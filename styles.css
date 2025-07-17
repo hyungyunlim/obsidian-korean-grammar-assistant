@@ -1,0 +1,873 @@
+#correctionPopup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-interface);
+    color: var(--text-normal);
+    /* Prevent any interaction with background elements */
+    isolation: isolate;
+    contain: layout style paint;
+}
+
+#correctionPopup .popup-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.92);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    /* Prevent cursor blinking through */
+    opacity: 1;
+    pointer-events: auto;
+    /* Force new stacking context */
+    will-change: auto;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+}
+
+#correctionPopup .popup-content {
+    position: relative;
+    width: min(98vw, 1200px);
+    height: 95vh;
+    max-height: 1000px;
+    min-height: 700px;
+    background: var(--background-primary);
+    border-radius: 12px;
+    box-shadow: 0 12px 60px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--background-modifier-border);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    /* 고해상도 디스플레이에서 선명도 개선 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    /* Ensure popup content is above everything */
+    z-index: 10000;
+}
+
+#correctionPopup .header {
+    padding: 20px 24px 16px;
+    background: var(--background-primary);
+    border-bottom: 1px solid var(--background-modifier-border-hover);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+#correctionPopup .header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-normal);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+#correctionPopup .close-btn-header {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+#correctionPopup .close-btn-header:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+#correctionPopup .cancel-btn,
+#correctionPopup .apply-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* 버튼 선명도 개선 */
+    backface-visibility: hidden;
+    transform: translateZ(0);
+}
+
+#correctionPopup .cancel-btn {
+    background: var(--background-secondary);
+    color: var(--text-muted);
+}
+
+#correctionPopup .cancel-btn:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+#correctionPopup .apply-btn {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+#correctionPopup .header .apply-btn {
+    margin-left: 8px;
+}
+
+#correctionPopup .apply-btn:hover {
+    background: var(--interactive-accent-hover);
+}
+
+#correctionPopup .button-area {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 16px 24px 24px;
+    border-top: 1px solid var(--background-modifier-border);
+    flex-shrink: 0;
+    background: var(--background-primary);
+}
+
+#correctionPopup .content {
+    padding: 20px 24px 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex: 1;
+    height: 100%;
+}
+
+#correctionPopup .preview-section {
+    background: var(--background-secondary);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    border: 1px solid var(--background-modifier-border);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+#correctionPopup .preview-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+#correctionPopup .preview-hint {
+    font-size: 11px;
+    font-weight: normal;
+    color: var(--text-muted);
+    text-transform: none;
+    letter-spacing: normal;
+    opacity: 0.8;
+}
+
+#correctionPopup .color-legend {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    opacity: 0.9;
+    padding: 4px 8px;
+    background: var(--background-secondary-alt);
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    flex-shrink: 0;
+}
+
+#correctionPopup .color-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+#correctionPopup .color-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+#correctionPopup .color-legend-dot.error {
+    background: var(--color-red);
+    border: 1px solid rgba(var(--color-red-rgb), 0.3);
+}
+
+#correctionPopup .color-legend-dot.corrected {
+    background: var(--color-green);
+    border: 1px solid rgba(var(--color-green-rgb), 0.3);
+}
+
+#correctionPopup .color-legend-dot.original-selected {
+    background: var(--color-blue);
+    border: 1px solid rgba(var(--color-blue-rgb), 0.3);
+}
+
+#correctionPopup .preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+#correctionPopup .pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+
+#correctionPopup .pagination-btn {
+    padding: 4px 8px;
+    font-size: 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#correctionPopup .pagination-btn.small {
+    padding: 2px 6px;
+    font-size: 10px;
+}
+
+#correctionPopup .pagination-btn:hover:not(:disabled) {
+    background: var(--interactive-hover);
+    border-color: var(--interactive-accent);
+}
+
+#correctionPopup .pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#correctionPopup .page-info {
+    font-size: 12px;
+    color: var(--text-muted);
+    min-width: 40px;
+    text-align: center;
+}
+
+#correctionPopup .page-info.small {
+    font-size: 10px;
+    min-width: 30px;
+}
+
+#correctionPopup .page-chars-info {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: 8px;
+    font-style: italic;
+    opacity: 0.9;
+    font-weight: 500;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+#correctionPopup .preview-text {
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--text-normal);
+    white-space: pre-wrap;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* 텍스트 선명도 개선 */
+    font-feature-settings: "liga" 1, "kern" 1;
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 0;
+    min-height: 200px;
+}
+
+#correctionPopup .error-summary {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--background-modifier-border);
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+#correctionPopup .error-summary.collapsed .error-summary-content {
+    height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+#correctionPopup .error-summary:not(.collapsed) .error-summary-content {
+    height: 280px;
+    overflow-y: auto;
+    opacity: 1;
+    transition: all 0.3s ease;
+}
+
+#correctionPopup .error-summary-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 8px 0;
+    margin-bottom: 12px;
+    user-select: none;
+}
+
+#correctionPopup .error-summary-toggle .left-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#correctionPopup .error-summary-toggle:hover {
+    background: var(--background-modifier-hover);
+    border-radius: 4px;
+    margin: 0 -8px 12px -8px;
+    padding: 8px;
+}
+
+#correctionPopup .error-summary-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#correctionPopup .error-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    line-height: 1;
+}
+
+#correctionPopup .toggle-icon {
+    font-size: 12px;
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+}
+
+#correctionPopup .error-summary-content {
+    scrollbar-width: thin;
+    /* 스크롤 개선 */
+    -webkit-overflow-scrolling: touch;
+}
+
+#correctionPopup .error-summary-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+#correctionPopup .error-summary-content::-webkit-scrollbar-track {
+    background: var(--background-secondary);
+}
+
+#correctionPopup .error-summary-content::-webkit-scrollbar-thumb {
+    background: var(--background-modifier-border);
+    border-radius: 3px;
+}
+
+#correctionPopup .error-summary-content::-webkit-scrollbar-thumb:hover {
+    background: var(--background-modifier-border-hover);
+}
+
+/* Improved compact error item styles */
+#correctionPopup .error-item-compact {
+    margin-bottom: 4px !important;
+    padding: 6px 8px !important;
+    background: var(--background-secondary-alt) !important;
+    border-radius: 4px !important;
+    border: 1px solid var(--background-modifier-border) !important;
+    transition: all 0.15s ease !important;
+    display: block !important;
+    line-height: 1.3 !important;
+}
+
+#correctionPopup .error-item-compact:hover {
+    background: var(--background-modifier-hover) !important;
+}
+
+#correctionPopup .error-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin-bottom: 3px !important;
+}
+
+#correctionPopup .error-original-compact {
+    min-width: 60px !important;
+    font-weight: 600 !important;
+    color: var(--color-red) !important;
+    background: rgba(var(--color-red-rgb), 0.15) !important;
+    padding: 3px 6px !important;
+    border-radius: 3px !important;
+    font-size: 12px !important;
+    flex-shrink: 0 !important;
+}
+
+#correctionPopup .error-suggestions-compact {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+    flex: 1 !important;
+}
+
+#correctionPopup .suggestion-compact {
+    background: var(--background-primary) !important;
+    border: 1px solid var(--background-modifier-border) !important;
+    border-radius: 8px !important;
+    padding: 3px 6px !important;
+    font-size: 11px !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+    color: var(--text-normal) !important;
+    white-space: nowrap !important;
+    font-weight: 500 !important;
+}
+
+#correctionPopup .suggestion-compact:hover {
+    background: var(--interactive-hover) !important;
+    border-color: var(--interactive-accent) !important;
+}
+
+#correctionPopup .suggestion-compact.selected {
+    background: var(--interactive-accent) !important;
+    color: var(--text-on-accent) !important;
+    border-color: var(--interactive-accent) !important;
+}
+
+#correctionPopup .suggestion-compact.keep-original {
+    background: var(--background-modifier-hover) !important;
+    color: var(--text-muted) !important;
+    font-size: 10px !important;
+    font-weight: 400 !important;
+}
+
+#correctionPopup .suggestion-compact.keep-original.selected {
+    background: var(--text-muted) !important;
+    color: var(--background-primary) !important;
+}
+
+#correctionPopup .error-help-compact {
+    font-size: 10px !important;
+    color: var(--text-muted) !important;
+    font-style: italic !important;
+    line-height: 1.2 !important;
+    margin-left: 4px !important;
+    margin-top: 2px !important;
+    opacity: 0.8 !important;
+}
+
+/* Error placeholder styles */
+#correctionPopup .error-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+    background: var(--background-secondary);
+    border-radius: 8px;
+    margin: 20px 0;
+    border: 1px dashed var(--background-modifier-border);
+}
+
+#correctionPopup .placeholder-icon {
+    font-size: 32px;
+    color: var(--color-green);
+    margin-bottom: 12px;
+}
+
+#correctionPopup .placeholder-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-normal);
+    margin-bottom: 6px;
+}
+
+#correctionPopup .placeholder-subtext {
+    font-size: 12px;
+    color: var(--text-muted);
+    opacity: 0.8;
+}
+
+
+#correctionPopup .info-box {
+    margin-top: 16px;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: var(--background-secondary-alt);
+    border-radius: 6px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+#correctionPopup .info-box a {
+    color: var(--interactive-accent);
+    text-decoration: none;
+}
+
+#correctionPopup .info-box a:hover {
+    text-decoration: underline;
+}
+
+/* Scrollbar styling */
+#correctionPopup .content::-webkit-scrollbar {
+    width: 6px;
+}
+
+#correctionPopup .content::-webkit-scrollbar-track {
+    background: var(--background-secondary);
+}
+
+#correctionPopup .content::-webkit-scrollbar-thumb {
+    background: var(--background-modifier-border);
+    border-radius: 3px;
+}
+
+#correctionPopup .content::-webkit-scrollbar-thumb:hover {
+    background: var(--background-modifier-border-hover);
+}
+
+/* Error highlighting in preview */
+.spell-error {
+    background: rgba(var(--color-red-rgb), 0.1);
+    color: var(--color-red);
+    padding: 2px 0;
+    border-bottom: 2px dotted var(--color-red);
+    transition: all 0.2s ease;
+}
+
+.spell-error:hover {
+    background: rgba(var(--color-red-rgb), 0.2);
+}
+
+/* Clickable error styling */
+.clickable-error {
+    cursor: pointer;
+    position: relative;
+}
+
+.clickable-error:hover {
+    background: rgba(var(--color-red-rgb), 0.25);
+    border-bottom: 2px solid var(--color-red);
+}
+
+.clickable-error:active {
+    background: rgba(var(--color-red-rgb), 0.3);
+}
+
+.spell-corrected {
+    background: rgba(var(--color-green-rgb), 0.1);
+    color: var(--color-green);
+    padding: 2px 0;
+    border-bottom: 2px solid var(--color-green);
+    font-weight: 500;
+}
+
+.spell-corrected.clickable-error {
+    cursor: pointer;
+    position: relative;
+}
+
+.spell-corrected.clickable-error:hover {
+    background: rgba(var(--color-green-rgb), 0.25);
+    border-bottom: 2px solid var(--color-green);
+}
+
+.spell-corrected.clickable-error:active {
+    background: rgba(var(--color-green-rgb), 0.3);
+}
+
+.spell-original-selected {
+    background: rgba(var(--color-blue-rgb), 0.1);
+    color: var(--color-blue);
+    padding: 2px 0;
+    border-bottom: 2px solid var(--color-blue);
+    font-weight: 500;
+}
+
+.spell-original-selected.clickable-error {
+    cursor: pointer;
+    position: relative;
+}
+
+.spell-original-selected.clickable-error:hover {
+    background: rgba(var(--color-blue-rgb), 0.25);
+    border-bottom: 2px solid var(--color-blue);
+}
+
+.spell-original-selected.clickable-error:active {
+    background: rgba(var(--color-blue-rgb), 0.3);
+}
+
+/* Safe area for mobile devices with notches */
+@supports (padding-top: env(safe-area-inset-top)) {
+    #correctionPopup {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+}
+
+/* Body scroll lock when popup is open */
+body.spell-popup-open {
+    overflow: hidden !important;
+    position: fixed !important;
+    width: 100% !important;
+    height: 100% !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    #correctionPopup {
+        align-items: flex-start;
+        padding-top: max(env(safe-area-inset-top, 0px), 20px);
+        padding-bottom: max(env(safe-area-inset-bottom, 0px), 20px);
+        padding-left: max(env(safe-area-inset-left, 0px), 10px);
+        padding-right: max(env(safe-area-inset-right, 0px), 10px);
+        box-sizing: border-box;
+    }
+
+    #correctionPopup .popup-content {
+        width: calc(100vw - 20px);
+        height: calc(100vh - max(env(safe-area-inset-top, 0px), 20px) - max(env(safe-area-inset-bottom, 0px), 20px) - 40px);
+        max-height: none;
+        min-height: 500px;
+        border-radius: 8px;
+        margin-top: auto;
+        margin-bottom: auto;
+    }
+    
+    #correctionPopup .header {
+        padding: 16px 20px 12px;
+    }
+    
+    #correctionPopup .header h2 {
+        font-size: 16px;
+    }
+    
+    #correctionPopup .content {
+        padding: 16px 20px 0;
+    }
+    
+#correctionPopup .preview-section {
+        padding: 12px;
+        margin-bottom: 16px;
+    }
+    
+    #correctionPopup .preview-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    #correctionPopup .color-legend {
+        order: 1;
+        align-self: flex-start;
+        margin-left: 0;
+        margin-top: 6px;
+        gap: 8px;
+        font-size: 10px;
+        padding: 3px 6px;
+        background: var(--background-secondary);
+        border-radius: 4px;
+    }
+    
+    #correctionPopup .preview-label {
+        order: 0;
+    }
+    
+    #correctionPopup .color-legend-dot {
+        width: 8px;
+        height: 8px;
+    }
+    
+    #correctionPopup .pagination-controls {
+        order: 2;
+        align-self: flex-end;
+    }
+    
+    #correctionPopup .pagination-btn {
+        padding: 8px 12px;
+        font-size: 14px;
+        min-height: 36px;
+        min-width: 60px;
+    }
+    
+    #correctionPopup .pagination-btn.small {
+        padding: 6px 10px;
+        font-size: 12px;
+        min-height: 32px;
+        min-width: 50px;
+    }
+    
+    #correctionPopup .page-info {
+        font-size: 14px;
+        min-width: 60px;
+    }
+    
+    #correctionPopup .page-info.small {
+        font-size: 12px;
+        min-width: 50px;
+    }
+    
+    #correctionPopup .error-item {
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+    
+    #correctionPopup .error-original {
+        font-size: 14px;
+        padding: 6px 10px;
+    }
+    
+    #correctionPopup .suggestion-option {
+        padding: 8px 12px;
+        font-size: 13px;
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+        border-radius: 16px;
+    }
+    
+    #correctionPopup .button-area {
+        gap: 10px;
+        padding: 16px 20px 20px;
+    }
+    
+    #correctionPopup .cancel-btn,
+    #correctionPopup .apply-btn {
+        padding: 12px 20px;
+        font-size: 15px;
+        min-height: 44px;
+        border-radius: 8px;
+        flex: 1;
+    }
+    
+    /* Make clickable errors more touch-friendly */
+    .clickable-error {
+        padding: 4px 2px;
+        margin: 0 1px;
+        border-radius: 3px;
+        min-height: 28px;
+        display: inline-flex;
+        align-items: center;
+    }
+    
+    #correctionPopup .preview-text {
+        font-size: 14px;
+        line-height: 1.6;
+        min-height: 150px;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    #correctionPopup .error-summary:not(.collapsed) .error-summary-content {
+        height: 220px;
+    }
+    
+    /* Improve touch targets */
+    #correctionPopup .error-suggestions {
+        gap: 8px;
+    }
+    
+    /* Better spacing for mobile */
+    #correctionPopup .error-summary {
+        margin-top: 12px;
+        padding-top: 12px;
+    }
+    
+    #correctionPopup .close-btn-header {
+        width: 36px;
+        height: 36px;
+        font-size: 20px;
+    }
+    
+    /* Additional mobile-specific safe area adjustments */
+    @media (max-height: 700px) {
+        #correctionPopup .popup-content {
+            min-height: 400px;
+        }
+    }
+    
+    /* iPhone landscape mode */
+    @media (max-width: 896px) and (orientation: landscape) {
+        #correctionPopup {
+            padding-top: max(env(safe-area-inset-top, 0px), 10px);
+            padding-bottom: max(env(safe-area-inset-bottom, 0px), 10px);
+        }
+        
+        #correctionPopup .popup-content {
+            height: calc(100vh - max(env(safe-area-inset-top, 0px), 10px) - max(env(safe-area-inset-bottom, 0px), 10px) - 20px);
+        }
+    }
+    
+    /* Compact error item styles for mobile */
+    #correctionPopup .error-item-compact {
+        padding: 10px;
+        margin-bottom: 8px;
+    }
+    
+    #correctionPopup .error-original-compact {
+        font-size: 12px;
+        padding: 3px 6px;
+        min-width: 50px;
+    }
+    
+    #correctionPopup .suggestion-compact {
+        font-size: 12px;
+        padding: 4px 8px;
+        min-height: 32px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+    }
+    
+    #correctionPopup .error-help-compact {
+        font-size: 11px;
+        margin-top: 4px;
+    }
+    
+}
+

@@ -1,0 +1,12 @@
+{
+  "id": "korean-grammar-assistant",
+  "name": "Korean Grammar Assistant",
+  "version": "0.1.1",
+  "minAppVersion": "0.15.0",
+  "description": "Advanced Korean grammar and spelling checker powered by Bareun.ai API. Features smart pagination, mobile optimization, and interactive correction interface.",
+  "author": "hyungyunlim",
+  "authorUrl": "https://github.com/hyungyunlim",
+  "fundingUrl": "",
+  "isDesktopOnly": false,
+  "styles": "styles.css"
+}
