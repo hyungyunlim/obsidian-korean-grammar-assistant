@@ -664,7 +664,31 @@ export class CorrectionPopup extends BaseComponent {
    * AI 분석을 수행합니다.
    */
   private async performAIAnalysis(): Promise<void> {
+    console.log('[Popup] performAIAnalysis 호출됨:', {
+      hasAiService: !!this.aiService,
+      isAiAnalyzing: this.isAiAnalyzing,
+      aiServiceAvailable: this.aiService?.isAvailable(),
+      aiServiceSettings: this.aiService?.getSettings()
+    });
+
     if (!this.aiService || this.isAiAnalyzing) {
+      console.log('[Popup] AI 분석 중단: aiService 없음 또는 이미 분석 중');
+      return;
+    }
+
+    if (!this.aiService.isAvailable()) {
+      console.error('[Popup] AI 서비스 사용 불가: 기능 비활성화 또는 API 키 없음');
+      // 기존 오류 처리 방식과 동일하게 처리
+      const errorNotice = document.createElement('div');
+      errorNotice.textContent = '❌ AI 기능이 비활성화되어 있거나 API 키가 설정되지 않았습니다. 플러그인 설정을 확인해주세요.';
+      errorNotice.style.cssText = `
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        background: var(--background-primary); border: 1px solid var(--background-modifier-border);
+        padding: 20px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        z-index: 10001; color: var(--text-normal); max-width: 400px; text-align: center;
+      `;
+      document.body.appendChild(errorNotice);
+      setTimeout(() => errorNotice.remove(), 5000);
       return;
     }
 

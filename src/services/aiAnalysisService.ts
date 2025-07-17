@@ -76,6 +76,13 @@ export class AIAnalysisService {
    * AI를 사용하여 맞춤법 오류를 분석하고 최적의 수정사항을 제안합니다.
    */
   async analyzeCorrections(request: AIAnalysisRequest): Promise<AIAnalysisResult[]> {
+    console.log('[AI] analyzeCorrections 시작:', {
+      enabled: this.settings.enabled,
+      provider: this.settings.provider,
+      model: this.settings.model,
+      correctionsCount: request.corrections.length
+    });
+
     if (!this.settings.enabled) {
       throw new Error('AI 기능이 비활성화되어 있습니다.');
     }

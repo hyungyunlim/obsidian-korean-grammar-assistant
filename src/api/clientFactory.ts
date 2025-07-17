@@ -7,6 +7,14 @@ import { OllamaClient } from './ollama-client';
 export class AIClientFactory {
   static createClient(settings: AISettings): AIClient {
     const provider = settings.provider;
+    const apiKey = this.getApiKey(settings);
+    
+    console.log('[ClientFactory] 클라이언트 생성:', {
+      provider: provider,
+      hasApiKey: !!apiKey,
+      apiKeyLength: apiKey ? apiKey.length : 0,
+      model: settings.model
+    });
     
     switch (provider) {
       case 'openai':

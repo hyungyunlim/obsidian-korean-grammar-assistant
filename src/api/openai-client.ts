@@ -47,6 +47,17 @@ export class OpenAIClient implements AIClient {
       throw new Error('OpenAI API 키가 설정되지 않았습니다.');
     }
 
+    if (!this.apiKey.startsWith('sk-')) {
+      throw new Error('OpenAI API 키 형식이 올바르지 않습니다. "sk-"로 시작해야 합니다.');
+    }
+
+    console.log('[OpenAI] chat 요청 시작:', {
+      model: model,
+      maxTokens: maxTokens,
+      messagesCount: messages.length,
+      apiKeyPrefix: this.apiKey.substring(0, 7) + '...'
+    });
+
     const requestBody = {
       model: model,
       messages: messages,
@@ -62,15 +73,27 @@ export class OpenAIClient implements AIClient {
       bodySize: JSON.stringify(requestBody).length
     });
 
-    const response = await requestUrl({
-      url: API_ENDPOINTS.openai.chat,
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
-    });
+    let response;
+    try {
+      response = await requestUrl({
+        url: API_ENDPOINTS.openai.chat,
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+    } catch (error) {
+      console.error('[OpenAI] requestUrl 오류:', error);
+      console.error('[OpenAI] 요청 정보:', {
+        url: API_ENDPOINTS.openai.chat,
+        model: model,
+        hasApiKey: !!this.apiKey,
+        bodySize: JSON.stringify(requestBody).length
+      });
+      throw error;
+    }
 
     if (response.status === 200) {
       return response.json.choices[0].message.content.trim();

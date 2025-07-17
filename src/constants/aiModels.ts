@@ -86,7 +86,7 @@ export const RECOMMENDED_MODELS_FOR_KOREAN = [
 
 // 기본 AI 설정 값
 export const DEFAULT_AI_SETTINGS = {
-  enabled: false,
+  enabled: false, // 기본적으로 비활성화
   provider: 'openai' as AIProvider,
   openaiApiKey: '',
   anthropicApiKey: '',
