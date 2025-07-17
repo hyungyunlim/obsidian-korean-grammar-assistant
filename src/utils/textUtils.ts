@@ -31,6 +31,15 @@ export function decodeHtmlEntities(text: string): string {
 }
 
 /**
+ * 정규식 특수 문자를 이스케이프합니다.
+ * @param text 이스케이프할 문자열
+ * @returns 이스케이프된 문자열
+ */
+export function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}
+
+/**
  * 텍스트를 페이지별로 분할하기 위한 최적의 끊는 지점을 찾습니다.
  * @param text 분할할 텍스트
  * @param targetLength 목표 길이
@@ -130,7 +139,10 @@ export function calculateDynamicCharsPerPage(
   previewElement?: HTMLElement,
   isErrorExpanded: boolean = false
 ): number {
-  if (!previewElement) return 800; // 기본값
+  if (!previewElement) {
+    console.log("[calculateDynamicCharsPerPage] No previewElement, returning default 800.");
+    return 800; // 기본값
+  }
 
   const previewRect = previewElement.getBoundingClientRect();
   const availableHeight = previewRect.height;
@@ -146,6 +158,7 @@ export function calculateDynamicCharsPerPage(
     // 오류 영역이 접혀 있으면 더 큰 페이지
     calculatedChars = Math.max(800, Math.min(1800, linesPerPage * avgCharsPerLine));
   }
+  console.log(`[calculateDynamicCharsPerPage] Available height: ${availableHeight}, Lines per page: ${linesPerPage}, Calculated chars: ${calculatedChars}, Error expanded: ${isErrorExpanded}`);
   
   return calculatedChars;
 }

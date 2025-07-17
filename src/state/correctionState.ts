@@ -6,9 +6,11 @@ import { Correction, CorrectionState } from '../types/interfaces';
 export class CorrectionStateManager {
   private states: Map<string | number, any> = new Map();
   private corrections: Correction[] = [];
+  private ignoredWords: string[] = [];
 
   constructor(corrections: Correction[], ignoredWords: string[] = []) {
     this.corrections = corrections;
+    this.ignoredWords = ignoredWords;
     this.initializeStates(ignoredWords);
   }
 
@@ -79,7 +81,18 @@ export class CorrectionStateManager {
   }
 
   /**
-   * 3단계 토글을 수행합니다 (빨간색 → 초록색 → 파란색(예외처리) → 빨간색).
+   * 특정 단어가 초기에 무시된 단어인지 확인합니다.
+   * @param word 확인할 단어
+   * @returns 초기에 무시된 단어 여부
+   */
+  private isInitiallyIgnoredWord(word: string): boolean {
+    return this.ignoredWords.includes(word);
+  }
+
+  /**
+   * 3단계 토글을 수행합니다.
+   * - 일반 단어: 빨간색(오류) → 초록색(수정) → 파란색(예외처리) → 빨간색(오류)
+   * - 무시된 단어: 주황색(무시됨) → 빨간색(오류) → 초록색(수정) → 파란색(예외처리) → 주황색(무시됨)
    * @param correctionIndex 교정 인덱스
    * @returns 새로운 상태 정보
    */
@@ -93,18 +106,22 @@ export class CorrectionStateManager {
     const currentValue = this.getValue(correctionIndex);
     const isCurrentlyException = this.isExceptionState(correctionIndex);
     const isCurrentlyIgnored = this.isIgnoredState(correctionIndex);
+    
+    // 이 단어가 초기에 무시된 단어인지 확인 (ignoredWords에 포함되어 있는지)
+    const wasInitiallyIgnored = this.isInitiallyIgnoredWord(correction.original);
 
     console.log('\n[CorrectionState.toggleState] Initial state:', {
       correctionIndex,
       currentValue,
       isCurrentlyException,
       isCurrentlyIgnored,
+      wasInitiallyIgnored,
       originalText: correction.original,
       suggestions
     });
 
     if (isCurrentlyIgnored) {
-        // Ignored -> Error
+        // Ignored (Orange) -> Error (Red)
         this.setState(correctionIndex, correction.original, false, false);
         console.log('[CorrectionState.toggleState] Ignored -> Error');
         return { value: correction.original, isExceptionState: false };
@@ -113,10 +130,17 @@ export class CorrectionStateManager {
     let nextIndex = suggestions.indexOf(currentValue) + 1;
 
     if (isCurrentlyException) {
-        // Exception (Blue) -> Ignored (Orange)
-        this.setState(correctionIndex, correction.original, false, true);
-        console.log('[CorrectionState.toggleState] Exception -> Ignored');
-        return { value: correction.original, isExceptionState: false };
+        if (wasInitiallyIgnored) {
+            // Exception (Blue) -> Ignored (Orange) - 초기에 무시된 단어만
+            this.setState(correctionIndex, correction.original, false, true);
+            console.log('[CorrectionState.toggleState] Exception -> Ignored (initially ignored word)');
+            return { value: correction.original, isExceptionState: false };
+        } else {
+            // Exception (Blue) -> Error (Red) - 일반 단어
+            this.setState(correctionIndex, correction.original, false, false);
+            console.log('[CorrectionState.toggleState] Exception -> Error (regular word)');
+            return { value: correction.original, isExceptionState: false };
+        }
     }
 
     if (nextIndex >= suggestions.length) {

@@ -3,7 +3,7 @@ import { Correction, PopupConfig } from '../types/interfaces';
 import { BaseComponent } from './baseComponent';
 import { CorrectionStateManager } from '../state/correctionState';
 import { escapeHtml } from '../utils/htmlUtils';
-import { calculateDynamicCharsPerPage, splitTextIntoPages } from '../utils/textUtils';
+import { calculateDynamicCharsPerPage, splitTextIntoPages, escapeRegExp } from '../utils/textUtils';
 
 /**
  * 맞춤법 교정 팝업 관리 클래스
@@ -36,14 +36,12 @@ export class CorrectionPopup extends BaseComponent {
     const textLength = this.config.selectedText.length;
     this.isLongText = textLength > 1000;
     
-    if (this.isLongText) {
-      this.charsPerPage = calculateDynamicCharsPerPage(undefined, false);
-      this.pageBreaks = splitTextIntoPages(this.config.selectedText, this.charsPerPage);
-      this.totalPreviewPages = this.pageBreaks.length;
-    } else {
-      this.totalPreviewPages = 1;
-      this.pageBreaks = [textLength];
-    }
+    // 초기값 설정. 실제 계산은 recalculatePagination에서 이루어짐.
+    this.charsPerPage = 800; 
+    this.pageBreaks = [textLength]; // 임시
+    this.totalPreviewPages = 1;
+    this.currentPreviewPage = 0;
+    console.log(`[CorrectionPopup] Initial pagination setup: Long text: ${this.isLongText}`);
   }
 
   /**
@@ -58,9 +56,6 @@ export class CorrectionPopup extends BaseComponent {
     
     // Body 스크롤 잠금
     document.body.classList.add('spell-popup-open');
-
-    // 초기 디스플레이 업데이트 (뱃지 숫자 등)
-    this.updateDisplay();
     
     return this.element;
   }
@@ -195,7 +190,7 @@ export class CorrectionPopup extends BaseComponent {
       const replacementHtml = `<span class="${displayClass} clickable-error" data-correction-index="${actualIndex}" style="cursor: pointer;">${escapedValue}</span>`;
       
       // Find all occurrences of the original word within the previewText
-      const regex = new RegExp(escapeHtml(correction.original), 'g');
+      const regex = new RegExp(escapeRegExp(correction.original), 'g');
       let match;
       while ((match = regex.exec(previewText)) !== null) {
         // Add the text before the current match
@@ -473,6 +468,7 @@ export class CorrectionPopup extends BaseComponent {
     if (this.currentPreviewPage >= this.totalPreviewPages) {
       this.currentPreviewPage = Math.max(0, this.totalPreviewPages - 1);
     }
+    console.log(`[CorrectionPopup] Recalculated pagination: Chars per page: ${this.charsPerPage}, Total pages: ${this.totalPreviewPages}, Current page: ${this.currentPreviewPage}`);
   }
 
   /**
@@ -509,15 +505,43 @@ export class CorrectionPopup extends BaseComponent {
    * 페이지네이션 컨트롤을 업데이트합니다.
    */
   private updatePaginationControls(): void {
+    const paginationContainer = this.element.querySelector('#paginationContainer') as HTMLElement;
     const prevButton = this.element.querySelector('#prevPreviewPage') as HTMLButtonElement;
     const nextButton = this.element.querySelector('#nextPreviewPage') as HTMLButtonElement;
     const pageInfo = this.element.querySelector('#previewPageInfo');
     const pageCharsInfo = this.element.querySelector('#pageCharsInfo');
 
-    if (prevButton) prevButton.disabled = this.currentPreviewPage === 0;
-    if (nextButton) nextButton.disabled = this.currentPreviewPage === this.totalPreviewPages - 1;
-    if (pageInfo) pageInfo.textContent = `${this.currentPreviewPage + 1} / ${this.totalPreviewPages}`;
-    if (pageCharsInfo) pageCharsInfo.textContent = `${this.charsPerPage}자`;
+    // 페이지네이션 컨테이너 가시성 업데이트
+    if (paginationContainer) {
+      if (this.isLongText && this.totalPreviewPages > 1) {
+        paginationContainer.style.display = 'flex';
+        // 페이지네이션이 표시되어야 하는데 버튼이 없으면 HTML을 다시 생성
+        if (!prevButton || !nextButton) {
+          paginationContainer.innerHTML = `
+            <button class="pagination-btn" id="prevPreviewPage" ${this.currentPreviewPage === 0 ? 'disabled' : ''}>이전</button>
+            <span class="page-info" id="previewPageInfo">${this.currentPreviewPage + 1} / ${this.totalPreviewPages}</span>
+            <button class="pagination-btn" id="nextPreviewPage" ${this.currentPreviewPage === this.totalPreviewPages - 1 ? 'disabled' : ''}>다음</button>
+            <span class="page-chars-info" id="pageCharsInfo">${this.charsPerPage}자</span>
+          `;
+          
+          // 새로 생성된 버튼에 이벤트 바인딩
+          this.bindPaginationEvents();
+        }
+      } else {
+        paginationContainer.style.display = 'none';
+      }
+    }
+
+    // 기존 버튼 업데이트 (새로 생성되었을 수도 있으므로 다시 쿼리)
+    const updatedPrevButton = this.element.querySelector('#prevPreviewPage') as HTMLButtonElement;
+    const updatedNextButton = this.element.querySelector('#nextPreviewPage') as HTMLButtonElement;
+    const updatedPageInfo = this.element.querySelector('#previewPageInfo');
+    const updatedPageCharsInfo = this.element.querySelector('#pageCharsInfo');
+
+    if (updatedPrevButton) updatedPrevButton.disabled = this.currentPreviewPage === 0;
+    if (updatedNextButton) updatedNextButton.disabled = this.currentPreviewPage === this.totalPreviewPages - 1;
+    if (updatedPageInfo) updatedPageInfo.textContent = `${this.currentPreviewPage + 1} / ${this.totalPreviewPages}`;
+    if (updatedPageCharsInfo) updatedPageCharsInfo.textContent = `${this.charsPerPage}자`;
   }
 
   /**
@@ -542,6 +566,13 @@ export class CorrectionPopup extends BaseComponent {
    */
   show(): void {
     document.body.appendChild(this.element);
+    
+    // DOM에 추가된 후에 페이지네이션 계산 및 디스플레이 업데이트
+    // requestAnimationFrame을 사용하여 브라우저가 레이아웃을 완료한 후 실행
+    requestAnimationFrame(() => {
+      this.recalculatePagination();
+      this.updateDisplay();
+    });
   }
 
   /**
