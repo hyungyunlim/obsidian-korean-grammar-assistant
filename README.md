@@ -45,6 +45,7 @@ An advanced Korean grammar and spelling checker plugin for Obsidian, powered by 
 
 ### Configuration
 
+#### Option 1: Plugin Settings (Recommended for most users)
 1. **Enable the Plugin**: Go to Settings → Community Plugins → Korean Grammar Assistant → Enable
 2. **Configure API Settings**: Navigate to Settings → Korean Grammar Assistant and configure:
 
@@ -58,7 +59,24 @@ An advanced Korean grammar and spelling checker plugin for Obsidian, powered by 
   - Cloud service: `443` (HTTPS)
   - Local server: `5655`
 
-⚠️ **Important**: Each user must obtain their own API key from Bareun.ai. The plugin will not work without a valid API key.
+#### Option 2: Local Config File (For developers)
+1. **Copy example config**: `cp api-config.example.json api-config.json`
+2. **Edit config file**: Add your API key to `api-config.json`
+3. **Automatic loading**: Plugin will automatically use local config if available
+
+```json
+{
+  "apiKey": "your-actual-api-key-here",
+  "apiHost": "bareun-api.junlim.org",
+  "apiPort": 443,
+  "ignoredWords": []
+}
+```
+
+⚠️ **Important**: 
+- Each user must obtain their own API key from Bareun.ai
+- `api-config.json` is git-ignored for security
+- The plugin will not work without a valid API key
 
 ## 📱 Usage
 

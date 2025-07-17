@@ -20,3 +20,7 @@ data.json
 
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store
+
+# API 설정 파일 (개인 정보 포함)
+api-config.json
+config.local.json

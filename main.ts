@@ -24,12 +24,35 @@ interface PluginSettings {
   ignoredWords: string[]; // 예외 처리할 단어들
 }
 
-const DEFAULT_SETTINGS: PluginSettings = {
-  apiKey: '', // 사용자가 직접 입력해야 함
-  apiHost: 'bareun-api.junlim.org', // Cloudflare 터널 도메인
-  apiPort: 443, // HTTPS 포트
-  ignoredWords: []
-};
+// API 설정 파일에서 기본값 로드 (로컬 개발용)
+function loadApiConfig(): PluginSettings {
+  try {
+    // Node.js 환경에서만 작동 (개발 시)
+    if (typeof require !== 'undefined') {
+      const fs = require('fs');
+      const path = require('path');
+      const configPath = path.join(__dirname, 'api-config.json');
+      
+      if (fs.existsSync(configPath)) {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        console.log('로컬 API 설정 파일을 로드했습니다.');
+        return config;
+      }
+    }
+  } catch (error) {
+    console.log('API 설정 파일을 찾을 수 없습니다. 기본값을 사용합니다.');
+  }
+  
+  // 기본값 (배포용)
+  return {
+    apiKey: '', // 사용자가 직접 입력해야 함
+    apiHost: 'bareun-api.junlim.org',
+    apiPort: 443,
+    ignoredWords: []
+  };
+}
+
+const DEFAULT_SETTINGS: PluginSettings = loadApiConfig();
 
 // Bareun.ai API 응답 인터페이스
 interface BareunResponse {
