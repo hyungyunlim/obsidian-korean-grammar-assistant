@@ -84,6 +84,39 @@ export const RECOMMENDED_MODELS_FOR_KOREAN = [
   'gemini-1.5-flash'
 ] as const;
 
+// 모델별 최대 출력 토큰 제한
+export const MODEL_TOKEN_LIMITS = {
+  // OpenAI 모델들
+  'gpt-4o': 4096,
+  'gpt-4o-mini': 16384,
+  'gpt-4-turbo': 4096,
+  'gpt-4': 4096,
+  'gpt-3.5-turbo': 4096,
+  'gpt-3.5-turbo-16k': 4096,
+  'o1-preview': 32768,
+  'o1-mini': 65536,
+  
+  // Anthropic 모델들 (매우 높은 한계)
+  'claude-3-5-sonnet-20241022': 8192,
+  'claude-3-5-haiku-20241022': 8192,
+  'claude-3-opus-20240229': 4096,
+  'claude-3-sonnet-20240229': 4096,
+  'claude-3-haiku-20240307': 4096,
+  
+  // Google 모델들
+  'gemini-1.5-pro': 8192,
+  'gemini-1.5-flash': 8192,
+  'gemini-1.5-flash-8b': 8192,
+  'gemini-1.0-pro': 2048,
+  
+  // Ollama 모델들 (설정 가능하지만 보수적으로)
+  'llama3.2:3b': 2048,
+  'llama3.2:1b': 2048,
+  'llama3.1:8b': 2048,
+  'mistral:7b': 2048,
+  'qwen2:7b': 2048
+} as const;
+
 // 기본 AI 설정 값
 export const DEFAULT_AI_SETTINGS = {
   enabled: false, // 기본적으로 비활성화
@@ -93,7 +126,7 @@ export const DEFAULT_AI_SETTINGS = {
   googleApiKey: '',
   ollamaEndpoint: 'http://localhost:11434',
   model: 'gpt-4o-mini',
-  maxTokens: 2000,
+  maxTokens: 2000, // 기본값 (모델별 제한 내에서 자동 조정됨)
   temperature: 0.1, // 낮은 값으로 설정하여 일관된 결과 도출
   showTokenWarning: true, // 기본적으로 토큰 경고 활성화
   tokenWarningThreshold: 3000 // 3000 토큰 이상일 때 경고

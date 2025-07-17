@@ -1,6 +1,6 @@
 import { AISettings, AIAnalysisRequest, AIAnalysisResult, Correction, CorrectionContext } from '../types/interfaces';
 import { AIClientFactory } from '../api/clientFactory';
-import { AI_PROMPTS } from '../constants/aiModels';
+import { AI_PROMPTS, MODEL_TOKEN_LIMITS } from '../constants/aiModels';
 import { estimateAnalysisTokenUsage, estimateCost } from '../utils/tokenEstimator';
 
 export class AIAnalysisService {
@@ -152,7 +152,10 @@ export class AIAnalysisService {
         contentPreview: m.content.substring(0, 200) + (m.content.length > 200 ? '...' : '')
       })));
 
-      const response = await client.chat(messages, this.settings.maxTokens, this.settings.model);
+      // 모델별 토큰 제한에 맞게 조정
+      const adjustedMaxTokens = this.adjustTokensForModel(this.settings.maxTokens, this.settings.model);
+      
+      const response = await client.chat(messages, adjustedMaxTokens, this.settings.model);
       
       console.log('[AI] 응답 수신:', response);
 
@@ -337,6 +340,25 @@ export class AIAnalysisService {
    */
   getSettings(): AISettings {
     return this.settings;
+  }
+
+  /**
+   * 모델별 최대 출력 토큰을 가져옵니다.
+   */
+  private getModelMaxTokens(model: string): number {
+    return MODEL_TOKEN_LIMITS[model as keyof typeof MODEL_TOKEN_LIMITS] || 2048; // 기본값
+  }
+
+  /**
+   * 요청할 토큰 수를 모델 제한에 맞게 조정합니다.
+   */
+  private adjustTokensForModel(requestedTokens: number, model: string): number {
+    const modelLimit = this.getModelMaxTokens(model);
+    if (requestedTokens > modelLimit) {
+      console.warn(`[AI] 요청된 토큰 수(${requestedTokens})가 모델 제한(${modelLimit})을 초과합니다. ${modelLimit}로 조정합니다.`);
+      return modelLimit;
+    }
+    return requestedTokens;
   }
 
   /**
