@@ -1,4 +1,5 @@
 import { PluginSettings } from '../types/interfaces';
+import { DEFAULT_AI_SETTINGS } from '../constants/aiModels';
 
 /**
  * API 설정 파일에서 기본값 로드 (로컬 개발용)
@@ -26,7 +27,8 @@ function loadApiConfig(): PluginSettings {
     apiKey: '', // 사용자가 직접 입력해야 함
     apiHost: 'bareun-api.junlim.org',
     apiPort: 443,
-    ignoredWords: []
+    ignoredWords: [],
+    ai: DEFAULT_AI_SETTINGS
   };
 }
 

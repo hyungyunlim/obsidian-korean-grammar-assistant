@@ -11,6 +11,13 @@ import { PluginSettings } from './src/types/interfaces';
 import { DEFAULT_SETTINGS, SettingsService } from './src/services/settings';
 import { IgnoredWordsService } from './src/services/ignoredWords';
 import { SpellCheckOrchestrator } from './src/orchestrator';
+import { 
+  AI_PROVIDER_DEFAULTS, 
+  OPENAI_MODELS, 
+  ANTHROPIC_MODELS, 
+  GOOGLE_MODELS, 
+  OLLAMA_MODELS 
+} from './src/constants/aiModels';
 
 // 한글 맞춤법 검사 아이콘 등록
 addIcon(
@@ -84,6 +91,166 @@ class SpellingSettingTab extends PluginSettingTab {
   constructor(app: App, plugin: KoreanGrammarPlugin) {
     super(app, plugin);
     this.plugin = plugin;
+  }
+
+  /**
+   * AI 설정 섹션을 렌더링합니다.
+   */
+  private renderAISettings(containerEl: HTMLElement): void {
+    containerEl.createEl("h3", { text: "AI 자동 교정 기능" });
+
+    // AI 기능 활성화/비활성화
+    new Setting(containerEl)
+      .setName("AI 자동 교정 활성화")
+      .setDesc("AI를 사용하여 맞춤법 오류에 대한 최적의 수정사항을 자동으로 제안합니다.")
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.ai.enabled)
+        .onChange(async (value) => {
+          this.plugin.settings.ai.enabled = value;
+          await this.plugin.saveSettings();
+          this.display(); // AI 설정이 변경되면 UI 새로고침
+        }));
+
+    if (!this.plugin.settings.ai.enabled) {
+      const disabledDesc = containerEl.createEl("div", {
+        cls: "setting-item-description",
+        text: "AI 기능이 비활성화되어 있습니다. 위의 토글을 활성화하면 AI 관련 설정이 표시됩니다."
+      });
+      disabledDesc.style.color = "var(--text-muted)";
+      disabledDesc.style.marginBottom = "20px";
+      return;
+    }
+
+    // AI 제공자 선택
+    new Setting(containerEl)
+      .setName("AI 제공자")
+      .setDesc("사용할 AI 서비스를 선택하세요")
+      .addDropdown(dropdown => dropdown
+        .addOption('openai', 'OpenAI')
+        .addOption('anthropic', 'Anthropic (Claude)')
+        .addOption('google', 'Google (Gemini)')
+        .addOption('ollama', 'Ollama (로컬)')
+        .setValue(this.plugin.settings.ai.provider)
+        .onChange(async (value: 'openai' | 'anthropic' | 'google' | 'ollama') => {
+          this.plugin.settings.ai.provider = value;
+          // 제공자 변경 시 기본 모델로 설정
+          this.plugin.settings.ai.model = AI_PROVIDER_DEFAULTS[value];
+          await this.plugin.saveSettings();
+          this.display(); // 제공자 변경 시 UI 새로고침
+        }));
+
+    // AI 모델 선택
+    new Setting(containerEl)
+      .setName("AI 모델")
+      .setDesc("사용할 AI 모델을 선택하세요")
+      .addDropdown(dropdown => {
+        const provider = this.plugin.settings.ai.provider;
+        let models: readonly string[] = [];
+        
+        switch (provider) {
+          case 'openai':
+            models = OPENAI_MODELS;
+            break;
+          case 'anthropic':
+            models = ANTHROPIC_MODELS;
+            break;
+          case 'google':
+            models = GOOGLE_MODELS;
+            break;
+          case 'ollama':
+            models = OLLAMA_MODELS;
+            break;
+        }
+
+        models.forEach(model => {
+          dropdown.addOption(model, model);
+        });
+
+        dropdown.setValue(this.plugin.settings.ai.model || AI_PROVIDER_DEFAULTS[provider]);
+        dropdown.onChange(async (value) => {
+          this.plugin.settings.ai.model = value;
+          await this.plugin.saveSettings();
+        });
+      });
+
+    // API 키 설정 (제공자별)
+    this.renderAIApiKeySettings(containerEl);
+
+    // 고급 설정
+    new Setting(containerEl)
+      .setName("최대 토큰 수")
+      .setDesc("AI 응답의 최대 길이를 제한합니다 (기본: 1000)")
+      .addText(text => text
+        .setPlaceholder("1000")
+        .setValue(this.plugin.settings.ai.maxTokens.toString())
+        .onChange(async (value) => {
+          const tokens = parseInt(value);
+          if (!isNaN(tokens) && tokens > 0 && tokens <= 4000) {
+            this.plugin.settings.ai.maxTokens = tokens;
+            await this.plugin.saveSettings();
+          }
+        }));
+  }
+
+  /**
+   * AI API 키 설정을 렌더링합니다.
+   */
+  private renderAIApiKeySettings(containerEl: HTMLElement): void {
+    const provider = this.plugin.settings.ai.provider;
+
+    switch (provider) {
+      case 'openai':
+        new Setting(containerEl)
+          .setName("OpenAI API 키")
+          .setDesc("OpenAI API 키를 입력하세요. https://platform.openai.com/api-keys 에서 발급받을 수 있습니다.")
+          .addText(text => text
+            .setPlaceholder("sk-...")
+            .setValue(this.plugin.settings.ai.openaiApiKey)
+            .onChange(async (value) => {
+              this.plugin.settings.ai.openaiApiKey = value;
+              await this.plugin.saveSettings();
+            }));
+        break;
+      
+      case 'anthropic':
+        new Setting(containerEl)
+          .setName("Anthropic API 키")
+          .setDesc("Anthropic (Claude) API 키를 입력하세요. https://console.anthropic.com/ 에서 발급받을 수 있습니다.")
+          .addText(text => text
+            .setPlaceholder("sk-ant-...")
+            .setValue(this.plugin.settings.ai.anthropicApiKey)
+            .onChange(async (value) => {
+              this.plugin.settings.ai.anthropicApiKey = value;
+              await this.plugin.saveSettings();
+            }));
+        break;
+      
+      case 'google':
+        new Setting(containerEl)
+          .setName("Google API 키")
+          .setDesc("Google AI API 키를 입력하세요. https://aistudio.google.com/app/apikey 에서 발급받을 수 있습니다.")
+          .addText(text => text
+            .setPlaceholder("AIza...")
+            .setValue(this.plugin.settings.ai.googleApiKey)
+            .onChange(async (value) => {
+              this.plugin.settings.ai.googleApiKey = value;
+              await this.plugin.saveSettings();
+            }));
+        break;
+      
+      case 'ollama':
+        new Setting(containerEl)
+          .setName("Ollama 엔드포인트")
+          .setDesc("로컬 Ollama 서버의 주소를 입력하세요. 기본값: http://localhost:11434")
+          .addText(text => text
+            .setPlaceholder("http://localhost:11434")
+            .setValue(this.plugin.settings.ai.ollamaEndpoint)
+            .onChange(async (value) => {
+              this.plugin.settings.ai.ollamaEndpoint = value;
+              await this.plugin.saveSettings();
+            }));
+        break;
+    }
   }
 
   /**
@@ -210,6 +377,9 @@ class SpellingSettingTab extends PluginSettingTab {
       errorContainer.style.color = "var(--text-error)";
       errorContainer.style.marginTop = "10px";
     }
+
+    // AI 설정 섹션
+    this.renderAISettings(containerEl);
 
     // 예외 처리된 단어 관리 섹션
     containerEl.createEl("h3", { text: "예외 처리된 단어" });

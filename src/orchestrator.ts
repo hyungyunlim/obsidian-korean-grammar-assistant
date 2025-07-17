@@ -4,6 +4,7 @@ import { SpellCheckApiService } from './services/api';
 import { SettingsService } from './services/settings';
 import { IgnoredWordsService } from './services/ignoredWords';
 import { CorrectionPopup } from './ui/correctionPopup';
+import { AIAnalysisService } from './services/aiAnalysisService';
 
 /**
  * 맞춤법 검사 워크플로우를 관리하는 오케스트레이터 클래스
@@ -12,12 +13,14 @@ export class SpellCheckOrchestrator {
   private app: App;
   private settings: PluginSettings;
   private apiService: SpellCheckApiService;
+  private aiService: AIAnalysisService;
   private onSettingsUpdated?: (settings: PluginSettings) => void;
 
   constructor(app: App, settings: PluginSettings, onSettingsUpdated?: (settings: PluginSettings) => void) {
     this.app = app;
     this.settings = settings;
     this.apiService = new SpellCheckApiService();
+    this.aiService = new AIAnalysisService(settings.ai);
     this.onSettingsUpdated = onSettingsUpdated;
   }
 
@@ -132,7 +135,7 @@ export class SpellCheckOrchestrator {
       editor: editor,
       ignoredWords: IgnoredWordsService.getIgnoredWords(this.settings),
       onExceptionWordsAdded: (words: string[]) => this.handleExceptionWords(words)
-    });
+    }, this.aiService);
 
     popup.render();
     popup.show();
@@ -181,5 +184,7 @@ export class SpellCheckOrchestrator {
    */
   updateSettings(newSettings: PluginSettings): void {
     this.settings = newSettings;
+    // AI 서비스 설정도 업데이트
+    this.aiService.updateSettings(newSettings.ai);
   }
 }

@@ -20,5 +20,10 @@
   },
   "include": [
     "**/*.ts"
+  ],
+  "exclude": [
+    "temp-reference/**",
+    "docs-reference/**",
+    "node_modules/**"
   ]
 }

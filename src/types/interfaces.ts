@@ -17,6 +17,7 @@ export interface PluginSettings {
   apiHost: string;
   apiPort: number;
   ignoredWords: string[]; // 예외 처리된 단어들
+  ai: AISettings; // AI 설정 추가
 }
 
 /**
@@ -87,4 +88,52 @@ export interface LayoutConfig {
   popupHeight: number;
   isMobile: boolean;
   errorSummaryExpanded: boolean;
+}
+
+/**
+ * AI 제공자 타입
+ */
+export type AIProvider = 'openai' | 'anthropic' | 'google' | 'ollama';
+
+/**
+ * AI 분석 결과 인터페이스
+ */
+export interface AIAnalysisResult {
+  correctionIndex: number;
+  selectedValue: string;
+  isExceptionProcessed: boolean;
+  confidence: number; // 0-100 사이의 신뢰도 점수
+  reasoning: string; // AI 선택 이유 설명
+}
+
+/**
+ * AI 설정 인터페이스
+ */
+export interface AISettings {
+  enabled: boolean;
+  provider: AIProvider;
+  openaiApiKey: string;
+  anthropicApiKey: string;
+  googleApiKey: string;
+  ollamaEndpoint: string;
+  model: string;
+  maxTokens: number;
+  temperature: number;
+}
+
+/**
+ * AI 분석 요청 인터페이스
+ */
+export interface AIAnalysisRequest {
+  originalText: string;
+  corrections: Correction[];
+  contextWindow?: number; // 앞뒤 몇 글자를 컨텍스트로 포함할지
+}
+
+/**
+ * AI API 클라이언트 인터페이스
+ */
+export interface AIClient {
+  chat(messages: Array<{role: string, content: string}>, maxTokens: number, model: string): Promise<string>;
+  fetchModels?(): Promise<string[]>;
 }

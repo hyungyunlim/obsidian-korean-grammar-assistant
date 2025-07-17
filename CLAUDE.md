@@ -38,6 +38,14 @@
 - **3단계 API 폴백**: `lineCount()` → `lastLine()` → 텍스트 기반 계산
 - **시각적 피드백**: 전체 문서 선택 표시 및 상세한 로깅
 
+### 7. AI 자동 교정 기능 ⭐ NEW
+- **다중 AI 제공자 지원**: OpenAI, Anthropic (Claude), Google (Gemini), Ollama (로컬)
+- **지능형 분석**: 문맥을 고려한 최적의 수정 제안 자동 선택
+- **신뢰도 점수**: AI의 각 선택에 대한 0-100% 신뢰도 표시
+- **상세한 추천 이유**: AI가 해당 수정을 선택한 이유를 한국어로 설명
+- **고유명사/URL 자동 감지**: 전문용어, 고유명사, URL 등은 자동으로 예외처리
+- **원클릭 적용**: AI 분석 후 검토만 하고 바로 적용 가능
+
 ## 기술 아키텍처
 
 ### 핵심 파일 구조
@@ -51,14 +59,38 @@ obsidian-korean-spellchecker/
 ├── CLAUDE.md                  # 프로젝트 문서 (이 파일)
 ├── api-config.example.json    # API 설정 템플릿
 ├── api-config.json            # 로컬 API 설정 (git ignored)
-└── docs-reference/            # Obsidian 개발자 문서 (git ignored)
-    └── en/Reference/TypeScript API/  # API 참조 문서
+├── docs-reference/            # Obsidian 개발자 문서 (git ignored)
+│   └── en/Reference/TypeScript API/  # API 참조 문서
+└── src/                       # 모듈화된 소스 코드
+    ├── types/interfaces.ts    # 타입 정의 (AI 관련 포함)
+    ├── constants/aiModels.ts  # AI 모델 및 프롬프트 상수
+    ├── api/                   # AI API 클라이언트들
+    │   ├── openai-client.ts   # OpenAI API 클라이언트
+    │   ├── anthropic-client.ts # Anthropic API 클라이언트
+    │   ├── google-client.ts   # Google AI API 클라이언트
+    │   ├── ollama-client.ts   # Ollama API 클라이언트
+    │   └── clientFactory.ts   # AI 클라이언트 팩토리
+    ├── services/              # 비즈니스 로직 서비스
+    │   ├── api.ts             # Bareun.ai API 서비스
+    │   ├── settings.ts        # 설정 관리 서비스
+    │   ├── ignoredWords.ts    # 예외 단어 관리 서비스
+    │   └── aiAnalysisService.ts # AI 분석 서비스 ⭐ NEW
+    ├── ui/                    # UI 컴포넌트
+    │   ├── baseComponent.ts   # 기본 컴포넌트 클래스
+    │   └── correctionPopup.ts # 교정 팝업 (AI 통합)
+    ├── state/                 # 상태 관리
+    │   └── correctionState.ts # 교정 상태 관리자
+    ├── utils/                 # 유틸리티 함수들
+    │   ├── htmlUtils.ts       # HTML 유틸리티
+    │   └── textUtils.ts       # 텍스트 처리 유틸리티
+    └── orchestrator.ts        # 워크플로우 오케스트레이터 (AI 통합)
 ```
 
 ### 주요 기술 스택
 - **TypeScript**: 타입 안전한 개발
 - **Obsidian API**: 플러그인 인터페이스
 - **Bareun.ai API**: 한국어 맞춤법 검사 서비스
+- **AI APIs**: OpenAI, Anthropic, Google, Ollama 통합 ⭐ NEW
 - **CSS3**: 모던 스타일링 및 애니메이션
 - **ESBuild**: 빌드 도구
 
@@ -168,6 +200,140 @@ const DEFAULT_SETTINGS: PluginSettings = {
 - **위치 기반 필터링**: 원본 텍스트에서 실제 찾을 수 있는 오류만 처리
 - **품질 검증**: 깨진 문자나 빈 제안 필터링
 
+## AI 자동 교정 기능 구현 상세 ⭐ NEW
+
+### 1. AI 아키텍처 개요
+
+#### 클라이언트 팩토리 패턴
+```typescript
+// AI 제공자별 클라이언트 생성
+export class AIClientFactory {
+  static createClient(settings: AISettings): AIClient {
+    switch (settings.provider) {
+      case 'openai': return new OpenAIClient(settings.openaiApiKey);
+      case 'anthropic': return new AnthropicClient(settings.anthropicApiKey);
+      case 'google': return new GoogleClient(settings.googleApiKey);
+      case 'ollama': return new OllamaClient(settings.ollamaEndpoint);
+    }
+  }
+}
+```
+
+#### AI 분석 서비스
+```typescript
+export class AIAnalysisService {
+  async analyzeCorrections(request: AIAnalysisRequest): Promise<AIAnalysisResult[]> {
+    // 1. 프롬프트 생성 (시스템 + 사용자 메시지)
+    // 2. AI API 호출
+    // 3. JSON 응답 파싱
+    // 4. 결과 검증 및 반환
+  }
+}
+```
+
+### 2. 지원되는 AI 제공자
+
+#### OpenAI Integration
+- **모델**: GPT-4o, GPT-4o-mini, GPT-4-turbo 등
+- **API**: Chat Completions API 사용
+- **특징**: 빠른 응답, 높은 정확도
+- **토큰 제한**: 모델별 최대 토큰 지원
+
+#### Anthropic (Claude) Integration  
+- **모델**: Claude 3.5 Sonnet, Claude 3.5 Haiku 등
+- **API**: Messages API 사용
+- **특징**: 한국어 이해력 우수, 상세한 설명
+- **시스템 프롬프트**: 별도 시스템 필드로 처리
+
+#### Google (Gemini) Integration
+- **모델**: Gemini 1.5 Pro, Gemini 1.5 Flash 등  
+- **API**: Generate Content API 사용
+- **특징**: 빠른 처리 속도, 멀티모달 지원
+- **메시지 변환**: OpenAI 형식 → Google 형식 자동 변환
+
+#### Ollama (Local) Integration
+- **모델**: Llama 3.2, Mistral, Qwen 등 로컬 모델
+- **API**: 로컬 서버 API 사용
+- **특징**: 완전한 프라이버시, 오프라인 작동
+- **프롬프트**: 단순 텍스트 형식으로 변환
+
+### 3. AI 프롬프트 엔지니어링
+
+#### 시스템 프롬프트
+```
+당신은 한국어 맞춤법 검사 전문가입니다. 주어진 텍스트와 맞춤법 오류들을 분석하여 가장 적절한 수정사항을 선택해주세요.
+
+다음 규칙을 따라주세요:
+1. 문맥에 가장 적합한 수정안을 선택하세요
+2. 고유명사, URL, 이메일, 전문용어는 예외처리를 고려하세요  
+3. 애매한 경우 원문을 유지하는 것을 고려하세요
+4. 각 선택에 대한 신뢰도(0-100)와 간단한 이유를 제공하세요
+```
+
+#### 응답 형식 (JSON)
+```json
+[
+  {
+    "correctionIndex": 0,
+    "selectedValue": "선택된 값",
+    "isExceptionProcessed": false,
+    "confidence": 85,
+    "reasoning": "문맥상 이 단어가 가장 적절함"
+  }
+]
+```
+
+### 4. UI/UX 통합
+
+#### 팝업 헤더 통합
+- **AI 분석 버튼**: 조건부 렌더링 (AI 사용 가능할 때만)
+- **상태 표시**: 분석 중 버튼 비활성화 및 텍스트 변경
+- **시각적 피드백**: 성공/실패 알림 오버레이
+
+#### 결과 표시 시스템
+- **신뢰도 배지**: 파란색 배경의 퍼센트 표시
+- **추천 이유**: 이탤릭 텍스트로 AI 설명 표시  
+- **색상 구분**: 파란색 테마로 AI 결과와 일반 오류 구분
+
+#### 자동 적용 워크플로우
+```typescript
+// AI 분석 → 상태 관리자에 자동 적용 → UI 업데이트
+private applyAIAnalysisResults(): void {
+  for (const result of this.aiAnalysisResults) {
+    this.stateManager.setState(
+      result.correctionIndex,
+      result.selectedValue, 
+      result.isExceptionProcessed
+    );
+  }
+}
+```
+
+### 5. 오류 처리 및 폴백
+
+#### API 오류 처리
+- **네트워크 오류**: 타임아웃 및 재시도 로직
+- **인증 오류**: API 키 유효성 검사
+- **모델 오류**: 지원되지 않는 모델 감지
+- **파싱 오류**: JSON 응답 검증 및 폴백
+
+#### 사용자 경험 개선
+- **상세한 오류 메시지**: 문제 원인 명확히 표시
+- **설정 가이드**: API 키 설정 방법 안내
+- **점진적 기능 제공**: AI 없이도 기본 기능 사용 가능
+
+### 6. 성능 최적화
+
+#### 요청 최적화
+- **컨텍스트 윈도우**: 앞뒤 50자로 제한하여 토큰 절약
+- **배치 처리**: 여러 오류를 한 번의 API 호출로 처리
+- **캐싱**: 동일한 요청 결과 메모리 캐싱 (향후 구현 예정)
+
+#### 응답 최적화  
+- **스트리밍**: 실시간 응답 처리 (향후 구선 예정)
+- **압축**: JSON 응답 최소화
+- **지연 로딩**: 필요할 때만 AI 서비스 초기화
+
 ## 사용자 워크플로우
 
 ### 1. 기본 사용법
@@ -186,6 +352,20 @@ const DEFAULT_SETTINGS: PluginSettings = {
 - **오류 영역 토글**: 하단 오류 영역 펼침/접힘으로 공간 효율적 사용
 - **실시간 배지**: 현재 페이지의 오류 개수 실시간 표시
 - **상태별 표시**: 오류/수정/원본선택 상태를 색상으로 구분
+
+### 4. AI 자동 교정 사용법 ⭐ NEW
+1. **AI 설정**: 플러그인 설정에서 AI 제공자 선택 및 API 키 입력
+2. **맞춤법 검사**: 일반적인 방법으로 맞춤법 검사 실행
+3. **AI 분석**: 팝업 상단의 "🤖 AI 분석" 버튼 클릭
+4. **결과 확인**: 
+   - 각 오류에 신뢰도 점수와 추천 이유 표시
+   - AI가 자동으로 최적의 수정사항 선택
+5. **검토 및 적용**: AI 선택사항 검토 후 "적용" 버튼 클릭
+
+#### AI 활용 팁
+- **고유명사/전문용어**: AI가 자동으로 예외처리 추천
+- **문맥 이해**: 문장의 의미를 고려한 정확한 수정 제안
+- **신뢰도 확인**: 낮은 신뢰도(70% 이하)는 수동 검토 권장
 
 ## 성능 최적화
 
@@ -288,7 +468,7 @@ npm run dev         # 개발 모드 (파일 변경 감지)
 
 ## 버전 히스토리
 
-### v0.1.1 (현재)
+### v0.1.1
 - ✅ 동적 페이지네이션 시스템 구현
 - ✅ 3단계 토글 시스템 완성
 - ✅ 스마트 문장 경계 감지 개선
@@ -304,12 +484,26 @@ npm run dev         # 개발 모드 (파일 변경 감지)
 - ✅ **로컬 개발자 문서**: Obsidian API 참조를 위한 오프라인 문서 환경 구축
 - ✅ **모바일 UX 개선**: 조건부 blur 처리 및 백그라운드 에디터 상태 관리
 
+### v0.2.0 (2025.01 업데이트) ⭐ NEW - 현재
+- ✅ **AI 자동 교정 기능**: OpenAI, Anthropic, Google, Ollama 지원
+- ✅ **다중 AI 제공자**: 4개 주요 AI 서비스 완전 통합
+- ✅ **지능형 분석**: 문맥 기반 최적 수정 제안 자동 선택
+- ✅ **신뢰도 시스템**: 0-100% AI 신뢰도 점수 및 상세 추천 이유 
+- ✅ **고유명사 감지**: 전문용어, 고유명사, URL 자동 예외처리
+- ✅ **완전한 설정 UI**: 제공자별 API 키 설정 및 모델 선택
+- ✅ **원클릭 워크플로우**: AI 분석 → 검토 → 적용 간소화
+- ✅ **타입 안전성**: TypeScript 기반 AI 클라이언트 아키텍처
+- ✅ **오류 처리**: 네트워크/인증/파싱 오류 완벽 대응
+- ✅ **성능 최적화**: 컨텍스트 윈도우 제한 및 배치 처리
+
 ### 향후 계획
-- 🔄 사용자 설정 확장
-- 🔄 성능 최적화 강화
-- 🔄 접근성 개선
-- 🔄 다국어 지원 검토
-- 🔄 오프라인 모드 지원
+- 🔄 **AI 성능 개선**: 응답 캐싱, 스트리밍, 모델 파인튜닝
+- 🔄 **추가 AI 제공자**: OpenRouter, Cohere, Hugging Face 지원
+- 🔄 **사용자 커스터마이징**: AI 프롬프트 편집, 신뢰도 임계값 설정  
+- 🔄 **일괄 처리**: 여러 파일 동시 AI 분석 및 교정
+- 🔄 **성능 최적화 강화**: 메모리 사용량 감소, 응답 속도 개선
+- 🔄 **접근성 개선**: 키보드 네비게이션, 스크린 리더 지원
+- 🔄 **다국어 지원 검토**: 영어, 일본어 등 추가 언어 지원
 
 ---
 

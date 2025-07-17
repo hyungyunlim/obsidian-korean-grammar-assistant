@@ -27,3 +27,6 @@ config.local.json
 
 # Obsidian 개발자 문서 참조용 (빌드에서 제외)
 docs-reference/
+
+# 임시 참조 리포지토리 (분석용, 빌드에서 제외)
+temp-reference/

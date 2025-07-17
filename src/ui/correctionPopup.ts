@@ -1,9 +1,10 @@
 import { Editor, EditorPosition, App, Platform } from 'obsidian';
-import { Correction, PopupConfig } from '../types/interfaces';
+import { Correction, PopupConfig, AIAnalysisResult } from '../types/interfaces';
 import { BaseComponent } from './baseComponent';
 import { CorrectionStateManager } from '../state/correctionState';
 import { escapeHtml } from '../utils/htmlUtils';
 import { calculateDynamicCharsPerPage, splitTextIntoPages, escapeRegExp } from '../utils/textUtils';
+import { AIAnalysisService } from '../services/aiAnalysisService';
 
 /**
  * 맞춤법 교정 팝업 관리 클래스
@@ -12,6 +13,7 @@ export class CorrectionPopup extends BaseComponent {
   private config: PopupConfig;
   private app: App;
   private stateManager: CorrectionStateManager;
+  private aiService?: AIAnalysisService;
   
   // Pagination state
   private isLongText: boolean = false;
@@ -19,12 +21,17 @@ export class CorrectionPopup extends BaseComponent {
   private totalPreviewPages: number = 1;
   private pageBreaks: number[] = [];
   private charsPerPage: number = 800;
+  
+  // AI 분석 결과
+  private aiAnalysisResults: AIAnalysisResult[] = [];
+  private isAiAnalyzing: boolean = false;
 
-  constructor(app: App, config: PopupConfig) {
+  constructor(app: App, config: PopupConfig, aiService?: AIAnalysisService) {
     super('div', 'correction-popup-container');
     this.app = app;
     this.config = config;
     this.stateManager = new CorrectionStateManager(config.corrections, this.config.ignoredWords);
+    this.aiService = aiService;
     
     this.initializePagination();
   }
@@ -70,6 +77,11 @@ export class CorrectionPopup extends BaseComponent {
         <div class="header">
           <h2>한국어 맞춤법 검사</h2>
           <div style="display: flex; align-items: center; gap: 8px;">
+            ${this.aiService?.isAvailable() ? `
+              <button class="ai-analyze-btn" id="aiAnalyzeBtn" ${this.isAiAnalyzing ? 'disabled' : ''}>
+                ${this.isAiAnalyzing ? '🤖 분석 중...' : '🤖 AI 분석'}
+              </button>
+            ` : ''}
             <button class="close-btn-header">×</button>
           </div>
         </div>
@@ -290,6 +302,9 @@ export class CorrectionPopup extends BaseComponent {
       const isIgnored = this.stateManager.isIgnoredState(actualIndex);
       const suggestions = correction.corrected.slice(0, 2);
       
+      // AI 분석 결과 찾기
+      const aiResult = this.aiAnalysisResults.find(result => result.correctionIndex === actualIndex);
+      
       const suggestionsHTML = suggestions.map(suggestion => 
         `<span class="suggestion-compact ${this.stateManager.isSelected(actualIndex, suggestion) ? 'selected' : ''}" 
               data-value="${escapeHtml(suggestion)}" 
@@ -314,6 +329,14 @@ export class CorrectionPopup extends BaseComponent {
             </div>
           </div>
           <div class="error-help-compact">${escapeHtml(correction.help)}</div>
+          ${aiResult ? `
+            <div class="ai-analysis-result">
+              <div class="ai-confidence">
+                🤖 신뢰도: <span class="confidence-score">${aiResult.confidence}%</span>
+              </div>
+              <div class="ai-reasoning">${escapeHtml(aiResult.reasoning)}</div>
+            </div>
+          ` : ''}
         </div>
       `;
     }).join('');
@@ -345,6 +368,9 @@ export class CorrectionPopup extends BaseComponent {
     
     // 적용 버튼
     this.bindApplyEvents();
+    
+    // AI 분석 버튼
+    this.bindAIAnalysisEvents();
   }
 
   /**
@@ -442,6 +468,18 @@ export class CorrectionPopup extends BaseComponent {
     if (applyButton) {
       this.addEventListener(applyButton as HTMLElement, 'click', () => {
         this.applyCorrections();
+      });
+    }
+  }
+
+  /**
+   * AI 분석 버튼 이벤트를 바인딩합니다.
+   */
+  private bindAIAnalysisEvents(): void {
+    const aiAnalyzeBtn = this.element.querySelector('#aiAnalyzeBtn');
+    if (aiAnalyzeBtn && this.aiService) {
+      this.addEventListener(aiAnalyzeBtn as HTMLElement, 'click', async () => {
+        await this.performAIAnalysis();
       });
     }
   }
@@ -597,6 +635,108 @@ export class CorrectionPopup extends BaseComponent {
     });
   }
 
+
+  /**
+   * AI 분석을 수행합니다.
+   */
+  private async performAIAnalysis(): Promise<void> {
+    if (!this.aiService || this.isAiAnalyzing) {
+      return;
+    }
+
+    try {
+      this.isAiAnalyzing = true;
+      
+      // UI 업데이트 (버튼 비활성화)
+      const aiBtn = this.element.querySelector('#aiAnalyzeBtn') as HTMLButtonElement;
+      if (aiBtn) {
+        aiBtn.disabled = true;
+        aiBtn.textContent = '🤖 분석 중...';
+      }
+
+      console.log('[AI] AI 분석 시작 중...');
+
+      // AI 분석 요청
+      const analysisRequest = {
+        originalText: this.config.selectedText,
+        corrections: this.config.corrections,
+        contextWindow: 50 // 앞뒤 50자씩 컨텍스트 포함
+      };
+
+      this.aiAnalysisResults = await this.aiService.analyzeCorrections(analysisRequest);
+      
+      console.log('[AI] AI 분석 완료:', this.aiAnalysisResults);
+
+      // AI 분석 결과를 상태 관리자에 적용
+      this.applyAIAnalysisResults();
+
+      // UI 업데이트
+      this.updateDisplay();
+
+      // 성공 알림
+      const notice = document.createElement('div');
+      notice.textContent = `🤖 AI가 ${this.aiAnalysisResults.length}개의 수정 제안을 분석했습니다.`;
+      notice.style.cssText = `
+        position: fixed;
+        top: 50px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--color-green);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        z-index: 10001;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      `;
+      document.body.appendChild(notice);
+      setTimeout(() => notice.remove(), 3000);
+
+    } catch (error) {
+      console.error('[AI] AI 분석 실패:', error);
+      
+      // 오류 알림
+      const errorNotice = document.createElement('div');
+      errorNotice.textContent = `❌ AI 분석 실패: ${error.message}`;
+      errorNotice.style.cssText = `
+        position: fixed;
+        top: 50px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--color-red);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        z-index: 10001;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      `;
+      document.body.appendChild(errorNotice);
+      setTimeout(() => errorNotice.remove(), 5000);
+    } finally {
+      this.isAiAnalyzing = false;
+      
+      // 버튼 재활성화
+      const aiBtn = this.element.querySelector('#aiAnalyzeBtn') as HTMLButtonElement;
+      if (aiBtn) {
+        aiBtn.disabled = false;
+        aiBtn.textContent = '🤖 AI 분석';
+      }
+    }
+  }
+
+  /**
+   * AI 분석 결과를 상태 관리자에 적용합니다.
+   */
+  private applyAIAnalysisResults(): void {
+    for (const result of this.aiAnalysisResults) {
+      this.stateManager.setState(
+        result.correctionIndex,
+        result.selectedValue,
+        result.isExceptionProcessed
+      );
+    }
+  }
 
   /**
    * 팝업을 닫습니다.
