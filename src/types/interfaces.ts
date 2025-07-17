@@ -145,6 +145,7 @@ export interface AIAnalysisRequest {
   corrections: Correction[];
   contextWindow?: number; // 앞뒤 몇 글자를 컨텍스트로 포함할지
   correctionContexts?: CorrectionContext[]; // 오류별 컨텍스트 정보
+  onProgress?: (current: number, total: number, status: string) => void; // 배치 진행 상황 콜백
 }
 
 /**

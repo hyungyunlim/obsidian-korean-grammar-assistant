@@ -73,6 +73,91 @@ export class AIAnalysisService {
   }
 
   /**
+   * 최적의 배치 크기를 계산합니다.
+   */
+  private calculateOptimalBatchSize(correctionContexts: CorrectionContext[]): number {
+    if (correctionContexts.length === 0) return 10;
+    
+    // 평균 컨텍스트 길이 계산
+    const avgContextLength = correctionContexts.reduce((sum, ctx) => sum + ctx.fullContext.length, 0) / correctionContexts.length;
+    const systemPromptLength = AI_PROMPTS.analysisSystem.length;
+    
+    // 모델별 입력 토큰 제한 (대략적으로 계산)
+    const maxInputTokens = this.getModelMaxInputTokens(this.settings.model);
+    
+    // 안전 마진을 고려한 배치 크기 계산
+    let optimalSize = 10; // 기본값
+    
+    if (avgContextLength < 100) {
+      optimalSize = 15; // 짧은 컨텍스트면 더 많이
+    } else if (avgContextLength < 200) {
+      optimalSize = 10; // 보통
+    } else if (avgContextLength < 400) {
+      optimalSize = 7; // 긴 컨텍스트면 적게
+    } else {
+      optimalSize = 5; // 매우 긴 컨텍스트
+    }
+    
+    console.log(`[AI] 배치 크기 계산: 평균 컨텍스트 ${avgContextLength}자 → ${optimalSize}개씩 처리`);
+    
+    return Math.min(optimalSize, 15); // 최대 15개로 제한
+  }
+
+  /**
+   * 모델별 최대 입력 토큰을 가져옵니다 (대략적).
+   */
+  private getModelMaxInputTokens(model: string): number {
+    // 대부분의 모델은 입력 토큰이 출력 토큰보다 훨씬 많음
+    const outputLimit = this.getModelMaxTokens(model);
+    return outputLimit * 10; // 보수적으로 계산
+  }
+
+  /**
+   * 오류들을 배치로 나누어 처리합니다.
+   */
+  private createBatches(correctionContexts: CorrectionContext[], maxBatchSize: number = 10): CorrectionContext[][] {
+    const batches: CorrectionContext[][] = [];
+    for (let i = 0; i < correctionContexts.length; i += maxBatchSize) {
+      batches.push(correctionContexts.slice(i, i + maxBatchSize));
+    }
+    return batches;
+  }
+
+  /**
+   * 단일 배치를 처리합니다.
+   */
+  private async processBatch(
+    batch: CorrectionContext[], 
+    batchIndex: number, 
+    totalBatches: number,
+    client: any,
+    adjustedMaxTokens: number,
+    model: string
+  ): Promise<AIAnalysisResult[]> {
+    console.log(`[AI] 배치 ${batchIndex + 1}/${totalBatches} 처리 중 (${batch.length}개 오류)`);
+
+    const systemPrompt = AI_PROMPTS.analysisSystem;
+    const userPrompt = AI_PROMPTS.analysisUserWithContext(batch);
+    
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ];
+
+    const response = await client.chat(messages, adjustedMaxTokens, model);
+    console.log(`[AI] 배치 ${batchIndex + 1} 응답 수신:`, response.substring(0, 100) + '...');
+
+    // 배치용 corrections 생성 (원본 corrections에서 해당 batch의 corrections만 추출)
+    const batchCorrections = batch.map(ctx => ({
+      original: ctx.original,
+      corrected: ctx.corrected,
+      help: ctx.help
+    }));
+
+    return this.parseAIResponse(response, batchCorrections);
+  }
+
+  /**
    * AI를 사용하여 맞춤법 오류를 분석하고 최적의 수정사항을 제안합니다.
    */
   async analyzeCorrections(request: AIAnalysisRequest): Promise<AIAnalysisResult[]> {
@@ -107,64 +192,67 @@ export class AIAnalysisService {
       // 컨텍스트 추출
       const correctionContexts = this.extractCorrectionContexts(request);
       
-      // 프롬프트 길이 확인 및 제한
-      let finalCorrectionContexts = correctionContexts;
-      const systemPrompt = AI_PROMPTS.analysisSystem;
-      let userPrompt = AI_PROMPTS.analysisUserWithContext(correctionContexts);
-      let totalPromptLength = systemPrompt.length + userPrompt.length;
+      // 배치 크기 결정 (토큰 제한 및 프롬프트 길이 기반)
+      const maxBatchSize = this.calculateOptimalBatchSize(correctionContexts);
       
-      if (totalPromptLength > 20000) { // 대략적인 토큰 한계
-        console.warn(`[AI] 프롬프트가 너무 깁니다 (${totalPromptLength}자). 요청을 줄입니다.`);
-        if (correctionContexts.length > 10) {
-          // 오류가 너무 많으면 일부만 처리
-          finalCorrectionContexts = correctionContexts.slice(0, 10);
-          console.log(`[AI] 오류 수를 ${correctionContexts.length}개에서 ${finalCorrectionContexts.length}개로 줄였습니다.`);
-          userPrompt = AI_PROMPTS.analysisUserWithContext(finalCorrectionContexts);
-        } else {
-          throw new Error('프롬프트가 너무 깁니다. 더 짧은 텍스트로 다시 시도해주세요.');
-        }
-      }
-      
-      const messages = [
-        {
-          role: 'system',
-          content: systemPrompt
-        },
-        {
-          role: 'user',
-          content: userPrompt
-        }
-      ];
-
       console.log('[AI] 분석 요청 전송 중...', {
         provider: this.settings.provider,
         model: this.settings.model,
-        correctionsCount: request.corrections.length,
+        totalCorrections: request.corrections.length,
+        batchSize: maxBatchSize,
+        estimatedBatches: Math.ceil(correctionContexts.length / maxBatchSize),
         contextWindow: request.contextWindow || 50,
-        avgContextLength: correctionContexts.reduce((sum, ctx) => sum + ctx.fullContext.length, 0) / correctionContexts.length,
         maxTokens: this.settings.maxTokens,
         apiKeySet: !!this.getApiKey()
       });
-      
-      console.log('[AI] 요청 메시지들:', messages.map(m => ({
-        role: m.role,
-        contentLength: m.content.length,
-        contentPreview: m.content.substring(0, 200) + (m.content.length > 200 ? '...' : '')
-      })));
+
+      // 배치 생성
+      const batches = this.createBatches(correctionContexts, maxBatchSize);
+      console.log(`[AI] ${batches.length}개 배치로 분할하여 처리합니다.`);
 
       // 모델별 토큰 제한에 맞게 조정
       const adjustedMaxTokens = this.adjustTokensForModel(this.settings.maxTokens, this.settings.model);
       
-      const response = await client.chat(messages, adjustedMaxTokens, this.settings.model);
+      // 모든 배치 병렬 또는 순차 처리
+      const allResults: AIAnalysisResult[] = [];
       
-      console.log('[AI] 응답 수신:', response);
-
-      // 줄어든 컨텍스트를 사용한 경우 해당 오류들만 파싱
-      const correctionsToProcess = finalCorrectionContexts.length < correctionContexts.length 
-        ? request.corrections.slice(0, finalCorrectionContexts.length)
-        : request.corrections;
+      for (let i = 0; i < batches.length; i++) {
+        try {
+          // 진행 상황 콜백 호출
+          if (request.onProgress) {
+            request.onProgress(i + 1, batches.length, `배치 ${i + 1}/${batches.length} 처리 중...`);
+          }
+          
+          const batchResults = await this.processBatch(
+            batches[i], 
+            i, 
+            batches.length, 
+            client, 
+            adjustedMaxTokens, 
+            this.settings.model
+          );
+          
+          // correctionIndex를 전체 범위로 조정
+          const adjustedResults = batchResults.map(result => ({
+            ...result,
+            correctionIndex: result.correctionIndex + (i * maxBatchSize)
+          }));
+          
+          allResults.push(...adjustedResults);
+          
+          // 배치 간 잠시 대기 (API 제한 고려)
+          if (i < batches.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        } catch (error) {
+          console.error(`[AI] 배치 ${i + 1} 처리 실패:`, error);
+          // 이 배치는 건너뛰고 다음 배치 처리 계속
+        }
+      }
       
-      return this.parseAIResponse(response, correctionsToProcess);
+      console.log(`[AI] 배치 처리 완료: ${allResults.length}개 결과 수집됨`);
+      
+      return allResults;
     } catch (error) {
       console.error('[AI] 분석 중 오류 발생:', error);
       throw new Error(`AI 분석 실패: ${error.message}`);

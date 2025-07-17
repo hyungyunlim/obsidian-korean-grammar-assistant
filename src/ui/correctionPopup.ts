@@ -708,7 +708,14 @@ export class CorrectionPopup extends BaseComponent {
       const analysisRequest = {
         originalText: this.config.selectedText,
         corrections: this.config.corrections,
-        contextWindow: 100 // 앞뒤 100자씩 컨텍스트 포함 (향상된 컨텍스트)
+        contextWindow: 100, // 앞뒤 100자씩 컨텍스트 포함 (향상된 컨텍스트)
+        onProgress: (current: number, total: number, status: string) => {
+          // 배치 진행 상황을 버튼 텍스트로 표시
+          const aiBtn = this.element.querySelector('#aiAnalyzeBtn') as HTMLButtonElement;
+          if (aiBtn) {
+            aiBtn.textContent = `🤖 ${status}`;
+          }
+        }
       };
 
       // 토큰 사용량 추정 및 경고 확인
