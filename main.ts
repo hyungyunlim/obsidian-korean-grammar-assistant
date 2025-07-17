@@ -10,49 +10,22 @@ import {
   Setting,
 } from "obsidian";
 
-interface Correction {
-  original: string;
-  corrected: string[];
-  help: string;
-}
+// Import modularized components
+import { Correction, PluginSettings, SpellCheckResult } from './src/types/interfaces';
+import { SpellCheckApiService } from './src/services/api';
+import { DEFAULT_SETTINGS, SettingsService } from './src/services/settings';
+import { CorrectionStateManager } from './src/state/correctionState';
+import { 
+  replaceFirstOccurrenceWithPlaceholder, 
+  decodeHtmlEntities, 
+  splitTextIntoPages,
+  calculateDynamicCharsPerPage 
+} from './src/utils/textUtils';
+import { escapeHtml, safeRemoveElement } from './src/utils/htmlUtils';
 
-// Bareun.ai API 설정
-interface PluginSettings {
-  apiKey: string;
-  apiHost: string;
-  apiPort: number;
-  ignoredWords: string[]; // 예외 처리할 단어들
-}
+// Interfaces are now imported from './src/types/interfaces'
 
-// API 설정 파일에서 기본값 로드 (로컬 개발용)
-function loadApiConfig(): PluginSettings {
-  try {
-    // Node.js 환경에서만 작동 (개발 시)
-    if (typeof require !== 'undefined') {
-      const fs = require('fs');
-      const path = require('path');
-      const configPath = path.join(__dirname, 'api-config.json');
-      
-      if (fs.existsSync(configPath)) {
-        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-        console.log('로컬 API 설정 파일을 로드했습니다.');
-        return config;
-      }
-    }
-  } catch (error) {
-    console.log('API 설정 파일을 찾을 수 없습니다. 기본값을 사용합니다.');
-  }
-  
-  // 기본값 (배포용)
-  return {
-    apiKey: '', // 사용자가 직접 입력해야 함
-    apiHost: 'bareun-api.junlim.org',
-    apiPort: 443,
-    ignoredWords: []
-  };
-}
-
-const DEFAULT_SETTINGS: PluginSettings = loadApiConfig();
+// Settings are now imported from './src/services/settings'
 
 // Bareun.ai API 응답 인터페이스
 interface BareunResponse {
@@ -251,21 +224,7 @@ function parseBareunResults(data: BareunResponse, originalText: string): {
 }
 
 
-function replaceFirstOccurrenceWithPlaceholder(
-  text: string,
-  search: string,
-  placeholder: string
-): string {
-  const index = text.indexOf(search);
-  if (index === -1) return text;
-  return text.slice(0, index) + placeholder + text.slice(index + search.length);
-}
-
-function decodeHtmlEntities(text: string): string {
-  const element = document.createElement("div");
-  element.innerHTML = text;
-  return element.textContent || "";
-}
+// Functions are now imported from './src/utils/textUtils' and './src/utils/htmlUtils'
 
 // 구식 함수들 제거됨 - 새로운 UI에서는 더 이상 필요하지 않음
 
