@@ -547,7 +547,7 @@ function createCorrectionPopup(
     // Try multiple approaches to hide mobile keyboard
     
     // Method 1: Blur CodeMirror editor
-    const editorElement = (editor as any).cm?.dom || editor.getScrollElement?.();
+    const editorElement = (editor as any).cm?.dom || (editor as any).getScrollElement?.();
     if (editorElement && typeof editorElement.blur === 'function') {
       editorElement.blur();
     }
@@ -1375,7 +1375,7 @@ export default class SpellingPlugin extends Plugin {
         selectedText = fullText;
         // Set cursor positions to cover entire document
         cursorStart = { line: 0, ch: 0 };
-        const lastLine = editor.getLineCount() - 1;
+        const lastLine = (editor as any).getLineCount() - 1;
         cursorEnd = { line: lastLine, ch: editor.getLine(lastLine).length };
         
         // Temporarily select all text to show user what's being checked
@@ -1430,7 +1430,7 @@ export default class SpellingPlugin extends Plugin {
           selectedText = fullText;
           // Set cursor positions to cover entire document
           cursorStart = { line: 0, ch: 0 };
-          const lastLine = editor.getLineCount() - 1;
+          const lastLine = (editor as any).getLineCount() - 1;
           cursorEnd = { line: lastLine, ch: editor.getLine(lastLine).length };
           
           // Temporarily select all text to show user what's being checked
