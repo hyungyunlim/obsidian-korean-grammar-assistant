@@ -56,14 +56,37 @@ export class AIAnalysisService {
       // JSON 응답 파싱 시도
       let parsedResponse: any[];
       
-      // JSON 응답 추출 (마크다운 코드 블록이나 다른 텍스트가 포함될 수 있음)
-      const jsonMatch = response.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        parsedResponse = JSON.parse(jsonMatch[0]);
-      } else {
-        // JSON 배열이 직접 있는 경우
-        parsedResponse = JSON.parse(response);
+      // 1. 먼저 마크다운 코드 블록 제거
+      let cleanedResponse = response.trim();
+      
+      // ```json ... ``` 패턴 제거
+      const codeBlockMatch = cleanedResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (codeBlockMatch) {
+        cleanedResponse = codeBlockMatch[1].trim();
       }
+      
+      // 2. JSON 배열 패턴 찾기 (더 관대한 매칭)
+      let jsonString = '';
+      const jsonArrayMatch = cleanedResponse.match(/\[[\s\S]*\]/);
+      if (jsonArrayMatch) {
+        jsonString = jsonArrayMatch[0];
+      } else {
+        jsonString = cleanedResponse;
+      }
+      
+      // 3. 잘린 JSON 복구 시도
+      if (!jsonString.endsWith(']') && jsonString.includes('[')) {
+        console.warn('[AI] JSON이 잘린 것으로 보임, 복구 시도');
+        // 마지막 완전한 객체까지만 취하고 배열을 닫기
+        const lastCompleteObjectIndex = jsonString.lastIndexOf('}');
+        if (lastCompleteObjectIndex > 0) {
+          jsonString = jsonString.substring(0, lastCompleteObjectIndex + 1) + ']';
+          console.log('[AI] JSON 복구 완료');
+        }
+      }
+      
+      console.log('[AI] 파싱할 JSON (첫 200자):', jsonString.substring(0, 200) + (jsonString.length > 200 ? '...' : ''));
+      parsedResponse = JSON.parse(jsonString);
 
       const results: AIAnalysisResult[] = [];
 
@@ -95,10 +118,18 @@ export class AIAnalysisService {
         });
       }
 
+      console.log(`[AI] 파싱 완료: ${results.length}개의 결과 추출됨`);
       return results;
     } catch (error) {
-      console.error('[AI] 응답 파싱 오류:', error, '원본 응답:', response);
-      throw new Error('AI 응답을 파싱할 수 없습니다. 다시 시도해주세요.');
+      console.error('[AI] 응답 파싱 오류:', error);
+      console.error('[AI] 원본 응답 (첫 500자):', response.substring(0, 500));
+      
+      // 더 구체적인 오류 메시지 제공
+      if (error instanceof SyntaxError) {
+        throw new Error(`JSON 형식 오류: ${error.message}. AI 응답이 올바른 JSON 형식이 아닙니다.`);
+      } else {
+        throw new Error(`AI 응답 파싱 실패: ${error.message}`);
+      }
     }
   }
 

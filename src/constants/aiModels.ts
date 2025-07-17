@@ -107,15 +107,19 @@ export const AI_PROMPTS = {
 3. 애매한 경우 원문을 유지하는 것을 고려하세요
 4. 각 선택에 대한 신뢰도(0-100)와 간단한 이유를 제공하세요
 
-응답 형식:
-각 오류에 대해 다음과 같이 JSON 배열로 응답해주세요:
+⚠️ 중요: 
+- 오직 JSON 배열만 응답하세요. 다른 텍스트나 설명은 포함하지 마세요.
+- 마크다운 코드 블록을 사용하지 마세요.
+- 응답이 잘리지 않도록 주의하세요.
+
+응답 형식 (이 JSON 배열만 응답):
 [
   {
     "correctionIndex": 0,
     "selectedValue": "선택된 값",
     "isExceptionProcessed": false,
     "confidence": 85,
-    "reasoning": "문맥상 이 단어가 가장 적절함"
+    "reasoning": "간단한 이유"
   }
 ]`,
   
