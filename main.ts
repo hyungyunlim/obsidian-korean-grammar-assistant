@@ -1419,23 +1419,35 @@ export default class SpellingPlugin extends Plugin {
           return;
         }
         selectedText = fullText;
-        // Set cursor positions to cover entire document
+        // Set cursor positions to cover entire document using official API
         try {
-          // Method 1: Use official Obsidian Editor API
-          const lastLine = editor.lastLine();
+          // Method 1: Use proper Obsidian Editor API methods
+          const totalLines = editor.lineCount();
+          const lastLine = totalLines - 1;
           const lastLineText = editor.getLine(lastLine);
           cursorStart = { line: 0, ch: 0 };
           cursorEnd = { line: lastLine, ch: lastLineText.length };
           editor.setSelection(cursorStart, cursorEnd);
-          console.log("전체 문서 텍스트 선택됨 (Obsidian API):", selectedText.length, "자");
+          console.log(`전체 문서 텍스트 선택됨 (Obsidian API): ${totalLines}줄, ${selectedText.length}자`);
         } catch (e) {
-          console.log("Obsidian API 사용 실패, 텍스트 기반 방법 사용:", e);
-          // Fallback: Calculate positions from text content
-          const lines = fullText.split('\n');
-          cursorStart = { line: 0, ch: 0 };
-          cursorEnd = { line: lines.length - 1, ch: lines[lines.length - 1].length };
-          editor.setSelection(cursorStart, cursorEnd);
-          console.log("전체 문서 텍스트 선택됨 (fallback method):", selectedText.length, "자");
+          console.log("Obsidian API 사용 실패, 대체 API 시도:", e);
+          // Fallback 1: Try lastLine() method
+          try {
+            const lastLine = editor.lastLine();
+            const lastLineText = editor.getLine(lastLine);
+            cursorStart = { line: 0, ch: 0 };
+            cursorEnd = { line: lastLine, ch: lastLineText.length };
+            editor.setSelection(cursorStart, cursorEnd);
+            console.log("전체 문서 텍스트 선택됨 (lastLine API):", selectedText.length, "자");
+          } catch (e2) {
+            console.log("lastLine API도 실패, 텍스트 기반 방법 사용:", e2);
+            // Fallback 2: Calculate positions from text content
+            const lines = fullText.split('\n');
+            cursorStart = { line: 0, ch: 0 };
+            cursorEnd = { line: lines.length - 1, ch: lines[lines.length - 1].length };
+            editor.setSelection(cursorStart, cursorEnd);
+            console.log("전체 문서 텍스트 선택됨 (fallback method):", selectedText.length, "자");
+          }
         }
       }
 
@@ -1484,23 +1496,35 @@ export default class SpellingPlugin extends Plugin {
             return;
           }
           selectedText = fullText;
-          // Set cursor positions to cover entire document
+          // Set cursor positions to cover entire document using official API
           try {
-            // Method 1: Use official Obsidian Editor API
-            const lastLine = editor.lastLine();
+            // Method 1: Use proper Obsidian Editor API methods
+            const totalLines = editor.lineCount();
+            const lastLine = totalLines - 1;
             const lastLineText = editor.getLine(lastLine);
             cursorStart = { line: 0, ch: 0 };
             cursorEnd = { line: lastLine, ch: lastLineText.length };
             editor.setSelection(cursorStart, cursorEnd);
-            console.log("전체 문서 텍스트 선택됨 (Obsidian API):", selectedText.length, "자");
+            console.log(`전체 문서 텍스트 선택됨 (Obsidian API): ${totalLines}줄, ${selectedText.length}자`);
           } catch (e) {
-            console.log("Obsidian API 사용 실패, 텍스트 기반 방법 사용:", e);
-            // Fallback: Calculate positions from text content
-            const lines = fullText.split('\n');
-            cursorStart = { line: 0, ch: 0 };
-            cursorEnd = { line: lines.length - 1, ch: lines[lines.length - 1].length };
-            editor.setSelection(cursorStart, cursorEnd);
-            console.log("전체 문서 텍스트 선택됨 (fallback method):", selectedText.length, "자");
+            console.log("Obsidian API 사용 실패, 대체 API 시도:", e);
+            // Fallback 1: Try lastLine() method
+            try {
+              const lastLine = editor.lastLine();
+              const lastLineText = editor.getLine(lastLine);
+              cursorStart = { line: 0, ch: 0 };
+              cursorEnd = { line: lastLine, ch: lastLineText.length };
+              editor.setSelection(cursorStart, cursorEnd);
+              console.log("전체 문서 텍스트 선택됨 (lastLine API):", selectedText.length, "자");
+            } catch (e2) {
+              console.log("lastLine API도 실패, 텍스트 기반 방법 사용:", e2);
+              // Fallback 2: Calculate positions from text content
+              const lines = fullText.split('\n');
+              cursorStart = { line: 0, ch: 0 };
+              cursorEnd = { line: lines.length - 1, ch: lines[lines.length - 1].length };
+              editor.setSelection(cursorStart, cursorEnd);
+              console.log("전체 문서 텍스트 선택됨 (fallback method):", selectedText.length, "자");
+            }
           }
         }
 

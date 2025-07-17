@@ -24,3 +24,6 @@ data.json
 # API 설정 파일 (개인 정보 포함)
 api-config.json
 config.local.json
+
+# Obsidian 개발자 문서 참조용 (빌드에서 제외)
+docs-reference/
