@@ -961,6 +961,7 @@ function createCorrectionPopup(
           // Find the actual index in the original corrections array
           const actualIndex = corrections.findIndex(c => c.original === correction.original && c.help === correction.help);
           const selectedValue = selectedCorrections[actualIndex];
+          const isBlueState = selectedCorrections[`${actualIndex}_blue`];
           const isChanged = selectedValue !== correction.original;
           const suggestions = correction.corrected.slice(0, 2); // 최대 2개만 표시 (공간 절약)
           
@@ -977,13 +978,13 @@ function createCorrectionPopup(
                 <div class="error-original-compact">${escapeHtml(correction.original)}</div>
                 <div class="error-suggestions-compact">
                   ${suggestions.map(suggestion => 
-                    `<span class="suggestion-compact ${selectedValue === suggestion ? 'selected' : ''}" 
+                    `<span class="suggestion-compact ${selectedValue === suggestion && !isBlueState ? 'selected' : ''}" 
                           data-value="${escapeHtml(suggestion)}" 
                           data-correction="${actualIndex}">
                       ${escapeHtml(suggestion)}
                     </span>`
                   ).join('')}
-                  <span class="suggestion-compact ${selectedValue === correction.original ? 'selected' : ''} keep-original" 
+                  <span class="suggestion-compact ${selectedValue === correction.original && isBlueState ? 'selected' : ''} keep-original" 
                         data-value="${escapeHtml(correction.original)}" 
                         data-correction="${actualIndex}">
                     원본
@@ -1028,18 +1029,22 @@ function createCorrectionPopup(
     if (target.closest('#resultPreview') || target.id === 'resultPreview') {
       console.log("Preview area clicked, checking focus state...");
       
-      // Check if any editor in the background still has focus
-      const markdownView = (window as any).app?.workspace?.getActiveViewOfType?.('markdown');
-      const backgroundEditor = markdownView?.editor;
+      // Check if any editor in the background still has focus  
+      // Access app through the editor parameter passed to this function
+      const app = (editor as any).app || (window as any).app;
+      if (app && app.workspace) {
+        const markdownView = app.workspace.getActiveViewOfType(MarkdownView);
+        const backgroundEditor = markdownView?.editor;
       
-      if (backgroundEditor && backgroundEditor.hasFocus()) {
-        console.log("Background editor still has focus, removing it...");
-        
-        // Blur background editor elements
-        const editorElement = (backgroundEditor as any).cm?.dom;
-        if (editorElement && typeof editorElement.blur === 'function') {
-          editorElement.blur();
-          console.log("Blurred background editor");
+        if (backgroundEditor && backgroundEditor.hasFocus()) {
+          console.log("Background editor still has focus, removing it...");
+          
+          // Blur background editor elements
+          const editorElement = (backgroundEditor as any).cm?.dom;
+          if (editorElement && typeof editorElement.blur === 'function') {
+            editorElement.blur();
+            console.log("Blurred background editor");
+          }
         }
       }
       
