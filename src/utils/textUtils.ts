@@ -1,6 +1,7 @@
 /**
  * 텍스트 처리 관련 유틸리티 함수들
  */
+import { Logger } from './logger';
 
 /**
  * 텍스트에서 첫 번째 일치하는 부분을 플레이스홀더로 대체합니다.
@@ -25,9 +26,10 @@ export function replaceFirstOccurrenceWithPlaceholder(
  * @returns 디코딩된 텍스트
  */
 export function decodeHtmlEntities(text: string): string {
-  const element = document.createElement("div");
-  element.innerHTML = text;
-  return element.textContent || "";
+  // Use DOMParser for safer HTML entity decoding
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(text, 'text/html');
+  return doc.documentElement.textContent || "";
 }
 
 /**
@@ -140,7 +142,7 @@ export function calculateDynamicCharsPerPage(
   isErrorExpanded: boolean = false
 ): number {
   if (!previewElement) {
-    console.log("[calculateDynamicCharsPerPage] No previewElement, returning default 800.");
+    Logger.log("No previewElement, returning default 800.");
     return 800; // 기본값
   }
 
@@ -158,7 +160,7 @@ export function calculateDynamicCharsPerPage(
     // 오류 영역이 접혀 있으면 더 큰 페이지
     calculatedChars = Math.max(800, Math.min(1800, linesPerPage * avgCharsPerLine));
   }
-  console.log(`[calculateDynamicCharsPerPage] Available height: ${availableHeight}, Lines per page: ${linesPerPage}, Calculated chars: ${calculatedChars}, Error expanded: ${isErrorExpanded}`);
+  Logger.log(`Available height: ${availableHeight}, Lines per page: ${linesPerPage}, Calculated chars: ${calculatedChars}, Error expanded: ${isErrorExpanded}`);
   
   return calculatedChars;
 }

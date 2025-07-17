@@ -3,13 +3,14 @@ import { OpenAIClient } from './openai-client';
 import { AnthropicClient } from './anthropic-client';
 import { GoogleClient } from './google-client';
 import { OllamaClient } from './ollama-client';
+import { Logger } from '../utils/logger';
 
 export class AIClientFactory {
   static createClient(settings: AISettings): AIClient {
     const provider = settings.provider;
     const apiKey = this.getApiKey(settings);
     
-    console.log('[ClientFactory] 클라이언트 생성:', {
+    Logger.log('클라이언트 생성:', {
       provider: provider,
       hasApiKey: !!apiKey,
       apiKeyLength: apiKey ? apiKey.length : 0,
@@ -45,7 +46,7 @@ export class AIClientFactory {
     try {
       return await client.fetchModels();
     } catch (error) {
-      console.error(`[${settings.provider}] 모델 목록 가져오기 실패:`, error);
+      Logger.error(`${settings.provider} 모델 목록 가져오기 실패:`, error);
       return [];
     }
   }

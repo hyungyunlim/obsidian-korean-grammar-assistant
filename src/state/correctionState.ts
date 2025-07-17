@@ -1,4 +1,5 @@
 import { Correction, CorrectionState } from '../types/interfaces';
+import { Logger } from '../utils/logger';
 
 /**
  * 교정 상태 관리 클래스
@@ -22,7 +23,7 @@ export class CorrectionStateManager {
     this.corrections.forEach((correction, index) => {
         const isOriginalKept = ignoredWords.includes(correction.original);
         this.setState(index, correction.original, false, isOriginalKept);
-        console.log(`[CorrectionState] Initializing: ${correction.original} at index ${index} as ${isOriginalKept ? 'ORIGINAL_KEPT' : 'ERROR'}.`);
+        Logger.log(`Initializing: ${correction.original} at index ${index} as ${isOriginalKept ? 'ORIGINAL_KEPT' : 'ERROR'}.`);
     });
   }
 
@@ -107,7 +108,7 @@ export class CorrectionStateManager {
     const isCurrentlyException = this.isExceptionState(correctionIndex);
     const isCurrentlyOriginalKept = this.isOriginalKeptState(correctionIndex);
     
-    console.log('\n[CorrectionState.toggleState] Initial state:', {
+    Logger.log('toggleState Initial state:', {
       correctionIndex,
       currentValue,
       isCurrentlyException,
@@ -119,14 +120,14 @@ export class CorrectionStateManager {
     // 1. 원본유지 상태에서 오류 상태로
     if (isCurrentlyOriginalKept) {
         this.setState(correctionIndex, correction.original, false, false);
-        console.log('[CorrectionState.toggleState] OriginalKept -> Error');
+        Logger.log('toggleState OriginalKept -> Error');
         return { value: correction.original, isExceptionState: false };
     }
 
     // 2. 예외처리 상태에서 원본유지 상태로
     if (isCurrentlyException) {
         this.setState(correctionIndex, correction.original, false, true);
-        console.log('[CorrectionState.toggleState] Exception -> OriginalKept');
+        Logger.log('toggleState Exception -> OriginalKept');
         return { value: correction.original, isExceptionState: false };
     }
 
@@ -136,14 +137,14 @@ export class CorrectionStateManager {
     if (nextIndex >= suggestions.length) {
         // 마지막 제안에서 예외처리 상태로
         this.setState(correctionIndex, correction.original, true, false);
-        console.log('[CorrectionState.toggleState] Last Suggestion -> Exception');
+        Logger.log('toggleState Last Suggestion -> Exception');
         return { value: correction.original, isExceptionState: true };
     }
 
     // 4. 다음 제안으로 이동 (오류 → 첫 번째 수정안, 수정안 → 다음 수정안)
     const newValue = suggestions[nextIndex];
     this.setState(correctionIndex, newValue, false, false);
-    console.log('[CorrectionState.toggleState] Next Suggestion:', newValue);
+    Logger.log('toggleState Next Suggestion:', newValue);
     return { value: newValue, isExceptionState: false };
   }
 
@@ -157,7 +158,7 @@ export class CorrectionStateManager {
     if (!correction) return '';
 
     if (this.isOriginalKeptState(correctionIndex)) {
-        console.log(`[CorrectionState] DisplayClass for ${correction.original} (index ${correctionIndex}): spell-original-kept`);
+        Logger.log(`DisplayClass for ${correction.original} (index ${correctionIndex}): spell-original-kept`);
         return 'spell-original-kept';
     }
 
@@ -166,10 +167,10 @@ export class CorrectionStateManager {
 
     if (currentValue === correction.original) {
       const className = isException ? 'spell-exception-processed' : 'spell-error';
-      console.log(`[CorrectionState] DisplayClass for ${correction.original} (index ${correctionIndex}): ${className}`);
+      Logger.log(`DisplayClass for ${correction.original} (index ${correctionIndex}): ${className}`);
       return className;
     } else {
-      console.log(`[CorrectionState] DisplayClass for ${correction.original} (index ${correctionIndex}): spell-corrected`);
+      Logger.log(`DisplayClass for ${correction.original} (index ${correctionIndex}): spell-corrected`);
       return 'spell-corrected';
     }
   }

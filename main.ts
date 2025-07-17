@@ -11,6 +11,7 @@ import { PluginSettings } from './src/types/interfaces';
 import { DEFAULT_SETTINGS, SettingsService } from './src/services/settings';
 import { IgnoredWordsService } from './src/services/ignoredWords';
 import { SpellCheckOrchestrator } from './src/orchestrator';
+import { createList, createParagraph, createLink, appendChildren, clearElement } from './src/utils/domUtils';
 import { 
   AI_PROVIDER_DEFAULTS, 
   DEFAULT_AI_SETTINGS,
@@ -127,8 +128,7 @@ class SpellingSettingTab extends PluginSettingTab {
         cls: "setting-item-description",
         text: "AI 기능이 비활성화되어 있습니다. 위의 토글을 활성화하면 AI 관련 설정이 표시됩니다."
       });
-      disabledDesc.style.color = "var(--text-muted)";
-      disabledDesc.style.marginBottom = "20px";
+      disabledDesc.addClass('ai-disabled-desc');
       return;
     }
 
@@ -313,7 +313,7 @@ class SpellingSettingTab extends PluginSettingTab {
       container.createEl("div", {
         text: "예외 처리된 단어가 없습니다.",
         cls: "setting-item-description"
-      }).style.textAlign = "center";
+      }).addClass('ignored-words-empty');
       return;
     }
 
@@ -323,28 +323,14 @@ class SpellingSettingTab extends PluginSettingTab {
         cls: "ignored-word-tag"
       });
       
-      tag.style.cssText = `
-        display: inline-block;
-        background: var(--interactive-accent);
-        color: var(--text-on-accent);
-        padding: 4px 8px;
-        margin: 2px;
-        border-radius: 12px;
-        font-size: 12px;
-        cursor: pointer;
-        position: relative;
-      `;
+      tag.addClass('ignored-word-tag');
       
       // X 버튼 추가
       const removeBtn = tag.createEl("span", {
         text: "×",
         cls: "remove-word-btn"
       });
-      removeBtn.style.cssText = `
-        margin-left: 6px;
-        font-weight: bold;
-        opacity: 0.7;
-      `;
+      removeBtn.addClass('remove-word-btn');
       
       removeBtn.onclick = async (e) => {
         e.stopPropagation();
@@ -359,13 +345,7 @@ class SpellingSettingTab extends PluginSettingTab {
         }
       };
       
-      removeBtn.onmouseover = () => {
-        removeBtn.style.opacity = "1";
-      };
-      
-      removeBtn.onmouseout = () => {
-        removeBtn.style.opacity = "0.7";
-      };
+      // Hover effects are now handled by CSS
     });
   }
 
@@ -422,8 +402,7 @@ class SpellingSettingTab extends PluginSettingTab {
         cls: "setting-item-description",
         text: `설정 오류: ${validation.errors.join(', ')}`
       });
-      errorContainer.style.color = "var(--text-error)";
-      errorContainer.style.marginTop = "10px";
+      errorContainer.addClass('settings-error');
     }
 
     // AI 설정 섹션
@@ -446,56 +425,27 @@ class SpellingSettingTab extends PluginSettingTab {
 
     // 태그 클라우드 섹션 컨테이너
     const tagCloudSection = containerEl.createDiv("tag-cloud-section");
-    tagCloudSection.style.cssText = `
-      border: 1px solid var(--background-modifier-border);
-      border-radius: 8px;
-      margin: 10px 0;
-      background: var(--background-secondary);
-      overflow: hidden;
-    `;
+    tagCloudSection.addClass('tag-cloud-section');
 
     // 태그 클라우드 헤더 (모두 제거 버튼 포함)
     const tagCloudHeader = tagCloudSection.createDiv("tag-cloud-header");
-    tagCloudHeader.style.cssText = `
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 12px;
-      background: var(--background-secondary-alt);
-      border-bottom: 1px solid var(--background-modifier-border);
-    `;
+    tagCloudHeader.addClass('tag-cloud-header');
 
     const headerLabel = tagCloudHeader.createEl("span", {
       text: "예외 처리된 단어 목록",
       cls: "tag-cloud-label"
     });
-    headerLabel.style.cssText = `
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    `;
+    headerLabel.addClass('tag-cloud-label');
 
     const clearAllButton = tagCloudHeader.createEl("button", {
       text: "모두 제거",
       cls: "mod-warning"
     });
-    clearAllButton.style.cssText = `
-      padding: 4px 8px;
-      font-size: 11px;
-      border-radius: 4px;
-      cursor: pointer;
-    `;
+    clearAllButton.addClass('clear-all-button');
 
     // 태그 클라우드 컨테이너
     const tagCloudContainer = tagCloudSection.createDiv("ignored-words-container");
-    tagCloudContainer.style.cssText = `
-      padding: 12px;
-      min-height: 80px;
-      max-height: 180px;
-      overflow-y: auto;
-    `;
+    tagCloudContainer.addClass('ignored-words-container');
 
     // 모두 제거 버튼 이벤트
     clearAllButton.onclick = async () => {
@@ -514,69 +464,33 @@ class SpellingSettingTab extends PluginSettingTab {
 
     // 커스텀 입력 컨테이너 생성
     const inputContainer = addWordSetting.controlEl.createDiv("add-word-container");
-    inputContainer.style.cssText = `
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    `;
+    inputContainer.addClass('add-word-container');
 
     // 입력 필드와 버튼 영역
     const inputRow = inputContainer.createDiv("input-row");
-    inputRow.style.cssText = `
-      display: flex;
-      gap: 8px;
-      align-items: flex-start;
-    `;
+    inputRow.addClass('input-row');
 
     const inputField = inputRow.createEl("input", {
       type: "text",
       placeholder: "예: 단어1, 단어2, 단어3"
     });
-    inputField.style.cssText = `
-      flex: 1;
-      padding: 8px 12px;
-      border: 1px solid var(--background-modifier-border);
-      border-radius: 6px;
-      background: var(--background-primary);
-      color: var(--text-normal);
-      font-size: 14px;
-    `;
+    inputField.addClass('add-word-input');
 
     const addButton = inputRow.createEl("button", {
       text: "추가",
       cls: "mod-cta"
     });
-    addButton.style.cssText = `
-      padding: 8px 16px;
-      white-space: nowrap;
-      cursor: pointer !important;
-    `;
+    addButton.addClass('add-word-button');
 
     // 미리보기 태그 영역
     const previewContainer = inputContainer.createDiv("tag-preview-container");
-    previewContainer.style.cssText = `
-      min-height: 40px;
-      padding: 8px;
-      background: var(--background-secondary);
-      border: 1px solid var(--background-modifier-border);
-      border-radius: 6px;
-      display: none;
-      flex-wrap: wrap;
-      gap: 4px;
-      align-items: center;
-    `;
+    previewContainer.addClass('tag-preview-container');
 
     const previewLabel = previewContainer.createEl("span", {
       text: "미리보기:",
       cls: "preview-label"
     });
-    previewLabel.style.cssText = `
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-right: 8px;
-      font-weight: 500;
-    `;
+    previewLabel.addClass('preview-label');
 
     // 현재 입력된 태그들을 추적
     let currentTags: string[] = [];
@@ -590,7 +504,7 @@ class SpellingSettingTab extends PluginSettingTab {
       const ignoredWords = IgnoredWordsService.getIgnoredWords(this.plugin.settings);
 
       if (currentTags.length > 0) {
-        previewContainer.style.display = "flex";
+        previewContainer.addClass('visible');
         
         currentTags.forEach((tag, index) => {
           const isAlreadyIgnored = ignoredWords.includes(tag);
@@ -601,27 +515,9 @@ class SpellingSettingTab extends PluginSettingTab {
           });
 
           if (isAlreadyIgnored) {
-            tagEl.style.cssText = `
-              display: inline-block;
-              background: var(--background-modifier-border);
-              color: var(--text-muted);
-              padding: 3px 8px;
-              border-radius: 12px;
-              font-size: 11px;
-              text-decoration: line-through;
-              opacity: 0.8;
-            `;
+            tagEl.addClass('preview-tag already-ignored');
           } else {
-            tagEl.style.cssText = `
-              display: inline-block;
-              background: var(--interactive-accent);
-              color: var(--text-on-accent);
-              padding: 3px 8px;
-              border-radius: 12px;
-              font-size: 11px;
-              cursor: pointer;
-              opacity: 0.8;
-            `;
+            tagEl.addClass('preview-tag new-tag');
           }
           
           // 클릭하면 해당 태그 제거
@@ -631,7 +527,7 @@ class SpellingSettingTab extends PluginSettingTab {
           };
         });
       } else {
-        previewContainer.style.display = "none";
+        previewContainer.removeClass('visible');
       }
     };
 
@@ -714,15 +610,15 @@ class SpellingSettingTab extends PluginSettingTab {
       cls: "setting-item-description"
     });
     
-    helpText.innerHTML = `
-      <ul>
-        <li><strong>텍스트 선택 후 실행:</strong> 특정 텍스트만 검사</li>
-        <li><strong>선택하지 않고 실행:</strong> 전체 문서 검사</li>
-        <li><strong>미리보기 클릭:</strong> 오류 → 수정 → 예외처리 순환</li>
-        <li><strong>예외 처리:</strong> 파란색으로 표시되며 향후 검사에서 제외됨</li>
-        <li><strong>긴 텍스트:</strong> 자동 페이지 분할 및 네비게이션</li>
-      </ul>
-    `;
+    const helpItems = [
+      '텍스트 선택 후 실행: 특정 텍스트만 검사',
+      '선택하지 않고 실행: 전체 문서 검사',
+      '미리보기 클릭: 오류 → 수정 → 예외처리 순환',
+      '예외 처리: 파란색으로 표시되며 향후 검사에서 제외됨',
+      '긴 텍스트: 자동 페이지 분할 및 네비게이션'
+    ];
+    const helpList = createList(helpItems, false);
+    helpText.appendChild(helpList);
 
     // API 정보 섹션
     containerEl.createEl("h3", { text: "API 정보" });
@@ -731,9 +627,13 @@ class SpellingSettingTab extends PluginSettingTab {
       cls: "setting-item-description"
     });
     
-    apiInfo.innerHTML = `
-      <p>이 플러그인은 <a href="https://bareun.ai" target="_blank">Bareun.ai</a> 서비스를 사용합니다.</p>
-      <p>API 키는 Bareun.ai 웹사이트에서 발급받을 수 있습니다.</p>
-    `;
+    const apiPara1 = createParagraph('이 플러그인은 ');
+    const bareunLink = createLink('Bareun.ai', 'https://bareun.ai', '_blank');
+    apiPara1.appendChild(bareunLink);
+    apiPara1.appendChild(document.createTextNode(' 서비스를 사용합니다.'));
+    
+    const apiPara2 = createParagraph('API 키는 Bareun.ai 웹사이트에서 발급받을 수 있습니다.');
+    
+    appendChildren(apiInfo, apiPara1, apiPara2);
   }
 }

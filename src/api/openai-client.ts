@@ -1,6 +1,7 @@
 import { requestUrl } from 'obsidian';
 import { AIClient } from '../types/interfaces';
 import { API_ENDPOINTS, MODEL_PREFIXES } from '../constants/aiModels';
+import { Logger } from '../utils/logger';
 
 export class OpenAIClient implements AIClient {
   constructor(private apiKey: string) {}
@@ -28,11 +29,11 @@ export class OpenAIClient implements AIClient {
           )
           .sort();
         
-        console.log(`[OpenAI] ${models.length}개 모델을 가져왔습니다.`);
+        Logger.log(`${models.length}개 모델을 가져왔습니다.`);
         return models;
       }
     } catch (error) {
-      console.error('[OpenAI] 모델 목록 가져오기 실패:', error);
+      Logger.error('모델 목록 가져오기 실패:', error);
     }
     
     return [];
@@ -51,7 +52,7 @@ export class OpenAIClient implements AIClient {
       throw new Error('OpenAI API 키 형식이 올바르지 않습니다. "sk-"로 시작해야 합니다.');
     }
 
-    console.log('[OpenAI] chat 요청 시작:', {
+    Logger.log('chat 요청 시작:', {
       model: model,
       maxTokens: maxTokens,
       messagesCount: messages.length,
@@ -65,7 +66,7 @@ export class OpenAIClient implements AIClient {
       temperature: 0.1
     };
 
-    console.log('[OpenAI] 요청 데이터:', {
+    Logger.log('요청 데이터:', {
       url: API_ENDPOINTS.openai.chat,
       model: model,
       messagesCount: messages.length,
@@ -85,8 +86,8 @@ export class OpenAIClient implements AIClient {
         body: JSON.stringify(requestBody)
       });
     } catch (error) {
-      console.error('[OpenAI] requestUrl 오류:', error);
-      console.error('[OpenAI] 요청 정보:', {
+      Logger.error('requestUrl 오류:', error);
+      Logger.error('요청 정보:', {
         url: API_ENDPOINTS.openai.chat,
         model: model,
         hasApiKey: !!this.apiKey,
@@ -98,7 +99,7 @@ export class OpenAIClient implements AIClient {
     if (response.status === 200) {
       return response.json.choices[0].message.content.trim();
     } else {
-      console.error('[OpenAI] API 응답 오류:', {
+      Logger.error('API 응답 오류:', {
         status: response.status,
         text: response.text,
         json: response.json

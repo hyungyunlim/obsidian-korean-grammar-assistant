@@ -2,6 +2,7 @@ import { AISettings, AIAnalysisRequest, AIAnalysisResult, Correction, Correction
 import { AIClientFactory } from '../api/clientFactory';
 import { AI_PROMPTS, MODEL_TOKEN_LIMITS } from '../constants/aiModels';
 import { estimateAnalysisTokenUsage, estimateCost } from '../utils/tokenEstimator';
+import { Logger } from '../utils/logger';
 
 export class AIAnalysisService {
   constructor(private settings: AISettings) {}
@@ -17,7 +18,7 @@ export class AIAnalysisService {
       // 원본 텍스트에서 오류 위치 찾기
       const errorIndex = originalText.indexOf(correction.original);
       if (errorIndex === -1) {
-        console.warn(`[AI] 오류 텍스트를 찾을 수 없음: "${correction.original}"`);
+        Logger.warn(`오류 텍스트를 찾을 수 없음: "${correction.original}"`);
         // 찾을 수 없는 경우 빈 컨텍스트로 처리
         contexts.push({
           correctionIndex: index,
@@ -102,7 +103,7 @@ export class AIAnalysisService {
       optimalSize = 5; // 매우 긴 컨텍스트
     }
     
-    console.log(`[AI] 배치 크기 계산: 평균 컨텍스트 ${avgContextLength}자 → ${optimalSize}개씩 처리`);
+    Logger.debug(`배치 크기 계산: 평균 컨텍스트 ${avgContextLength}자 → ${optimalSize}개씩 처리`);
     
     return Math.min(optimalSize, 15); // 최대 15개로 제한
   }
@@ -138,7 +139,7 @@ export class AIAnalysisService {
     adjustedMaxTokens: number,
     model: string
   ): Promise<AIAnalysisResult[]> {
-    console.log(`[AI] 배치 ${batchIndex + 1}/${totalBatches} 처리 중 (${batch.length}개 오류)`);
+    Logger.debug(`배치 ${batchIndex + 1}/${totalBatches} 처리 중 (${batch.length}개 오류)`);
 
     const systemPrompt = AI_PROMPTS.analysisSystem;
     const userPrompt = AI_PROMPTS.analysisUserWithContext(batch);
@@ -149,7 +150,7 @@ export class AIAnalysisService {
     ];
 
     const response = await client.chat(messages, adjustedMaxTokens, model);
-    console.log(`[AI] 배치 ${batchIndex + 1} 응답 수신:`, response.substring(0, 100) + '...');
+    Logger.debug(`배치 ${batchIndex + 1} 응답 수신:`, response.substring(0, 100) + '...');
 
     return this.parseAIResponse(response, batch);
   }
@@ -158,7 +159,7 @@ export class AIAnalysisService {
    * AI를 사용하여 맞춤법 오류를 분석하고 최적의 수정사항을 제안합니다.
    */
   async analyzeCorrections(request: AIAnalysisRequest): Promise<AIAnalysisResult[]> {
-    console.log('[AI] analyzeCorrections 시작:', {
+    Logger.debug('analyzeCorrections 시작:', {
       enabled: this.settings.enabled,
       provider: this.settings.provider,
       model: this.settings.model,
@@ -197,7 +198,7 @@ export class AIAnalysisService {
         ctx => ctx.currentState === 'original-kept' || ctx.currentState === 'exception-processed'
       );
 
-      console.log(`[AI] 분석 대상: ${contextsToAnalyze.length}개, 이미 처리됨: ${alreadyResolvedContexts.length}개`);
+      Logger.debug(`분석 대상: ${contextsToAnalyze.length}개, 이미 처리됨: ${alreadyResolvedContexts.length}개`);
 
       let aiResults: AIAnalysisResult[] = [];
 
@@ -205,7 +206,7 @@ export class AIAnalysisService {
         // 배치 크기 결정
         const maxBatchSize = this.calculateOptimalBatchSize(contextsToAnalyze);
         
-        console.log('[AI] 분석 요청 전송 중...', {
+        Logger.debug('분석 요청 전송 중...', {
           provider: this.settings.provider,
           model: this.settings.model,
           totalCorrections: contextsToAnalyze.length,
@@ -218,7 +219,7 @@ export class AIAnalysisService {
 
         // 배치 생성
         const batches = this.createBatches(contextsToAnalyze, maxBatchSize);
-        console.log(`[AI] ${batches.length}개 배치로 분할하여 처리합니다.`);
+        Logger.debug(`${batches.length}개 배치로 분할하여 처리합니다.`);
 
         // 모델별 토큰 제한에 맞게 조정
         const adjustedMaxTokens = this.adjustTokensForModel(this.settings.maxTokens, this.settings.model);
@@ -246,10 +247,10 @@ export class AIAnalysisService {
               await new Promise(resolve => setTimeout(resolve, 500));
             }
           } catch (error) {
-            console.error(`[AI] 배치 ${i + 1} 처리 실패:`, error);
+            Logger.error(`배치 ${i + 1} 처리 실패:`, error);
           }
         }
-        console.log(`[AI] AI 분석 완료: ${aiResults.length}개 결과 수집됨`);
+        Logger.debug(`AI 분석 완료: ${aiResults.length}개 결과 수집됨`);
       }
 
       // 이미 처리된 컨텍스트를 결과에 추가
@@ -266,11 +267,11 @@ export class AIAnalysisService {
       const allResults = [...aiResults, ...resolvedResults];
       allResults.sort((a, b) => a.correctionIndex - b.correctionIndex);
       
-      console.log(`[AI] 최종 처리 완료: ${allResults.length}개 결과 반환`);
+      Logger.debug(`최종 처리 완료: ${allResults.length}개 결과 반환`);
       
       return allResults;
     } catch (error) {
-      console.error('[AI] 분석 중 오류 발생:', error);
+      Logger.error('분석 중 오류 발생:', error);
       throw new Error(`AI 분석 실패: ${error.message}`);
     }
   }
@@ -303,16 +304,16 @@ export class AIAnalysisService {
       
       // 3. 잘린 JSON 복구 시도
       if (!jsonString.endsWith(']') && jsonString.includes('[')) {
-        console.warn('[AI] JSON이 잘린 것으로 보임, 복구 시도');
+        Logger.warn('JSON이 잘린 것으로 보임, 복구 시도');
         // 마지막 완전한 객체까지만 취하고 배열을 닫기
         const lastCompleteObjectIndex = jsonString.lastIndexOf('}');
         if (lastCompleteObjectIndex > 0) {
           jsonString = jsonString.substring(0, lastCompleteObjectIndex + 1) + ']';
-          console.log('[AI] JSON 복구 완료');
+          Logger.debug('JSON 복구 완료');
         }
       }
       
-      console.log('[AI] 파싱할 JSON (첫 200자):', jsonString.substring(0, 200) + (jsonString.length > 200 ? '...' : ''));
+      Logger.debug('파싱할 JSON (첫 200자):', jsonString.substring(0, 200) + (jsonString.length > 200 ? '...' : ''));
       parsedResponse = JSON.parse(jsonString);
 
       const results: AIAnalysisResult[] = [];
@@ -321,7 +322,7 @@ export class AIAnalysisService {
         const batchIndex = parseInt(item.correctionIndex);
         
         if (isNaN(batchIndex) || batchIndex < 0 || batchIndex >= correctionContexts.length) {
-          console.warn('[AI] 유효하지 않은 batchIndex:', batchIndex);
+          Logger.warn('유효하지 않은 batchIndex:', batchIndex);
           continue;
         }
 
@@ -334,14 +335,14 @@ export class AIAnalysisService {
         if (!validOptions.includes(selectedValue)) {
           if (selectedValue === '원본유지' || selectedValue === '예외처리' || !selectedValue) {
             selectedValue = context.original;
-            console.log(`[AI] "${item.selectedValue}"를 원본 "${context.original}"로 변경`);
+            Logger.debug(`"${item.selectedValue}"를 원본 "${context.original}"로 변경`);
           } else {
             const matchedOption = this.findBestMatch(selectedValue, validOptions);
             if (matchedOption) {
-              console.log(`[AI] "${selectedValue}"를 가장 유사한 옵션 "${matchedOption}"로 매칭`);
+              Logger.debug(`"${selectedValue}"를 가장 유사한 옵션 "${matchedOption}"로 매칭`);
               selectedValue = matchedOption;
             } else {
-              console.warn('[AI] 유효하지 않은 선택값:', selectedValue, '가능한 옵션:', validOptions);
+              Logger.warn('유효하지 않은 선택값:', selectedValue, '가능한 옵션:', validOptions);
               selectedValue = context.original;
             }
           }
@@ -360,13 +361,13 @@ export class AIAnalysisService {
         });
       }
 
-      console.log(`[AI] 파싱 완료: ${results.length}개의 결과 추출됨`);
+      Logger.debug(`파싱 완료: ${results.length}개의 결과 추출됨`);
       
       const processedIndexes = new Set(results.map(r => r.correctionIndex));
       const missingContexts = correctionContexts.filter(ctx => !processedIndexes.has(ctx.correctionIndex));
       
       if (missingContexts.length > 0) {
-        console.warn(`[AI] 누락된 오류들 (원본 인덱스): ${missingContexts.map(c => c.correctionIndex).join(', ')}`);
+        Logger.warn(`누락된 오류들 (원본 인덱스): ${missingContexts.map(c => c.correctionIndex).join(', ')}`);
         
         missingContexts.forEach(context => {
           const defaultValue = context.corrected[0] || context.original;
@@ -387,8 +388,8 @@ export class AIAnalysisService {
       
       return results;
     } catch (error) {
-      console.error('[AI] 응답 파싱 오류:', error);
-      console.error('[AI] 원본 응답 (첫 500자):', response.substring(0, 500));
+      Logger.error('응답 파싱 오류:', error);
+      Logger.error('원본 응답 (첫 500자):', response.substring(0, 500));
       
       if (error instanceof SyntaxError) {
         throw new Error(`JSON 형식 오류: ${error.message}. AI 응답이 올바른 JSON 형식이 아닙니다.`);
@@ -405,7 +406,7 @@ export class AIAnalysisService {
     try {
       return await AIClientFactory.fetchModels(this.settings);
     } catch (error) {
-      console.error('[AI] 모델 목록 가져오기 실패:', error);
+      Logger.error('모델 목록 가져오기 실패:', error);
       return [];
     }
   }
@@ -455,7 +456,7 @@ export class AIAnalysisService {
   private adjustTokensForModel(requestedTokens: number, model: string): number {
     const modelLimit = this.getModelMaxTokens(model);
     if (requestedTokens > modelLimit) {
-      console.warn(`[AI] 요청된 토큰 수(${requestedTokens})가 모델 제한(${modelLimit})을 초과합니다. ${modelLimit}로 조정합니다.`);
+      Logger.warn(`요청된 토큰 수(${requestedTokens})가 모델 제한(${modelLimit})을 초과합니다. ${modelLimit}로 조정합니다.`);
       return modelLimit;
     }
     return requestedTokens;

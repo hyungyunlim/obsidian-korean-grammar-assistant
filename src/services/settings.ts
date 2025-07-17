@@ -1,5 +1,6 @@
 import { PluginSettings } from '../types/interfaces';
 import { DEFAULT_AI_SETTINGS } from '../constants/aiModels';
+import { Logger } from '../utils/logger';
 
 /**
  * API 설정 파일에서 기본값 로드 (로컬 개발용)
@@ -14,12 +15,12 @@ function loadApiConfig(): PluginSettings {
       
       if (fs.existsSync(configPath)) {
         const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-        console.log('로컬 API 설정 파일을 로드했습니다.');
+        Logger.log('로컬 API 설정 파일을 로드했습니다.');
         return config;
       }
     }
   } catch (error) {
-    console.log('로컬 API 설정 파일을 로드할 수 없습니다. 기본값을 사용합니다.');
+    Logger.log('로컬 API 설정 파일을 로드할 수 없습니다. 기본값을 사용합니다.');
   }
   
   // 기본값 (배포용)
