@@ -179,13 +179,13 @@ class SpellingSettingTab extends PluginSettingTab {
     // 고급 설정
     new Setting(containerEl)
       .setName("최대 토큰 수")
-      .setDesc("AI 응답의 최대 길이를 제한합니다. 높을수록 더 많은 오류를 한 번에 처리할 수 있습니다. (기본: 2000, 권장: 1500-3000)")
+      .setDesc("AI 응답의 최대 길이를 설정합니다. 높을수록 더 많은 오류를 한 번에 처리할 수 있습니다. (기본: 2000, 큰 문서는 5000-10000 권장)")
       .addText(text => text
         .setPlaceholder("2000")
         .setValue(this.plugin.settings.ai.maxTokens.toString())
         .onChange(async (value) => {
           const tokens = parseInt(value);
-          if (!isNaN(tokens) && tokens >= 500 && tokens <= 8000) {
+          if (!isNaN(tokens) && tokens >= 100) {
             this.plugin.settings.ai.maxTokens = tokens;
             await this.plugin.saveSettings();
           }
