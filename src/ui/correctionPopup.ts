@@ -14,6 +14,7 @@ export class CorrectionPopup extends BaseComponent {
   private app: App;
   private stateManager: CorrectionStateManager;
   private aiService?: AIAnalysisService;
+  private onSettingsUpdate?: (newMaxTokens: number) => void;
   
   // Pagination state
   private isLongText: boolean = false;
@@ -26,12 +27,13 @@ export class CorrectionPopup extends BaseComponent {
   private aiAnalysisResults: AIAnalysisResult[] = [];
   private isAiAnalyzing: boolean = false;
 
-  constructor(app: App, config: PopupConfig, aiService?: AIAnalysisService) {
+  constructor(app: App, config: PopupConfig, aiService?: AIAnalysisService, onSettingsUpdate?: (newMaxTokens: number) => void) {
     super('div', 'correction-popup-container');
     this.app = app;
     this.config = config;
     this.stateManager = new CorrectionStateManager(config.corrections, this.config.ignoredWords);
     this.aiService = aiService;
+    this.onSettingsUpdate = onSettingsUpdate;
     
     this.initializePagination();
   }
@@ -108,8 +110,8 @@ export class CorrectionPopup extends BaseComponent {
                   <span>예외처리</span>
                 </div>
                 <div class="color-legend-item">
-                  <div class="color-legend-dot ignored"></div>
-                  <span>무시됨</span>
+                  <div class="color-legend-dot original-kept"></div>
+                  <span>원본유지</span>
                 </div>
               </div>
               
@@ -125,7 +127,7 @@ export class CorrectionPopup extends BaseComponent {
             <div class="error-summary-toggle">
               <div class="left-section">
                 <span class="error-summary-label">오류 상세</span>
-                <span class="error-count-badge" id="errorCountBadge">${this.getCurrentCorrections().length}</span>
+                <span class="error-count-badge" id="errorCountBadge">${this.getErrorStateCount()}</span>
               </div>
               <span class="toggle-icon">▼</span>
             </div>
@@ -174,6 +176,33 @@ export class CorrectionPopup extends BaseComponent {
     return this.config.corrections.filter(correction => {
       return currentPreviewText.includes(correction.original);
     });
+  }
+
+  /**
+   * 현재 페이지에서 오류 상태(빨간색)인 항목의 개수를 가져옵니다.
+   */
+  private getErrorStateCount(): number {
+    const currentCorrections = this.getCurrentCorrections();
+    let errorCount = 0;
+    
+    currentCorrections.forEach(correction => {
+      const actualIndex = this.config.corrections.findIndex(c => 
+        c.original === correction.original && c.help === correction.help
+      );
+      
+      if (actualIndex !== -1) {
+        const currentValue = this.stateManager.getValue(actualIndex);
+        const isException = this.stateManager.isExceptionState(actualIndex);
+        const isOriginalKept = this.stateManager.isOriginalKeptState(actualIndex);
+        
+        // 오류 상태: 원본 값이고, 예외처리나 원본유지 상태가 아닌 경우
+        if (currentValue === correction.original && !isException && !isOriginalKept) {
+          errorCount++;
+        }
+      }
+    });
+    
+    return errorCount;
   }
 
   /**
@@ -294,11 +323,11 @@ export class CorrectionPopup extends BaseComponent {
       `;
     }
 
-    return currentCorrections.filter(correction => !this.stateManager.isIgnoredState(this.config.corrections.findIndex(c => c.original === correction.original && c.help === correction.help))).map((correction, index) => {
+    return currentCorrections.filter(correction => !this.stateManager.isOriginalKeptState(this.config.corrections.findIndex(c => c.original === correction.original && c.help === correction.help))).map((correction, index) => {
       const actualIndex = this.config.corrections.findIndex(c => 
         c.original === correction.original && c.help === correction.help
       );
-      const isIgnored = this.stateManager.isIgnoredState(actualIndex);
+      const isOriginalKept = this.stateManager.isOriginalKeptState(actualIndex);
       const suggestions = correction.corrected.slice(0, 2);
       
       // AI 분석 결과 찾기
@@ -308,13 +337,13 @@ export class CorrectionPopup extends BaseComponent {
         `<span class="suggestion-compact ${this.stateManager.isSelected(actualIndex, suggestion) ? 'selected' : ''}" 
               data-value="${escapeHtml(suggestion)}" 
               data-correction="${actualIndex}"
-              ${isIgnored ? 'disabled' : ''}>
+              ${isOriginalKept ? 'disabled' : ''}>
           ${escapeHtml(suggestion)}
         </span>`
       ).join('');
 
       return `
-        <div class="error-item-compact ${isIgnored ? 'spell-ignored' : ''}" data-correction-index="${actualIndex}">
+        <div class="error-item-compact ${isOriginalKept ? 'spell-original-kept' : ''}" data-correction-index="${actualIndex}">
           <div class="error-row">
             <div class="error-original-compact">${escapeHtml(correction.original)}</div>
             <div class="error-suggestions-compact">
@@ -322,7 +351,7 @@ export class CorrectionPopup extends BaseComponent {
               <span class="suggestion-compact ${this.stateManager.isSelected(actualIndex, correction.original) ? 'selected' : ''} keep-original" 
                     data-value="${escapeHtml(correction.original)}" 
                     data-correction="${actualIndex}"
-                    ${isIgnored ? 'disabled' : ''}>
+                    ${isOriginalKept ? 'disabled' : ''}>
                 예외처리
               </span>
             </div>
@@ -543,14 +572,10 @@ export class CorrectionPopup extends BaseComponent {
     // 페이지네이션 컨트롤 업데이트
     this.updatePaginationControls();
 
-    // 오류 개수 배지 업데이트
+    // 오류 개수 배지 업데이트 (오류 상태만 카운팅)
     const errorCountBadge = this.element.querySelector('#errorCountBadge');
     if (errorCountBadge) {
-      const visibleCorrections = this.getCurrentCorrections().filter(correction => {
-        const actualIndex = this.config.corrections.findIndex(c => c.original === correction.original && c.help === correction.help);
-        return !this.stateManager.isIgnoredState(actualIndex);
-      });
-      errorCountBadge.textContent = visibleCorrections.length.toString();
+      errorCountBadge.textContent = this.getErrorStateCount().toString();
     }
   }
 
@@ -740,9 +765,11 @@ export class CorrectionPopup extends BaseComponent {
       return true; // AI 서비스 없으면 그냥 진행
     }
 
-    // TODO: 실제 AI 설정에서 경고 설정 가져오기 (임시로 기본값 사용)
-    const showWarning = true; // 임시
-    const threshold = 3000; // 임시
+    // AI 서비스에서 실제 설정 가져오기
+    const aiServiceSettings = this.aiService.getSettings();
+    const showWarning = aiServiceSettings.showTokenWarning;
+    const threshold = aiServiceSettings.tokenWarningThreshold;
+    const maxTokens = aiServiceSettings.maxTokens;
     
     if (!showWarning) {
       return true; // 경고 비활성화된 경우
@@ -750,9 +777,10 @@ export class CorrectionPopup extends BaseComponent {
 
     // 토큰 사용량 추정
     const tokenUsage = this.aiService.estimateTokenUsage(request);
+    const isOverMaxTokens = tokenUsage.totalEstimated > maxTokens;
     
-    if (tokenUsage.totalEstimated < threshold) {
-      return true; // 임계값 미만이면 바로 진행
+    if (tokenUsage.totalEstimated < threshold && !isOverMaxTokens) {
+      return true; // 임계값 미만이고 최대 토큰 이내면 바로 진행
     }
 
     // 확인 모달 표시
@@ -775,42 +803,206 @@ export class CorrectionPopup extends BaseComponent {
       modal.innerHTML = `
         <div style="
           background: var(--background-primary);
-          border-radius: 12px;
-          padding: 24px;
-          max-width: 400px;
-          width: 90%;
-          box-shadow: 0 12px 60px rgba(0, 0, 0, 0.3);
+          border-radius: 16px;
+          padding: 32px;
+          max-width: 480px;
+          width: 92%;
+          box-shadow: 0 20px 80px rgba(0, 0, 0, 0.15);
           border: 1px solid var(--background-modifier-border);
+          position: relative;
+          overflow: hidden;
         ">
-          <h3 style="margin: 0 0 16px 0; color: var(--text-normal); font-size: 18px;">
-            🚨 높은 토큰 사용량 예상
-          </h3>
-          <div style="margin-bottom: 20px; color: var(--text-normal); line-height: 1.5;">
-            <p style="margin: 8px 0;">예상 토큰 사용량: <strong>${tokenUsage.totalEstimated.toLocaleString()}</strong> 토큰</p>
-            <p style="margin: 8px 0;">• 입력: ${tokenUsage.inputTokens.toLocaleString()} 토큰</p>
-            <p style="margin: 8px 0;">• 출력 예상: ${tokenUsage.estimatedOutputTokens.toLocaleString()} 토큰</p>
-            <p style="margin: 8px 0;">• 예상 비용: ${tokenUsage.estimatedCost}</p>
-            <p style="margin: 12px 0 0 0; font-size: 14px; color: var(--text-muted);">
-              계속 진행하시겠습니까?
-            </p>
+          <!-- 헤더 -->
+          <div style="
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+          ">
+            <div style="
+              width: 40px;
+              height: 40px;
+              border-radius: 12px;
+              background: linear-gradient(135deg, var(--interactive-accent), var(--interactive-accent-hover));
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 18px;
+              color: white;
+            ">⚡</div>
+            <div>
+              <h3 style="
+                margin: 0;
+                color: var(--text-normal);
+                font-size: 20px;
+                font-weight: 600;
+                line-height: 1.2;
+              ">${isOverMaxTokens ? '토큰 사용량 확인' : '토큰 사용량 안내'}</h3>
+              <p style="
+                margin: 2px 0 0 0;
+                color: var(--text-muted);
+                font-size: 14px;
+                line-height: 1.3;
+              ">${isOverMaxTokens ? '설정된 한계를 초과했습니다' : '예상 사용량이 높습니다'}</p>
+            </div>
           </div>
-          <div style="display: flex; gap: 12px; justify-content: flex-end;">
+
+          <!-- 토큰 사용량 카드 -->
+          <div style="
+            background: var(--background-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--background-modifier-border);
+          ">
+            <div style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 16px;
+              margin-bottom: 16px;
+            ">
+              <div style="text-align: center;">
+                <div style="
+                  font-size: 24px;
+                  font-weight: 700;
+                  color: var(--text-normal);
+                  line-height: 1;
+                ">${tokenUsage.totalEstimated.toLocaleString()}</div>
+                <div style="
+                  font-size: 12px;
+                  color: var(--text-muted);
+                  margin-top: 4px;
+                  text-transform: uppercase;
+                  letter-spacing: 0.5px;
+                ">총 토큰</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="
+                  font-size: 24px;
+                  font-weight: 700;
+                  color: var(--interactive-accent);
+                  line-height: 1;
+                ">${tokenUsage.estimatedCost}</div>
+                <div style="
+                  font-size: 12px;
+                  color: var(--text-muted);
+                  margin-top: 4px;
+                  text-transform: uppercase;
+                  letter-spacing: 0.5px;
+                ">예상 비용</div>
+              </div>
+            </div>
+            
+            <div style="
+              display: flex;
+              justify-content: space-between;
+              padding-top: 16px;
+              border-top: 1px solid var(--background-modifier-border);
+              font-size: 13px;
+              color: var(--text-muted);
+            ">
+              <span>입력: ${tokenUsage.inputTokens.toLocaleString()}</span>
+              <span>출력: ${tokenUsage.estimatedOutputTokens.toLocaleString()}</span>
+            </div>
+          </div>
+
+          ${isOverMaxTokens ? `
+            <!-- 토큰 초과 알림 -->
+            <div style="
+              background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+              border: 1px solid #ffd93d;
+              border-radius: 12px;
+              padding: 16px;
+              margin-bottom: 24px;
+              position: relative;
+            ">
+              <div style="
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+              ">
+                <div style="
+                  width: 24px;
+                  height: 24px;
+                  border-radius: 6px;
+                  background: #f39c12;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  color: white;
+                  font-size: 14px;
+                  font-weight: 600;
+                  flex-shrink: 0;
+                ">!</div>
+                <div style="flex: 1;">
+                  <div style="
+                    font-weight: 600;
+                    color: #8b4513;
+                    margin-bottom: 4px;
+                    font-size: 14px;
+                  ">설정된 최대 토큰을 초과했습니다</div>
+                  <div style="
+                    font-size: 13px;
+                    color: #8b4513;
+                    opacity: 0.8;
+                    line-height: 1.4;
+                  ">
+                    현재 설정: ${maxTokens.toLocaleString()} 토큰 → 
+                    초과량: ${(tokenUsage.totalEstimated - maxTokens).toLocaleString()} 토큰
+                  </div>
+                </div>
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- 액션 버튼들 -->
+          <div style="
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+          ">
             <button id="token-warning-cancel" style="
-              padding: 8px 16px;
+              padding: 12px 20px;
               border: 1px solid var(--background-modifier-border);
-              border-radius: 6px;
+              border-radius: 8px;
               background: var(--background-secondary);
               color: var(--text-normal);
               cursor: pointer;
-            ">취소</button>
+              font-size: 14px;
+              font-weight: 500;
+              transition: all 0.2s ease;
+            " onmouseover="this.style.background='var(--background-modifier-hover)'" 
+               onmouseout="this.style.background='var(--background-secondary)'">취소</button>
+            
+            ${isOverMaxTokens ? `
+              <button id="token-warning-update-settings" style="
+                padding: 12px 20px;
+                border: 1px solid var(--interactive-accent);
+                border-radius: 8px;
+                background: var(--background-primary);
+                color: var(--interactive-accent);
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 500;
+                transition: all 0.2s ease;
+              " onmouseover="this.style.background='var(--interactive-accent)'; this.style.color='var(--text-on-accent)'" 
+                 onmouseout="this.style.background='var(--background-primary)'; this.style.color='var(--interactive-accent)'">설정 업데이트</button>
+            ` : ''}
+            
             <button id="token-warning-proceed" style="
-              padding: 8px 16px;
+              padding: 12px 20px;
               border: none;
-              border-radius: 6px;
+              border-radius: 8px;
               background: var(--interactive-accent);
               color: var(--text-on-accent);
               cursor: pointer;
-            ">계속 진행</button>
+              font-size: 14px;
+              font-weight: 600;
+              box-shadow: 0 2px 8px rgba(var(--interactive-accent-rgb), 0.3);
+              transition: all 0.2s ease;
+            " onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(var(--interactive-accent-rgb), 0.4)'" 
+               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(var(--interactive-accent-rgb), 0.3)'">${isOverMaxTokens ? '이번만 진행' : '계속 진행'}</button>
           </div>
         </div>
       `;
@@ -818,18 +1010,28 @@ export class CorrectionPopup extends BaseComponent {
       document.body.appendChild(modal);
 
       // 이벤트 처리
-      const handleResponse = (proceed: boolean) => {
+      const handleResponse = (action: 'cancel' | 'proceed' | 'updateSettings') => {
         modal.remove();
-        resolve(proceed);
+        if (action === 'cancel') {
+          resolve(false);
+        } else if (action === 'updateSettings') {
+          // 100단위로 올림하여 설정 업데이트
+          const recommendedTokens = Math.ceil(tokenUsage.totalEstimated / 100) * 100;
+          this.updateMaxTokenSetting(recommendedTokens);
+          resolve(true);
+        } else {
+          resolve(true);
+        }
       };
 
-      modal.querySelector('#token-warning-cancel')?.addEventListener('click', () => handleResponse(false));
-      modal.querySelector('#token-warning-proceed')?.addEventListener('click', () => handleResponse(true));
+      modal.querySelector('#token-warning-cancel')?.addEventListener('click', () => handleResponse('cancel'));
+      modal.querySelector('#token-warning-proceed')?.addEventListener('click', () => handleResponse('proceed'));
+      modal.querySelector('#token-warning-update-settings')?.addEventListener('click', () => handleResponse('updateSettings'));
       
       // 오버레이 클릭 시 취소
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
-          handleResponse(false);
+          handleResponse('cancel');
         }
       });
     });
@@ -843,8 +1045,40 @@ export class CorrectionPopup extends BaseComponent {
       this.stateManager.setState(
         result.correctionIndex,
         result.selectedValue,
-        result.isExceptionProcessed
+        result.isExceptionProcessed,
+        result.isOriginalKept
       );
+    }
+  }
+
+  /**
+   * 최대 토큰 설정을 업데이트합니다.
+   */
+  private updateMaxTokenSetting(newMaxTokens: number): void {
+    if (this.onSettingsUpdate) {
+      this.onSettingsUpdate(newMaxTokens);
+      console.log(`[TokenWarning] 최대 토큰을 ${newMaxTokens}으로 업데이트했습니다.`);
+      
+      // 성공 알림 표시
+      const notice = document.createElement('div');
+      notice.textContent = `⚙️ 최대 토큰이 ${newMaxTokens.toLocaleString()}으로 업데이트되었습니다.`;
+      notice.style.cssText = `
+        position: fixed;
+        top: 50px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--interactive-accent);
+        color: var(--text-on-accent);
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        z-index: 10001;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      `;
+      document.body.appendChild(notice);
+      setTimeout(() => notice.remove(), 3000);
+    } else {
+      console.warn('[TokenWarning] 설정 업데이트 콜백이 없습니다.');
     }
   }
 

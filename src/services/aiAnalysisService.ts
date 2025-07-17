@@ -172,19 +172,30 @@ export class AIAnalysisService {
         }
 
         const correction = corrections[correctionIndex];
-        const selectedValue = item.selectedValue || '';
+        let selectedValue = item.selectedValue || '';
         
-        // 선택된 값이 유효한 옵션인지 확인
+        // AI가 "원본유지", "예외처리" 같은 명령어를 보낸 경우 원본으로 변경
         const validOptions = [...correction.corrected, correction.original];
         if (!validOptions.includes(selectedValue)) {
-          console.warn('[AI] 유효하지 않은 선택값:', selectedValue, '가능한 옵션:', validOptions);
-          continue;
+          if (selectedValue === '원본유지' || selectedValue === '예외처리' || !selectedValue) {
+            selectedValue = correction.original;
+            console.log(`[AI] "${item.selectedValue}"를 원본 "${correction.original}"로 변경`);
+          } else {
+            console.warn('[AI] 유효하지 않은 선택값:', selectedValue, '가능한 옵션:', validOptions);
+            // 유효하지 않은 값이면 원본으로 폴백
+            selectedValue = correction.original;
+          }
         }
+
+        // AI가 원본을 선택했을 때는 원본유지 상태로 설정 (검토해서 그대로 두기로 함)
+        const isOriginalSelected = selectedValue === correction.original;
+        const isOriginalKept = isOriginalSelected && !item.isExceptionProcessed;
 
         results.push({
           correctionIndex,
           selectedValue,
           isExceptionProcessed: item.isExceptionProcessed || false,
+          isOriginalKept: isOriginalKept,
           confidence: Math.max(0, Math.min(100, parseInt(item.confidence) || 0)),
           reasoning: item.reasoning || '이유가 제공되지 않았습니다.'
         });
@@ -204,10 +215,14 @@ export class AIAnalysisService {
         missingIndexes.forEach(index => {
           const correction = corrections[index];
           if (correction) {
+            const defaultValue = correction.corrected[0] || correction.original;
+            const isDefaultOriginal = defaultValue === correction.original;
+            
             results.push({
               correctionIndex: index,
-              selectedValue: correction.corrected[0] || correction.original, // 첫 번째 수정안 또는 원본
+              selectedValue: defaultValue,
               isExceptionProcessed: false,
+              isOriginalKept: isDefaultOriginal, // 원본이 기본값이면 원본유지 상태
               confidence: 50, // 낮은 신뢰도로 표시
               reasoning: 'AI 분석에서 누락되어 기본값으로 설정됨'
             });
@@ -267,5 +282,12 @@ export class AIAnalysisService {
       model: this.settings.model,
       available: this.isAvailable()
     };
+  }
+
+  /**
+   * 현재 AI 설정을 반환합니다.
+   */
+  getSettings(): AISettings {
+    return this.settings;
   }
 }

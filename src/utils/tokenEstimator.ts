@@ -61,7 +61,7 @@ export function estimateAnalysisTokenUsage(correctionContexts: CorrectionContext
 }
 
 /**
- * 토큰 사용량에 따른 대략적인 비용을 추정합니다.
+ * 토큰 사용량에 따른 대략적인 비용을 추정합니다 (USD 및 KRW).
  */
 export function estimateCost(tokens: number, provider: string): string {
   const costs = {
@@ -83,13 +83,17 @@ export function estimateCost(tokens: number, provider: string): string {
   
   // 간단한 평균 비용 반환
   const avgCostPer1M = 2.0; // USD per 1M tokens (average)
-  const estimatedCost = (tokens / 1000000) * avgCostPer1M;
+  const estimatedCostUSD = (tokens / 1000000) * avgCostPer1M;
   
-  if (estimatedCost < 0.001) {
-    return '< $0.001';
-  } else if (estimatedCost < 0.01) {
-    return `~$${estimatedCost.toFixed(4)}`;
+  // USD-KRW 환율 (대략 1350원)
+  const exchangeRate = 1350;
+  const estimatedCostKRW = estimatedCostUSD * exchangeRate;
+  
+  if (estimatedCostUSD < 0.001) {
+    return '< $0.001 (< ₩1)';
+  } else if (estimatedCostUSD < 0.01) {
+    return `~$${estimatedCostUSD.toFixed(4)} (~₩${estimatedCostKRW.toFixed(0)})`;
   } else {
-    return `~$${estimatedCost.toFixed(3)}`;
+    return `~$${estimatedCostUSD.toFixed(3)} (~₩${estimatedCostKRW.toFixed(0)})`;
   }
 }

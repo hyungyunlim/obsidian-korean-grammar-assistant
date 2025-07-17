@@ -234,7 +234,7 @@
     border: 1px solid rgba(var(--color-blue-rgb), 0.3);
 }
 
-#correctionPopup .color-legend-dot.ignored {
+#correctionPopup .color-legend-dot.original-kept {
     background: var(--color-yellow);
     border: 1px solid rgba(var(--color-yellow-rgb), 0.3);
 }
@@ -725,7 +725,7 @@
 }
 
 /* 예외 처리로 인해 무시된 단어들 (노란색) */
-.spell-ignored {
+.spell-original-kept {
     background: rgba(var(--color-yellow-rgb), 0.1);
     color: var(--color-yellow);
     padding: 2px 0;
@@ -733,17 +733,17 @@
     font-weight: 500;
 }
 
-.spell-ignored.clickable-error {
+.spell-original-kept.clickable-error {
     cursor: pointer;
     position: relative;
 }
 
-.spell-ignored.clickable-error:hover {
+.spell-original-kept.clickable-error:hover {
     background: rgba(var(--color-yellow-rgb), 0.25);
     border-bottom: 2px solid var(--color-yellow);
 }
 
-.spell-ignored.clickable-error:active {
+.spell-original-kept.clickable-error:active {
     background: rgba(var(--color-yellow-rgb), 0.3);
 }
 

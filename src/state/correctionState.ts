@@ -20,9 +20,9 @@ export class CorrectionStateManager {
   private initializeStates(ignoredWords: string[]): void {
     this.states.clear();
     this.corrections.forEach((correction, index) => {
-        const isIgnored = ignoredWords.includes(correction.original);
-        this.setState(index, correction.original, false, isIgnored);
-        console.log(`[CorrectionState] Initializing: ${correction.original} at index ${index} as ${isIgnored ? 'IGNORED' : 'ERROR'}.`);
+        const isOriginalKept = ignoredWords.includes(correction.original);
+        this.setState(index, correction.original, false, isOriginalKept);
+        console.log(`[CorrectionState] Initializing: ${correction.original} at index ${index} as ${isOriginalKept ? 'ORIGINAL_KEPT' : 'ERROR'}.`);
     });
   }
 
@@ -31,12 +31,13 @@ export class CorrectionStateManager {
    * @param correctionIndex 교정 인덱스
    * @param value 설정할 값
    * @param isExceptionState 예외 처리 상태 여부
+   * @param isOriginalKept 원본유지 상태 여부
    */
-  setState(correctionIndex: number, value: string, isExceptionState: boolean = false, isIgnoredState: boolean = false): void {
+  setState(correctionIndex: number, value: string, isExceptionState: boolean = false, isOriginalKept: boolean = false): void {
     this.states.set(correctionIndex, value);
     
     const exceptionKey = `${correctionIndex}_exception`;
-    const ignoredKey = `${correctionIndex}_ignored`;
+    const originalKeptKey = `${correctionIndex}_originalKept`;
 
     if (isExceptionState) {
       this.states.set(exceptionKey, true);
@@ -44,10 +45,10 @@ export class CorrectionStateManager {
       this.states.delete(exceptionKey);
     }
 
-    if (isIgnoredState) {
-        this.states.set(ignoredKey, true);
+    if (isOriginalKept) {
+        this.states.set(originalKeptKey, true);
     } else {
-        this.states.delete(ignoredKey);
+        this.states.delete(originalKeptKey);
     }
   }
 
@@ -71,13 +72,13 @@ export class CorrectionStateManager {
   }
 
   /**
-   * 3단계 토글을 수행합니다 (빨간색 → 초록색 → 파란색(예외처리) → 빨간색).
+   * 특정 교정이 원본유지 상태인지 확인합니다.
    * @param correctionIndex 교정 인덱스
-   * @returns 새로운 상태 정보
+   * @returns 원본유지 상태 여부
    */
-  isIgnoredState(correctionIndex: number): boolean {
-    const ignoredKey = `${correctionIndex}_ignored`;
-    return !!this.states.get(ignoredKey);
+  isOriginalKeptState(correctionIndex: number): boolean {
+    const originalKeptKey = `${correctionIndex}_originalKept`;
+    return !!this.states.get(originalKeptKey);
   }
 
   /**
@@ -90,9 +91,8 @@ export class CorrectionStateManager {
   }
 
   /**
-   * 3단계 토글을 수행합니다.
-   * - 일반 단어: 빨간색(오류) → 초록색(수정) → 파란색(예외처리) → 빨간색(오류)
-   * - 무시된 단어: 주황색(무시됨) → 빨간색(오류) → 초록색(수정) → 파란색(예외처리) → 주황색(무시됨)
+   * 4단계 토글을 수행합니다.
+   * - 오류(빨간색) → 수정1, 수정2...(초록색) → 예외처리(파란색) → 원본유지(주황색) → 오류(빨간색)
    * @param correctionIndex 교정 인덱스
    * @returns 새로운 상태 정보
    */
@@ -105,55 +105,45 @@ export class CorrectionStateManager {
     const suggestions = [correction.original, ...correction.corrected];
     const currentValue = this.getValue(correctionIndex);
     const isCurrentlyException = this.isExceptionState(correctionIndex);
-    const isCurrentlyIgnored = this.isIgnoredState(correctionIndex);
+    const isCurrentlyOriginalKept = this.isOriginalKeptState(correctionIndex);
     
-    // 이 단어가 초기에 무시된 단어인지 확인 (ignoredWords에 포함되어 있는지)
-    const wasInitiallyIgnored = this.isInitiallyIgnoredWord(correction.original);
-
     console.log('\n[CorrectionState.toggleState] Initial state:', {
       correctionIndex,
       currentValue,
       isCurrentlyException,
-      isCurrentlyIgnored,
-      wasInitiallyIgnored,
+      isCurrentlyOriginalKept,
       originalText: correction.original,
       suggestions
     });
 
-    if (isCurrentlyIgnored) {
-        // Ignored (Orange) -> Error (Red)
+    // 1. 원본유지 상태에서 오류 상태로
+    if (isCurrentlyOriginalKept) {
         this.setState(correctionIndex, correction.original, false, false);
-        console.log('[CorrectionState.toggleState] Ignored -> Error');
+        console.log('[CorrectionState.toggleState] OriginalKept -> Error');
         return { value: correction.original, isExceptionState: false };
     }
 
-    let nextIndex = suggestions.indexOf(currentValue) + 1;
-
+    // 2. 예외처리 상태에서 원본유지 상태로
     if (isCurrentlyException) {
-        if (wasInitiallyIgnored) {
-            // Exception (Blue) -> Ignored (Orange) - 초기에 무시된 단어만
-            this.setState(correctionIndex, correction.original, false, true);
-            console.log('[CorrectionState.toggleState] Exception -> Ignored (initially ignored word)');
-            return { value: correction.original, isExceptionState: false };
-        } else {
-            // Exception (Blue) -> Error (Red) - 일반 단어
-            this.setState(correctionIndex, correction.original, false, false);
-            console.log('[CorrectionState.toggleState] Exception -> Error (regular word)');
-            return { value: correction.original, isExceptionState: false };
-        }
+        this.setState(correctionIndex, correction.original, false, true);
+        console.log('[CorrectionState.toggleState] Exception -> OriginalKept');
+        return { value: correction.original, isExceptionState: false };
     }
 
+    // 3. 현재 값의 다음 제안으로 이동
+    let nextIndex = suggestions.indexOf(currentValue) + 1;
+
     if (nextIndex >= suggestions.length) {
-        // Last suggestion (Green) -> Exception (Blue)
+        // 마지막 제안에서 예외처리 상태로
         this.setState(correctionIndex, correction.original, true, false);
         console.log('[CorrectionState.toggleState] Last Suggestion -> Exception');
         return { value: correction.original, isExceptionState: true };
     }
 
-    // Error (Red) or Corrected (Green) -> Next suggestion (Green)
+    // 4. 다음 제안으로 이동 (오류 → 첫 번째 수정안, 수정안 → 다음 수정안)
     const newValue = suggestions[nextIndex];
     this.setState(correctionIndex, newValue, false, false);
-    console.log('[CorrectionState.toggleState] Next Suggestion');
+    console.log('[CorrectionState.toggleState] Next Suggestion:', newValue);
     return { value: newValue, isExceptionState: false };
   }
 
@@ -166,9 +156,9 @@ export class CorrectionStateManager {
     const correction = this.corrections[correctionIndex];
     if (!correction) return '';
 
-    if (this.isIgnoredState(correctionIndex)) {
-        console.log(`[CorrectionState] DisplayClass for ${correction.original} (index ${correctionIndex}): spell-ignored`);
-        return 'spell-ignored';
+    if (this.isOriginalKeptState(correctionIndex)) {
+        console.log(`[CorrectionState] DisplayClass for ${correction.original} (index ${correctionIndex}): spell-original-kept`);
+        return 'spell-original-kept';
     }
 
     const currentValue = this.getValue(correctionIndex);

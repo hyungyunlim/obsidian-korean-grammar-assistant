@@ -135,7 +135,7 @@ export class SpellCheckOrchestrator {
       editor: editor,
       ignoredWords: IgnoredWordsService.getIgnoredWords(this.settings),
       onExceptionWordsAdded: (words: string[]) => this.handleExceptionWords(words)
-    }, this.aiService);
+    }, this.aiService, (newMaxTokens: number) => this.handleMaxTokensUpdate(newMaxTokens));
 
     popup.render();
     popup.show();
@@ -186,5 +186,18 @@ export class SpellCheckOrchestrator {
     this.settings = newSettings;
     // AI 서비스 설정도 업데이트
     this.aiService.updateSettings(newSettings.ai);
+  }
+
+  /**
+   * 최대 토큰 설정을 업데이트합니다.
+   */
+  private handleMaxTokensUpdate(newMaxTokens: number): void {
+    this.settings.ai.maxTokens = newMaxTokens;
+    this.aiService.updateSettings(this.settings.ai);
+    
+    // 메인 플러그인에 설정 저장 요청
+    if (this.onSettingsUpdated) {
+      this.onSettingsUpdated(this.settings);
+    }
   }
 }

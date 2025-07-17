@@ -106,22 +106,39 @@ export const AI_PROMPTS = {
 다음 규칙을 따라주세요:
 1. 문맥에 가장 적합한 수정안을 선택하세요
 2. 고유명사, URL, 이메일, 전문용어는 예외처리를 고려하세요
-3. 애매한 경우 원문을 유지하는 것을 고려하세요
+3. 애매한 경우나 원문이 적절한 경우 원본유지를 선택하세요
 4. 각 선택에 대한 신뢰도(0-100)와 간단한 이유를 제공하세요
 
-⚠️ 중요: 
+⚠️ 중요한 응답 규칙:
+- selectedValue에는 반드시 제공된 수정안 중 하나 또는 원본 텍스트만 입력하세요
+- "원본유지", "예외처리" 같은 명령어를 사용하지 마세요
+- 원본을 유지하려면 원본 텍스트를 selectedValue에 입력하세요
+- 예외처리하려면 원본 텍스트를 selectedValue에 입력하고 isExceptionProcessed를 true로 설정하세요
+
+선택 방법:
+1. 수정이 필요한 경우: 제공된 수정안 중 하나를 selectedValue에 입력
+2. 원본을 유지하는 경우: 원본 텍스트를 selectedValue에 입력, isExceptionProcessed: false
+3. 예외처리하는 경우: 원본 텍스트를 selectedValue에 입력, isExceptionProcessed: true
+
+⚠️ 응답 형식: 
 - 오직 JSON 배열만 응답하세요. 다른 텍스트나 설명은 포함하지 마세요.
 - 마크다운 코드 블록을 사용하지 마세요.
-- 응답이 잘리지 않도록 주의하세요.
 
-응답 형식 (이 JSON 배열만 응답):
+응답 형식 예시:
 [
   {
     "correctionIndex": 0,
-    "selectedValue": "선택된 값",
+    "selectedValue": "따라",
     "isExceptionProcessed": false,
-    "confidence": 85,
-    "reasoning": "간단한 이유"
+    "confidence": 90,
+    "reasoning": "원본이 적절함"
+  },
+  {
+    "correctionIndex": 1,
+    "selectedValue": "슬랙",
+    "isExceptionProcessed": true,
+    "confidence": 100,
+    "reasoning": "고유명사로 예외처리"
   }
 ]`,
   

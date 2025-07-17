@@ -46,7 +46,7 @@ export interface PopupConfig {
  */
 export interface CorrectionState {
   correctionIndex: number;
-  currentState: 'error' | 'corrected' | 'exception-processed' | 'ignored';
+  currentState: 'error' | 'corrected' | 'exception-processed' | 'original-kept';
   selectedValue: string;
   isExceptionState?: boolean;
 }
@@ -75,7 +75,7 @@ export interface UIComponent {
  */
 export interface TextSegment {
   text: string;
-  type: 'normal' | 'error' | 'corrected' | 'exception-processed' | 'ignored';
+  type: 'normal' | 'error' | 'corrected' | 'exception-processed' | 'original-kept';
   suggestion?: string;
   correctionIndex?: number;
 }
@@ -102,6 +102,7 @@ export interface AIAnalysisResult {
   correctionIndex: number;
   selectedValue: string;
   isExceptionProcessed: boolean;
+  isOriginalKept: boolean; // 원본유지 상태 (AI가 원본을 선택했을 때)
   confidence: number; // 0-100 사이의 신뢰도 점수
   reasoning: string; // AI 선택 이유 설명
 }
