@@ -94,7 +94,9 @@ export const DEFAULT_AI_SETTINGS = {
   ollamaEndpoint: 'http://localhost:11434',
   model: 'gpt-4o-mini',
   maxTokens: 2000,
-  temperature: 0.1 // 낮은 값으로 설정하여 일관된 결과 도출
+  temperature: 0.1, // 낮은 값으로 설정하여 일관된 결과 도출
+  showTokenWarning: true, // 기본적으로 토큰 경고 활성화
+  tokenWarningThreshold: 3000 // 3000 토큰 이상일 때 경고
 } as const;
 
 // AI 프롬프트 템플릿

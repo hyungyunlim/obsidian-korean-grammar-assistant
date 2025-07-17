@@ -119,6 +119,8 @@ export interface AISettings {
   model: string;
   maxTokens: number;
   temperature: number;
+  showTokenWarning: boolean; // 토큰 사용량 경고 표시 여부
+  tokenWarningThreshold: number; // 경고를 표시할 토큰 임계값
 }
 
 /**

@@ -1,6 +1,7 @@
 import { AISettings, AIAnalysisRequest, AIAnalysisResult, Correction, CorrectionContext } from '../types/interfaces';
 import { AIClientFactory } from '../api/clientFactory';
 import { AI_PROMPTS } from '../constants/aiModels';
+import { estimateAnalysisTokenUsage, estimateCost } from '../utils/tokenEstimator';
 
 export class AIAnalysisService {
   constructor(private settings: AISettings) {}
@@ -50,6 +51,25 @@ export class AIAnalysisService {
     });
 
     return contexts;
+  }
+
+  /**
+   * AI 분석에 필요한 토큰 사용량을 추정합니다.
+   */
+  estimateTokenUsage(request: AIAnalysisRequest): {
+    inputTokens: number;
+    estimatedOutputTokens: number;
+    totalEstimated: number;
+    estimatedCost: string;
+  } {
+    const correctionContexts = this.extractCorrectionContexts(request);
+    const tokenUsage = estimateAnalysisTokenUsage(correctionContexts);
+    const cost = estimateCost(tokenUsage.totalEstimated, this.settings.provider);
+    
+    return {
+      ...tokenUsage,
+      estimatedCost: cost
+    };
   }
 
   /**

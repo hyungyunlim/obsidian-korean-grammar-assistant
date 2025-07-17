@@ -1,5 +1,5 @@
 import { Editor, EditorPosition, App, Platform } from 'obsidian';
-import { Correction, PopupConfig, AIAnalysisResult } from '../types/interfaces';
+import { Correction, PopupConfig, AIAnalysisResult, AIAnalysisRequest } from '../types/interfaces';
 import { BaseComponent } from './baseComponent';
 import { CorrectionStateManager } from '../state/correctionState';
 import { escapeHtml } from '../utils/htmlUtils';
@@ -655,12 +655,18 @@ export class CorrectionPopup extends BaseComponent {
 
       console.log('[AI] AI 분석 시작 중...');
 
-      // AI 분석 요청
+      // AI 분석 요청 준비
       const analysisRequest = {
         originalText: this.config.selectedText,
         corrections: this.config.corrections,
         contextWindow: 100 // 앞뒤 100자씩 컨텍스트 포함 (향상된 컨텍스트)
       };
+
+      // 토큰 사용량 추정 및 경고 확인
+      if (await this.checkTokenUsageWarning(analysisRequest) === false) {
+        // 사용자가 취소한 경우
+        return;
+      }
 
       this.aiAnalysisResults = await this.aiService.analyzeCorrections(analysisRequest);
       
@@ -722,6 +728,111 @@ export class CorrectionPopup extends BaseComponent {
         aiBtn.textContent = '🤖 AI 분석';
       }
     }
+  }
+
+  /**
+   * 토큰 사용량 경고를 확인하고 사용자 확인을 받습니다.
+   */
+  private async checkTokenUsageWarning(request: AIAnalysisRequest): Promise<boolean> {
+    // AI 서비스에서 설정 확인
+    const aiSettings = this.aiService?.getProviderInfo();
+    if (!this.aiService || !aiSettings?.available) {
+      return true; // AI 서비스 없으면 그냥 진행
+    }
+
+    // TODO: 실제 AI 설정에서 경고 설정 가져오기 (임시로 기본값 사용)
+    const showWarning = true; // 임시
+    const threshold = 3000; // 임시
+    
+    if (!showWarning) {
+      return true; // 경고 비활성화된 경우
+    }
+
+    // 토큰 사용량 추정
+    const tokenUsage = this.aiService.estimateTokenUsage(request);
+    
+    if (tokenUsage.totalEstimated < threshold) {
+      return true; // 임계값 미만이면 바로 진행
+    }
+
+    // 확인 모달 표시
+    return new Promise((resolve) => {
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10002;
+        font-family: var(--font-interface);
+      `;
+
+      modal.innerHTML = `
+        <div style="
+          background: var(--background-primary);
+          border-radius: 12px;
+          padding: 24px;
+          max-width: 400px;
+          width: 90%;
+          box-shadow: 0 12px 60px rgba(0, 0, 0, 0.3);
+          border: 1px solid var(--background-modifier-border);
+        ">
+          <h3 style="margin: 0 0 16px 0; color: var(--text-normal); font-size: 18px;">
+            🚨 높은 토큰 사용량 예상
+          </h3>
+          <div style="margin-bottom: 20px; color: var(--text-normal); line-height: 1.5;">
+            <p style="margin: 8px 0;">예상 토큰 사용량: <strong>${tokenUsage.totalEstimated.toLocaleString()}</strong> 토큰</p>
+            <p style="margin: 8px 0;">• 입력: ${tokenUsage.inputTokens.toLocaleString()} 토큰</p>
+            <p style="margin: 8px 0;">• 출력 예상: ${tokenUsage.estimatedOutputTokens.toLocaleString()} 토큰</p>
+            <p style="margin: 8px 0;">• 예상 비용: ${tokenUsage.estimatedCost}</p>
+            <p style="margin: 12px 0 0 0; font-size: 14px; color: var(--text-muted);">
+              계속 진행하시겠습니까?
+            </p>
+          </div>
+          <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <button id="token-warning-cancel" style="
+              padding: 8px 16px;
+              border: 1px solid var(--background-modifier-border);
+              border-radius: 6px;
+              background: var(--background-secondary);
+              color: var(--text-normal);
+              cursor: pointer;
+            ">취소</button>
+            <button id="token-warning-proceed" style="
+              padding: 8px 16px;
+              border: none;
+              border-radius: 6px;
+              background: var(--interactive-accent);
+              color: var(--text-on-accent);
+              cursor: pointer;
+            ">계속 진행</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      // 이벤트 처리
+      const handleResponse = (proceed: boolean) => {
+        modal.remove();
+        resolve(proceed);
+      };
+
+      modal.querySelector('#token-warning-cancel')?.addEventListener('click', () => handleResponse(false));
+      modal.querySelector('#token-warning-proceed')?.addEventListener('click', () => handleResponse(true));
+      
+      // 오버레이 클릭 시 취소
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          handleResponse(false);
+        }
+      });
+    });
   }
 
   /**

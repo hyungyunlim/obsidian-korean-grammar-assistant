@@ -190,6 +190,34 @@ class SpellingSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           }
         }));
+
+    // 토큰 사용량 경고 설정
+    new Setting(containerEl)
+      .setName("토큰 사용량 경고")
+      .setDesc("AI 분석 시 예상 토큰 사용량이 많을 때 확인 메시지를 표시합니다.")
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.ai.showTokenWarning)
+        .onChange(async (value) => {
+          this.plugin.settings.ai.showTokenWarning = value;
+          await this.plugin.saveSettings();
+          this.display(); // 토글 변경 시 UI 새로고침
+        }));
+
+    if (this.plugin.settings.ai.showTokenWarning) {
+      new Setting(containerEl)
+        .setName("경고 임계값")
+        .setDesc("이 토큰 수 이상일 때 확인 메시지를 표시합니다 (기본: 3000)")
+        .addText(text => text
+          .setPlaceholder("3000")
+          .setValue(this.plugin.settings.ai.tokenWarningThreshold.toString())
+          .onChange(async (value) => {
+            const threshold = parseInt(value);
+            if (!isNaN(threshold) && threshold >= 500) {
+              this.plugin.settings.ai.tokenWarningThreshold = threshold;
+              await this.plugin.saveSettings();
+            }
+          }));
+    }
   }
 
   /**
