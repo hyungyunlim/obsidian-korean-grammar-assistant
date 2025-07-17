@@ -1373,26 +1373,31 @@ export default class SpellingPlugin extends Plugin {
           return;
         }
         selectedText = fullText;
-        // Set cursor positions to cover entire document - use simple approach
+        // Set cursor positions to cover entire document
         try {
-          // Method 1: Try selectAll if available
-          if (typeof (editor as any).selectAll === 'function') {
-            (editor as any).selectAll();
-            cursorStart = editor.getCursor("from");
-            cursorEnd = editor.getCursor("to");
+          // Method 1: Try using CodeMirror doc methods via getDoc()
+          const doc = editor.getDoc();
+          if (doc && typeof (doc as any).lastLine === 'function') {
+            const lastLine = (doc as any).lastLine();
+            const lastLineText = editor.getLine(lastLine);
+            cursorStart = { line: 0, ch: 0 };
+            cursorEnd = { line: lastLine, ch: lastLineText.length };
+            editor.setSelection(cursorStart, cursorEnd);
+            console.log("전체 문서 텍스트 선택됨 (CodeMirror method):", selectedText.length, "자");
           } else {
             // Method 2: Calculate positions from text content
             const lines = fullText.split('\n');
             cursorStart = { line: 0, ch: 0 };
             cursorEnd = { line: lines.length - 1, ch: lines[lines.length - 1].length };
             editor.setSelection(cursorStart, cursorEnd);
+            console.log("전체 문서 텍스트 선택됨 (text-based method):", selectedText.length, "자");
           }
-          console.log("전체 문서 텍스트 선택됨:", selectedText.length, "자");
         } catch (e) {
           console.log("전체 선택 시도 중 오류:", e);
           // Safe fallback
+          const lines = fullText.split('\n');
           cursorStart = { line: 0, ch: 0 };
-          cursorEnd = { line: 0, ch: Math.min(1000, fullText.length) };
+          cursorEnd = { line: lines.length - 1, ch: lines[lines.length - 1].length };
         }
       }
 
@@ -1441,26 +1446,31 @@ export default class SpellingPlugin extends Plugin {
             return;
           }
           selectedText = fullText;
-          // Set cursor positions to cover entire document - use simple approach
+          // Set cursor positions to cover entire document
           try {
-            // Method 1: Try selectAll if available
-            if (typeof (editor as any).selectAll === 'function') {
-              (editor as any).selectAll();
-              cursorStart = editor.getCursor("from");
-              cursorEnd = editor.getCursor("to");
+            // Method 1: Try using CodeMirror doc methods via getDoc()
+            const doc = editor.getDoc();
+            if (doc && typeof (doc as any).lastLine === 'function') {
+              const lastLine = (doc as any).lastLine();
+              const lastLineText = editor.getLine(lastLine);
+              cursorStart = { line: 0, ch: 0 };
+              cursorEnd = { line: lastLine, ch: lastLineText.length };
+              editor.setSelection(cursorStart, cursorEnd);
+              console.log("전체 문서 텍스트 선택됨 (CodeMirror method):", selectedText.length, "자");
             } else {
               // Method 2: Calculate positions from text content
               const lines = fullText.split('\n');
               cursorStart = { line: 0, ch: 0 };
               cursorEnd = { line: lines.length - 1, ch: lines[lines.length - 1].length };
               editor.setSelection(cursorStart, cursorEnd);
+              console.log("전체 문서 텍스트 선택됨 (text-based method):", selectedText.length, "자");
             }
-            console.log("전체 문서 텍스트 선택됨:", selectedText.length, "자");
           } catch (e) {
             console.log("전체 선택 시도 중 오류:", e);
             // Safe fallback
+            const lines = fullText.split('\n');
             cursorStart = { line: 0, ch: 0 };
-            cursorEnd = { line: 0, ch: Math.min(1000, fullText.length) };
+            cursorEnd = { line: lines.length - 1, ch: lines[lines.length - 1].length };
           }
         }
 
