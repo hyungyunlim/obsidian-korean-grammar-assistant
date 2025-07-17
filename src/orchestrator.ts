@@ -2,6 +2,7 @@ import { App, Editor, Notice, MarkdownView } from 'obsidian';
 import { PluginSettings, SpellCheckResult } from './types/interfaces';
 import { SpellCheckApiService } from './services/api';
 import { SettingsService } from './services/settings';
+import { IgnoredWordsService } from './services/ignoredWords';
 import { CorrectionPopup } from './ui/correctionPopup';
 
 /**
@@ -11,11 +12,13 @@ export class SpellCheckOrchestrator {
   private app: App;
   private settings: PluginSettings;
   private apiService: SpellCheckApiService;
+  private onSettingsUpdated?: (settings: PluginSettings) => void;
 
-  constructor(app: App, settings: PluginSettings) {
+  constructor(app: App, settings: PluginSettings, onSettingsUpdated?: (settings: PluginSettings) => void) {
     this.app = app;
     this.settings = settings;
     this.apiService = new SpellCheckApiService();
+    this.onSettingsUpdated = onSettingsUpdated;
   }
 
   /**
@@ -126,7 +129,8 @@ export class SpellCheckOrchestrator {
       selectedText: selectedText,
       start: selectionStart,
       end: selectionEnd,
-      editor: editor
+      editor: editor,
+      onExceptionWordsAdded: (words: string[]) => this.handleExceptionWords(words)
     });
 
     popup.render();
@@ -147,6 +151,27 @@ export class SpellCheckOrchestrator {
       new Notice("네트워크 연결을 확인해주세요.");
     } else {
       new Notice(`맞춤법 검사 중 오류가 발생했습니다: ${error.message}`);
+    }
+  }
+
+  /**
+   * 예외 처리된 단어들을 설정에 추가합니다.
+   */
+  private handleExceptionWords(words: string[]): void {
+    if (words.length === 0) return;
+
+    const updatedSettings = IgnoredWordsService.addMultipleIgnoredWords(words, this.settings);
+    
+    if (updatedSettings.ignoredWords.length > this.settings.ignoredWords.length) {
+      this.settings = updatedSettings;
+      
+      // 설정 업데이트 콜백 호출
+      if (this.onSettingsUpdated) {
+        this.onSettingsUpdated(this.settings);
+      }
+
+      const addedCount = updatedSettings.ignoredWords.length - this.settings.ignoredWords.length + words.length;
+      new Notice(`${words.length}개의 단어가 예외 처리 목록에 추가되었습니다.`);
     }
   }
 

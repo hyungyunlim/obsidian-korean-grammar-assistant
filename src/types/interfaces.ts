@@ -16,7 +16,7 @@ export interface PluginSettings {
   apiKey: string;
   apiHost: string;
   apiPort: number;
-  ignoredWords: string[]; // 예외 처리할 단어들
+  ignoredWords: string[]; // 예외 처리된 단어들
 }
 
 /**
@@ -36,6 +36,7 @@ export interface PopupConfig {
   start: EditorPosition;
   end: EditorPosition;
   editor: Editor;
+  onExceptionWordsAdded?: (words: string[]) => void;
 }
 
 /**
@@ -43,9 +44,9 @@ export interface PopupConfig {
  */
 export interface CorrectionState {
   correctionIndex: number;
-  currentState: 'error' | 'corrected' | 'original-selected';
+  currentState: 'error' | 'corrected' | 'exception-processed' | 'ignored';
   selectedValue: string;
-  isBlueState?: boolean;
+  isExceptionState?: boolean;
 }
 
 /**
@@ -72,7 +73,7 @@ export interface UIComponent {
  */
 export interface TextSegment {
   text: string;
-  type: 'normal' | 'error' | 'corrected' | 'original-selected';
+  type: 'normal' | 'error' | 'corrected' | 'exception-processed' | 'ignored';
   suggestion?: string;
   correctionIndex?: number;
 }

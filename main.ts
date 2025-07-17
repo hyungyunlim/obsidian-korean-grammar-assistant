@@ -9,6 +9,7 @@ import {
 // Import modularized components
 import { PluginSettings } from './src/types/interfaces';
 import { DEFAULT_SETTINGS, SettingsService } from './src/services/settings';
+import { IgnoredWordsService } from './src/services/ignoredWords';
 import { SpellCheckOrchestrator } from './src/orchestrator';
 
 // 한글 맞춤법 검사 아이콘 등록
@@ -29,7 +30,14 @@ export default class KoreanGrammarPlugin extends Plugin {
     await this.loadSettings();
 
     // 오케스트레이터 초기화
-    this.orchestrator = new SpellCheckOrchestrator(this.app, this.settings);
+    this.orchestrator = new SpellCheckOrchestrator(
+      this.app, 
+      this.settings, 
+      (updatedSettings) => {
+        this.settings = updatedSettings;
+        this.saveSettings();
+      }
+    );
 
     // 리본 아이콘 추가
     this.addRibbonIcon("han-spellchecker", "Check Spelling", async () => {
@@ -76,6 +84,74 @@ class SpellingSettingTab extends PluginSettingTab {
   constructor(app: App, plugin: KoreanGrammarPlugin) {
     super(app, plugin);
     this.plugin = plugin;
+  }
+
+  /**
+   * 예외 처리된 단어들을 태그 클라우드로 렌더링합니다.
+   */
+  private renderIgnoredWordsCloud(container: HTMLElement): void {
+    container.empty();
+    
+    const ignoredWords = IgnoredWordsService.getIgnoredWords(this.plugin.settings);
+    
+    if (ignoredWords.length === 0) {
+      container.createEl("div", {
+        text: "예외 처리된 단어가 없습니다.",
+        cls: "setting-item-description"
+      }).style.textAlign = "center";
+      return;
+    }
+
+    ignoredWords.forEach(word => {
+      const tag = container.createEl("span", {
+        text: word,
+        cls: "ignored-word-tag"
+      });
+      
+      tag.style.cssText = `
+        display: inline-block;
+        background: var(--interactive-accent);
+        color: var(--text-on-accent);
+        padding: 4px 8px;
+        margin: 2px;
+        border-radius: 12px;
+        font-size: 12px;
+        cursor: pointer;
+        position: relative;
+      `;
+      
+      // X 버튼 추가
+      const removeBtn = tag.createEl("span", {
+        text: "×",
+        cls: "remove-word-btn"
+      });
+      removeBtn.style.cssText = `
+        margin-left: 6px;
+        font-weight: bold;
+        opacity: 0.7;
+      `;
+      
+      removeBtn.onclick = async (e) => {
+        e.stopPropagation();
+        this.plugin.settings = IgnoredWordsService.removeIgnoredWord(word, this.plugin.settings);
+        await this.plugin.saveSettings();
+        this.renderIgnoredWordsCloud(container);
+        
+        // 개수 업데이트
+        const countInfo = container.parentElement?.querySelector('.setting-item-description');
+        if (countInfo) {
+          countInfo.textContent = `현재 ${IgnoredWordsService.getIgnoredWordsCount(this.plugin.settings)}개의 단어가 예외 처리되어 있습니다.`;
+        }
+      };
+      
+      removeBtn.onmouseover = () => {
+        removeBtn.style.opacity = "1";
+      };
+      
+      removeBtn.onmouseout = () => {
+        removeBtn.style.opacity = "0.7";
+      };
+    });
   }
 
   display(): void {
@@ -135,6 +211,82 @@ class SpellingSettingTab extends PluginSettingTab {
       errorContainer.style.marginTop = "10px";
     }
 
+    // 예외 처리된 단어 관리 섹션
+    containerEl.createEl("h3", { text: "예외 처리된 단어" });
+    
+    const ignoredWordsDesc = containerEl.createEl("div", {
+      cls: "setting-item-description",
+      text: "맞춤법 검사에서 제외할 단어들을 관리합니다. 팝업에서 '예외처리'를 선택하면 자동으로 추가됩니다."
+    });
+
+    // 예외 처리된 단어 개수 표시
+    const wordsCount = IgnoredWordsService.getIgnoredWordsCount(this.plugin.settings);
+    const countInfo = containerEl.createEl("div", {
+      cls: "setting-item-description",
+      text: `현재 ${wordsCount}개의 단어가 예외 처리되어 있습니다.`
+    });
+
+    // 태그 클라우드 컨테이너
+    const tagCloudContainer = containerEl.createDiv("ignored-words-container");
+    tagCloudContainer.style.cssText = `
+      border: 1px solid var(--background-modifier-border);
+      border-radius: 8px;
+      padding: 12px;
+      margin: 10px 0;
+      background: var(--background-secondary);
+      min-height: 100px;
+      max-height: 200px;
+      overflow-y: auto;
+    `;
+
+    this.renderIgnoredWordsCloud(tagCloudContainer);
+
+    // 단어 추가/제거 컨트롤
+    new Setting(containerEl)
+      .setName("단어 추가")
+      .setDesc("쉼표로 구분하여 여러 단어를 한 번에 추가할 수 있습니다")
+      .addText(text => {
+        const input = text.setPlaceholder("예: 단어1, 단어2, 단어3");
+        
+        const addButton = containerEl.createEl("button", {
+          text: "추가",
+          cls: "mod-cta"
+        });
+        addButton.style.marginLeft = "8px";
+        
+        addButton.onclick = async () => {
+          const words = input.getValue();
+          if (words.trim()) {
+            this.plugin.settings = IgnoredWordsService.importIgnoredWords(
+              words, 
+              ',', 
+              this.plugin.settings
+            );
+            await this.plugin.saveSettings();
+            input.setValue("");
+            this.renderIgnoredWordsCloud(tagCloudContainer);
+            countInfo.textContent = `현재 ${IgnoredWordsService.getIgnoredWordsCount(this.plugin.settings)}개의 단어가 예외 처리되어 있습니다.`;
+          }
+        };
+        
+        text.inputEl.parentElement?.appendChild(addButton);
+        return text;
+      });
+
+    // 모든 단어 제거 버튼
+    new Setting(containerEl)
+      .setName("모든 예외 처리된 단어 제거")
+      .setDesc("주의: 이 작업은 되돌릴 수 없습니다")
+      .addButton(button => button
+        .setButtonText("모두 제거")
+        .setWarning()
+        .onClick(async () => {
+          this.plugin.settings = IgnoredWordsService.clearAllIgnoredWords(this.plugin.settings);
+          await this.plugin.saveSettings();
+          this.renderIgnoredWordsCloud(tagCloudContainer);
+          countInfo.textContent = `현재 ${IgnoredWordsService.getIgnoredWordsCount(this.plugin.settings)}개의 단어가 예외 처리되어 있습니다.`;
+        }));
+
     // 도움말 섹션
     containerEl.createEl("h3", { text: "사용법" });
     
@@ -146,7 +298,8 @@ class SpellingSettingTab extends PluginSettingTab {
       <ul>
         <li><strong>텍스트 선택 후 실행:</strong> 특정 텍스트만 검사</li>
         <li><strong>선택하지 않고 실행:</strong> 전체 문서 검사</li>
-        <li><strong>미리보기 클릭:</strong> 오류 → 수정 → 원본선택 순환</li>
+        <li><strong>미리보기 클릭:</strong> 오류 → 수정 → 예외처리 순환</li>
+        <li><strong>예외 처리:</strong> 파란색으로 표시되며 향후 검사에서 제외됨</li>
         <li><strong>긴 텍스트:</strong> 자동 페이지 분할 및 네비게이션</li>
       </ul>
     `;

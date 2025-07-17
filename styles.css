@@ -229,9 +229,14 @@
     border: 1px solid rgba(var(--color-green-rgb), 0.3);
 }
 
-#correctionPopup .color-legend-dot.original-selected {
+#correctionPopup .color-legend-dot.exception-processed {
     background: var(--color-blue);
     border: 1px solid rgba(var(--color-blue-rgb), 0.3);
+}
+
+#correctionPopup .color-legend-dot.ignored {
+    background: var(--color-yellow);
+    border: 1px solid rgba(var(--color-yellow-rgb), 0.3);
 }
 
 #correctionPopup .preview-header {
@@ -624,7 +629,7 @@
     background: rgba(var(--color-green-rgb), 0.3);
 }
 
-.spell-original-selected {
+.spell-exception-processed {
     background: rgba(var(--color-blue-rgb), 0.1);
     color: var(--color-blue);
     padding: 2px 0;
@@ -632,18 +637,41 @@
     font-weight: 500;
 }
 
-.spell-original-selected.clickable-error {
+.spell-exception-processed.clickable-error {
     cursor: pointer;
     position: relative;
 }
 
-.spell-original-selected.clickable-error:hover {
+.spell-exception-processed.clickable-error:hover {
     background: rgba(var(--color-blue-rgb), 0.25);
     border-bottom: 2px solid var(--color-blue);
 }
 
-.spell-original-selected.clickable-error:active {
+.spell-exception-processed.clickable-error:active {
     background: rgba(var(--color-blue-rgb), 0.3);
+}
+
+/* 예외 처리로 인해 무시된 단어들 (노란색) */
+.spell-ignored {
+    background: rgba(var(--color-yellow-rgb), 0.1);
+    color: var(--color-yellow);
+    padding: 2px 0;
+    border-bottom: 2px dotted var(--color-yellow);
+    font-weight: 500;
+}
+
+.spell-ignored.clickable-error {
+    cursor: pointer;
+    position: relative;
+}
+
+.spell-ignored.clickable-error:hover {
+    background: rgba(var(--color-yellow-rgb), 0.25);
+    border-bottom: 2px solid var(--color-yellow);
+}
+
+.spell-ignored.clickable-error:active {
+    background: rgba(var(--color-yellow-rgb), 0.3);
 }
 
 /* Safe area for mobile devices with notches */

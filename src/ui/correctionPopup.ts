@@ -96,8 +96,12 @@ export class CorrectionPopup extends BaseComponent {
                     <span>수정</span>
                   </div>
                   <div class="color-legend-item">
-                    <div class="color-legend-dot original-selected"></div>
-                    <span>원본선택</span>
+                    <div class="color-legend-dot exception-processed"></div>
+                    <span>예외처리</span>
+                  </div>
+                  <div class="color-legend-item">
+                    <div class="color-legend-dot ignored"></div>
+                    <span>무시됨</span>
                   </div>
                 </div>
               </div>
@@ -239,7 +243,7 @@ export class CorrectionPopup extends BaseComponent {
               <span class="suggestion-compact ${this.stateManager.isSelected(actualIndex, correction.original) ? 'selected' : ''} keep-original" 
                     data-value="${escapeHtml(correction.original)}" 
                     data-correction="${actualIndex}">
-                원본
+                예외처리
               </span>
             </div>
           </div>
@@ -453,10 +457,15 @@ export class CorrectionPopup extends BaseComponent {
    * 교정사항을 적용합니다.
    */
   private applyCorrections(): void {
-    const finalText = this.stateManager.applyCorrections(this.config.selectedText);
+    const result = this.stateManager.applyCorrections(this.config.selectedText);
     
     // 에디터에 변경사항 적용
-    this.config.editor.replaceRange(finalText, this.config.start, this.config.end);
+    this.config.editor.replaceRange(result.finalText, this.config.start, this.config.end);
+    
+    // 예외 처리된 단어들이 있으면 콜백 호출
+    if (result.exceptionWords.length > 0 && this.config.onExceptionWordsAdded) {
+      this.config.onExceptionWordsAdded(result.exceptionWords);
+    }
     
     this.close();
   }
