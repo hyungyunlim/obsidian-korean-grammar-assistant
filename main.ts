@@ -1375,29 +1375,21 @@ export default class SpellingPlugin extends Plugin {
         selectedText = fullText;
         // Set cursor positions to cover entire document
         try {
-          // Method 1: Try using CodeMirror doc methods via getDoc()
-          const doc = editor.getDoc();
-          if (doc && typeof (doc as any).lastLine === 'function') {
-            const lastLine = (doc as any).lastLine();
-            const lastLineText = editor.getLine(lastLine);
-            cursorStart = { line: 0, ch: 0 };
-            cursorEnd = { line: lastLine, ch: lastLineText.length };
-            editor.setSelection(cursorStart, cursorEnd);
-            console.log("전체 문서 텍스트 선택됨 (CodeMirror method):", selectedText.length, "자");
-          } else {
-            // Method 2: Calculate positions from text content
-            const lines = fullText.split('\n');
-            cursorStart = { line: 0, ch: 0 };
-            cursorEnd = { line: lines.length - 1, ch: lines[lines.length - 1].length };
-            editor.setSelection(cursorStart, cursorEnd);
-            console.log("전체 문서 텍스트 선택됨 (text-based method):", selectedText.length, "자");
-          }
+          // Method 1: Use official Obsidian Editor API
+          const lastLine = editor.lastLine();
+          const lastLineText = editor.getLine(lastLine);
+          cursorStart = { line: 0, ch: 0 };
+          cursorEnd = { line: lastLine, ch: lastLineText.length };
+          editor.setSelection(cursorStart, cursorEnd);
+          console.log("전체 문서 텍스트 선택됨 (Obsidian API):", selectedText.length, "자");
         } catch (e) {
-          console.log("전체 선택 시도 중 오류:", e);
-          // Safe fallback
+          console.log("Obsidian API 사용 실패, 텍스트 기반 방법 사용:", e);
+          // Fallback: Calculate positions from text content
           const lines = fullText.split('\n');
           cursorStart = { line: 0, ch: 0 };
           cursorEnd = { line: lines.length - 1, ch: lines[lines.length - 1].length };
+          editor.setSelection(cursorStart, cursorEnd);
+          console.log("전체 문서 텍스트 선택됨 (fallback method):", selectedText.length, "자");
         }
       }
 
@@ -1448,29 +1440,21 @@ export default class SpellingPlugin extends Plugin {
           selectedText = fullText;
           // Set cursor positions to cover entire document
           try {
-            // Method 1: Try using CodeMirror doc methods via getDoc()
-            const doc = editor.getDoc();
-            if (doc && typeof (doc as any).lastLine === 'function') {
-              const lastLine = (doc as any).lastLine();
-              const lastLineText = editor.getLine(lastLine);
-              cursorStart = { line: 0, ch: 0 };
-              cursorEnd = { line: lastLine, ch: lastLineText.length };
-              editor.setSelection(cursorStart, cursorEnd);
-              console.log("전체 문서 텍스트 선택됨 (CodeMirror method):", selectedText.length, "자");
-            } else {
-              // Method 2: Calculate positions from text content
-              const lines = fullText.split('\n');
-              cursorStart = { line: 0, ch: 0 };
-              cursorEnd = { line: lines.length - 1, ch: lines[lines.length - 1].length };
-              editor.setSelection(cursorStart, cursorEnd);
-              console.log("전체 문서 텍스트 선택됨 (text-based method):", selectedText.length, "자");
-            }
+            // Method 1: Use official Obsidian Editor API
+            const lastLine = editor.lastLine();
+            const lastLineText = editor.getLine(lastLine);
+            cursorStart = { line: 0, ch: 0 };
+            cursorEnd = { line: lastLine, ch: lastLineText.length };
+            editor.setSelection(cursorStart, cursorEnd);
+            console.log("전체 문서 텍스트 선택됨 (Obsidian API):", selectedText.length, "자");
           } catch (e) {
-            console.log("전체 선택 시도 중 오류:", e);
-            // Safe fallback
+            console.log("Obsidian API 사용 실패, 텍스트 기반 방법 사용:", e);
+            // Fallback: Calculate positions from text content
             const lines = fullText.split('\n');
             cursorStart = { line: 0, ch: 0 };
             cursorEnd = { line: lines.length - 1, ch: lines[lines.length - 1].length };
+            editor.setSelection(cursorStart, cursorEnd);
+            console.log("전체 문서 텍스트 선택됨 (fallback method):", selectedText.length, "자");
           }
         }
 
