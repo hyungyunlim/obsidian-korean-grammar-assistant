@@ -542,17 +542,62 @@ function createCorrectionPopup(
   popup.innerHTML = popupHtml;
   document.body.appendChild(popup);
   
-  // Mobile fix: Blur editor to hide keyboard and cursor
+  // Mobile fix: Aggressive keyboard hiding
   if (editor) {
-    // Remove focus from editor to hide mobile keyboard
+    // Try multiple approaches to hide mobile keyboard
+    
+    // Method 1: Blur CodeMirror editor
     const editorElement = (editor as any).cm?.dom || editor.getScrollElement?.();
     if (editorElement && typeof editorElement.blur === 'function') {
       editorElement.blur();
     }
     
-    // Also try to blur the document's active element
-    if (document.activeElement && typeof document.activeElement.blur === 'function') {
-      (document.activeElement as HTMLElement).blur();
+    // Method 2: Blur CodeMirror input elements specifically
+    try {
+      const cmEditor = (editor as any).cm;
+      if (cmEditor) {
+        // CodeMirror 6 style
+        if (cmEditor.contentDOM) {
+          cmEditor.contentDOM.blur();
+        }
+        // Also try to blur the editor view
+        if (cmEditor.dom) {
+          cmEditor.dom.blur();
+        }
+      }
+    } catch (e) {
+      console.log('CodeMirror blur attempt failed:', e);
+    }
+    
+    // Method 3: Blur any active input/textarea elements
+    const activeElement = document.activeElement as HTMLElement;
+    if (activeElement && (
+      activeElement.tagName === 'INPUT' || 
+      activeElement.tagName === 'TEXTAREA' || 
+      activeElement.contentEditable === 'true'
+    )) {
+      activeElement.blur();
+    }
+    
+    // Method 4: Create temporary element and focus it to steal focus
+    const tempElement = document.createElement('button');
+    tempElement.style.position = 'absolute';
+    tempElement.style.left = '-9999px';
+    tempElement.style.opacity = '0';
+    tempElement.style.pointerEvents = 'none';
+    document.body.appendChild(tempElement);
+    tempElement.focus();
+    setTimeout(() => {
+      document.body.removeChild(tempElement);
+    }, 100);
+    
+    // Method 5: Force viewport change to trigger keyboard hide
+    if (window.scrollTo) {
+      const currentScroll = window.scrollY;
+      window.scrollTo(0, currentScroll + 1);
+      setTimeout(() => {
+        window.scrollTo(0, currentScroll);
+      }, 50);
     }
   }
   
@@ -961,10 +1006,27 @@ function createCorrectionPopup(
     
     // Mobile fix: Hide keyboard when clicking on preview area
     if (target.closest('#resultPreview') || target.id === 'resultPreview') {
-      // Blur any active element to hide mobile keyboard
-      if (document.activeElement && typeof document.activeElement.blur === 'function') {
-        (document.activeElement as HTMLElement).blur();
+      // Aggressive keyboard hiding for mobile
+      const activeElement = document.activeElement as HTMLElement;
+      if (activeElement) {
+        activeElement.blur();
       }
+      
+      // Create temporary element to steal focus
+      const tempInput = document.createElement('input');
+      tempInput.style.position = 'absolute';
+      tempInput.style.left = '-9999px';
+      tempInput.style.opacity = '0';
+      tempInput.setAttribute('readonly', 'true');
+      document.body.appendChild(tempInput);
+      tempInput.focus();
+      tempInput.blur();
+      setTimeout(() => {
+        document.body.removeChild(tempInput);
+      }, 100);
+      
+      // Prevent default to avoid any focus behavior
+      e.preventDefault();
     }
     
     // Handle background overlay clicks
@@ -1299,14 +1361,27 @@ export default class SpellingPlugin extends Plugin {
         return;
       }
 
-      const selectedText = editor.getSelection();
-      if (!selectedText) {
-        new Notice("선택된 텍스트가 없습니다.");
-        return;
+      let selectedText = editor.getSelection();
+      let cursorStart = editor.getCursor("from");
+      let cursorEnd = editor.getCursor("to");
+      
+      // If no text is selected, use entire document
+      if (!selectedText || selectedText.trim().length === 0) {
+        const fullText = editor.getValue();
+        if (!fullText || fullText.trim().length === 0) {
+          new Notice("문서에 텍스트가 없습니다.");
+          return;
+        }
+        selectedText = fullText;
+        // Set cursor positions to cover entire document
+        cursorStart = { line: 0, ch: 0 };
+        const lastLine = editor.getLineCount() - 1;
+        cursorEnd = { line: lastLine, ch: editor.getLine(lastLine).length };
+        
+        // Temporarily select all text to show user what's being checked
+        editor.setSelection(cursorStart, cursorEnd);
+        console.log("전체 문서 텍스트 선택됨:", selectedText.length, "자");
       }
-
-      const cursorStart = editor.getCursor("from");
-      const cursorEnd = editor.getCursor("to");
 
       if (!cursorStart || !cursorEnd) {
         new Notice("텍스트의 시작 또는 끝 위치를 가져올 수 없습니다.");
@@ -1341,14 +1416,27 @@ export default class SpellingPlugin extends Plugin {
       id: "check-spelling",
       name: "Check Spelling",
       editorCallback: async (editor) => {
-        const selectedText = editor.getSelection();
-        if (!selectedText) {
-          new Notice("선택된 텍스트가 없습니다.");
-          return;
+        let selectedText = editor.getSelection();
+        let cursorStart = editor.getCursor("from");
+        let cursorEnd = editor.getCursor("to");
+        
+        // If no text is selected, use entire document
+        if (!selectedText || selectedText.trim().length === 0) {
+          const fullText = editor.getValue();
+          if (!fullText || fullText.trim().length === 0) {
+            new Notice("문서에 텍스트가 없습니다.");
+            return;
+          }
+          selectedText = fullText;
+          // Set cursor positions to cover entire document
+          cursorStart = { line: 0, ch: 0 };
+          const lastLine = editor.getLineCount() - 1;
+          cursorEnd = { line: lastLine, ch: editor.getLine(lastLine).length };
+          
+          // Temporarily select all text to show user what's being checked
+          editor.setSelection(cursorStart, cursorEnd);
+          console.log("전체 문서 텍스트 선택됨:", selectedText.length, "자");
         }
-
-        const cursorStart = editor.getCursor("from");
-        const cursorEnd = editor.getCursor("to");
 
         if (!cursorStart || !cursorEnd) {
           new Notice("텍스트의 시작 또는 끝 위치를 가져올 수 없습니다.");
