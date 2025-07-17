@@ -63,7 +63,6 @@ export interface PaginationConfig {
  * UI 컴포넌트 기본 인터페이스
  */
 export interface UIComponent {
-  element: HTMLElement;
   render(): HTMLElement;
   destroy(): void;
 }
