@@ -1373,14 +1373,27 @@ export default class SpellingPlugin extends Plugin {
           return;
         }
         selectedText = fullText;
-        // Set cursor positions to cover entire document
-        cursorStart = { line: 0, ch: 0 };
-        const lastLine = (editor as any).getLineCount() - 1;
-        cursorEnd = { line: lastLine, ch: editor.getLine(lastLine).length };
-        
-        // Temporarily select all text to show user what's being checked
-        editor.setSelection(cursorStart, cursorEnd);
-        console.log("전체 문서 텍스트 선택됨:", selectedText.length, "자");
+        // Set cursor positions to cover entire document - use simple approach
+        try {
+          // Method 1: Try selectAll if available
+          if (typeof (editor as any).selectAll === 'function') {
+            (editor as any).selectAll();
+            cursorStart = editor.getCursor("from");
+            cursorEnd = editor.getCursor("to");
+          } else {
+            // Method 2: Calculate positions from text content
+            const lines = fullText.split('\n');
+            cursorStart = { line: 0, ch: 0 };
+            cursorEnd = { line: lines.length - 1, ch: lines[lines.length - 1].length };
+            editor.setSelection(cursorStart, cursorEnd);
+          }
+          console.log("전체 문서 텍스트 선택됨:", selectedText.length, "자");
+        } catch (e) {
+          console.log("전체 선택 시도 중 오류:", e);
+          // Safe fallback
+          cursorStart = { line: 0, ch: 0 };
+          cursorEnd = { line: 0, ch: Math.min(1000, fullText.length) };
+        }
       }
 
       if (!cursorStart || !cursorEnd) {
@@ -1428,14 +1441,27 @@ export default class SpellingPlugin extends Plugin {
             return;
           }
           selectedText = fullText;
-          // Set cursor positions to cover entire document
-          cursorStart = { line: 0, ch: 0 };
-          const lastLine = (editor as any).getLineCount() - 1;
-          cursorEnd = { line: lastLine, ch: editor.getLine(lastLine).length };
-          
-          // Temporarily select all text to show user what's being checked
-          editor.setSelection(cursorStart, cursorEnd);
-          console.log("전체 문서 텍스트 선택됨:", selectedText.length, "자");
+          // Set cursor positions to cover entire document - use simple approach
+          try {
+            // Method 1: Try selectAll if available
+            if (typeof (editor as any).selectAll === 'function') {
+              (editor as any).selectAll();
+              cursorStart = editor.getCursor("from");
+              cursorEnd = editor.getCursor("to");
+            } else {
+              // Method 2: Calculate positions from text content
+              const lines = fullText.split('\n');
+              cursorStart = { line: 0, ch: 0 };
+              cursorEnd = { line: lines.length - 1, ch: lines[lines.length - 1].length };
+              editor.setSelection(cursorStart, cursorEnd);
+            }
+            console.log("전체 문서 텍스트 선택됨:", selectedText.length, "자");
+          } catch (e) {
+            console.log("전체 선택 시도 중 오류:", e);
+            // Safe fallback
+            cursorStart = { line: 0, ch: 0 };
+            cursorEnd = { line: 0, ch: Math.min(1000, fullText.length) };
+          }
         }
 
         if (!cursorStart || !cursorEnd) {
