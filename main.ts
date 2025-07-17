@@ -226,66 +226,246 @@ class SpellingSettingTab extends PluginSettingTab {
       text: `현재 ${wordsCount}개의 단어가 예외 처리되어 있습니다.`
     });
 
-    // 태그 클라우드 컨테이너
-    const tagCloudContainer = containerEl.createDiv("ignored-words-container");
-    tagCloudContainer.style.cssText = `
+    // 태그 클라우드 섹션 컨테이너
+    const tagCloudSection = containerEl.createDiv("tag-cloud-section");
+    tagCloudSection.style.cssText = `
       border: 1px solid var(--background-modifier-border);
       border-radius: 8px;
-      padding: 12px;
       margin: 10px 0;
       background: var(--background-secondary);
-      min-height: 100px;
-      max-height: 200px;
+      overflow: hidden;
+    `;
+
+    // 태그 클라우드 헤더 (모두 제거 버튼 포함)
+    const tagCloudHeader = tagCloudSection.createDiv("tag-cloud-header");
+    tagCloudHeader.style.cssText = `
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: var(--background-secondary-alt);
+      border-bottom: 1px solid var(--background-modifier-border);
+    `;
+
+    const headerLabel = tagCloudHeader.createEl("span", {
+      text: "예외 처리된 단어 목록",
+      cls: "tag-cloud-label"
+    });
+    headerLabel.style.cssText = `
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    `;
+
+    const clearAllButton = tagCloudHeader.createEl("button", {
+      text: "모두 제거",
+      cls: "mod-warning"
+    });
+    clearAllButton.style.cssText = `
+      padding: 4px 8px;
+      font-size: 11px;
+      border-radius: 4px;
+    `;
+
+    // 태그 클라우드 컨테이너
+    const tagCloudContainer = tagCloudSection.createDiv("ignored-words-container");
+    tagCloudContainer.style.cssText = `
+      padding: 12px;
+      min-height: 80px;
+      max-height: 180px;
       overflow-y: auto;
     `;
 
+    // 모두 제거 버튼 이벤트
+    clearAllButton.onclick = async () => {
+      this.plugin.settings = IgnoredWordsService.clearAllIgnoredWords(this.plugin.settings);
+      await this.plugin.saveSettings();
+      this.renderIgnoredWordsCloud(tagCloudContainer);
+      countInfo.textContent = `현재 ${IgnoredWordsService.getIgnoredWordsCount(this.plugin.settings)}개의 단어가 예외 처리되어 있습니다.`;
+    };
+
     this.renderIgnoredWordsCloud(tagCloudContainer);
 
-    // 단어 추가/제거 컨트롤
-    new Setting(containerEl)
+    // 단어 추가 섹션
+    const addWordSetting = new Setting(containerEl)
       .setName("단어 추가")
-      .setDesc("쉼표로 구분하여 여러 단어를 한 번에 추가할 수 있습니다")
-      .addText(text => {
-        const input = text.setPlaceholder("예: 단어1, 단어2, 단어3");
-        
-        const addButton = containerEl.createEl("button", {
-          text: "추가",
-          cls: "mod-cta"
-        });
-        addButton.style.marginLeft = "8px";
-        
-        addButton.onclick = async () => {
-          const words = input.getValue();
-          if (words.trim()) {
-            this.plugin.settings = IgnoredWordsService.importIgnoredWords(
-              words, 
-              ',', 
-              this.plugin.settings
-            );
-            await this.plugin.saveSettings();
-            input.setValue("");
-            this.renderIgnoredWordsCloud(tagCloudContainer);
-            countInfo.textContent = `현재 ${IgnoredWordsService.getIgnoredWordsCount(this.plugin.settings)}개의 단어가 예외 처리되어 있습니다.`;
-          }
-        };
-        
-        text.inputEl.parentElement?.appendChild(addButton);
-        return text;
-      });
+      .setDesc("쉼표를 입력하면 미리보기가 표시되고, 엔터키를 누르면 추가됩니다");
 
-    // 모든 단어 제거 버튼
-    new Setting(containerEl)
-      .setName("모든 예외 처리된 단어 제거")
-      .setDesc("주의: 이 작업은 되돌릴 수 없습니다")
-      .addButton(button => button
-        .setButtonText("모두 제거")
-        .setWarning()
-        .onClick(async () => {
-          this.plugin.settings = IgnoredWordsService.clearAllIgnoredWords(this.plugin.settings);
-          await this.plugin.saveSettings();
-          this.renderIgnoredWordsCloud(tagCloudContainer);
-          countInfo.textContent = `현재 ${IgnoredWordsService.getIgnoredWordsCount(this.plugin.settings)}개의 단어가 예외 처리되어 있습니다.`;
-        }));
+    // 커스텀 입력 컨테이너 생성
+    const inputContainer = addWordSetting.controlEl.createDiv("add-word-container");
+    inputContainer.style.cssText = `
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    `;
+
+    // 입력 필드와 버튼 영역
+    const inputRow = inputContainer.createDiv("input-row");
+    inputRow.style.cssText = `
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    `;
+
+    const inputField = inputRow.createEl("input", {
+      type: "text",
+      placeholder: "예: 단어1, 단어2, 단어3"
+    });
+    inputField.style.cssText = `
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--background-modifier-border);
+      border-radius: 6px;
+      background: var(--background-primary);
+      color: var(--text-normal);
+      font-size: 14px;
+    `;
+
+    const addButton = inputRow.createEl("button", {
+      text: "추가",
+      cls: "mod-cta"
+    });
+    addButton.style.cssText = `
+      padding: 8px 16px;
+      white-space: nowrap;
+    `;
+
+    // 미리보기 태그 영역
+    const previewContainer = inputContainer.createDiv("tag-preview-container");
+    previewContainer.style.cssText = `
+      min-height: 40px;
+      padding: 8px;
+      background: var(--background-secondary);
+      border: 1px solid var(--background-modifier-border);
+      border-radius: 6px;
+      display: none;
+      flex-wrap: wrap;
+      gap: 4px;
+      align-items: center;
+    `;
+
+    const previewLabel = previewContainer.createEl("span", {
+      text: "미리보기:",
+      cls: "preview-label"
+    });
+    previewLabel.style.cssText = `
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-right: 8px;
+      font-weight: 500;
+    `;
+
+    // 현재 입력된 태그들을 추적
+    let currentTags: string[] = [];
+
+    // 태그 미리보기 업데이트 함수
+    const updateTagPreview = () => {
+      // 기존 태그들 제거 (라벨 제외)
+      const existingTags = previewContainer.querySelectorAll('.preview-tag');
+      existingTags.forEach(tag => tag.remove());
+
+      if (currentTags.length > 0) {
+        previewContainer.style.display = "flex";
+        
+        currentTags.forEach((tag, index) => {
+          const tagEl = previewContainer.createEl("span", {
+            text: tag,
+            cls: "preview-tag"
+          });
+          tagEl.style.cssText = `
+            display: inline-block;
+            background: var(--interactive-accent);
+            color: var(--text-on-accent);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            cursor: pointer;
+            opacity: 0.8;
+          `;
+          
+          // 클릭하면 해당 태그 제거
+          tagEl.onclick = () => {
+            currentTags.splice(index, 1);
+            updateTagPreview();
+          };
+        });
+      } else {
+        previewContainer.style.display = "none";
+      }
+    };
+
+    // 단어 추가 함수
+    const addWordsToSettings = async () => {
+      if (currentTags.length > 0) {
+        const wordsString = currentTags.join(", ");
+        this.plugin.settings = IgnoredWordsService.importIgnoredWords(
+          wordsString, 
+          ',', 
+          this.plugin.settings
+        );
+        await this.plugin.saveSettings();
+        
+        // 초기화
+        currentTags = [];
+        inputField.value = "";
+        updateTagPreview();
+        
+        // UI 업데이트
+        this.renderIgnoredWordsCloud(tagCloudContainer);
+        countInfo.textContent = `현재 ${IgnoredWordsService.getIgnoredWordsCount(this.plugin.settings)}개의 단어가 예외 처리되어 있습니다.`;
+      }
+    };
+
+    // 입력 필드 이벤트 리스너
+    inputField.addEventListener('input', (e) => {
+      const value = (e.target as HTMLInputElement).value;
+      
+      // 콤마가 입력되면 태그로 변환
+      if (value.includes(',')) {
+        const parts = value.split(',');
+        const newWords = parts.slice(0, -1).map(word => word.trim()).filter(word => word.length > 0);
+        
+        newWords.forEach(word => {
+          if (!currentTags.includes(word)) {
+            currentTags.push(word);
+          }
+        });
+        
+        // 마지막 부분 (콤마 이후)을 입력 필드에 남김
+        inputField.value = parts[parts.length - 1];
+        updateTagPreview();
+      }
+    });
+
+    // 엔터키 이벤트
+    inputField.addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        
+        // 현재 입력 중인 단어도 추가
+        const currentInput = inputField.value.trim();
+        if (currentInput && !currentTags.includes(currentInput)) {
+          currentTags.push(currentInput);
+        }
+        
+        await addWordsToSettings();
+      }
+    });
+
+    // 추가 버튼 클릭
+    addButton.onclick = async () => {
+      // 현재 입력 중인 단어도 추가
+      const currentInput = inputField.value.trim();
+      if (currentInput && !currentTags.includes(currentInput)) {
+        currentTags.push(currentInput);
+      }
+      
+      await addWordsToSettings();
+    };
+
 
     // 도움말 섹션
     containerEl.createEl("h3", { text: "사용법" });
