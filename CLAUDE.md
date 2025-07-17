@@ -27,17 +27,32 @@
 - **동적 레이아웃**: 오류 영역 토글에 따른 미리보기 영역 자동 크기 조정
 - **모바일 최적화**: 터치 기반 인터페이스와 모바일 디바이스 지원
 
+### 5. 스마트 포커스 관리 (모바일 특화)
+- **editor.hasFocus() API 활용**: 정확한 포커스 상태 감지 및 관리
+- **조건부 blur 처리**: 실제 포커스가 있을 때만 키보드 숨김 작업 수행
+- **백그라운드 에디터 관리**: 팝업 뒤의 에디터 커서 및 키보드 상태 제어
+- **임시 포커스 스틸링**: 모바일 최적화된 키보드 숨김 기법
+
+### 6. 전체 문서 자동 검사
+- **선택 없이 실행**: 텍스트 선택 없이 리본 아이콘 클릭 시 전체 문서 자동 검사
+- **3단계 API 폴백**: `lineCount()` → `lastLine()` → 텍스트 기반 계산
+- **시각적 피드백**: 전체 문서 선택 표시 및 상세한 로깅
+
 ## 기술 아키텍처
 
 ### 핵심 파일 구조
 ```
 obsidian-korean-spellchecker/
-├── main.ts                 # 메인 플러그인 코드
-├── styles.css              # UI 스타일링
-├── manifest.json           # 플러그인 매니페스트
-├── esbuild.config.mjs      # 빌드 설정
-├── package.json            # 의존성 관리
-└── CLAUDE.md              # 프로젝트 문서 (이 파일)
+├── main.ts                    # 메인 플러그인 코드
+├── styles.css                 # UI 스타일링 
+├── manifest.json              # 플러그인 매니페스트
+├── esbuild.config.mjs         # 빌드 설정
+├── package.json               # 의존성 관리
+├── CLAUDE.md                  # 프로젝트 문서 (이 파일)
+├── api-config.example.json    # API 설정 템플릿
+├── api-config.json            # 로컬 API 설정 (git ignored)
+└── docs-reference/            # Obsidian 개발자 문서 (git ignored)
+    └── en/Reference/TypeScript API/  # API 참조 문서
 ```
 
 ### 주요 기술 스택
@@ -186,6 +201,30 @@ const DEFAULT_SETTINGS: PluginSettings = {
 
 ## 개발 환경 설정
 
+### 초기 설정
+```bash
+# 프로젝트 클론
+git clone https://github.com/hyungyunlim/obsidian-korean-grammar-assistant.git
+cd obsidian-korean-grammar-assistant
+
+# 의존성 설치
+npm install
+
+# API 설정 파일 생성 (로컬 개발용)
+cp api-config.example.json api-config.json
+# api-config.json에 본인의 Bareun.ai API 키 입력
+```
+
+### Obsidian 개발자 문서 참조
+로컬에서 Obsidian API 문서를 참조할 수 있습니다:
+```bash
+# 문서는 이미 docs-reference/ 폴더에 클론되어 있음
+# 주요 API 참조 경로:
+# docs-reference/en/Reference/TypeScript API/Editor/
+# docs-reference/en/Reference/TypeScript API/Plugin/
+# docs-reference/en/Reference/TypeScript API/App/
+```
+
 ### 빌드 명령어
 ```bash
 npm run build        # 프로덕션 빌드
@@ -194,14 +233,16 @@ npm run dev         # 개발 모드 (파일 변경 감지)
 
 ### 개발 워크플로우
 1. **코드 수정**: TypeScript/CSS 파일 편집
-2. **빌드 실행**: `npm run build`로 컴파일
-3. **플러그인 테스트**: Obsidian에서 플러그인 재로드
-4. **디버깅**: 개발자 도구 콘솔에서 로그 확인
+2. **API 참조**: `docs-reference/` 폴더에서 Obsidian API 확인
+3. **빌드 실행**: `npm run build`로 컴파일
+4. **플러그인 테스트**: Obsidian에서 플러그인 재로드
+5. **디버깅**: 개발자 도구 콘솔에서 상세 로그 확인
 
 ### 주요 개발 도구
 - **ESBuild**: 빠른 번들링 및 TypeScript 컴파일
 - **TypeScript**: 타입 안전성 및 IDE 지원
 - **CSS3**: 모던 스타일링 기능
+- **로컬 API 문서**: 오프라인 Obsidian API 참조
 
 ## 확장 가능성
 
@@ -228,7 +269,19 @@ npm run dev         # 개발 모드 (파일 변경 감지)
 - **DOM 요소**: 팝업 렌더링 타이밍 문제 확인
 - **메모리 누수**: 이벤트 리스너 정리 확인
 
-### 3. 사용자 경험
+### 3. 모바일 관련 문제
+- **키보드 숨김 실패**: 
+  - 개발자 콘솔에서 `editor.hasFocus()` 로그 확인
+  - `"Editor has focus before/after popup"` 메시지 확인
+  - 여러 blur 방법 중 어떤 것이 작동하는지 로그 확인
+- **백그라운드 커서 보임**: 
+  - CSS `pointer-events: none` 적용 확인
+  - `spell-popup-open` 클래스 적용 상태 확인
+- **전체 문서 선택 실패**:
+  - 콘솔에서 API 사용 방법 확인 (`lineCount()` vs `lastLine()` vs fallback)
+  - `"전체 문서 텍스트 선택됨"` 로그 메시지 확인
+
+### 4. 사용자 경험
 - **응답 속도**: API 호출 최적화
 - **UI 반응성**: CSS 애니메이션 성능 확인
 - **접근성**: 키보드 네비게이션 지원
@@ -243,11 +296,20 @@ npm run dev         # 개발 모드 (파일 변경 감지)
 - ✅ 시각적 피드백 시스템 구현
 - ✅ 모바일 최적화 완료
 
+### v0.1.2 (2024.07 업데이트)
+- ✅ **스마트 포커스 관리**: `editor.hasFocus()` API 활용한 정확한 모바일 키보드 제어
+- ✅ **전체 문서 자동 검사**: 텍스트 선택 없이 전체 문서 맞춤법 검사 지원
+- ✅ **3단계 API 폴백**: `lineCount()` → `lastLine()` → 텍스트 기반 계산
+- ✅ **API 키 보안 강화**: Git ignored 설정 파일 시스템으로 개인 API 키 보호
+- ✅ **로컬 개발자 문서**: Obsidian API 참조를 위한 오프라인 문서 환경 구축
+- ✅ **모바일 UX 개선**: 조건부 blur 처리 및 백그라운드 에디터 상태 관리
+
 ### 향후 계획
 - 🔄 사용자 설정 확장
 - 🔄 성능 최적화 강화
 - 🔄 접근성 개선
 - 🔄 다국어 지원 검토
+- 🔄 오프라인 모드 지원
 
 ---
 
