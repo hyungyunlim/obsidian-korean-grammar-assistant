@@ -188,14 +188,22 @@ ${corrections.map((correction, index) =>
   analysisUserWithContext: (correctionContexts: any[]) => 
     `총 ${correctionContexts.length}개의 맞춤법 오류들과 주변 문맥:
 
-${correctionContexts.map((ctx) => 
-  `${ctx.correctionIndex}. 오류: "${ctx.original}"
+${correctionContexts.map((ctx, index) => 
+  `${index}. 오류: "${ctx.original}"
    문맥: "${ctx.fullContext}"
    수정안: [${ctx.corrected.join(', ')}]
    설명: ${ctx.help}
    
-`).join('')}⚠️ 중요: 위의 모든 ${correctionContexts.length}개 오류에 대해 반드시 분석 결과를 제공해주세요. 
-누락된 오류가 있으면 안 됩니다. 각 오류의 correctionIndex를 정확히 매칭해주세요.`
+`).join('')}⚠️ 중요 응답 규칙:
+1. 위의 모든 ${correctionContexts.length}개 오류에 대해 반드시 분석 결과를 제공해주세요.
+2. correctionIndex는 반드시 0부터 ${correctionContexts.length - 1}까지의 순서를 사용하세요.
+3. selectedValue는 반드시 제공된 수정안 중 하나 또는 원본 텍스트와 정확히 일치해야 합니다.
+4. 특수문자(**, ~, - 등)가 포함된 수정안은 그대로 복사해서 사용하세요.
+5. 누락된 오류가 있으면 안 됩니다.
+
+예시:
+- 오류: "어" → 수정안: ["**어", "**아"] → selectedValue: "**어" (정확한 형태 사용)
+- 오류: "총" → 수정안: ["** 총", "**총"] → selectedValue: "** 총" (공백 포함 정확히 사용)`
 } as const;
 
 // 타입 정의

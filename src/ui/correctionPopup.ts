@@ -323,15 +323,24 @@ export class CorrectionPopup extends BaseComponent {
       `;
     }
 
-    return currentCorrections.filter(correction => !this.stateManager.isOriginalKeptState(this.config.corrections.findIndex(c => c.original === correction.original && c.help === correction.help))).map((correction, index) => {
+    return currentCorrections.map((correction, index) => {
       const actualIndex = this.config.corrections.findIndex(c => 
         c.original === correction.original && c.help === correction.help
       );
       const isOriginalKept = this.stateManager.isOriginalKeptState(actualIndex);
       const suggestions = correction.corrected.slice(0, 2);
       
-      // AI 분석 결과 찾기
       const aiResult = this.aiAnalysisResults.find(result => result.correctionIndex === actualIndex);
+      const reasoningHTML = aiResult
+        ? `<div class="ai-analysis-result">
+             <div class="ai-confidence">🤖 신뢰도: <span class="confidence-score">${aiResult.confidence}%</span></div>
+             <div class="ai-reasoning">${escapeHtml(aiResult.reasoning)}</div>
+           </div>`
+        : isOriginalKept
+        ? `<div class="ai-analysis-result">
+             <div class="ai-reasoning">사용자가 직접 선택했거나, 예외 단어로 등록된 항목입니다.</div>
+           </div>`
+        : '';
       
       const suggestionsHTML = suggestions.map(suggestion => 
         `<span class="suggestion-compact ${this.stateManager.isSelected(actualIndex, suggestion) ? 'selected' : ''}" 
@@ -357,14 +366,7 @@ export class CorrectionPopup extends BaseComponent {
             </div>
           </div>
           <div class="error-help-compact">${escapeHtml(correction.help)}</div>
-          ${aiResult ? `
-            <div class="ai-analysis-result">
-              <div class="ai-confidence">
-                🤖 신뢰도: <span class="confidence-score">${aiResult.confidence}%</span>
-              </div>
-              <div class="ai-reasoning">${escapeHtml(aiResult.reasoning)}</div>
-            </div>
-          ` : ''}
+          ${reasoningHTML}
         </div>
       `;
     }).join('');
@@ -705,10 +707,12 @@ export class CorrectionPopup extends BaseComponent {
       console.log('[AI] AI 분석 시작 중...');
 
       // AI 분석 요청 준비
-      const analysisRequest = {
+      const currentStates = this.stateManager.getAllStates();
+      const analysisRequest: AIAnalysisRequest = {
         originalText: this.config.selectedText,
         corrections: this.config.corrections,
         contextWindow: 100, // 앞뒤 100자씩 컨텍스트 포함 (향상된 컨텍스트)
+        currentStates: currentStates, // 현재 상태 전달
         onProgress: (current: number, total: number, status: string) => {
           // 배치 진행 상황을 버튼 텍스트로 표시
           const aiBtn = this.element.querySelector('#aiAnalyzeBtn') as HTMLButtonElement;

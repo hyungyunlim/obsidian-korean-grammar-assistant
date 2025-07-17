@@ -135,6 +135,8 @@ export interface CorrectionContext {
   contextBefore: string; // 오류 앞 컨텍스트
   contextAfter: string;  // 오류 뒤 컨텍스트
   fullContext: string;   // 전체 컨텍스트 (앞 + 오류 + 뒤)
+  currentState?: 'error' | 'corrected' | 'exception-processed' | 'original-kept'; // 현재 상태 정보
+  currentValue?: string; // 현재 선택된 값
 }
 
 /**
@@ -146,6 +148,7 @@ export interface AIAnalysisRequest {
   contextWindow?: number; // 앞뒤 몇 글자를 컨텍스트로 포함할지
   correctionContexts?: CorrectionContext[]; // 오류별 컨텍스트 정보
   onProgress?: (current: number, total: number, status: string) => void; // 배치 진행 상황 콜백
+  currentStates?: {[correctionIndex: number]: {state: 'error' | 'corrected' | 'exception-processed' | 'original-kept', value: string}}; // 현재 상태 정보
 }
 
 /**

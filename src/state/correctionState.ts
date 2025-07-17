@@ -200,8 +200,26 @@ export class CorrectionStateManager {
    * 모든 상태를 가져옵니다.
    * @returns 상태 맵
    */
-  getAllStates(): Map<string | number, any> {
-    return new Map(this.states);
+  getAllStates(): { [key: number]: { state: 'error' | 'corrected' | 'exception-processed' | 'original-kept', value: string } } {
+    const allStates: { [key: number]: { state: 'error' | 'corrected' | 'exception-processed' | 'original-kept', value: string } } = {};
+    for (let i = 0; i < this.corrections.length; i++) {
+      const correction = this.corrections[i];
+      const value = this.getValue(i);
+      let state: 'error' | 'corrected' | 'exception-processed' | 'original-kept';
+
+      if (this.isOriginalKeptState(i)) {
+        state = 'original-kept';
+      } else if (this.isExceptionState(i)) {
+        state = 'exception-processed';
+      } else if (value !== correction.original) {
+        state = 'corrected';
+      } else {
+        state = 'error';
+      }
+      
+      allStates[i] = { state, value };
+    }
+    return allStates;
   }
 
   /**

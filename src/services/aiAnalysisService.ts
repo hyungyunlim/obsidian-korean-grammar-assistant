@@ -10,7 +10,7 @@ export class AIAnalysisService {
    * 각 오류에 대한 컨텍스트를 추출합니다.
    */
   private extractCorrectionContexts(request: AIAnalysisRequest): CorrectionContext[] {
-    const { originalText, corrections, contextWindow = 50 } = request;
+    const { originalText, corrections, contextWindow = 50, currentStates } = request;
     const contexts: CorrectionContext[] = [];
 
     corrections.forEach((correction, index) => {
@@ -26,7 +26,7 @@ export class AIAnalysisService {
           help: correction.help,
           contextBefore: '',
           contextAfter: '',
-          fullContext: correction.original
+          fullContext: correction.original,
         });
         return;
       }
@@ -39,6 +39,8 @@ export class AIAnalysisService {
       const contextAfter = originalText.slice(errorIndex + correction.original.length, endIndex);
       const fullContext = originalText.slice(startIndex, endIndex);
 
+      const stateInfo = currentStates ? currentStates[index] : undefined;
+
       contexts.push({
         correctionIndex: index,
         original: correction.original,
@@ -46,7 +48,9 @@ export class AIAnalysisService {
         help: correction.help,
         contextBefore: contextBefore.trim(),
         contextAfter: contextAfter.trim(),
-        fullContext: fullContext.trim()
+        fullContext: fullContext.trim(),
+        currentState: stateInfo?.state,
+        currentValue: stateInfo?.value,
       });
     });
 
@@ -147,14 +151,7 @@ export class AIAnalysisService {
     const response = await client.chat(messages, adjustedMaxTokens, model);
     console.log(`[AI] 배치 ${batchIndex + 1} 응답 수신:`, response.substring(0, 100) + '...');
 
-    // 배치용 corrections 생성 (원본 corrections에서 해당 batch의 corrections만 추출)
-    const batchCorrections = batch.map(ctx => ({
-      original: ctx.original,
-      corrected: ctx.corrected,
-      help: ctx.help
-    }));
-
-    return this.parseAIResponse(response, batchCorrections);
+    return this.parseAIResponse(response, batch);
   }
 
   /**
@@ -190,67 +187,86 @@ export class AIAnalysisService {
     
     try {
       // 컨텍스트 추출
-      const correctionContexts = this.extractCorrectionContexts(request);
+      const allContexts = this.extractCorrectionContexts(request);
       
-      // 배치 크기 결정 (토큰 제한 및 프롬프트 길이 기반)
-      const maxBatchSize = this.calculateOptimalBatchSize(correctionContexts);
-      
-      console.log('[AI] 분석 요청 전송 중...', {
-        provider: this.settings.provider,
-        model: this.settings.model,
-        totalCorrections: request.corrections.length,
-        batchSize: maxBatchSize,
-        estimatedBatches: Math.ceil(correctionContexts.length / maxBatchSize),
-        contextWindow: request.contextWindow || 50,
-        maxTokens: this.settings.maxTokens,
-        apiKeySet: !!this.getApiKey()
-      });
+      // 분석이 필요한 컨텍스트와 이미 처리된 컨텍스트 분리
+      const contextsToAnalyze = allContexts.filter(
+        ctx => ctx.currentState !== 'original-kept' && ctx.currentState !== 'exception-processed'
+      );
+      const alreadyResolvedContexts = allContexts.filter(
+        ctx => ctx.currentState === 'original-kept' || ctx.currentState === 'exception-processed'
+      );
 
-      // 배치 생성
-      const batches = this.createBatches(correctionContexts, maxBatchSize);
-      console.log(`[AI] ${batches.length}개 배치로 분할하여 처리합니다.`);
+      console.log(`[AI] 분석 대상: ${contextsToAnalyze.length}개, 이미 처리됨: ${alreadyResolvedContexts.length}개`);
 
-      // 모델별 토큰 제한에 맞게 조정
-      const adjustedMaxTokens = this.adjustTokensForModel(this.settings.maxTokens, this.settings.model);
-      
-      // 모든 배치 병렬 또는 순차 처리
-      const allResults: AIAnalysisResult[] = [];
-      
-      for (let i = 0; i < batches.length; i++) {
-        try {
-          // 진행 상황 콜백 호출
-          if (request.onProgress) {
-            request.onProgress(i + 1, batches.length, `배치 ${i + 1}/${batches.length} 처리 중...`);
+      let aiResults: AIAnalysisResult[] = [];
+
+      if (contextsToAnalyze.length > 0) {
+        // 배치 크기 결정
+        const maxBatchSize = this.calculateOptimalBatchSize(contextsToAnalyze);
+        
+        console.log('[AI] 분석 요청 전송 중...', {
+          provider: this.settings.provider,
+          model: this.settings.model,
+          totalCorrections: contextsToAnalyze.length,
+          batchSize: maxBatchSize,
+          estimatedBatches: Math.ceil(contextsToAnalyze.length / maxBatchSize),
+          contextWindow: request.contextWindow || 50,
+          maxTokens: this.settings.maxTokens,
+          apiKeySet: !!this.getApiKey()
+        });
+
+        // 배치 생성
+        const batches = this.createBatches(contextsToAnalyze, maxBatchSize);
+        console.log(`[AI] ${batches.length}개 배치로 분할하여 처리합니다.`);
+
+        // 모델별 토큰 제한에 맞게 조정
+        const adjustedMaxTokens = this.adjustTokensForModel(this.settings.maxTokens, this.settings.model);
+        
+        // 모든 배치 처리
+        for (let i = 0; i < batches.length; i++) {
+          try {
+            if (request.onProgress) {
+              const progress = Math.round(((i + 1) / batches.length) * 100);
+              request.onProgress(i + 1, batches.length, `AI 분석 중... (${progress}%)`);
+            }
+            
+            const batchResults = await this.processBatch(
+              batches[i], 
+              i, 
+              batches.length, 
+              client, 
+              adjustedMaxTokens, 
+              this.settings.model
+            );
+            
+            aiResults.push(...batchResults);
+            
+            if (i < batches.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+          } catch (error) {
+            console.error(`[AI] 배치 ${i + 1} 처리 실패:`, error);
           }
-          
-          const batchResults = await this.processBatch(
-            batches[i], 
-            i, 
-            batches.length, 
-            client, 
-            adjustedMaxTokens, 
-            this.settings.model
-          );
-          
-          // correctionIndex를 전체 범위로 조정
-          const adjustedResults = batchResults.map(result => ({
-            ...result,
-            correctionIndex: result.correctionIndex + (i * maxBatchSize)
-          }));
-          
-          allResults.push(...adjustedResults);
-          
-          // 배치 간 잠시 대기 (API 제한 고려)
-          if (i < batches.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-        } catch (error) {
-          console.error(`[AI] 배치 ${i + 1} 처리 실패:`, error);
-          // 이 배치는 건너뛰고 다음 배치 처리 계속
         }
+        console.log(`[AI] AI 분석 완료: ${aiResults.length}개 결과 수집됨`);
       }
+
+      // 이미 처리된 컨텍스트를 결과에 추가
+      const resolvedResults: AIAnalysisResult[] = alreadyResolvedContexts.map(ctx => ({
+        correctionIndex: ctx.correctionIndex,
+        selectedValue: ctx.currentValue || ctx.original,
+        isExceptionProcessed: ctx.currentState === 'exception-processed',
+        isOriginalKept: ctx.currentState === 'original-kept',
+        confidence: 100,
+        reasoning: '사용자가 직접 선택한 항목입니다.'
+      }));
+
+      // AI 결과와 처리된 결과를 합치고 정렬
+      const allResults = [...aiResults, ...resolvedResults];
+      allResults.sort((a, b) => a.correctionIndex - b.correctionIndex);
       
-      console.log(`[AI] 배치 처리 완료: ${allResults.length}개 결과 수집됨`);
+      console.log(`[AI] 최종 처리 완료: ${allResults.length}개 결과 반환`);
       
       return allResults;
     } catch (error) {
@@ -262,7 +278,7 @@ export class AIAnalysisService {
   /**
    * AI 응답을 파싱하여 구조화된 결과로 변환합니다.
    */
-  private parseAIResponse(response: string, corrections: Correction[]): AIAnalysisResult[] {
+  private parseAIResponse(response: string, correctionContexts: CorrectionContext[]): AIAnalysisResult[] {
     try {
       // JSON 응답 파싱 시도
       let parsedResponse: any[];
@@ -302,36 +318,40 @@ export class AIAnalysisService {
       const results: AIAnalysisResult[] = [];
 
       for (const item of parsedResponse) {
-        const correctionIndex = parseInt(item.correctionIndex);
+        const batchIndex = parseInt(item.correctionIndex);
         
-        // 유효성 검사
-        if (isNaN(correctionIndex) || correctionIndex < 0 || correctionIndex >= corrections.length) {
-          console.warn('[AI] 유효하지 않은 correctionIndex:', correctionIndex);
+        if (isNaN(batchIndex) || batchIndex < 0 || batchIndex >= correctionContexts.length) {
+          console.warn('[AI] 유효하지 않은 batchIndex:', batchIndex);
           continue;
         }
 
-        const correction = corrections[correctionIndex];
+        const context = correctionContexts[batchIndex];
+        const originalCorrectionIndex = context.correctionIndex;
+
         let selectedValue = item.selectedValue || '';
         
-        // AI가 "원본유지", "예외처리" 같은 명령어를 보낸 경우 원본으로 변경
-        const validOptions = [...correction.corrected, correction.original];
+        const validOptions = [...context.corrected, context.original];
         if (!validOptions.includes(selectedValue)) {
           if (selectedValue === '원본유지' || selectedValue === '예외처리' || !selectedValue) {
-            selectedValue = correction.original;
-            console.log(`[AI] "${item.selectedValue}"를 원본 "${correction.original}"로 변경`);
+            selectedValue = context.original;
+            console.log(`[AI] "${item.selectedValue}"를 원본 "${context.original}"로 변경`);
           } else {
-            console.warn('[AI] 유효하지 않은 선택값:', selectedValue, '가능한 옵션:', validOptions);
-            // 유효하지 않은 값이면 원본으로 폴백
-            selectedValue = correction.original;
+            const matchedOption = this.findBestMatch(selectedValue, validOptions);
+            if (matchedOption) {
+              console.log(`[AI] "${selectedValue}"를 가장 유사한 옵션 "${matchedOption}"로 매칭`);
+              selectedValue = matchedOption;
+            } else {
+              console.warn('[AI] 유효하지 않은 선택값:', selectedValue, '가능한 옵션:', validOptions);
+              selectedValue = context.original;
+            }
           }
         }
 
-        // AI가 원본을 선택했을 때는 원본유지 상태로 설정 (검토해서 그대로 두기로 함)
-        const isOriginalSelected = selectedValue === correction.original;
+        const isOriginalSelected = selectedValue === context.original;
         const isOriginalKept = isOriginalSelected && !item.isExceptionProcessed;
 
         results.push({
-          correctionIndex,
+          correctionIndex: originalCorrectionIndex,
           selectedValue,
           isExceptionProcessed: item.isExceptionProcessed || false,
           isOriginalKept: isOriginalKept,
@@ -342,33 +362,26 @@ export class AIAnalysisService {
 
       console.log(`[AI] 파싱 완료: ${results.length}개의 결과 추출됨`);
       
-      // 누락된 오류 확인
       const processedIndexes = new Set(results.map(r => r.correctionIndex));
-      const missingIndexes = corrections.map((_, index) => index).filter(index => !processedIndexes.has(index));
+      const missingContexts = correctionContexts.filter(ctx => !processedIndexes.has(ctx.correctionIndex));
       
-      if (missingIndexes.length > 0) {
-        console.warn(`[AI] 누락된 오류들 (인덱스): ${missingIndexes.join(', ')}`);
-        console.warn(`[AI] 전체 오류 수: ${corrections.length}, 처리된 오류 수: ${results.length}`);
+      if (missingContexts.length > 0) {
+        console.warn(`[AI] 누락된 오류들 (원본 인덱스): ${missingContexts.map(c => c.correctionIndex).join(', ')}`);
         
-        // 누락된 오류들에 대해 기본값 추가
-        missingIndexes.forEach(index => {
-          const correction = corrections[index];
-          if (correction) {
-            const defaultValue = correction.corrected[0] || correction.original;
-            const isDefaultOriginal = defaultValue === correction.original;
-            
-            results.push({
-              correctionIndex: index,
-              selectedValue: defaultValue,
-              isExceptionProcessed: false,
-              isOriginalKept: isDefaultOriginal, // 원본이 기본값이면 원본유지 상태
-              confidence: 50, // 낮은 신뢰도로 표시
-              reasoning: 'AI 분석에서 누락되어 기본값으로 설정됨'
-            });
-          }
+        missingContexts.forEach(context => {
+          const defaultValue = context.corrected[0] || context.original;
+          const isDefaultOriginal = defaultValue === context.original;
+          
+          results.push({
+            correctionIndex: context.correctionIndex,
+            selectedValue: defaultValue,
+            isExceptionProcessed: false,
+            isOriginalKept: isDefaultOriginal,
+            confidence: 50,
+            reasoning: 'AI 분석에서 누락되어 기본값으로 설정됨'
+          });
         });
         
-        // 인덱스 순으로 정렬
         results.sort((a, b) => a.correctionIndex - b.correctionIndex);
       }
       
@@ -377,7 +390,6 @@ export class AIAnalysisService {
       console.error('[AI] 응답 파싱 오류:', error);
       console.error('[AI] 원본 응답 (첫 500자):', response.substring(0, 500));
       
-      // 더 구체적인 오류 메시지 제공
       if (error instanceof SyntaxError) {
         throw new Error(`JSON 형식 오류: ${error.message}. AI 응답이 올바른 JSON 형식이 아닙니다.`);
       } else {
@@ -465,5 +477,85 @@ export class AIAnalysisService {
       default:
         return '';
     }
+  }
+
+  /**
+   * AI가 반환한 값과 가장 유사한 유효한 옵션을 찾습니다.
+   */
+  private findBestMatch(aiValue: string, validOptions: string[]): string | null {
+    // 1. 정확히 일치하는 것이 있는지 확인 (이미 체크됨)
+    if (validOptions.includes(aiValue)) {
+      return aiValue;
+    }
+
+    // 2. 공백과 특수문자를 제거한 핵심 텍스트로 비교
+    const cleanAiValue = aiValue.replace(/[\s\*\~\-\+\[\]]/g, '');
+    
+    for (const option of validOptions) {
+      const cleanOption = option.replace(/[\s\*\~\-\+\[\]]/g, '');
+      
+      // 핵심 텍스트가 정확히 일치하는 경우
+      if (cleanAiValue === cleanOption) {
+        return option;
+      }
+      
+      // AI 값이 옵션에 포함되거나 그 반대인 경우
+      if (cleanAiValue.includes(cleanOption) || cleanOption.includes(cleanAiValue)) {
+        return option;
+      }
+    }
+
+    // 3. 편집 거리 기반 유사도 검사 (매우 유사한 경우만)
+    let bestMatch = null;
+    let bestScore = Infinity;
+    
+    for (const option of validOptions) {
+      const distance = this.levenshteinDistance(aiValue, option);
+      const similarity = 1 - distance / Math.max(aiValue.length, option.length);
+      
+      // 70% 이상 유사한 경우만 고려
+      if (similarity >= 0.7 && distance < bestScore) {
+        bestMatch = option;
+        bestScore = distance;
+      }
+    }
+
+    return bestMatch;
+  }
+
+  /**
+   * 두 문자열 간의 편집 거리를 계산합니다.
+   */
+  private levenshteinDistance(str1: string, str2: string): number {
+    const matrix = [];
+    const n = str2.length;
+    const m = str1.length;
+
+    if (n === 0) return m;
+    if (m === 0) return n;
+
+    for (let i = 0; i <= n; i++) {
+      matrix[i] = [i];
+    }
+
+    for (let j = 0; j <= m; j++) {
+      matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= n; i++) {
+      for (let j = 1; j <= m; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
+      }
+    }
+
+    return matrix[n][m];
   }
 }
