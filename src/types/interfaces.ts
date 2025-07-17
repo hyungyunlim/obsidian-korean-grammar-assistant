@@ -122,12 +122,26 @@ export interface AISettings {
 }
 
 /**
+ * 오류별 컨텍스트 정보
+ */
+export interface CorrectionContext {
+  correctionIndex: number;
+  original: string;
+  corrected: string[];
+  help: string;
+  contextBefore: string; // 오류 앞 컨텍스트
+  contextAfter: string;  // 오류 뒤 컨텍스트
+  fullContext: string;   // 전체 컨텍스트 (앞 + 오류 + 뒤)
+}
+
+/**
  * AI 분석 요청 인터페이스
  */
 export interface AIAnalysisRequest {
   originalText: string;
   corrections: Correction[];
   contextWindow?: number; // 앞뒤 몇 글자를 컨텍스트로 포함할지
+  correctionContexts?: CorrectionContext[]; // 오류별 컨텍스트 정보
 }
 
 /**

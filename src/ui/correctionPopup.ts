@@ -660,7 +660,7 @@ export class CorrectionPopup extends BaseComponent {
       const analysisRequest = {
         originalText: this.config.selectedText,
         corrections: this.config.corrections,
-        contextWindow: 50 // 앞뒤 50자씩 컨텍스트 포함
+        contextWindow: 100 // 앞뒤 100자씩 컨텍스트 포함 (향상된 컨텍스트)
       };
 
       this.aiAnalysisResults = await this.aiService.analyzeCorrections(analysisRequest);

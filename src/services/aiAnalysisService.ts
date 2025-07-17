@@ -1,9 +1,56 @@
-import { AISettings, AIAnalysisRequest, AIAnalysisResult, Correction } from '../types/interfaces';
+import { AISettings, AIAnalysisRequest, AIAnalysisResult, Correction, CorrectionContext } from '../types/interfaces';
 import { AIClientFactory } from '../api/clientFactory';
 import { AI_PROMPTS } from '../constants/aiModels';
 
 export class AIAnalysisService {
   constructor(private settings: AISettings) {}
+
+  /**
+   * 각 오류에 대한 컨텍스트를 추출합니다.
+   */
+  private extractCorrectionContexts(request: AIAnalysisRequest): CorrectionContext[] {
+    const { originalText, corrections, contextWindow = 50 } = request;
+    const contexts: CorrectionContext[] = [];
+
+    corrections.forEach((correction, index) => {
+      // 원본 텍스트에서 오류 위치 찾기
+      const errorIndex = originalText.indexOf(correction.original);
+      if (errorIndex === -1) {
+        console.warn(`[AI] 오류 텍스트를 찾을 수 없음: "${correction.original}"`);
+        // 찾을 수 없는 경우 빈 컨텍스트로 처리
+        contexts.push({
+          correctionIndex: index,
+          original: correction.original,
+          corrected: correction.corrected,
+          help: correction.help,
+          contextBefore: '',
+          contextAfter: '',
+          fullContext: correction.original
+        });
+        return;
+      }
+
+      // 앞뒤 컨텍스트 추출
+      const startIndex = Math.max(0, errorIndex - contextWindow);
+      const endIndex = Math.min(originalText.length, errorIndex + correction.original.length + contextWindow);
+      
+      const contextBefore = originalText.slice(startIndex, errorIndex);
+      const contextAfter = originalText.slice(errorIndex + correction.original.length, endIndex);
+      const fullContext = originalText.slice(startIndex, endIndex);
+
+      contexts.push({
+        correctionIndex: index,
+        original: correction.original,
+        corrected: correction.corrected,
+        help: correction.help,
+        contextBefore: contextBefore.trim(),
+        contextAfter: contextAfter.trim(),
+        fullContext: fullContext.trim()
+      });
+    });
+
+    return contexts;
+  }
 
   /**
    * AI를 사용하여 맞춤법 오류를 분석하고 최적의 수정사항을 제안합니다.
@@ -20,6 +67,9 @@ export class AIAnalysisService {
     const client = AIClientFactory.createClient(this.settings);
     
     try {
+      // 컨텍스트 추출
+      const correctionContexts = this.extractCorrectionContexts(request);
+      
       const messages = [
         {
           role: 'system',
@@ -27,14 +77,16 @@ export class AIAnalysisService {
         },
         {
           role: 'user',
-          content: AI_PROMPTS.analysisUser(request.originalText, request.corrections)
+          content: AI_PROMPTS.analysisUserWithContext(correctionContexts)
         }
       ];
 
       console.log('[AI] 분석 요청 전송 중...', {
         provider: this.settings.provider,
         model: this.settings.model,
-        correctionsCount: request.corrections.length
+        correctionsCount: request.corrections.length,
+        contextWindow: request.contextWindow || 50,
+        avgContextLength: correctionContexts.reduce((sum, ctx) => sum + ctx.fullContext.length, 0) / correctionContexts.length
       });
 
       const response = await client.chat(messages, this.settings.maxTokens, this.settings.model);

@@ -131,7 +131,18 @@ ${corrections.map((correction, index) =>
   `${index}. "${correction.original}" → 수정안: [${correction.corrected.join(', ')}] (설명: ${correction.help})`
 ).join('\n')}
 
-위 오류들에 대해 문맥을 고려하여 가장 적절한 선택을 해주세요.`
+위 오류들에 대해 문맥을 고려하여 가장 적절한 선택을 해주세요.`,
+
+  analysisUserWithContext: (correctionContexts: any[]) => 
+    `발견된 맞춤법 오류들과 주변 문맥:
+
+${correctionContexts.map((ctx) => 
+  `${ctx.correctionIndex}. 오류: "${ctx.original}"
+   문맥: "${ctx.fullContext}"
+   수정안: [${ctx.corrected.join(', ')}]
+   설명: ${ctx.help}
+   
+`).join('')}위 오류들에 대해 각각의 문맥을 고려하여 가장 적절한 선택을 해주세요.`
 } as const;
 
 // 타입 정의
