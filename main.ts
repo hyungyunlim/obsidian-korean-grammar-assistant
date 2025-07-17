@@ -542,6 +542,20 @@ function createCorrectionPopup(
   popup.innerHTML = popupHtml;
   document.body.appendChild(popup);
   
+  // Mobile fix: Blur editor to hide keyboard and cursor
+  if (editor) {
+    // Remove focus from editor to hide mobile keyboard
+    const editorElement = (editor as any).cm?.dom || editor.getScrollElement?.();
+    if (editorElement && typeof editorElement.blur === 'function') {
+      editorElement.blur();
+    }
+    
+    // Also try to blur the document's active element
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      (document.activeElement as HTMLElement).blur();
+    }
+  }
+  
   // Lock body scroll to prevent background interaction
   document.body.classList.add('spell-popup-open');
 
@@ -626,6 +640,10 @@ function createCorrectionPopup(
     
     // Unlock body scroll
     document.body.classList.remove('spell-popup-open');
+    
+    // Mobile fix: Restore editor focus if needed
+    // Note: We don't automatically refocus to avoid unwanted keyboard popup
+    // User can manually tap the editor if they want to continue editing
   }
 
 
@@ -940,6 +958,14 @@ function createCorrectionPopup(
   // Handle suggestion chip clicks, preview error clicks, and UI interactions
   function handleClick(e: Event) {
     const target = e.target as HTMLElement;
+    
+    // Mobile fix: Hide keyboard when clicking on preview area
+    if (target.closest('#resultPreview') || target.id === 'resultPreview') {
+      // Blur any active element to hide mobile keyboard
+      if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        (document.activeElement as HTMLElement).blur();
+      }
+    }
     
     // Handle background overlay clicks
     if (target.classList.contains("popup-overlay")) {

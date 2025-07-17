@@ -31,6 +31,13 @@
     will-change: auto;
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
+    /* Mobile: Ensure overlay covers viewport properly */
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height */
+    /* Prevent touch events from reaching background */
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 #correctionPopup .popup-content {
@@ -654,6 +661,23 @@ body.spell-popup-open {
     overflow: hidden !important;
     position: fixed !important;
     width: 100% !important;
+    /* Mobile: Prevent keyboard from affecting layout */
+    height: 100vh !important;
+    height: 100dvh !important; /* Dynamic viewport height */
+}
+
+/* Mobile: Prevent any input focus within body when popup is open */
+body.spell-popup-open input,
+body.spell-popup-open textarea,
+body.spell-popup-open [contenteditable] {
+    pointer-events: none !important;
+}
+
+/* But allow inputs within the popup to work */
+body.spell-popup-open #correctionPopup input,
+body.spell-popup-open #correctionPopup textarea,
+body.spell-popup-open #correctionPopup [contenteditable] {
+    pointer-events: auto !important;
     height: 100% !important;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: none;
