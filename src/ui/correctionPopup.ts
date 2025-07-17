@@ -1,4 +1,4 @@
-import { Editor, EditorPosition, App } from 'obsidian';
+import { Editor, EditorPosition, App, Platform } from 'obsidian';
 import { Correction, PopupConfig } from '../types/interfaces';
 import { BaseComponent } from './baseComponent';
 import { CorrectionStateManager } from '../state/correctionState';
@@ -77,7 +77,7 @@ export class CorrectionPopup extends BaseComponent {
         <div class="content">
           <div class="preview-section">
             <div class="preview-header">
-              <div style="display: flex; flex-direction: column; gap: 4px;">
+              <div class="preview-title-row">
                 <div class="preview-label">
                   미리보기
                   <span class="preview-hint">클릭하여 수정사항 적용</span>
@@ -172,11 +172,24 @@ export class CorrectionPopup extends BaseComponent {
     const previewText = this.isLongText ? this.getCurrentPreviewText() : this.config.selectedText;
     const currentCorrections = this.getCurrentCorrections();
 
-    // Create an array of segments to build the final HTML
+    // Create a map to track processed positions and avoid duplicates
+    const processedPositions: Map<string, boolean> = new Map();
     const segments: { text: string; html: string; start: number; end: number }[] = [];
-    let lastIndex = 0;
 
-    currentCorrections.forEach((correction) => {
+    // Group corrections by original text to handle duplicates
+    const correctionsByOriginal = new Map<string, Correction[]>();
+    currentCorrections.forEach(correction => {
+      const original = correction.original;
+      if (!correctionsByOriginal.has(original)) {
+        correctionsByOriginal.set(original, []);
+      }
+      correctionsByOriginal.get(original)!.push(correction);
+    });
+
+    // Process each unique original text only once
+    correctionsByOriginal.forEach((corrections, originalText) => {
+      // Use the first correction for this original text (could be improved to use best match)
+      const correction = corrections[0];
       const actualIndex = this.config.corrections.findIndex(c => 
         c.original === correction.original && c.help === correction.help
       );
@@ -193,48 +206,51 @@ export class CorrectionPopup extends BaseComponent {
       const regex = new RegExp(escapeRegExp(correction.original), 'g');
       let match;
       while ((match = regex.exec(previewText)) !== null) {
-        // Add the text before the current match
-        if (match.index > lastIndex) {
-          segments.push({ text: previewText.substring(lastIndex, match.index), html: '', start: lastIndex, end: match.index });
+        const positionKey = `${match.index}-${match.index + match[0].length}`;
+        
+        // Skip if this position has already been processed
+        if (processedPositions.has(positionKey)) {
+          continue;
         }
-        // Add the replacement HTML for the current match
-        segments.push({ text: match[0], html: replacementHtml, start: match.index, end: match.index + match[0].length });
-        lastIndex = match.index + match[0].length;
+        processedPositions.set(positionKey, true);
+        
+        // Add the replacement segment for the current match
+        segments.push({ 
+          text: match[0], 
+          html: replacementHtml, 
+          start: match.index, 
+          end: match.index + match[0].length 
+        });
       }
     });
 
-    // Add any remaining text after the last match
-    if (lastIndex < previewText.length) {
-      segments.push({ text: previewText.substring(lastIndex), html: '', start: lastIndex, end: previewText.length });
-    }
+    // No need to add remaining text as we'll handle it in the final loop
 
     // Sort segments by their start index to handle potential overlaps or out-of-order matches
     segments.sort((a, b) => a.start - b.start);
 
-    // Build the final HTML string, handling overlaps by prioritizing earlier, longer matches
+    // Build the final HTML string by filling gaps between segments
     let finalHtml = '';
     let currentPos = 0;
+    
     segments.forEach(segment => {
-      if (segment.start >= currentPos) {
-        if (segment.html) {
-          finalHtml += segment.html;
-          currentPos = segment.end;
-        } else {
-          finalHtml += escapeHtml(segment.text);
-          currentPos = segment.end;
-        }
-      } else if (segment.end > currentPos) {
-        // Handle partial overlap: only append the non-overlapping part if it's a replacement
-        if (segment.html && segment.start < currentPos) {
-          // This case is tricky and might need more sophisticated tokenization for perfect handling
-          // For now, we'll just append the full HTML if it's a replacement and it extends beyond currentPos
-          // This might lead to nested spans if not careful, but given the current regex, it should be okay.
-          // A more robust solution would involve a proper AST or token stream.
-          finalHtml += segment.html.substring(segment.html.indexOf(escapeHtml(segment.text.substring(currentPos - segment.start))));
-          currentPos = segment.end;
-        }
+      // Add any text between the current position and the start of this segment
+      if (segment.start > currentPos) {
+        finalHtml += escapeHtml(previewText.substring(currentPos, segment.start));
       }
+      
+      // Add the segment (replacement HTML) if it's not overlapping
+      if (segment.start >= currentPos) {
+        finalHtml += segment.html;
+        currentPos = segment.end;
+      }
+      // Skip overlapping segments
     });
+
+    // Add any remaining text after the last segment
+    if (currentPos < previewText.length) {
+      finalHtml += escapeHtml(previewText.substring(currentPos));
+    }
 
     return finalHtml;
   }
@@ -567,6 +583,12 @@ export class CorrectionPopup extends BaseComponent {
   show(): void {
     document.body.appendChild(this.element);
     
+    // 모바일 감지를 위한 클래스 추가
+    if (Platform.isMobile) {
+      this.element.classList.add('mobile-popup');
+      console.log('[CorrectionPopup] Mobile mode detected, added mobile-popup class');
+    }
+    
     // DOM에 추가된 후에 페이지네이션 계산 및 디스플레이 업데이트
     // requestAnimationFrame을 사용하여 브라우저가 레이아웃을 완료한 후 실행
     requestAnimationFrame(() => {
@@ -574,6 +596,7 @@ export class CorrectionPopup extends BaseComponent {
       this.updateDisplay();
     });
   }
+
 
   /**
    * 팝업을 닫습니다.
