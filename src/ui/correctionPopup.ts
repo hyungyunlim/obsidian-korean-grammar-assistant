@@ -24,7 +24,7 @@ export class CorrectionPopup extends BaseComponent {
     super('div', 'correction-popup-container');
     this.app = app;
     this.config = config;
-    this.stateManager = new CorrectionStateManager(config.corrections);
+    this.stateManager = new CorrectionStateManager(config.corrections, this.config.ignoredWords);
     
     this.initializePagination();
   }
@@ -58,6 +58,9 @@ export class CorrectionPopup extends BaseComponent {
     
     // Body 스크롤 잠금
     document.body.classList.add('spell-popup-open');
+
+    // 초기 디스플레이 업데이트 (뱃지 숫자 등)
+    this.updateDisplay();
     
     return this.element;
   }
@@ -72,8 +75,6 @@ export class CorrectionPopup extends BaseComponent {
         <div class="header">
           <h2>한국어 맞춤법 검사</h2>
           <div style="display: flex; align-items: center; gap: 8px;">
-            <button class="cancel-btn">취소</button>
-            <button class="apply-btn">적용</button>
             <button class="close-btn-header">×</button>
           </div>
         </div>
@@ -173,23 +174,74 @@ export class CorrectionPopup extends BaseComponent {
    * 미리보기 HTML을 생성합니다.
    */
   private generatePreviewHTML(): string {
-    // This is a simplified version - full implementation would be moved from main.ts
     const previewText = this.isLongText ? this.getCurrentPreviewText() : this.config.selectedText;
-    
-    // Apply corrections and highlighting
-    let processedText = previewText;
-    this.getCurrentCorrections().forEach((correction, index) => {
-      const displayClass = this.stateManager.getDisplayClass(index);
-      const escapedOriginal = escapeHtml(correction.original);
-      const replacement = `<span class="${displayClass} clickable-error" data-correction-index="${index}" style="cursor: pointer;">${escapedOriginal}</span>`;
-      
-      processedText = processedText.replace(
-        new RegExp(escapeHtml(correction.original), 'g'),
-        replacement
+    const currentCorrections = this.getCurrentCorrections();
+
+    // Create an array of segments to build the final HTML
+    const segments: { text: string; html: string; start: number; end: number }[] = [];
+    let lastIndex = 0;
+
+    currentCorrections.forEach((correction) => {
+      const actualIndex = this.config.corrections.findIndex(c => 
+        c.original === correction.original && c.help === correction.help
       );
+
+      if (actualIndex === -1) return;
+
+      const displayClass = this.stateManager.getDisplayClass(actualIndex);
+      const currentValue = this.stateManager.getValue(actualIndex);
+      const escapedValue = escapeHtml(currentValue);
+      
+      const replacementHtml = `<span class="${displayClass} clickable-error" data-correction-index="${actualIndex}" style="cursor: pointer;">${escapedValue}</span>`;
+      
+      // Find all occurrences of the original word within the previewText
+      const regex = new RegExp(escapeHtml(correction.original), 'g');
+      let match;
+      while ((match = regex.exec(previewText)) !== null) {
+        // Add the text before the current match
+        if (match.index > lastIndex) {
+          segments.push({ text: previewText.substring(lastIndex, match.index), html: '', start: lastIndex, end: match.index });
+        }
+        // Add the replacement HTML for the current match
+        segments.push({ text: match[0], html: replacementHtml, start: match.index, end: match.index + match[0].length });
+        lastIndex = match.index + match[0].length;
+      }
     });
-    
-    return processedText;
+
+    // Add any remaining text after the last match
+    if (lastIndex < previewText.length) {
+      segments.push({ text: previewText.substring(lastIndex), html: '', start: lastIndex, end: previewText.length });
+    }
+
+    // Sort segments by their start index to handle potential overlaps or out-of-order matches
+    segments.sort((a, b) => a.start - b.start);
+
+    // Build the final HTML string, handling overlaps by prioritizing earlier, longer matches
+    let finalHtml = '';
+    let currentPos = 0;
+    segments.forEach(segment => {
+      if (segment.start >= currentPos) {
+        if (segment.html) {
+          finalHtml += segment.html;
+          currentPos = segment.end;
+        } else {
+          finalHtml += escapeHtml(segment.text);
+          currentPos = segment.end;
+        }
+      } else if (segment.end > currentPos) {
+        // Handle partial overlap: only append the non-overlapping part if it's a replacement
+        if (segment.html && segment.start < currentPos) {
+          // This case is tricky and might need more sophisticated tokenization for perfect handling
+          // For now, we'll just append the full HTML if it's a replacement and it extends beyond currentPos
+          // This might lead to nested spans if not careful, but given the current regex, it should be okay.
+          // A more robust solution would involve a proper AST or token stream.
+          finalHtml += segment.html.substring(segment.html.indexOf(escapeHtml(segment.text.substring(currentPos - segment.start))));
+          currentPos = segment.end;
+        }
+      }
+    });
+
+    return finalHtml;
   }
 
   /**
@@ -220,29 +272,32 @@ export class CorrectionPopup extends BaseComponent {
       `;
     }
 
-    return currentCorrections.map((correction, index) => {
+    return currentCorrections.filter(correction => !this.stateManager.isIgnoredState(this.config.corrections.findIndex(c => c.original === correction.original && c.help === correction.help))).map((correction, index) => {
       const actualIndex = this.config.corrections.findIndex(c => 
         c.original === correction.original && c.help === correction.help
       );
+      const isIgnored = this.stateManager.isIgnoredState(actualIndex);
       const suggestions = correction.corrected.slice(0, 2);
       
       const suggestionsHTML = suggestions.map(suggestion => 
         `<span class="suggestion-compact ${this.stateManager.isSelected(actualIndex, suggestion) ? 'selected' : ''}" 
               data-value="${escapeHtml(suggestion)}" 
-              data-correction="${actualIndex}">
+              data-correction="${actualIndex}"
+              ${isIgnored ? 'disabled' : ''}>
           ${escapeHtml(suggestion)}
         </span>`
       ).join('');
 
       return `
-        <div class="error-item-compact" data-correction-index="${actualIndex}">
+        <div class="error-item-compact ${isIgnored ? 'spell-ignored' : ''}" data-correction-index="${actualIndex}">
           <div class="error-row">
             <div class="error-original-compact">${escapeHtml(correction.original)}</div>
             <div class="error-suggestions-compact">
               ${suggestionsHTML}
               <span class="suggestion-compact ${this.stateManager.isSelected(actualIndex, correction.original) ? 'selected' : ''} keep-original" 
                     data-value="${escapeHtml(correction.original)}" 
-                    data-correction="${actualIndex}">
+                    data-correction="${actualIndex}"
+                    ${isIgnored ? 'disabled' : ''}>
                 예외처리
               </span>
             </div>
@@ -260,6 +315,14 @@ export class CorrectionPopup extends BaseComponent {
     // 닫기 버튼들
     this.bindCloseEvents();
     
+    // 팝업 오버레이 클릭 시 닫기
+    const overlay = this.element.querySelector('.popup-overlay');
+    if (overlay) {
+      this.addEventListener(overlay as HTMLElement, 'click', () => {
+        this.close();
+      });
+    }
+
     // 페이지네이션
     this.bindPaginationEvents();
     
@@ -434,7 +497,11 @@ export class CorrectionPopup extends BaseComponent {
     // 오류 개수 배지 업데이트
     const errorCountBadge = this.element.querySelector('#errorCountBadge');
     if (errorCountBadge) {
-      errorCountBadge.textContent = this.getCurrentCorrections().length.toString();
+      const visibleCorrections = this.getCurrentCorrections().filter(correction => {
+        const actualIndex = this.config.corrections.findIndex(c => c.original === correction.original && c.help === correction.help);
+        return !this.stateManager.isIgnoredState(actualIndex);
+      });
+      errorCountBadge.textContent = visibleCorrections.length.toString();
     }
   }
 

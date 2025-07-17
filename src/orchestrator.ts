@@ -130,6 +130,7 @@ export class SpellCheckOrchestrator {
       start: selectionStart,
       end: selectionEnd,
       editor: editor,
+      ignoredWords: IgnoredWordsService.getIgnoredWords(this.settings),
       onExceptionWordsAdded: (words: string[]) => this.handleExceptionWords(words)
     });
 

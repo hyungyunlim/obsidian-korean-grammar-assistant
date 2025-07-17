@@ -36,6 +36,7 @@ export interface PopupConfig {
   start: EditorPosition;
   end: EditorPosition;
   editor: Editor;
+  ignoredWords: string[];
   onExceptionWordsAdded?: (words: string[]) => void;
 }
 

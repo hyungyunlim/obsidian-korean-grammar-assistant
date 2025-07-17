@@ -7,18 +7,20 @@ export class CorrectionStateManager {
   private states: Map<string | number, any> = new Map();
   private corrections: Correction[] = [];
 
-  constructor(corrections: Correction[]) {
+  constructor(corrections: Correction[], ignoredWords: string[] = []) {
     this.corrections = corrections;
-    this.initializeStates();
+    this.initializeStates(ignoredWords);
   }
 
   /**
    * 상태를 초기화합니다.
    */
-  private initializeStates(): void {
+  private initializeStates(ignoredWords: string[]): void {
     this.states.clear();
     this.corrections.forEach((correction, index) => {
-      this.states.set(index, correction.original);
+        const isIgnored = ignoredWords.includes(correction.original);
+        this.setState(index, correction.original, false, isIgnored);
+        console.log(`[CorrectionState] Initializing: ${correction.original} at index ${index} as ${isIgnored ? 'IGNORED' : 'ERROR'}.`);
     });
   }
 
@@ -28,14 +30,22 @@ export class CorrectionStateManager {
    * @param value 설정할 값
    * @param isExceptionState 예외 처리 상태 여부
    */
-  setState(correctionIndex: number, value: string, isExceptionState: boolean = false): void {
+  setState(correctionIndex: number, value: string, isExceptionState: boolean = false, isIgnoredState: boolean = false): void {
     this.states.set(correctionIndex, value);
     
     const exceptionKey = `${correctionIndex}_exception`;
+    const ignoredKey = `${correctionIndex}_ignored`;
+
     if (isExceptionState) {
       this.states.set(exceptionKey, true);
     } else {
       this.states.delete(exceptionKey);
+    }
+
+    if (isIgnoredState) {
+        this.states.set(ignoredKey, true);
+    } else {
+        this.states.delete(ignoredKey);
     }
   }
 
@@ -63,63 +73,64 @@ export class CorrectionStateManager {
    * @param correctionIndex 교정 인덱스
    * @returns 새로운 상태 정보
    */
+  isIgnoredState(correctionIndex: number): boolean {
+    const ignoredKey = `${correctionIndex}_ignored`;
+    return !!this.states.get(ignoredKey);
+  }
+
+  /**
+   * 3단계 토글을 수행합니다 (빨간색 → 초록색 → 파란색(예외처리) → 빨간색).
+   * @param correctionIndex 교정 인덱스
+   * @returns 새로운 상태 정보
+   */
   toggleState(correctionIndex: number): { value: string; isExceptionState: boolean } {
     if (correctionIndex < 0 || correctionIndex >= this.corrections.length) {
       throw new Error(`Invalid correction index: ${correctionIndex}`);
     }
 
     const correction = this.corrections[correctionIndex];
-    const suggestions = correction.corrected;
+    const suggestions = [correction.original, ...correction.corrected];
     const currentValue = this.getValue(correctionIndex);
     const isCurrentlyException = this.isExceptionState(correctionIndex);
+    const isCurrentlyIgnored = this.isIgnoredState(correctionIndex);
 
-    console.log('Toggle state analysis:', {
+    console.log('\n[CorrectionState.toggleState] Initial state:', {
       correctionIndex,
       currentValue,
       isCurrentlyException,
+      isCurrentlyIgnored,
       originalText: correction.original,
       suggestions
     });
 
-    // 현재 상태 분석
-    const isCurrentlyOriginal = currentValue === correction.original;
-    const currentSuggestionIndex = suggestions.indexOf(currentValue);
-
-    if (isCurrentlyOriginal && !isCurrentlyException) {
-      // 빨간색 상태 → 첫 번째 제안 (초록색)
-      const newValue = suggestions[0] || correction.original;
-      this.setState(correctionIndex, newValue, false);
-      console.log('Red → Green: Moving to first suggestion');
-      return { value: newValue, isExceptionState: false };
-      
-    } else if (isCurrentlyOriginal && isCurrentlyException) {
-      // 파란색 상태 (예외처리) → 빨간색 상태
-      this.setState(correctionIndex, correction.original, false);
-      console.log('Blue(Exception) → Red: Removing exception flag');
-      return { value: correction.original, isExceptionState: false };
-      
-    } else if (currentSuggestionIndex >= 0) {
-      // 현재 제안 상태 (초록색)
-      if (currentSuggestionIndex < suggestions.length - 1) {
-        // 다음 제안으로 이동
-        const nextValue = suggestions[currentSuggestionIndex + 1];
-        this.setState(correctionIndex, nextValue, false);
-        console.log(`Green → Green: Moving to suggestion ${currentSuggestionIndex + 1}`);
-        return { value: nextValue, isExceptionState: false };
-      } else {
-        // 마지막 제안 → 파란색 상태 (예외 처리)
-        this.setState(correctionIndex, correction.original, true);
-        console.log('Green → Blue(Exception): Setting exception flag');
-        return { value: correction.original, isExceptionState: true };
-      }
-      
-    } else {
-      // 알 수 없는 상태 → 첫 번째 제안으로 리셋
-      const newValue = suggestions[0] || correction.original;
-      this.setState(correctionIndex, newValue, false);
-      console.log('Unknown → Green: Resetting to first suggestion');
-      return { value: newValue, isExceptionState: false };
+    if (isCurrentlyIgnored) {
+        // Ignored -> Error
+        this.setState(correctionIndex, correction.original, false, false);
+        console.log('[CorrectionState.toggleState] Ignored -> Error');
+        return { value: correction.original, isExceptionState: false };
     }
+
+    let nextIndex = suggestions.indexOf(currentValue) + 1;
+
+    if (isCurrentlyException) {
+        // Exception (Blue) -> Ignored (Orange)
+        this.setState(correctionIndex, correction.original, false, true);
+        console.log('[CorrectionState.toggleState] Exception -> Ignored');
+        return { value: correction.original, isExceptionState: false };
+    }
+
+    if (nextIndex >= suggestions.length) {
+        // Last suggestion (Green) -> Exception (Blue)
+        this.setState(correctionIndex, correction.original, true, false);
+        console.log('[CorrectionState.toggleState] Last Suggestion -> Exception');
+        return { value: correction.original, isExceptionState: true };
+    }
+
+    // Error (Red) or Corrected (Green) -> Next suggestion (Green)
+    const newValue = suggestions[nextIndex];
+    this.setState(correctionIndex, newValue, false, false);
+    console.log('[CorrectionState.toggleState] Next Suggestion');
+    return { value: newValue, isExceptionState: false };
   }
 
   /**
@@ -131,12 +142,20 @@ export class CorrectionStateManager {
     const correction = this.corrections[correctionIndex];
     if (!correction) return '';
 
+    if (this.isIgnoredState(correctionIndex)) {
+        console.log(`[CorrectionState] DisplayClass for ${correction.original} (index ${correctionIndex}): spell-ignored`);
+        return 'spell-ignored';
+    }
+
     const currentValue = this.getValue(correctionIndex);
     const isException = this.isExceptionState(correctionIndex);
 
     if (currentValue === correction.original) {
-      return isException ? 'spell-exception-processed' : 'spell-error';
+      const className = isException ? 'spell-exception-processed' : 'spell-error';
+      console.log(`[CorrectionState] DisplayClass for ${correction.original} (index ${correctionIndex}): ${className}`);
+      return className;
     } else {
+      console.log(`[CorrectionState] DisplayClass for ${correction.original} (index ${correctionIndex}): spell-corrected`);
       return 'spell-corrected';
     }
   }

@@ -267,6 +267,7 @@ class SpellingSettingTab extends PluginSettingTab {
       padding: 4px 8px;
       font-size: 11px;
       border-radius: 4px;
+      cursor: pointer;
     `;
 
     // 태그 클라우드 컨테이너
@@ -331,6 +332,7 @@ class SpellingSettingTab extends PluginSettingTab {
     addButton.style.cssText = `
       padding: 8px 16px;
       white-space: nowrap;
+      cursor: pointer !important;
     `;
 
     // 미리보기 태그 영역
@@ -367,24 +369,42 @@ class SpellingSettingTab extends PluginSettingTab {
       const existingTags = previewContainer.querySelectorAll('.preview-tag');
       existingTags.forEach(tag => tag.remove());
 
+      const ignoredWords = IgnoredWordsService.getIgnoredWords(this.plugin.settings);
+
       if (currentTags.length > 0) {
         previewContainer.style.display = "flex";
         
         currentTags.forEach((tag, index) => {
+          const isAlreadyIgnored = ignoredWords.includes(tag);
+          
           const tagEl = previewContainer.createEl("span", {
-            text: tag,
+            text: isAlreadyIgnored ? `${tag} (무시됨)` : tag,
             cls: "preview-tag"
           });
-          tagEl.style.cssText = `
-            display: inline-block;
-            background: var(--interactive-accent);
-            color: var(--text-on-accent);
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            cursor: pointer;
-            opacity: 0.8;
-          `;
+
+          if (isAlreadyIgnored) {
+            tagEl.style.cssText = `
+              display: inline-block;
+              background: var(--background-modifier-border);
+              color: var(--text-muted);
+              padding: 3px 8px;
+              border-radius: 12px;
+              font-size: 11px;
+              text-decoration: line-through;
+              opacity: 0.8;
+            `;
+          } else {
+            tagEl.style.cssText = `
+              display: inline-block;
+              background: var(--interactive-accent);
+              color: var(--text-on-accent);
+              padding: 3px 8px;
+              border-radius: 12px;
+              font-size: 11px;
+              cursor: pointer;
+              opacity: 0.8;
+            `;
+          }
           
           // 클릭하면 해당 태그 제거
           tagEl.onclick = () => {
@@ -451,6 +471,7 @@ class SpellingSettingTab extends PluginSettingTab {
           currentTags.push(currentInput);
         }
         
+        updateTagPreview(); // 미리보기 업데이트
         await addWordsToSettings();
       }
     });
@@ -463,6 +484,7 @@ class SpellingSettingTab extends PluginSettingTab {
         currentTags.push(currentInput);
       }
       
+      updateTagPreview(); // 미리보기 업데이트
       await addWordsToSettings();
     };
 
