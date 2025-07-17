@@ -542,34 +542,63 @@ function createCorrectionPopup(
   popup.innerHTML = popupHtml;
   document.body.appendChild(popup);
   
-  // Mobile fix: Aggressive keyboard hiding
+  // Mobile fix: Smart focus management using Obsidian API
   if (editor) {
-    // Try multiple approaches to hide mobile keyboard
+    console.log("Editor has focus before popup:", editor.hasFocus());
     
-    // Method 1: Blur CodeMirror editor
-    const editorElement = (editor as any).cm?.dom || (editor as any).getScrollElement?.();
-    if (editorElement && typeof editorElement.blur === 'function') {
-      editorElement.blur();
-    }
-    
-    // Method 2: Blur CodeMirror input elements specifically
-    try {
-      const cmEditor = (editor as any).cm;
-      if (cmEditor) {
-        // CodeMirror 6 style
-        if (cmEditor.contentDOM) {
-          cmEditor.contentDOM.blur();
-        }
-        // Also try to blur the editor view
-        if (cmEditor.dom) {
-          cmEditor.dom.blur();
-        }
+    // Only proceed with blur if editor actually has focus
+    if (editor.hasFocus()) {
+      console.log("Editor is focused, attempting to blur...");
+      
+      // Method 1: Blur CodeMirror editor elements
+      const editorElement = (editor as any).cm?.dom || (editor as any).getScrollElement?.();
+      if (editorElement && typeof editorElement.blur === 'function') {
+        editorElement.blur();
+        console.log("Blurred editor element");
       }
-    } catch (e) {
-      console.log('CodeMirror blur attempt failed:', e);
+      
+      // Method 2: Blur CodeMirror input elements specifically
+      try {
+        const cmEditor = (editor as any).cm;
+        if (cmEditor) {
+          // CodeMirror 6 style
+          if (cmEditor.contentDOM) {
+            cmEditor.contentDOM.blur();
+            console.log("Blurred CodeMirror contentDOM");
+          }
+          if (cmEditor.dom) {
+            cmEditor.dom.blur();
+            console.log("Blurred CodeMirror dom");
+          }
+        }
+      } catch (e) {
+        console.log('CodeMirror blur attempt failed:', e);
+      }
+      
+      // Method 3: Create temporary element to steal focus (more reliable on mobile)
+      const tempElement = document.createElement('input');
+      tempElement.style.position = 'absolute';
+      tempElement.style.left = '-9999px';
+      tempElement.style.opacity = '0';
+      tempElement.style.pointerEvents = 'none';
+      tempElement.setAttribute('readonly', 'true');
+      document.body.appendChild(tempElement);
+      tempElement.focus();
+      setTimeout(() => {
+        tempElement.blur();
+        document.body.removeChild(tempElement);
+        console.log("Focus stealing completed");
+      }, 150);
+      
+      // Verify focus was removed
+      setTimeout(() => {
+        console.log("Editor has focus after blur attempt:", editor.hasFocus());
+      }, 200);
+    } else {
+      console.log("Editor was not focused, skipping blur operations");
     }
     
-    // Method 3: Blur any active input/textarea elements
+    // Always blur any other active elements as safety net
     const activeElement = document.activeElement as HTMLElement;
     if (activeElement && (
       activeElement.tagName === 'INPUT' || 
@@ -577,27 +606,7 @@ function createCorrectionPopup(
       activeElement.contentEditable === 'true'
     )) {
       activeElement.blur();
-    }
-    
-    // Method 4: Create temporary element and focus it to steal focus
-    const tempElement = document.createElement('button');
-    tempElement.style.position = 'absolute';
-    tempElement.style.left = '-9999px';
-    tempElement.style.opacity = '0';
-    tempElement.style.pointerEvents = 'none';
-    document.body.appendChild(tempElement);
-    tempElement.focus();
-    setTimeout(() => {
-      document.body.removeChild(tempElement);
-    }, 100);
-    
-    // Method 5: Force viewport change to trigger keyboard hide
-    if (window.scrollTo) {
-      const currentScroll = window.scrollY;
-      window.scrollTo(0, currentScroll + 1);
-      setTimeout(() => {
-        window.scrollTo(0, currentScroll);
-      }, 50);
+      console.log("Blurred active element:", activeElement.tagName);
     }
   }
   
@@ -686,9 +695,20 @@ function createCorrectionPopup(
     // Unlock body scroll
     document.body.classList.remove('spell-popup-open');
     
-    // Mobile fix: Restore editor focus if needed
-    // Note: We don't automatically refocus to avoid unwanted keyboard popup
-    // User can manually tap the editor if they want to continue editing
+    // Mobile fix: Clean up focus state when closing popup
+    if (editor) {
+      console.log("Popup closing, editor focus state:", editor.hasFocus());
+      
+      // Don't automatically refocus editor to avoid unwanted keyboard popup
+      // But ensure any remaining focus is properly cleared
+      const activeElement = document.activeElement as HTMLElement;
+      if (activeElement && activeElement !== document.body) {
+        console.log("Clearing remaining focus from:", activeElement.tagName);
+        activeElement.blur();
+      }
+      
+      console.log("Popup closed, final editor focus state:", editor.hasFocus());
+    }
   }
 
 
@@ -1004,28 +1024,54 @@ function createCorrectionPopup(
   function handleClick(e: Event) {
     const target = e.target as HTMLElement;
     
-    // Mobile fix: Hide keyboard when clicking on preview area
+    // Mobile fix: Smart keyboard hiding when clicking on preview area
     if (target.closest('#resultPreview') || target.id === 'resultPreview') {
-      // Aggressive keyboard hiding for mobile
-      const activeElement = document.activeElement as HTMLElement;
-      if (activeElement) {
-        activeElement.blur();
+      console.log("Preview area clicked, checking focus state...");
+      
+      // Check if any editor in the background still has focus
+      const markdownView = (window as any).app?.workspace?.getActiveViewOfType?.('markdown');
+      const backgroundEditor = markdownView?.editor;
+      
+      if (backgroundEditor && backgroundEditor.hasFocus()) {
+        console.log("Background editor still has focus, removing it...");
+        
+        // Blur background editor elements
+        const editorElement = (backgroundEditor as any).cm?.dom;
+        if (editorElement && typeof editorElement.blur === 'function') {
+          editorElement.blur();
+          console.log("Blurred background editor");
+        }
       }
       
-      // Create temporary element to steal focus
+      // Also blur any currently active element
+      const activeElement = document.activeElement as HTMLElement;
+      if (activeElement && (
+        activeElement.tagName === 'INPUT' || 
+        activeElement.tagName === 'TEXTAREA' || 
+        activeElement.contentEditable === 'true'
+      )) {
+        activeElement.blur();
+        console.log("Blurred active element on preview click:", activeElement.tagName);
+      }
+      
+      // Create temporary readonly input to steal focus (mobile-optimized)
       const tempInput = document.createElement('input');
       tempInput.style.position = 'absolute';
       tempInput.style.left = '-9999px';
       tempInput.style.opacity = '0';
+      tempInput.style.pointerEvents = 'none';
       tempInput.setAttribute('readonly', 'true');
+      tempInput.setAttribute('inputmode', 'none'); // Prevent keyboard on mobile
       document.body.appendChild(tempInput);
       tempInput.focus();
-      tempInput.blur();
+      
       setTimeout(() => {
+        tempInput.blur();
         document.body.removeChild(tempInput);
+        console.log("Preview area focus stealing completed");
       }, 100);
       
-      // Prevent default to avoid any focus behavior
+      // Prevent default to avoid any unwanted focus behavior
       e.preventDefault();
     }
     
