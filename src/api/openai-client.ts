@@ -47,6 +47,21 @@ export class OpenAIClient implements AIClient {
       throw new Error('OpenAI API 키가 설정되지 않았습니다.');
     }
 
+    const requestBody = {
+      model: model,
+      messages: messages,
+      max_tokens: maxTokens,
+      temperature: 0.1
+    };
+
+    console.log('[OpenAI] 요청 데이터:', {
+      url: API_ENDPOINTS.openai.chat,
+      model: model,
+      messagesCount: messages.length,
+      maxTokens: maxTokens,
+      bodySize: JSON.stringify(requestBody).length
+    });
+
     const response = await requestUrl({
       url: API_ENDPOINTS.openai.chat,
       method: 'POST',
@@ -54,18 +69,18 @@ export class OpenAIClient implements AIClient {
         'Authorization': `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        model: model,
-        messages: messages,
-        max_tokens: maxTokens,
-        temperature: 0.1
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (response.status === 200) {
       return response.json.choices[0].message.content.trim();
     } else {
-      throw new Error(`OpenAI API 오류: ${response.status} - ${response.text}`);
+      console.error('[OpenAI] API 응답 오류:', {
+        status: response.status,
+        text: response.text,
+        json: response.json
+      });
+      throw new Error(`OpenAI API 오류: ${response.status} - ${response.text || JSON.stringify(response.json)}`);
     }
   }
 }

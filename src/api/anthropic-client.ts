@@ -38,7 +38,12 @@ export class AnthropicClient implements AIClient {
     if (response.status === 200) {
       return response.json.content[0].text.trim();
     } else {
-      throw new Error(`Anthropic API 오류: ${response.status} - ${response.text}`);
+      console.error('[Anthropic] API 응답 오류:', {
+        status: response.status,
+        text: response.text,
+        json: response.json
+      });
+      throw new Error(`Anthropic API 오류: ${response.status} - ${response.text || JSON.stringify(response.json)}`);
     }
   }
 }

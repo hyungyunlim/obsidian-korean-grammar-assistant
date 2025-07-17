@@ -81,7 +81,17 @@ export class AIAnalysisService {
     }
 
     if (!AIClientFactory.hasValidApiKey(this.settings)) {
-      throw new Error('AI API 키가 설정되지 않았습니다.');
+      const provider = this.settings.provider;
+      const keyName = provider === 'openai' ? 'OpenAI API 키' :
+                     provider === 'anthropic' ? 'Anthropic API 키' :
+                     provider === 'google' ? 'Google API 키' :
+                     provider === 'ollama' ? 'Ollama 엔드포인트' : 'API 키';
+      throw new Error(`${keyName}가 설정되지 않았습니다. 플러그인 설정에서 ${provider} 제공자의 ${keyName}를 입력해주세요.`);
+    }
+
+    // 모델명 유효성 검사
+    if (!this.settings.model || this.settings.model.trim() === '') {
+      throw new Error(`모델이 설정되지 않았습니다. 플러그인 설정에서 ${this.settings.provider} 모델을 선택해주세요.`);
     }
 
     const client = AIClientFactory.createClient(this.settings);
@@ -90,14 +100,32 @@ export class AIAnalysisService {
       // 컨텍스트 추출
       const correctionContexts = this.extractCorrectionContexts(request);
       
+      // 프롬프트 길이 확인 및 제한
+      let finalCorrectionContexts = correctionContexts;
+      const systemPrompt = AI_PROMPTS.analysisSystem;
+      let userPrompt = AI_PROMPTS.analysisUserWithContext(correctionContexts);
+      let totalPromptLength = systemPrompt.length + userPrompt.length;
+      
+      if (totalPromptLength > 20000) { // 대략적인 토큰 한계
+        console.warn(`[AI] 프롬프트가 너무 깁니다 (${totalPromptLength}자). 요청을 줄입니다.`);
+        if (correctionContexts.length > 10) {
+          // 오류가 너무 많으면 일부만 처리
+          finalCorrectionContexts = correctionContexts.slice(0, 10);
+          console.log(`[AI] 오류 수를 ${correctionContexts.length}개에서 ${finalCorrectionContexts.length}개로 줄였습니다.`);
+          userPrompt = AI_PROMPTS.analysisUserWithContext(finalCorrectionContexts);
+        } else {
+          throw new Error('프롬프트가 너무 깁니다. 더 짧은 텍스트로 다시 시도해주세요.');
+        }
+      }
+      
       const messages = [
         {
           role: 'system',
-          content: AI_PROMPTS.analysisSystem
+          content: systemPrompt
         },
         {
           role: 'user',
-          content: AI_PROMPTS.analysisUserWithContext(correctionContexts)
+          content: userPrompt
         }
       ];
 
@@ -106,14 +134,27 @@ export class AIAnalysisService {
         model: this.settings.model,
         correctionsCount: request.corrections.length,
         contextWindow: request.contextWindow || 50,
-        avgContextLength: correctionContexts.reduce((sum, ctx) => sum + ctx.fullContext.length, 0) / correctionContexts.length
+        avgContextLength: correctionContexts.reduce((sum, ctx) => sum + ctx.fullContext.length, 0) / correctionContexts.length,
+        maxTokens: this.settings.maxTokens,
+        apiKeySet: !!this.getApiKey()
       });
+      
+      console.log('[AI] 요청 메시지들:', messages.map(m => ({
+        role: m.role,
+        contentLength: m.content.length,
+        contentPreview: m.content.substring(0, 200) + (m.content.length > 200 ? '...' : '')
+      })));
 
       const response = await client.chat(messages, this.settings.maxTokens, this.settings.model);
       
       console.log('[AI] 응답 수신:', response);
 
-      return this.parseAIResponse(response, request.corrections);
+      // 줄어든 컨텍스트를 사용한 경우 해당 오류들만 파싱
+      const correctionsToProcess = finalCorrectionContexts.length < correctionContexts.length 
+        ? request.corrections.slice(0, finalCorrectionContexts.length)
+        : request.corrections;
+      
+      return this.parseAIResponse(response, correctionsToProcess);
     } catch (error) {
       console.error('[AI] 분석 중 오류 발생:', error);
       throw new Error(`AI 분석 실패: ${error.message}`);
@@ -289,5 +330,23 @@ export class AIAnalysisService {
    */
   getSettings(): AISettings {
     return this.settings;
+  }
+
+  /**
+   * 현재 제공자의 API 키를 반환합니다.
+   */
+  private getApiKey(): string {
+    switch (this.settings.provider) {
+      case 'openai':
+        return this.settings.openaiApiKey;
+      case 'anthropic':
+        return this.settings.anthropicApiKey;
+      case 'google':
+        return this.settings.googleApiKey;
+      case 'ollama':
+        return this.settings.ollamaEndpoint;
+      default:
+        return '';
+    }
   }
 }
