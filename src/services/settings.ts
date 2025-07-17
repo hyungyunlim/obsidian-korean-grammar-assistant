@@ -73,7 +73,17 @@ export class SettingsService {
    * @returns 병합된 설정
    */
   static mergeWithDefaults(userSettings: Partial<PluginSettings>): PluginSettings {
-    return Object.assign({}, DEFAULT_SETTINGS, userSettings);
+    // 깊은 병합을 위해 AI 설정을 별도로 처리
+    const mergedSettings = Object.assign({}, DEFAULT_SETTINGS, userSettings);
+    
+    // AI 설정이 있으면 기본값과 병합
+    if (userSettings.ai) {
+      mergedSettings.ai = Object.assign({}, DEFAULT_AI_SETTINGS, userSettings.ai);
+    } else {
+      mergedSettings.ai = Object.assign({}, DEFAULT_AI_SETTINGS);
+    }
+    
+    return mergedSettings;
   }
 
   /**

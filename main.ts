@@ -13,6 +13,7 @@ import { IgnoredWordsService } from './src/services/ignoredWords';
 import { SpellCheckOrchestrator } from './src/orchestrator';
 import { 
   AI_PROVIDER_DEFAULTS, 
+  DEFAULT_AI_SETTINGS,
   OPENAI_MODELS, 
   ANTHROPIC_MODELS, 
   GOOGLE_MODELS, 
@@ -94,6 +95,15 @@ class SpellingSettingTab extends PluginSettingTab {
   }
 
   /**
+   * AI 설정이 없을 경우 초기화합니다.
+   */
+  private ensureAISettings(): void {
+    if (!this.plugin.settings.ai) {
+      this.plugin.settings.ai = { ...DEFAULT_AI_SETTINGS };
+    }
+  }
+
+  /**
    * AI 설정 섹션을 렌더링합니다.
    */
   private renderAISettings(containerEl: HTMLElement): void {
@@ -104,14 +114,15 @@ class SpellingSettingTab extends PluginSettingTab {
       .setName("AI 자동 교정 활성화")
       .setDesc("AI를 사용하여 맞춤법 오류에 대한 최적의 수정사항을 자동으로 제안합니다.")
       .addToggle(toggle => toggle
-        .setValue(this.plugin.settings.ai.enabled)
+        .setValue(this.plugin.settings.ai?.enabled || false)
         .onChange(async (value) => {
+          this.ensureAISettings();
           this.plugin.settings.ai.enabled = value;
           await this.plugin.saveSettings();
           this.display(); // AI 설정이 변경되면 UI 새로고침
         }));
 
-    if (!this.plugin.settings.ai.enabled) {
+    if (!this.plugin.settings.ai?.enabled) {
       const disabledDesc = containerEl.createEl("div", {
         cls: "setting-item-description",
         text: "AI 기능이 비활성화되어 있습니다. 위의 토글을 활성화하면 AI 관련 설정이 표시됩니다."
@@ -130,8 +141,9 @@ class SpellingSettingTab extends PluginSettingTab {
         .addOption('anthropic', 'Anthropic (Claude)')
         .addOption('google', 'Google (Gemini)')
         .addOption('ollama', 'Ollama (로컬)')
-        .setValue(this.plugin.settings.ai.provider)
+        .setValue(this.plugin.settings.ai?.provider || 'openai')
         .onChange(async (value: 'openai' | 'anthropic' | 'google' | 'ollama') => {
+          this.ensureAISettings();
           this.plugin.settings.ai.provider = value;
           // 제공자 변경 시 기본 모델로 설정
           this.plugin.settings.ai.model = AI_PROVIDER_DEFAULTS[value];
@@ -144,7 +156,7 @@ class SpellingSettingTab extends PluginSettingTab {
       .setName("AI 모델")
       .setDesc("사용할 AI 모델을 선택하세요")
       .addDropdown(dropdown => {
-        const provider = this.plugin.settings.ai.provider;
+        const provider = this.plugin.settings.ai?.provider || 'openai';
         let models: readonly string[] = [];
         
         switch (provider) {
@@ -166,8 +178,9 @@ class SpellingSettingTab extends PluginSettingTab {
           dropdown.addOption(model, model);
         });
 
-        dropdown.setValue(this.plugin.settings.ai.model || AI_PROVIDER_DEFAULTS[provider]);
+        dropdown.setValue(this.plugin.settings.ai?.model || AI_PROVIDER_DEFAULTS[provider]);
         dropdown.onChange(async (value) => {
+          this.ensureAISettings();
           this.plugin.settings.ai.model = value;
           await this.plugin.saveSettings();
         });
@@ -182,10 +195,11 @@ class SpellingSettingTab extends PluginSettingTab {
       .setDesc("AI 응답의 최대 길이를 설정합니다. 높을수록 더 많은 오류를 한 번에 처리할 수 있습니다. (기본: 2000, 큰 문서는 5000-10000 권장)")
       .addText(text => text
         .setPlaceholder("2000")
-        .setValue(this.plugin.settings.ai.maxTokens.toString())
+        .setValue((this.plugin.settings.ai.maxTokens || 2000).toString())
         .onChange(async (value) => {
           const tokens = parseInt(value);
           if (!isNaN(tokens) && tokens >= 100) {
+            this.ensureAISettings();
             this.plugin.settings.ai.maxTokens = tokens;
             await this.plugin.saveSettings();
           }
@@ -196,23 +210,25 @@ class SpellingSettingTab extends PluginSettingTab {
       .setName("토큰 사용량 경고")
       .setDesc("AI 분석 시 예상 토큰 사용량이 많을 때 확인 메시지를 표시합니다.")
       .addToggle(toggle => toggle
-        .setValue(this.plugin.settings.ai.showTokenWarning)
+        .setValue(this.plugin.settings.ai?.showTokenWarning || true)
         .onChange(async (value) => {
+          this.ensureAISettings();
           this.plugin.settings.ai.showTokenWarning = value;
           await this.plugin.saveSettings();
           this.display(); // 토글 변경 시 UI 새로고침
         }));
 
-    if (this.plugin.settings.ai.showTokenWarning) {
+    if (this.plugin.settings.ai?.showTokenWarning) {
       new Setting(containerEl)
         .setName("경고 임계값")
         .setDesc("이 토큰 수 이상일 때 확인 메시지를 표시합니다 (기본: 3000)")
         .addText(text => text
           .setPlaceholder("3000")
-          .setValue(this.plugin.settings.ai.tokenWarningThreshold.toString())
+          .setValue((this.plugin.settings.ai?.tokenWarningThreshold || 3000).toString())
           .onChange(async (value) => {
             const threshold = parseInt(value);
             if (!isNaN(threshold) && threshold >= 500) {
+              this.ensureAISettings();
               this.plugin.settings.ai.tokenWarningThreshold = threshold;
               await this.plugin.saveSettings();
             }
@@ -224,7 +240,7 @@ class SpellingSettingTab extends PluginSettingTab {
    * AI API 키 설정을 렌더링합니다.
    */
   private renderAIApiKeySettings(containerEl: HTMLElement): void {
-    const provider = this.plugin.settings.ai.provider;
+    const provider = this.plugin.settings.ai?.provider || 'openai';
 
     switch (provider) {
       case 'openai':
@@ -233,8 +249,9 @@ class SpellingSettingTab extends PluginSettingTab {
           .setDesc("OpenAI API 키를 입력하세요. https://platform.openai.com/api-keys 에서 발급받을 수 있습니다.")
           .addText(text => text
             .setPlaceholder("sk-...")
-            .setValue(this.plugin.settings.ai.openaiApiKey)
+            .setValue(this.plugin.settings.ai?.openaiApiKey || '')
             .onChange(async (value) => {
+              this.ensureAISettings();
               this.plugin.settings.ai.openaiApiKey = value;
               await this.plugin.saveSettings();
             }));
@@ -246,8 +263,9 @@ class SpellingSettingTab extends PluginSettingTab {
           .setDesc("Anthropic (Claude) API 키를 입력하세요. https://console.anthropic.com/ 에서 발급받을 수 있습니다.")
           .addText(text => text
             .setPlaceholder("sk-ant-...")
-            .setValue(this.plugin.settings.ai.anthropicApiKey)
+            .setValue(this.plugin.settings.ai?.anthropicApiKey || '')
             .onChange(async (value) => {
+              this.ensureAISettings();
               this.plugin.settings.ai.anthropicApiKey = value;
               await this.plugin.saveSettings();
             }));
@@ -259,8 +277,9 @@ class SpellingSettingTab extends PluginSettingTab {
           .setDesc("Google AI API 키를 입력하세요. https://aistudio.google.com/app/apikey 에서 발급받을 수 있습니다.")
           .addText(text => text
             .setPlaceholder("AIza...")
-            .setValue(this.plugin.settings.ai.googleApiKey)
+            .setValue(this.plugin.settings.ai?.googleApiKey || '')
             .onChange(async (value) => {
+              this.ensureAISettings();
               this.plugin.settings.ai.googleApiKey = value;
               await this.plugin.saveSettings();
             }));
@@ -272,8 +291,9 @@ class SpellingSettingTab extends PluginSettingTab {
           .setDesc("로컬 Ollama 서버의 주소를 입력하세요. 기본값: http://localhost:11434")
           .addText(text => text
             .setPlaceholder("http://localhost:11434")
-            .setValue(this.plugin.settings.ai.ollamaEndpoint)
+            .setValue(this.plugin.settings.ai?.ollamaEndpoint || 'http://localhost:11434')
             .onChange(async (value) => {
+              this.ensureAISettings();
               this.plugin.settings.ai.ollamaEndpoint = value;
               await this.plugin.saveSettings();
             }));
