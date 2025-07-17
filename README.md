@@ -1,193 +1,96 @@
 # Korean Grammar Assistant
 
-An advanced Korean grammar and spelling checker plugin for Obsidian, powered by Bareun.ai API. This plugin provides comprehensive Korean text correction with modern UI/UX features.
+An advanced Korean grammar and spelling checker plugin for Obsidian, powered by Bareun.ai and various AI providers. This plugin provides comprehensive Korean text correction with modern UI/UX features.
 
 ## ✨ Features
 
 ### Core Functionality
-- **Advanced Grammar & Spelling Check**: Powered by Bareun.ai's state-of-the-art Korean language processing
-- **Interactive Correction Interface**: Click-to-cycle through corrections (Error → Suggestions → Keep Original)
-- **Real-time Preview**: See corrections applied instantly with color-coded status
-- **Multi-suggestion Support**: Multiple correction options for each detected error
+- **Advanced Grammar & Spelling Check**: Powered by Bareun.ai's state-of-the-art Korean language processing.
+- **AI-Powered Corrections**: Integrates with OpenAI, Anthropic (Claude), Google (Gemini), and Ollama for intelligent, context-aware suggestions.
+- **Interactive Correction Interface**: Click-to-cycle through corrections (Error → Suggestions → Keep Original).
+- **Real-time Preview**: See corrections applied instantly with color-coded status.
+- **Multi-suggestion Support**: Multiple correction options for each detected error.
 
 ### Modern UI/UX
-- **Smart Pagination**: Dynamic page sizing based on screen space and content
-- **Mobile Optimized**: Touch-friendly interface with Safe Area support for iPhone notches
-- **Responsive Design**: Adapts seamlessly to different screen sizes
-- **Color-coded Status**: Visual indicators for errors (red), corrections (green), and intentional originals (blue)
-- **Large Modal Interface**: 1200x1000px workspace for comfortable editing
+- **Smart Pagination**: Dynamic page sizing based on screen space and content.
+- **Mobile Optimized**: Touch-friendly interface with Safe Area support for iPhone notches.
+- **Responsive Design**: Adapts seamlessly to different screen sizes.
+- **Color-coded Status**: Visual indicators for errors (red), corrections (green), and intentional originals (orange).
+- **Large Modal Interface**: A spacious workspace for comfortable editing.
 
-### Technical Highlights
-- **Dynamic Page Calculation**: Automatically adjusts content per page based on available space
-- **Smart Sentence Boundaries**: Intelligent text splitting at natural Korean sentence endings
-- **Background Isolation**: Prevents cursor blinking and interaction issues on mobile
-- **Error State Management**: Sophisticated 3-stage toggle system for correction states
+### AI-Specific Features
+- **Multiple AI Providers**: Choose from OpenAI, Anthropic, Google, or a local Ollama instance.
+- **Intelligent Analysis**: AI considers the full context to provide the best correction.
+- **Confidence Scores**: Each AI suggestion comes with a confidence score (0-100%).
+- **Detailed Reasoning**: Understand *why* the AI chose a particular correction.
+- **Automatic Exception Handling**: AI can identify and preserve proper nouns, URLs, and technical terms.
+- **One-Click Application**: Review the AI's suggestions and apply them with a single click.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-1. **Bareun.ai Account**: Sign up at https://bareun.ai/
-2. **API Key**: Obtain your personal API key from Bareun.ai dashboard
-3. **API Server**: Choose between cloud service (recommended) or local Bareun.ai server
+1. **Bareun.ai Account**: Sign up at [https://bareun.ai/](https://bareun.ai/) for the base grammar check.
+2. **API Key**: Obtain your personal API key from the Bareun.ai dashboard.
+3. **(Optional) AI Provider Account**: For AI features, you'll need an API key from OpenAI, Anthropic, or Google, or a running Ollama instance.
 
 ### Installation
 
 #### Method 1: Manual Installation (Recommended)
-1. Download or clone this repository
-2. Run `npm install && npm run build`
-3. Copy `main.js`, `manifest.json`, `styles.css` to your Obsidian vault's `.obsidian/plugins/korean-grammar-assistant/` folder
-4. Enable the plugin in Obsidian settings
+1. Download or clone this repository.
+2. Run `npm install && npm run build`.
+3. Copy `main.js`, `manifest.json`, and `styles.css` to your Obsidian vault's `.obsidian/plugins/korean-grammar-assistant/` folder.
+4. Enable the plugin in Obsidian settings.
 
 #### Method 2: BRAT Plugin
-1. Install BRAT plugin in Obsidian
-2. Add this repository URL to BRAT
-3. Install and enable Korean Grammar Assistant
+1. Install the BRAT plugin in Obsidian.
+2. Add this repository's URL to BRAT.
+3. Install and enable the Korean Grammar Assistant.
 
 ### Configuration
 
-#### Option 1: Plugin Settings (Recommended for most users)
-1. **Enable the Plugin**: Go to Settings → Community Plugins → Korean Grammar Assistant → Enable
-2. **Configure API Settings**: Navigate to Settings → Korean Grammar Assistant and configure:
-
-- **API Key (Required)**: Your personal Bareun.ai API key 
-  - Format: `koba-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX`
-  - Get yours at: https://bareun.ai/
-- **API Host**: 
-  - Cloud service (recommended): `bareun-api.junlim.org`
-  - Local server: `localhost`
-- **API Port**: 
-  - Cloud service: `443` (HTTPS)
-  - Local server: `5655`
-
-#### Option 2: Local Config File (For developers)
-1. **Copy example config**: `cp api-config.example.json api-config.json`
-2. **Edit config file**: Add your API key to `api-config.json`
-3. **Automatic loading**: Plugin will automatically use local config if available
-
-```json
-{
-  "apiKey": "your-actual-api-key-here",
-  "apiHost": "bareun-api.junlim.org",
-  "apiPort": 443,
-  "ignoredWords": []
-}
-```
-
-⚠️ **Important**: 
-- Each user must obtain their own API key from Bareun.ai
-- `api-config.json` is git-ignored for security
-- The plugin will not work without a valid API key
+1. **Enable the Plugin**: Go to `Settings` → `Community Plugins` → `Korean Grammar Assistant` → `Enable`.
+2. **Configure API Settings**: Navigate to `Settings` → `Korean Grammar Assistant`.
+    - **Bareun.ai API Key (Required)**: Your personal Bareun.ai API key.
+    - **AI Provider (Optional)**: Select your preferred AI provider and enter the corresponding API key or endpoint.
 
 ## 📱 Usage
 
 ### Basic Workflow
-1. **Select Text**: Highlight Korean text you want to check
-2. **Launch Checker**: Click ribbon icon or use Command Palette → "Check Spelling"
-3. **Review Errors**: Examine detected issues in the preview pane
-4. **Apply Corrections**: Click on highlighted errors to cycle through options:
-   - **Red (Error)**: Original text with detected issues
-   - **Green (Corrected)**: Applied correction
-   - **Blue (Intentional)**: Intentionally kept original despite suggestions
-5. **Finalize**: Click "Apply" to commit changes to your document
+1. **Select Text**: Highlight the Korean text you want to check.
+2. **Launch Checker**: Click the ribbon icon or use the Command Palette → "Check Spelling".
+3. **Review Errors**: Examine the detected issues in the preview pane.
+4. **Apply Corrections**: Click on highlighted errors to cycle through options.
+5. **Finalize**: Click "Apply" to commit changes to your document.
 
-### Mobile Experience
-- **Touch-Optimized**: Large touch targets and gesture-friendly interface
-- **Safe Area Support**: Proper handling of iPhone notches and home indicators
-- **Contextual UI**: Color legend and controls adapt to mobile layout
-- **Background Lock**: Prevents accidental interactions with underlying content
-
-### Advanced Features
-- **Smart Pagination**: Long texts are automatically split into manageable pages
-- **Error Summary**: Collapsible panel showing all detected issues with quick fixes
-- **Batch Processing**: Apply multiple corrections efficiently
-- **Undo Support**: Standard Obsidian undo/redo works with applied corrections
+### AI-Powered Workflow
+1. **Perform Basic Check**: Follow the basic workflow above.
+2. **Run AI Analysis**: Click the "🤖 AI 분석" button in the popup header.
+3. **Review AI Suggestions**: The AI will automatically select the best corrections. Review the confidence scores and reasoning.
+4. **Apply**: Click "Apply" to save the AI-powered corrections.
 
 ## 🎨 Interface Guide
 
 ### Color Coding
-- 🔴 **Red**: Original text with detected errors
-- 🟢 **Green**: Text with applied corrections
-- 🔵 **Blue**: Original text intentionally preserved by user
-
-### Navigation
-- **Pagination**: For long texts, use Previous/Next buttons
-- **Error Summary**: Toggle the bottom panel to see all errors at once
-- **Dynamic Sizing**: Interface automatically adjusts to your screen and content
+- 🔴 **Red**: Original text with detected errors.
+- 🟢 **Green**: Text with applied corrections.
+- 🔵 **Blue**: Original text intentionally preserved by the user (exception).
+- 🟠 **Orange**: Original text kept by the user.
 
 ## 🛠️ Technical Architecture
 
-### API Integration
-- **Bareun.ai Integration**: Utilizes advanced Korean NLP models
-- **Error Handling**: Graceful degradation for API issues
-- **Caching**: Efficient request management
-
-### Performance Optimizations
-- **Dynamic Pagination**: Content-aware page sizing
-- **Memory Efficient**: Processes content in manageable chunks
-- **Responsive Rendering**: Smooth interactions across devices
-
-### Mobile Engineering
-- **CSS Containment**: Prevents layout thrashing
-- **Hardware Acceleration**: Smooth animations and transitions
-- **Stacking Context**: Proper z-index management for overlay content
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-**API Connection Failed**
-- Verify Bareun.ai server is running (if using local setup)
-- Check network connectivity for cloud service
-- Confirm API endpoint and port settings
-
-**Authentication Error**
-- Validate API key format and permissions
-- Ensure API key is active and not expired
-
-**Mobile Interface Issues**
-- Clear browser cache if using Obsidian web
-- Ensure latest plugin version
-- Check for conflicting plugins
-
-**Performance Issues**
-- Consider shorter text selections for very long documents
-- Check available system memory
-- Verify API server performance
-
-### Debug Mode
-Enable developer console to see detailed logging:
-- Plugin initialization
-- API requests and responses
-- Pagination calculations
-- Error processing details
+- **Frontend**: TypeScript, CSS3, Obsidian API
+- **Backend**: Bareun.ai API, OpenAI API, Anthropic API, Google API, Ollama API
+- **Build Tool**: ESBuild
 
 ## 🤝 Contributing
 
-This project welcomes contributions! Areas of interest:
-- Additional Korean language processing features
-- UI/UX improvements
-- Performance optimizations
-- Mobile experience enhancements
-- Documentation improvements
+Contributions are welcome! Please feel free to submit a pull request or open an issue.
 
 ## 📄 License
 
-MIT License - see LICENSE file for details
+MIT License - see the LICENSE file for details.
 
 ## 🙏 Acknowledgments
 
-- **Bareun.ai**: Providing excellent Korean language processing API
-- **Obsidian Community**: Inspiration and feedback for plugin development
-- **Original Plugin**: Based on concepts from x1brn/obsidian-korean-spellchecker
-
----
-
-## 📊 Project Stats
-
-- **Language**: TypeScript, CSS3
-- **Platform**: Obsidian Desktop & Mobile
-- **API**: Bareun.ai Korean Language Processing
-- **UI Framework**: Vanilla CSS with modern features
-- **Bundle Size**: Optimized for fast loading
-
-**Made with ❤️ for the Korean Obsidian community**
+- **Bareun.ai**: For their excellent Korean language processing API.
+- **Obsidian Community**: For their inspiration and feedback.
