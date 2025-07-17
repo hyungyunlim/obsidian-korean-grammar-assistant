@@ -93,7 +93,7 @@ export const DEFAULT_AI_SETTINGS = {
   googleApiKey: '',
   ollamaEndpoint: 'http://localhost:11434',
   model: 'gpt-4o-mini',
-  maxTokens: 1000,
+  maxTokens: 2000,
   temperature: 0.1 // 낮은 값으로 설정하여 일관된 결과 도출
 } as const;
 
@@ -134,7 +134,7 @@ ${corrections.map((correction, index) =>
 위 오류들에 대해 문맥을 고려하여 가장 적절한 선택을 해주세요.`,
 
   analysisUserWithContext: (correctionContexts: any[]) => 
-    `발견된 맞춤법 오류들과 주변 문맥:
+    `총 ${correctionContexts.length}개의 맞춤법 오류들과 주변 문맥:
 
 ${correctionContexts.map((ctx) => 
   `${ctx.correctionIndex}. 오류: "${ctx.original}"
@@ -142,7 +142,8 @@ ${correctionContexts.map((ctx) =>
    수정안: [${ctx.corrected.join(', ')}]
    설명: ${ctx.help}
    
-`).join('')}위 오류들에 대해 각각의 문맥을 고려하여 가장 적절한 선택을 해주세요.`
+`).join('')}⚠️ 중요: 위의 모든 ${correctionContexts.length}개 오류에 대해 반드시 분석 결과를 제공해주세요. 
+누락된 오류가 있으면 안 됩니다. 각 오류의 correctionIndex를 정확히 매칭해주세요.`
 } as const;
 
 // 타입 정의

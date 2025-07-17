@@ -171,6 +171,33 @@ export class AIAnalysisService {
       }
 
       console.log(`[AI] 파싱 완료: ${results.length}개의 결과 추출됨`);
+      
+      // 누락된 오류 확인
+      const processedIndexes = new Set(results.map(r => r.correctionIndex));
+      const missingIndexes = corrections.map((_, index) => index).filter(index => !processedIndexes.has(index));
+      
+      if (missingIndexes.length > 0) {
+        console.warn(`[AI] 누락된 오류들 (인덱스): ${missingIndexes.join(', ')}`);
+        console.warn(`[AI] 전체 오류 수: ${corrections.length}, 처리된 오류 수: ${results.length}`);
+        
+        // 누락된 오류들에 대해 기본값 추가
+        missingIndexes.forEach(index => {
+          const correction = corrections[index];
+          if (correction) {
+            results.push({
+              correctionIndex: index,
+              selectedValue: correction.corrected[0] || correction.original, // 첫 번째 수정안 또는 원본
+              isExceptionProcessed: false,
+              confidence: 50, // 낮은 신뢰도로 표시
+              reasoning: 'AI 분석에서 누락되어 기본값으로 설정됨'
+            });
+          }
+        });
+        
+        // 인덱스 순으로 정렬
+        results.sort((a, b) => a.correctionIndex - b.correctionIndex);
+      }
+      
       return results;
     } catch (error) {
       console.error('[AI] 응답 파싱 오류:', error);

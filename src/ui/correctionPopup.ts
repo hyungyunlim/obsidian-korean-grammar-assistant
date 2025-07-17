@@ -89,28 +89,27 @@ export class CorrectionPopup extends BaseComponent {
         <div class="content">
           <div class="preview-section">
             <div class="preview-header">
-              <div class="preview-title-row">
-                <div class="preview-label">
-                  미리보기
-                  <span class="preview-hint">클릭하여 수정사항 적용</span>
+              <div class="preview-label">
+                미리보기
+                <span class="preview-hint">클릭하여 수정사항 적용</span>
+              </div>
+              
+              <div class="color-legend">
+                <div class="color-legend-item">
+                  <div class="color-legend-dot error"></div>
+                  <span>오류</span>
                 </div>
-                <div class="color-legend">
-                  <div class="color-legend-item">
-                    <div class="color-legend-dot error"></div>
-                    <span>오류</span>
-                  </div>
-                  <div class="color-legend-item">
-                    <div class="color-legend-dot corrected"></div>
-                    <span>수정</span>
-                  </div>
-                  <div class="color-legend-item">
-                    <div class="color-legend-dot exception-processed"></div>
-                    <span>예외처리</span>
-                  </div>
-                  <div class="color-legend-item">
-                    <div class="color-legend-dot ignored"></div>
-                    <span>무시됨</span>
-                  </div>
+                <div class="color-legend-item">
+                  <div class="color-legend-dot corrected"></div>
+                  <span>수정</span>
+                </div>
+                <div class="color-legend-item">
+                  <div class="color-legend-dot exception-processed"></div>
+                  <span>예외처리</span>
+                </div>
+                <div class="color-legend-item">
+                  <div class="color-legend-dot ignored"></div>
+                  <span>무시됨</span>
                 </div>
               </div>
               
