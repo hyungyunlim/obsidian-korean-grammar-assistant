@@ -1533,14 +1533,36 @@ export class CorrectionPopup extends BaseComponent {
    * 키보드 네비게이션 힌트를 표시합니다.
    */
   private showKeyboardHint(): void {
+    // 모바일에서는 표시하지 않음
+    if (Platform.isMobile) {
+      Logger.log('모바일 환경에서는 키보드 힌트를 표시하지 않음');
+      return;
+    }
+
     const hint = document.createElement('div');
     hint.className = 'keyboard-navigation-hint';
     hint.id = 'keyboard-hint';
     
+    // 헤더 (제목 + 닫기 버튼)
+    const header = document.createElement('div');
+    header.className = 'hint-header';
+    
     const title = document.createElement('div');
     title.className = 'hint-title';
     title.textContent = '⌨️ 키보드 단축키';
-    hint.appendChild(title);
+    header.appendChild(title);
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'hint-close-btn';
+    closeBtn.textContent = '×';
+    closeBtn.title = '단축키 가이드 닫기';
+    closeBtn.addEventListener('click', () => {
+      hint.style.opacity = '0';
+      setTimeout(() => hint.remove(), 200);
+    });
+    header.appendChild(closeBtn);
+    
+    hint.appendChild(header);
     
     const shortcuts = [
       { key: 'Tab', desc: '다음 오류' },
@@ -1571,13 +1593,7 @@ export class CorrectionPopup extends BaseComponent {
     
     document.body.appendChild(hint);
     
-    // 5초 후 자동으로 숨김
-    setTimeout(() => {
-      hint.style.opacity = '0';
-      setTimeout(() => hint.remove(), 300);
-    }, 5000);
-    
-    Logger.log('키보드 네비게이션 힌트 표시됨');
+    Logger.log('키보드 네비게이션 힌트 표시됨 (데스크톱 전용)');
   }
 
   /**
@@ -1586,6 +1602,12 @@ export class CorrectionPopup extends BaseComponent {
   close(): void {
     // 키보드 네비게이션 비활성화
     this.app.keymap.popScope(this.keyboardScope);
+    
+    // 키보드 힌트 제거
+    const hint = document.getElementById('keyboard-hint');
+    if (hint) {
+      hint.remove();
+    }
     
     document.body.classList.remove('spell-popup-open');
     this.destroy();
