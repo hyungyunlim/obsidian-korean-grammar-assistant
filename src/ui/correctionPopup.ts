@@ -163,8 +163,16 @@ export class CorrectionPopup extends BaseComponent {
       this.currentFocusIndex = (this.currentFocusIndex + 1) % this.currentCorrections.length;
     }
     this.updateFocusHighlight();
-    this.scrollToFocusedError(true); // Tab 키 사용 시 상세보기 펼치기
-    Logger.debug(`포커스 이동: ${this.currentFocusIndex}/${this.currentCorrections.length}`);
+    
+    // 상세보기가 이미 펼쳐져 있을 때만 스크롤
+    const errorSummary = document.getElementById('errorSummary');
+    const isExpanded = errorSummary && !errorSummary.classList.contains('collapsed');
+    
+    if (isExpanded) {
+      this.scrollToFocusedError(false); // 펼쳐진 상태에서는 상태 유지하며 스크롤
+    }
+    
+    Logger.debug(`포커스 이동: ${this.currentFocusIndex}/${this.currentCorrections.length}, 상세보기 펼쳐짐: ${isExpanded}`);
   }
 
   /**
@@ -183,8 +191,16 @@ export class CorrectionPopup extends BaseComponent {
         : this.currentFocusIndex - 1;
     }
     this.updateFocusHighlight();
-    this.scrollToFocusedError(false); // Shift+Tab 사용 시 상세보기 상태 유지
-    Logger.debug(`포커스 이동: ${this.currentFocusIndex}/${this.currentCorrections.length}`);
+    
+    // 상세보기가 이미 펼쳐져 있을 때만 스크롤
+    const errorSummary = document.getElementById('errorSummary');
+    const isExpanded = errorSummary && !errorSummary.classList.contains('collapsed');
+    
+    if (isExpanded) {
+      this.scrollToFocusedError(false); // 펼쳐진 상태에서는 상태 유지하며 스크롤
+    }
+    
+    Logger.debug(`포커스 이동: ${this.currentFocusIndex}/${this.currentCorrections.length}, 상세보기 펼쳐짐: ${isExpanded}`);
   }
 
   /**
@@ -314,7 +330,16 @@ export class CorrectionPopup extends BaseComponent {
       setTimeout(() => {
         this.updateFocusHighlight();
       }, 100);
+      
+      // 디버깅을 위한 상세 로깅
+      const firstCorrection = this.currentCorrections[0];
+      const actualIndex = this.config.corrections.findIndex(c => 
+        c.original === firstCorrection.original && c.help === firstCorrection.help
+      );
+      
       Logger.log(`초기 포커스 설정: ${this.currentFocusIndex}/${this.currentCorrections.length}`);
+      Logger.log(`첫 번째 오류: "${firstCorrection.original}" (전체 배열 인덱스: ${actualIndex})`);
+      Logger.log('현재 페이지 오류 목록:', this.currentCorrections.map(c => c.original));
     } else {
       this.currentFocusIndex = -1;
       Logger.log('오류가 없어 포커스 설정하지 않음');
@@ -506,9 +531,25 @@ export class CorrectionPopup extends BaseComponent {
     const previewEndIndex = this.pageBreaks[this.currentPreviewPage];
     const currentPreviewText = this.config.selectedText.slice(previewStartIndex, previewEndIndex);
     
-    return this.config.corrections.filter(correction => {
+    // 현재 페이지에 포함된 오류들을 필터링하고 원본 순서대로 정렬
+    const filteredCorrections = this.config.corrections.filter(correction => {
       return currentPreviewText.includes(correction.original);
     });
+    
+    // 원본 텍스트에서의 순서대로 정렬
+    const sortedCorrections = filteredCorrections.sort((a, b) => {
+      const aPos = currentPreviewText.indexOf(a.original);
+      const bPos = currentPreviewText.indexOf(b.original);
+      return aPos - bPos;
+    });
+    
+    Logger.debug(`getCurrentCorrections: 페이지 ${this.currentPreviewPage + 1}, 오류 ${sortedCorrections.length}개`);
+    Logger.debug('오류 위치 순서:', sortedCorrections.map(c => ({ 
+      original: c.original, 
+      position: currentPreviewText.indexOf(c.original) 
+    })));
+    
+    return sortedCorrections;
   }
 
   /**
