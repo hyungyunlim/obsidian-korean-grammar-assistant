@@ -1,4 +1,5 @@
 import { Logger } from '../utils/logger';
+import { clearElement } from '../utils/domUtils';
 
 /**
  * 가상 스크롤 아이템 인터페이스
@@ -209,7 +210,7 @@ export class VirtualScroller {
    * DOM 구조를 초기화합니다
    */
   private initializeStructure(): void {
-    this.container.innerHTML = '';
+    clearElement(this.container);
     this.container.className = 'virtual-scroller-container';
     
     // 뷰포트 (스크롤 가능한 영역)

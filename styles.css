@@ -1439,3 +1439,106 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   opacity: 0.8;
 }
 
+/* === 알림 시스템 클래스들 === */
+/* 토스트 알림 기본 스타일 */
+.notification-toast {
+  position: fixed !important;
+  top: 50px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  padding: 12px 20px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  z-index: 10001 !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+  pointer-events: auto !important;
+}
+
+/* 성공 토스트 */
+.notification-toast-success {
+  background: var(--color-green) !important;
+  color: white !important;
+}
+
+/* 오류 토스트 */
+.notification-toast-error {
+  background: var(--color-red) !important;
+  color: white !important;
+}
+
+/* 정보 토스트 */
+.notification-toast-info {
+  background: var(--interactive-accent) !important;
+  color: var(--text-on-accent) !important;
+}
+
+/* 중앙 모달 알림 */
+.notification-modal-center {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  background: var(--background-primary) !important;
+  border: 1px solid var(--background-modifier-border) !important;
+  padding: 20px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3) !important;
+  z-index: 10001 !important;
+  color: var(--text-normal) !important;
+  max-width: 400px !important;
+  text-align: center !important;
+  pointer-events: auto !important;
+}
+
+/* === 설정 탭 클래스들 === */
+/* 예외 단어 태그 */
+.ksc-tag {
+  display: inline-block !important;
+  background: var(--interactive-accent) !important;
+  color: var(--text-on-accent) !important;
+  padding: 3px 8px !important;
+  border-radius: 12px !important;
+  margin: 0 4px 4px 0 !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: background 0.2s ease !important;
+}
+
+.ksc-tag:hover {
+  background: var(--interactive-accent-hover) !important;
+}
+
+/* 빈 상태 메시지 */
+.ksc-empty-state {
+  color: var(--text-muted) !important;
+  text-align: center !important;
+  padding: 20px !important;
+}
+
+/* 단계별 아이템 */
+.ksc-step-item {
+  margin-bottom: 4px !important;
+}
+
+/* 접을 수 있는 컨테이너 */
+.ksc-collapsible-container {
+  display: none !important;
+  margin-top: 16px !important;
+}
+
+.ksc-collapsible-container.visible {
+  display: block !important;
+}
+
+/* 백업 아이템 */
+.ksc-backup-item {
+  margin-bottom: 8px !important;
+}
+
+/* 복원 버튼 */
+.ksc-restore-button {
+  margin-top: 8px !important;
+  font-size: 12px !important;
+}
+

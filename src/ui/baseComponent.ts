@@ -1,5 +1,6 @@
 import { UIComponent } from '../types/interfaces';
 import { safeRemoveElement, addEventListenerWithCleanup } from '../utils/htmlUtils';
+import { parseHTMLSafely, clearElement } from '../utils/domUtils';
 
 /**
  * UI 컴포넌트의 기본 클래스
@@ -116,7 +117,10 @@ export abstract class BaseComponent implements UIComponent {
    */
   setContent(content: string, isHTML: boolean = false): void {
     if (isHTML) {
-      this.element.innerHTML = content;
+      // DOM API를 사용하여 안전하게 HTML 콘텐츠 설정
+      clearElement(this.element);
+      const fragment = parseHTMLSafely(content);
+      this.element.appendChild(fragment);
     } else {
       this.element.textContent = content;
     }

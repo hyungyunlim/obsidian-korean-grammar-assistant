@@ -6,6 +6,7 @@ import { escapeHtml } from '../utils/htmlUtils';
 import { calculateDynamicCharsPerPage, splitTextIntoPages, escapeRegExp } from '../utils/textUtils';
 import { AIAnalysisService } from '../services/aiAnalysisService';
 import { Logger } from '../utils/logger';
+import { clearElement, appendChildren } from '../utils/domUtils';
 
 /**
  * 맞춤법 교정 팝업 관리 클래스
@@ -567,9 +568,11 @@ export class CorrectionPopup extends BaseComponent {
     }
 
     // 오류 요약 업데이트
-    const errorSummaryContent = this.element.querySelector('#errorSummaryContent');
+    const errorSummaryContent = this.element.querySelector('#errorSummaryContent') as HTMLElement;
     if (errorSummaryContent) {
-      errorSummaryContent.innerHTML = this.generateErrorSummaryHTML();
+      clearElement(errorSummaryContent);
+      const errorSummaryDOM = this.generateErrorSummaryDOM();
+      errorSummaryContent.appendChild(errorSummaryDOM);
     }
 
     // 페이지네이션 컨트롤 업데이트
@@ -598,12 +601,10 @@ export class CorrectionPopup extends BaseComponent {
         paginationContainer.className = 'pagination-controls';
         // 페이지네이션이 표시되어야 하는데 버튼이 없으면 HTML을 다시 생성
         if (!prevButton || !nextButton) {
-          paginationContainer.innerHTML = `
-            <button class="pagination-btn" id="prevPreviewPage" ${this.currentPreviewPage === 0 ? 'disabled' : ''}>이전</button>
-            <span class="page-info" id="previewPageInfo">${this.currentPreviewPage + 1} / ${this.totalPreviewPages}</span>
-            <button class="pagination-btn" id="nextPreviewPage" ${this.currentPreviewPage === this.totalPreviewPages - 1 ? 'disabled' : ''}>다음</button>
-            <span class="page-chars-info" id="pageCharsInfo">${this.charsPerPage}자</span>
-          `;
+          // DOM API를 사용하여 페이지네이션 컨트롤 생성
+          clearElement(paginationContainer);
+          const paginationFragment = this.createPaginationControls();
+          paginationContainer.appendChild(paginationFragment);
           
           // 새로 생성된 버튼에 이벤트 바인딩
           this.bindPaginationEvents();
@@ -684,12 +685,7 @@ export class CorrectionPopup extends BaseComponent {
       // 기존 오류 처리 방식과 동일하게 처리
       const errorNotice = document.createElement('div');
       errorNotice.textContent = '❌ AI 기능이 비활성화되어 있거나 API 키가 설정되지 않았습니다. 플러그인 설정을 확인해주세요.';
-      errorNotice.style.cssText = `
-        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        background: var(--background-primary); border: 1px solid var(--background-modifier-border);
-        padding: 20px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        z-index: 10001; color: var(--text-normal); max-width: 400px; text-align: center;
-      `;
+      errorNotice.className = 'notification-modal-center';
       document.body.appendChild(errorNotice);
       setTimeout(() => errorNotice.remove(), 5000);
       return;
@@ -742,19 +738,7 @@ export class CorrectionPopup extends BaseComponent {
       // 성공 알림
       const notice = document.createElement('div');
       notice.textContent = `🤖 AI가 ${this.aiAnalysisResults.length}개의 수정 제안을 분석했습니다.`;
-      notice.style.cssText = `
-        position: fixed;
-        top: 50px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: var(--color-green);
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        font-size: 14px;
-        z-index: 10001;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      `;
+      notice.className = 'notification-toast notification-toast-success';
       document.body.appendChild(notice);
       setTimeout(() => notice.remove(), 3000);
 
@@ -764,19 +748,7 @@ export class CorrectionPopup extends BaseComponent {
       // 오류 알림
       const errorNotice = document.createElement('div');
       errorNotice.textContent = `❌ AI 분석 실패: ${error.message}`;
-      errorNotice.style.cssText = `
-        position: fixed;
-        top: 50px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: var(--color-red);
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        font-size: 14px;
-        z-index: 10001;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      `;
+      errorNotice.className = 'notification-toast notification-toast-error';
       document.body.appendChild(errorNotice);
       setTimeout(() => errorNotice.remove(), 5000);
     } finally {
@@ -789,6 +761,295 @@ export class CorrectionPopup extends BaseComponent {
         aiBtn.textContent = '🤖 AI 분석';
       }
     }
+  }
+
+  /**
+   * 오류 요약 섹션의 DOM 구조를 생성합니다.
+   */
+  private generateErrorSummaryDOM(): HTMLElement {
+    const container = document.createElement('div');
+    const currentCorrections = this.getCurrentCorrections();
+    
+    if (currentCorrections.length === 0) {
+      // 오류가 없는 경우의 플레이스홀더
+      const placeholder = document.createElement('div');
+      placeholder.className = 'error-placeholder';
+      
+      const icon = document.createElement('div');
+      icon.className = 'placeholder-icon';
+      icon.textContent = '✓';
+      placeholder.appendChild(icon);
+      
+      const text = document.createElement('div');
+      text.className = 'placeholder-text';
+      text.textContent = '이 페이지에는 발견된 오류가 없습니다';
+      placeholder.appendChild(text);
+      
+      const subtext = document.createElement('div');
+      subtext.className = 'placeholder-subtext';
+      subtext.textContent = '다른 페이지에서 오류를 확인하세요';
+      placeholder.appendChild(subtext);
+      
+      container.appendChild(placeholder);
+      return container;
+    }
+
+    // 오류가 있는 경우 각 오류 항목 생성
+    currentCorrections.forEach((correction, index) => {
+      const actualIndex = this.config.corrections.findIndex(c => 
+        c.original === correction.original && c.help === correction.help
+      );
+      const isOriginalKept = this.stateManager.isOriginalKeptState(actualIndex);
+      const suggestions = correction.corrected.slice(0, 2);
+      
+      // 에러 아이템 컨테이너
+      const errorItem = document.createElement('div');
+      errorItem.className = `error-item-compact ${isOriginalKept ? 'spell-original-kept' : ''}`;
+      errorItem.setAttribute('data-correction-index', actualIndex.toString());
+      
+      // 에러 행 (원본 + 제안들)
+      const errorRow = document.createElement('div');
+      errorRow.className = 'error-row';
+      
+      // 원본 텍스트
+      const errorOriginal = document.createElement('div');
+      errorOriginal.className = 'error-original-compact';
+      errorOriginal.textContent = correction.original;
+      errorRow.appendChild(errorOriginal);
+      
+      // 제안들 컨테이너
+      const suggestionsContainer = document.createElement('div');
+      suggestionsContainer.className = 'error-suggestions-compact';
+      
+      // 제안 스팬들 생성
+      suggestions.forEach(suggestion => {
+        const suggestionSpan = document.createElement('span');
+        suggestionSpan.className = `suggestion-compact ${this.stateManager.isSelected(actualIndex, suggestion) ? 'selected' : ''}`;
+        suggestionSpan.setAttribute('data-value', suggestion);
+        suggestionSpan.setAttribute('data-correction', actualIndex.toString());
+        if (isOriginalKept) {
+          suggestionSpan.setAttribute('disabled', '');
+        }
+        suggestionSpan.textContent = suggestion;
+        suggestionsContainer.appendChild(suggestionSpan);
+      });
+      
+      // 예외처리 스팬
+      const keepOriginalSpan = document.createElement('span');
+      keepOriginalSpan.className = `suggestion-compact ${this.stateManager.isSelected(actualIndex, correction.original) ? 'selected' : ''} keep-original`;
+      keepOriginalSpan.setAttribute('data-value', correction.original);
+      keepOriginalSpan.setAttribute('data-correction', actualIndex.toString());
+      if (isOriginalKept) {
+        keepOriginalSpan.setAttribute('disabled', '');
+      }
+      keepOriginalSpan.textContent = '예외처리';
+      suggestionsContainer.appendChild(keepOriginalSpan);
+      
+      errorRow.appendChild(suggestionsContainer);
+      errorItem.appendChild(errorRow);
+      
+      // 도움말 텍스트
+      const errorHelp = document.createElement('div');
+      errorHelp.className = 'error-help-compact';
+      errorHelp.textContent = correction.help;
+      errorItem.appendChild(errorHelp);
+      
+      // AI 분석 결과 (조건부)
+      const aiResult = this.aiAnalysisResults.find(result => result.correctionIndex === actualIndex);
+      if (aiResult || isOriginalKept) {
+        const aiAnalysis = document.createElement('div');
+        aiAnalysis.className = 'ai-analysis-result';
+        
+        if (aiResult) {
+          const aiConfidence = document.createElement('div');
+          aiConfidence.className = 'ai-confidence';
+          aiConfidence.textContent = '🤖 신뢰도: ';
+          
+          const confidenceScore = document.createElement('span');
+          confidenceScore.className = 'confidence-score';
+          confidenceScore.textContent = `${aiResult.confidence}%`;
+          aiConfidence.appendChild(confidenceScore);
+          aiAnalysis.appendChild(aiConfidence);
+          
+          const aiReasoning = document.createElement('div');
+          aiReasoning.className = 'ai-reasoning';
+          aiReasoning.textContent = aiResult.reasoning;
+          aiAnalysis.appendChild(aiReasoning);
+        } else if (isOriginalKept) {
+          const aiReasoning = document.createElement('div');
+          aiReasoning.className = 'ai-reasoning';
+          aiReasoning.textContent = '사용자가 직접 선택했거나, 예외 단어로 등록된 항목입니다.';
+          aiAnalysis.appendChild(aiReasoning);
+        }
+        
+        errorItem.appendChild(aiAnalysis);
+      }
+      
+      container.appendChild(errorItem);
+    });
+    
+    return container;
+  }
+
+  /**
+   * 페이지네이션 컨트롤의 DOM 구조를 생성합니다.
+   */
+  private createPaginationControls(): DocumentFragment {
+    const fragment = document.createDocumentFragment();
+
+    const prevButton = document.createElement('button');
+    prevButton.className = 'pagination-btn';
+    prevButton.id = 'prevPreviewPage';
+    prevButton.textContent = '이전';
+    if (this.currentPreviewPage === 0) {
+      prevButton.disabled = true;
+    }
+    fragment.appendChild(prevButton);
+
+    const pageInfo = document.createElement('span');
+    pageInfo.className = 'page-info';
+    pageInfo.id = 'previewPageInfo';
+    pageInfo.textContent = `${this.currentPreviewPage + 1} / ${this.totalPreviewPages}`;
+    fragment.appendChild(pageInfo);
+
+    const nextButton = document.createElement('button');
+    nextButton.className = 'pagination-btn';
+    nextButton.id = 'nextPreviewPage';
+    nextButton.textContent = '다음';
+    if (this.currentPreviewPage === this.totalPreviewPages - 1) {
+      nextButton.disabled = true;
+    }
+    fragment.appendChild(nextButton);
+
+    const charsInfo = document.createElement('span');
+    charsInfo.className = 'page-chars-info';
+    charsInfo.id = 'pageCharsInfo';
+    charsInfo.textContent = `${this.charsPerPage}자`;
+    fragment.appendChild(charsInfo);
+
+    return fragment;
+  }
+
+  /**
+   * 토큰 경고 모달의 DOM 구조를 생성합니다.
+   */
+  private createTokenWarningModal(tokenUsage: any, isOverMaxTokens: boolean, maxTokens: number): HTMLElement {
+    const content = document.createElement('div');
+    content.className = 'token-warning-content';
+
+    // 헤더 섹션
+    const header = content.appendChild(document.createElement('div'));
+    header.className = 'token-warning-header';
+    
+    const headerIcon = header.appendChild(document.createElement('div'));
+    headerIcon.className = 'token-warning-header-icon';
+    headerIcon.textContent = '⚡';
+    
+    const headerInfo = header.appendChild(document.createElement('div'));
+    
+    const title = headerInfo.appendChild(document.createElement('h3'));
+    title.className = 'token-warning-title';
+    title.textContent = isOverMaxTokens ? '토큰 사용량 확인' : '토큰 사용량 안내';
+    
+    const description = headerInfo.appendChild(document.createElement('p'));
+    description.className = 'token-warning-description';
+    description.textContent = isOverMaxTokens ? '설정된 한계를 초과했습니다' : '예상 사용량이 높습니다';
+
+    // 토큰 사용량 카드
+    const details = content.appendChild(document.createElement('div'));
+    details.className = 'token-warning-details';
+    
+    const stats = details.appendChild(document.createElement('div'));
+    stats.className = 'token-warning-stats';
+    
+    // 총 토큰 통계
+    const totalTokenItem = stats.appendChild(document.createElement('div'));
+    totalTokenItem.className = 'token-stat-item';
+    
+    const totalTokenNumber = totalTokenItem.appendChild(document.createElement('div'));
+    totalTokenNumber.className = 'token-stat-number';
+    totalTokenNumber.textContent = tokenUsage.totalEstimated.toLocaleString();
+    
+    const totalTokenLabel = totalTokenItem.appendChild(document.createElement('div'));
+    totalTokenLabel.className = 'token-stat-label';
+    totalTokenLabel.textContent = '총 토큰';
+    
+    // 예상 비용 통계
+    const costItem = stats.appendChild(document.createElement('div'));
+    costItem.className = 'token-stat-item';
+    
+    const costNumber = costItem.appendChild(document.createElement('div'));
+    costNumber.className = 'token-stat-number orange';
+    costNumber.textContent = tokenUsage.estimatedCost;
+    
+    const costLabel = costItem.appendChild(document.createElement('div'));
+    costLabel.className = 'token-stat-label';
+    costLabel.textContent = '예상 비용';
+    
+    // 사용량 세부사항
+    const recommendation = details.appendChild(document.createElement('div'));
+    recommendation.className = 'token-warning-recommendation';
+    
+    const recHeader = recommendation.appendChild(document.createElement('div'));
+    recHeader.className = 'token-warning-recommendation-header';
+    
+    const recContent = recHeader.appendChild(document.createElement('div'));
+    recContent.className = 'token-warning-recommendation-content';
+    
+    const recTitle = recContent.appendChild(document.createElement('div'));
+    recTitle.className = 'token-warning-recommendation-title';
+    recTitle.textContent = '사용량 세부사항';
+    
+    const recText = recContent.appendChild(document.createElement('div'));
+    recText.className = 'token-warning-recommendation-text';
+    recText.textContent = `입력: ${tokenUsage.inputTokens.toLocaleString()} • 출력: ${tokenUsage.estimatedOutputTokens.toLocaleString()}`;
+
+    // 토큰 초과 알림 (조건부)
+    if (isOverMaxTokens) {
+      const overLimit = content.appendChild(document.createElement('div'));
+      overLimit.className = 'token-warning-over-limit';
+      
+      const overLimitContent = overLimit.appendChild(document.createElement('div'));
+      overLimitContent.className = 'token-warning-over-limit-content';
+      
+      const overLimitIcon = overLimitContent.appendChild(document.createElement('div'));
+      overLimitIcon.className = 'token-warning-over-limit-icon';
+      overLimitIcon.textContent = '!';
+      
+      const overLimitText = overLimitContent.appendChild(document.createElement('div'));
+      overLimitText.className = 'token-warning-over-limit-text';
+      
+      const overLimitTitle = overLimitText.appendChild(document.createElement('div'));
+      overLimitTitle.className = 'token-warning-over-limit-title';
+      overLimitTitle.textContent = '설정된 최대 토큰을 초과했습니다';
+      
+      const overLimitDesc = overLimitText.appendChild(document.createElement('div'));
+      overLimitDesc.className = 'token-warning-over-limit-description';
+      overLimitDesc.textContent = `현재 설정: ${maxTokens.toLocaleString()} 토큰 → 초과량: ${(tokenUsage.totalEstimated - maxTokens).toLocaleString()} 토큰`;
+    }
+
+    // 액션 버튼들
+    const actions = content.appendChild(document.createElement('div'));
+    actions.className = 'token-warning-actions';
+    
+    const cancelBtn = actions.appendChild(document.createElement('button'));
+    cancelBtn.id = 'token-warning-cancel';
+    cancelBtn.className = 'token-warning-btn token-warning-btn-cancel';
+    cancelBtn.textContent = '취소';
+    
+    if (isOverMaxTokens) {
+      const updateSettingsBtn = actions.appendChild(document.createElement('button'));
+      updateSettingsBtn.id = 'token-warning-update-settings';
+      updateSettingsBtn.className = 'token-warning-btn token-warning-btn-settings';
+      updateSettingsBtn.textContent = '설정 업데이트';
+    }
+    
+    const proceedBtn = actions.appendChild(document.createElement('button'));
+    proceedBtn.id = 'token-warning-proceed';
+    proceedBtn.className = 'token-warning-btn token-warning-btn-proceed';
+    proceedBtn.textContent = isOverMaxTokens ? '이번만 진행' : '계속 진행';
+
+    return content;
   }
 
   /**
@@ -824,70 +1085,9 @@ export class CorrectionPopup extends BaseComponent {
       const modal = document.createElement('div');
       modal.className = 'token-warning-modal';
 
-      modal.innerHTML = `
-        <div class="token-warning-content">
-          <!-- 헤더 -->
-          <div class="token-warning-header">
-            <div class="token-warning-header-icon">⚡</div>
-            <div>
-              <h3 class="token-warning-title">${isOverMaxTokens ? '토큰 사용량 확인' : '토큰 사용량 안내'}</h3>
-              <p class="token-warning-description">${isOverMaxTokens ? '설정된 한계를 초과했습니다' : '예상 사용량이 높습니다'}</p>
-            </div>
-          </div>
-
-          <!-- 토큰 사용량 카드 -->
-          <div class="token-warning-details">
-            <div class="token-warning-stats">
-              <div class="token-stat-item">
-                <div class="token-stat-number">${tokenUsage.totalEstimated.toLocaleString()}</div>
-                <div class="token-stat-label">총 토큰</div>
-              </div>
-              <div class="token-stat-item">
-                <div class="token-stat-number orange">${tokenUsage.estimatedCost}</div>
-                <div class="token-stat-label">예상 비용</div>
-              </div>
-            </div>
-            
-            <div class="token-warning-recommendation">
-              <div class="token-warning-recommendation-header">
-                <div class="token-warning-recommendation-content">
-                  <div class="token-warning-recommendation-title">사용량 세부사항</div>
-                  <div class="token-warning-recommendation-text">
-                    입력: ${tokenUsage.inputTokens.toLocaleString()} • 출력: ${tokenUsage.estimatedOutputTokens.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          ${isOverMaxTokens ? `
-            <!-- 토큰 초과 알림 -->
-            <div class="token-warning-over-limit">
-              <div class="token-warning-over-limit-content">
-                <div class="token-warning-over-limit-icon">!</div>
-                <div class="token-warning-over-limit-text">
-                  <div class="token-warning-over-limit-title">설정된 최대 토큰을 초과했습니다</div>
-                  <div class="token-warning-over-limit-description">
-                    현재 설정: ${maxTokens.toLocaleString()} 토큰 → 
-                    초과량: ${(tokenUsage.totalEstimated - maxTokens).toLocaleString()} 토큰
-                  </div>
-                </div>
-              </div>
-            </div>
-          ` : ''}
-
-          <!-- 액션 버튼들 -->
-          <div class="token-warning-actions">
-            <button id="token-warning-cancel" class="token-warning-btn token-warning-btn-cancel">취소</button>
-            
-            ${isOverMaxTokens ? `
-              <button id="token-warning-update-settings" class="token-warning-btn token-warning-btn-settings">설정 업데이트</button>
-            ` : ''}
-            
-            <button id="token-warning-proceed" class="token-warning-btn token-warning-btn-proceed">${isOverMaxTokens ? '이번만 진행' : '계속 진행'}</button>
-          </div>
-        </div>
-      `;
+      // DOM API를 사용하여 모달 내용 생성
+      const modalContent = this.createTokenWarningModal(tokenUsage, isOverMaxTokens, maxTokens);
+      modal.appendChild(modalContent);
 
       document.body.appendChild(modal);
 
@@ -944,19 +1144,7 @@ export class CorrectionPopup extends BaseComponent {
       // 성공 알림 표시
       const notice = document.createElement('div');
       notice.textContent = `⚙️ 최대 토큰이 ${newMaxTokens.toLocaleString()}으로 업데이트되었습니다.`;
-      notice.style.cssText = `
-        position: fixed;
-        top: 50px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: var(--interactive-accent);
-        color: var(--text-on-accent);
-        padding: 12px 20px;
-        border-radius: 8px;
-        font-size: 14px;
-        z-index: 10001;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      `;
+      notice.className = 'notification-toast notification-toast-info';
       document.body.appendChild(notice);
       setTimeout(() => notice.remove(), 3000);
     } else {
