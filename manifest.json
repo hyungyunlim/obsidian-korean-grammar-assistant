@@ -1,10 +1,10 @@
 {
-  "id": "korean-grammar-assistant",
-  "name": "Korean Grammar Assistant",
-  "version": "0.2.0",
-  "minAppVersion": "0.15.0",
-  "description": "Check Korean grammar and spelling with AI-powered suggestions and interactive corrections. Supports mobile devices with optimized interface.",
-  "author": "hyungyunlim",
-  "authorUrl": "https://github.com/hyungyunlim",
-  "isDesktopOnly": false
+	"id": "korean-grammar-assistant",
+	"name": "Korean Grammar Assistant",
+	"version": "0.2.0",
+	"minAppVersion": "0.15.0",
+	"description": "Check Korean grammar and spelling with AI-powered suggestions and interactive corrections. Supports mobile devices with optimized interface.",
+	"author": "hyungyunlim",
+	"authorUrl": "https://github.com/hyungyunlim",
+	"isDesktopOnly": false
 }
