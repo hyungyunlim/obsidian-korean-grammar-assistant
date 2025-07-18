@@ -1488,9 +1488,15 @@ export class CorrectionPopup extends BaseComponent {
 
       document.body.appendChild(modal);
 
-      // 모달에 포커스 설정
+      // 모달에 포커스 설정 (강화된 접근법)
       modal.setAttribute('tabindex', '-1');
-      modal.focus();
+      modal.style.outline = 'none';
+      
+      // 강제로 포커스 설정 (지연 처리)
+      setTimeout(() => {
+        modal.focus();
+        Logger.log('토큰 경고 모달: 포커스 설정 완료');
+      }, 10);
 
       // 이벤트 처리
       let handleResponse = (action: 'cancel' | 'proceed' | 'updateSettings') => {
@@ -1509,6 +1515,7 @@ export class CorrectionPopup extends BaseComponent {
 
       // 키보드 이벤트 처리 (모든 키 이벤트 차단)
       const handleKeyboard = (e: KeyboardEvent) => {
+        Logger.log(`토큰 경고 모달: 키 이벤트 감지 - ${e.key} (코드: ${e.code})`);
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
@@ -1523,24 +1530,42 @@ export class CorrectionPopup extends BaseComponent {
         // 다른 모든 키 이벤트는 무시하고 전파 차단
       };
 
-      // 키보드 이벤트를 캡처 모드로 처리하여 우선순위 확보
+      // 여러 레벨에서 키보드 이벤트 캡처
       modal.addEventListener('keydown', handleKeyboard, { capture: true });
+      modal.addEventListener('keyup', handleKeyboard, { capture: true });
       
       // 글로벌 키보드 이벤트도 차단 (백그라운드 이벤트 방지)
       const globalKeyHandler = (e: KeyboardEvent) => {
         if (document.body.contains(modal)) {
+          Logger.log(`토큰 경고 모달: 글로벌 키 이벤트 차단 - ${e.key}`);
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();
+          
+          // 글로벌 레벨에서도 키 처리
+          if (e.key === 'Enter') {
+            Logger.log('토큰 경고 모달: 글로벌 Enter키 감지 - 진행');
+            handleResponse('proceed');
+          } else if (e.key === 'Escape') {
+            Logger.log('토큰 경고 모달: 글로벌 Escape키 감지 - 취소');
+            handleResponse('cancel');
+          }
         }
       };
       
       document.addEventListener('keydown', globalKeyHandler, { capture: true });
+      document.addEventListener('keyup', globalKeyHandler, { capture: true });
+      window.addEventListener('keydown', globalKeyHandler, { capture: true });
       
-      // 모달 제거 시 글로벌 핸들러도 제거
+      // 모달 제거 시 모든 이벤트 핸들러 제거
       const originalHandleResponse = handleResponse;
       handleResponse = (action: 'cancel' | 'proceed' | 'updateSettings') => {
+        // 모든 이벤트 리스너 제거
         document.removeEventListener('keydown', globalKeyHandler, { capture: true });
+        document.removeEventListener('keyup', globalKeyHandler, { capture: true });
+        window.removeEventListener('keydown', globalKeyHandler, { capture: true });
+        
+        Logger.log('토큰 경고 모달: 모든 이벤트 리스너 제거 완료');
         originalHandleResponse(action);
       };
 
