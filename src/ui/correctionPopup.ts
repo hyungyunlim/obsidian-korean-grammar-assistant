@@ -95,8 +95,8 @@ export class CorrectionPopup extends BaseComponent {
       return false;
     });
 
-    // A: AI 분석 트리거
-    this.keyboardScope.register([], 'KeyA', (evt: KeyboardEvent) => {
+    // Space: AI 분석 트리거 (더 확실한 키)
+    this.keyboardScope.register([], 'Space', (evt: KeyboardEvent) => {
       evt.preventDefault();
       evt.stopPropagation();
       evt.stopImmediatePropagation();
@@ -104,8 +104,8 @@ export class CorrectionPopup extends BaseComponent {
       return false;
     });
 
-    // E: 오류 상세부분 펼침/접힘
-    this.keyboardScope.register([], 'KeyE', (evt: KeyboardEvent) => {
+    // Ctrl+E: 오류 상세부분 펼침/접힘
+    this.keyboardScope.register(['Ctrl'], 'KeyE', (evt: KeyboardEvent) => {
       evt.preventDefault();
       evt.stopPropagation();
       this.toggleErrorSummary();
@@ -254,65 +254,30 @@ export class CorrectionPopup extends BaseComponent {
     const correction = this.config.corrections[correctionIndex];
     if (!correction) return;
 
-    // 현재 상태 가져오기
-    const currentState = this.stateManager.getValue(correctionIndex);
-    const isBlueState = this.stateManager.isOriginalKeptState(correctionIndex);
+    // StateManager의 toggleState 메서드 사용
+    const result = this.stateManager.toggleState(correctionIndex);
     
-    // 가능한 옵션들 (원본 + 수정 제안들)
-    const options = [correction.original, ...correction.corrected];
+    Logger.debug(`수정 제안 순환: ${direction}, index: ${correctionIndex}, 새로운 값: ${result.value}`);
     
-    if (direction === 'next') {
-      if (isBlueState) {
-        // 파란색 상태(원본 선택)에서 오류 상태(빨간색)로
-        this.stateManager.setState(correctionIndex, correction.original, false, false);
-      } else {
-        const currentIndex = options.indexOf(currentState || correction.original);
-        if (currentIndex === options.length - 1) {
-          // 마지막 제안에서 파란색 상태(원본 선택)로
-          this.stateManager.setState(correctionIndex, correction.original, false, true);
-        } else if (currentIndex >= 0) {
-          // 다음 제안으로
-          this.stateManager.setState(correctionIndex, options[currentIndex + 1], false);
-        } else {
-          // 예외 상황 처리: 첫 번째 수정 제안으로
-          if (correction.corrected.length > 0) {
-            this.stateManager.setState(correctionIndex, correction.corrected[0], false);
-          }
-        }
-      }
-    } else {
-      // prev 방향
-      if (isBlueState) {
-        // 파란색 상태에서 마지막 수정 제안으로
-        if (correction.corrected.length > 0) {
-          this.stateManager.setState(correctionIndex, correction.corrected[correction.corrected.length - 1], false);
-        }
-      } else {
-        const currentIndex = options.indexOf(currentState || correction.original);
-        if (currentIndex <= 0) {
-          // 첫 번째에서 파란색 상태로
-          this.stateManager.setState(correctionIndex, correction.original, false, true);
-        } else {
-          // 이전 제안으로
-          this.stateManager.setState(correctionIndex, options[currentIndex - 1], false);
-        }
-      }
-    }
-
     // UI 업데이트
     this.updateDisplay();
-    Logger.debug(`수정 제안 순환: ${direction}, index: ${correctionIndex}`);
   }
 
   /**
    * AI 분석을 트리거합니다.
    */
   private triggerAIAnalysis(): void {
+    Logger.log('AI 분석 트리거됨 (키보드 단축키)');
     const aiBtn = this.element.querySelector('#aiAnalyzeBtn') as HTMLButtonElement;
     if (aiBtn && !aiBtn.disabled) {
+      Logger.log('AI 분석 버튼 클릭 실행');
       aiBtn.click();
     } else {
       Logger.warn('AI 분석 버튼이 비활성화되어 있거나 찾을 수 없습니다.');
+      // 직접 AI 분석 실행 시도
+      if (this.aiService && !this.isAiAnalyzing) {
+        this.performAIAnalysis();
+      }
     }
   }
 
@@ -744,6 +709,26 @@ export class CorrectionPopup extends BaseComponent {
    * 이벤트를 바인딩합니다.
    */
   private bindEvents(): void {
+    // DOM 레벨에서 키보드 이벤트 처리 (백업)
+    this.addEventListener(this.element, 'keydown', (evt: KeyboardEvent) => {
+      // Space: AI 분석
+      if (evt.code === 'Space' && !evt.shiftKey && !evt.ctrlKey && !evt.metaKey) {
+        evt.preventDefault();
+        evt.stopPropagation();
+        this.triggerAIAnalysis();
+        return;
+      }
+      
+      // Ctrl+E: 오류 상세부분 토글
+      if (evt.code === 'KeyE' && evt.ctrlKey && !evt.shiftKey && !evt.metaKey) {
+        evt.preventDefault();
+        evt.stopPropagation();
+        this.toggleErrorSummary();
+        return;
+      }
+    });
+
+
     // 닫기 버튼들
     this.bindCloseEvents();
     
@@ -900,7 +885,7 @@ export class CorrectionPopup extends BaseComponent {
     const correctionIndex = parseInt(target.dataset.correction || '0');
     const value = target.dataset.value || '';
     
-    this.stateManager.setState(correctionIndex, value, value === this.config.corrections[correctionIndex]?.original);
+    this.stateManager.setState(correctionIndex, value, value === this.config.corrections[correctionIndex]?.original, false);
     this.updateDisplay();
   }
 
@@ -1587,8 +1572,8 @@ export class CorrectionPopup extends BaseComponent {
       { key: 'Tab', desc: '다음 오류' },
       { key: '←/→', desc: '수정 제안 순환' },
       { key: 'Enter', desc: '적용' },
-      { key: 'A', desc: 'AI 분석' },
-      { key: 'E', desc: '오류 상세 토글' },
+      { key: 'Space', desc: 'AI 분석' },
+      { key: 'Ctrl+E', desc: '오류 상세 토글' },
       { key: '⌘⇧←/→', desc: '일괄 변경' },
       { key: '↑/↓', desc: '페이지 이동' },
       { key: 'Esc', desc: '닫기' }
@@ -1620,8 +1605,12 @@ export class CorrectionPopup extends BaseComponent {
    * 오류 상세부분 펼침/접힘을 토글합니다.
    */
   private toggleErrorSummary(): void {
+    Logger.log('오류 상세부분 토글 트리거됨 (키보드 단축키)');
     const errorSummary = document.getElementById('errorSummary');
-    if (!errorSummary) return;
+    if (!errorSummary) {
+      Logger.warn('errorSummary 요소를 찾을 수 없습니다.');
+      return;
+    }
 
     const isCurrentlyCollapsed = errorSummary.classList.contains('collapsed');
     
