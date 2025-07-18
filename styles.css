@@ -1542,3 +1542,64 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   font-size: 12px !important;
 }
 
+/* === 키보드 네비게이션 스타일 === */
+/* 키보드 포커스 하이라이트 */
+.keyboard-focused {
+  outline: 2px solid var(--interactive-accent) !important;
+  outline-offset: 2px !important;
+  border-radius: 4px !important;
+  background: var(--background-modifier-hover) !important;
+  transition: all 0.2s ease !important;
+}
+
+/* 오류 아이템 키보드 포커스 */
+.error-item-compact.keyboard-focused {
+  background: var(--background-modifier-hover) !important;
+  border-left: 3px solid var(--interactive-accent) !important;
+  padding-left: 13px !important; /* 원래 16px에서 border 3px를 뺀 값 */
+}
+
+/* 키보드 네비게이션 힌트 */
+.keyboard-navigation-hint {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+  z-index: 10002;
+  max-width: 300px;
+  line-height: 1.4;
+  opacity: 0.9;
+}
+
+.keyboard-navigation-hint .hint-title {
+  font-weight: 600;
+  color: var(--text-normal);
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.keyboard-navigation-hint .hint-item {
+  display: flex;
+  justify-content: space-between;
+  margin: 2px 0;
+}
+
+.keyboard-navigation-hint .hint-key {
+  font-family: var(--font-monospace);
+  background: var(--background-modifier-border);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  min-width: 60px;
+  text-align: center;
+}
+
+.keyboard-navigation-hint .hint-desc {
+  color: var(--text-muted);
+}
+

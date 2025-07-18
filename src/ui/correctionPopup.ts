@@ -1,4 +1,4 @@
-import { Editor, EditorPosition, App, Platform } from 'obsidian';
+import { Editor, EditorPosition, App, Platform, Scope } from 'obsidian';
 import { Correction, PopupConfig, AIAnalysisResult, AIAnalysisRequest } from '../types/interfaces';
 import { BaseComponent } from './baseComponent';
 import { CorrectionStateManager } from '../state/correctionState';
@@ -29,6 +29,11 @@ export class CorrectionPopup extends BaseComponent {
   private aiAnalysisResults: AIAnalysisResult[] = [];
   private isAiAnalyzing: boolean = false;
 
+  // 키보드 네비게이션
+  private keyboardScope: Scope;
+  private currentFocusIndex: number = 0;
+  private currentCorrections: Correction[] = [];
+
   constructor(app: App, config: PopupConfig, aiService?: AIAnalysisService, onSettingsUpdate?: (newMaxTokens: number) => void) {
     super('div', 'correction-popup-container');
     this.app = app;
@@ -37,7 +42,340 @@ export class CorrectionPopup extends BaseComponent {
     this.aiService = aiService;
     this.onSettingsUpdate = onSettingsUpdate;
     
+    // 키보드 네비게이션 스코프 초기화
+    this.keyboardScope = new Scope();
+    this.setupKeyboardNavigation();
+    
     this.initializePagination();
+  }
+
+  /**
+   * 키보드 네비게이션을 설정합니다.
+   */
+  private setupKeyboardNavigation(): void {
+    // Tab: 다음 오류 항목으로 이동
+    this.keyboardScope.register([], 'Tab', (evt: KeyboardEvent) => {
+      evt.preventDefault();
+      this.focusNextError();
+      return false;
+    });
+
+    // Shift+Tab: 이전 오류 항목으로 이동
+    this.keyboardScope.register(['Shift'], 'Tab', (evt: KeyboardEvent) => {
+      evt.preventDefault();
+      this.focusPrevError();
+      return false;
+    });
+
+    // Enter: 현재 선택된 수정사항 적용
+    this.keyboardScope.register([], 'Enter', (evt: KeyboardEvent) => {
+      evt.preventDefault();
+      this.applyCurrentSelection();
+      return false;
+    });
+
+    // Escape: 팝업 닫기
+    this.keyboardScope.register([], 'Escape', (evt: KeyboardEvent) => {
+      evt.preventDefault();
+      this.close();
+      return false;
+    });
+
+    // ArrowRight: 다음 수정 제안으로 순환
+    this.keyboardScope.register([], 'ArrowRight', (evt: KeyboardEvent) => {
+      evt.preventDefault();
+      this.cycleCurrentCorrectionNext();
+      return false;
+    });
+
+    // ArrowLeft: 이전 수정 제안으로 순환
+    this.keyboardScope.register([], 'ArrowLeft', (evt: KeyboardEvent) => {
+      evt.preventDefault();
+      this.cycleCurrentCorrectionPrev();
+      return false;
+    });
+
+    // A: AI 분석 트리거
+    this.keyboardScope.register([], 'KeyA', (evt: KeyboardEvent) => {
+      evt.preventDefault();
+      this.triggerAIAnalysis();
+      return false;
+    });
+
+    // ArrowUp: 이전 페이지
+    this.keyboardScope.register([], 'ArrowUp', (evt: KeyboardEvent) => {
+      if (this.isLongText && this.currentPreviewPage > 0) {
+        evt.preventDefault();
+        this.goToPrevPage();
+        return false;
+      }
+      return true;
+    });
+
+    // ArrowDown: 다음 페이지
+    this.keyboardScope.register([], 'ArrowDown', (evt: KeyboardEvent) => {
+      if (this.isLongText && this.currentPreviewPage < this.totalPreviewPages - 1) {
+        evt.preventDefault();
+        this.goToNextPage();
+        return false;
+      }
+      return true;
+    });
+
+    // Cmd/Ctrl+Shift+ArrowRight: 모든 오류를 다음 제안으로 일괄 변경
+    this.keyboardScope.register(['Mod', 'Shift'], 'ArrowRight', (evt: KeyboardEvent) => {
+      evt.preventDefault();
+      this.batchCycleCorrections('next');
+      return false;
+    });
+
+    // Cmd/Ctrl+Shift+ArrowLeft: 모든 오류를 이전 제안으로 일괄 변경
+    this.keyboardScope.register(['Mod', 'Shift'], 'ArrowLeft', (evt: KeyboardEvent) => {
+      evt.preventDefault();
+      this.batchCycleCorrections('prev');
+      return false;
+    });
+
+    Logger.log('키보드 네비게이션 설정 완료');
+  }
+
+  /**
+   * 다음 오류 항목으로 포커스를 이동합니다.
+   */
+  private focusNextError(): void {
+    this.currentCorrections = this.getCurrentCorrections();
+    if (this.currentCorrections.length === 0) return;
+
+    // 초기에 포커스가 없으면 첫 번째로 설정
+    if (this.currentFocusIndex === -1) {
+      this.currentFocusIndex = 0;
+    } else {
+      this.currentFocusIndex = (this.currentFocusIndex + 1) % this.currentCorrections.length;
+    }
+    this.updateFocusHighlight();
+    Logger.debug(`포커스 이동: ${this.currentFocusIndex}/${this.currentCorrections.length}`);
+  }
+
+  /**
+   * 이전 오류 항목으로 포커스를 이동합니다.
+   */
+  private focusPrevError(): void {
+    this.currentCorrections = this.getCurrentCorrections();
+    if (this.currentCorrections.length === 0) return;
+
+    // 초기에 포커스가 없으면 마지막으로 설정
+    if (this.currentFocusIndex === -1) {
+      this.currentFocusIndex = this.currentCorrections.length - 1;
+    } else {
+      this.currentFocusIndex = this.currentFocusIndex === 0 
+        ? this.currentCorrections.length - 1 
+        : this.currentFocusIndex - 1;
+    }
+    this.updateFocusHighlight();
+    Logger.debug(`포커스 이동: ${this.currentFocusIndex}/${this.currentCorrections.length}`);
+  }
+
+  /**
+   * 현재 포커스된 항목의 수정사항을 적용합니다.
+   */
+  private applyCurrentSelection(): void {
+    if (this.currentCorrections.length === 0) {
+      // 오류가 없으면 팝업을 닫습니다
+      this.close();
+      return;
+    }
+
+    const currentCorrection = this.currentCorrections[this.currentFocusIndex];
+    if (!currentCorrection) return;
+
+    const actualIndex = this.config.corrections.findIndex(c => 
+      c.original === currentCorrection.original && c.help === currentCorrection.help
+    );
+
+    if (actualIndex !== -1) {
+      const currentState = this.stateManager.getValue(actualIndex);
+      // 현재 선택된 수정사항을 적용 처리
+      Logger.log(`키보드로 수정사항 적용: ${currentState}`);
+    }
+  }
+
+  /**
+   * 현재 포커스된 오류의 다음 수정 제안으로 순환합니다.
+   */
+  private cycleCurrentCorrectionNext(): void {
+    if (this.currentCorrections.length === 0) return;
+
+    const currentCorrection = this.currentCorrections[this.currentFocusIndex];
+    if (!currentCorrection) return;
+
+    const actualIndex = this.config.corrections.findIndex(c => 
+      c.original === currentCorrection.original && c.help === currentCorrection.help
+    );
+
+    if (actualIndex !== -1) {
+      this.cycleCorrectionState(actualIndex, 'next');
+    }
+  }
+
+  /**
+   * 현재 포커스된 오류의 이전 수정 제안으로 순환합니다.
+   */
+  private cycleCurrentCorrectionPrev(): void {
+    if (this.currentCorrections.length === 0) return;
+
+    const currentCorrection = this.currentCorrections[this.currentFocusIndex];
+    if (!currentCorrection) return;
+
+    const actualIndex = this.config.corrections.findIndex(c => 
+      c.original === currentCorrection.original && c.help === currentCorrection.help
+    );
+
+    if (actualIndex !== -1) {
+      this.cycleCorrectionState(actualIndex, 'prev');
+    }
+  }
+
+  /**
+   * 수정 제안 상태를 순환시킵니다.
+   */
+  private cycleCorrectionState(correctionIndex: number, direction: 'next' | 'prev'): void {
+    const correction = this.config.corrections[correctionIndex];
+    if (!correction) return;
+
+    // 현재 상태 가져오기
+    const currentState = this.stateManager.getValue(correctionIndex);
+    const isBlueState = this.stateManager.isOriginalKeptState(correctionIndex);
+    
+    // 가능한 옵션들 (원본 + 수정 제안들)
+    const options = [correction.original, ...correction.corrected];
+    
+    if (direction === 'next') {
+      if (isBlueState) {
+        // 파란색 상태(원본 선택)에서 오류 상태(빨간색)로
+        this.stateManager.setState(correctionIndex, correction.original, false, false);
+      } else {
+        const currentIndex = options.indexOf(currentState || correction.original);
+        if (currentIndex === options.length - 1) {
+          // 마지막 제안에서 파란색 상태(원본 선택)로
+          this.stateManager.setState(correctionIndex, correction.original, false, true);
+        } else if (currentIndex >= 0) {
+          // 다음 제안으로
+          this.stateManager.setState(correctionIndex, options[currentIndex + 1], false);
+        } else {
+          // 예외 상황 처리: 첫 번째 수정 제안으로
+          if (correction.corrected.length > 0) {
+            this.stateManager.setState(correctionIndex, correction.corrected[0], false);
+          }
+        }
+      }
+    } else {
+      // prev 방향
+      if (isBlueState) {
+        // 파란색 상태에서 마지막 수정 제안으로
+        if (correction.corrected.length > 0) {
+          this.stateManager.setState(correctionIndex, correction.corrected[correction.corrected.length - 1], false);
+        }
+      } else {
+        const currentIndex = options.indexOf(currentState || correction.original);
+        if (currentIndex <= 0) {
+          // 첫 번째에서 파란색 상태로
+          this.stateManager.setState(correctionIndex, correction.original, false, true);
+        } else {
+          // 이전 제안으로
+          this.stateManager.setState(correctionIndex, options[currentIndex - 1], false);
+        }
+      }
+    }
+
+    // UI 업데이트
+    this.updateDisplay();
+    Logger.debug(`수정 제안 순환: ${direction}, index: ${correctionIndex}`);
+  }
+
+  /**
+   * AI 분석을 트리거합니다.
+   */
+  private triggerAIAnalysis(): void {
+    const aiBtn = this.element.querySelector('#aiAnalyzeBtn') as HTMLButtonElement;
+    if (aiBtn && !aiBtn.disabled) {
+      aiBtn.click();
+    } else {
+      Logger.warn('AI 분석 버튼이 비활성화되어 있거나 찾을 수 없습니다.');
+    }
+  }
+
+  /**
+   * 이전 페이지로 이동합니다.
+   */
+  private goToPrevPage(): void {
+    if (this.currentPreviewPage > 0) {
+      this.currentPreviewPage--;
+      this.updateDisplay();
+      this.resetFocusToFirstError();
+    }
+  }
+
+  /**
+   * 다음 페이지로 이동합니다.
+   */
+  private goToNextPage(): void {
+    if (this.currentPreviewPage < this.totalPreviewPages - 1) {
+      this.currentPreviewPage++;
+      this.updateDisplay();
+      this.resetFocusToFirstError();
+    }
+  }
+
+  /**
+   * 포커스를 첫 번째 오류로 리셋합니다.
+   */
+  private resetFocusToFirstError(): void {
+    this.currentCorrections = this.getCurrentCorrections();
+    if (this.currentCorrections.length > 0) {
+      this.currentFocusIndex = 0;
+      // 약간의 지연을 두고 포커스 설정 (DOM이 완전히 렌더링된 후)
+      setTimeout(() => {
+        this.updateFocusHighlight();
+      }, 100);
+      Logger.log(`초기 포커스 설정: ${this.currentFocusIndex}/${this.currentCorrections.length}`);
+    } else {
+      this.currentFocusIndex = -1;
+      Logger.log('오류가 없어 포커스 설정하지 않음');
+    }
+  }
+
+  /**
+   * 현재 포커스된 항목을 시각적으로 표시합니다.
+   */
+  private updateFocusHighlight(): void {
+    // 기존 포커스 하이라이트 제거
+    const prevFocused = this.element.querySelectorAll('.keyboard-focused');
+    prevFocused.forEach(el => el.removeClass('keyboard-focused'));
+
+    // 현재 포커스 항목 하이라이트
+    if (this.currentCorrections.length > 0 && 
+        this.currentFocusIndex >= 0 && 
+        this.currentFocusIndex < this.currentCorrections.length) {
+      
+      const correction = this.currentCorrections[this.currentFocusIndex];
+      const actualIndex = this.config.corrections.findIndex(c => 
+        c.original === correction.original && c.help === correction.help
+      );
+
+      if (actualIndex !== -1) {
+        const errorItem = this.element.querySelector(`[data-correction-index="${actualIndex}"]`);
+        if (errorItem) {
+          errorItem.addClass('keyboard-focused');
+          // 스크롤하여 보이게 하기
+          errorItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          Logger.debug(`포커스 하이라이트 적용: 인덱스 ${actualIndex}`);
+        } else {
+          Logger.warn(`포커스 대상 요소를 찾을 수 없음: 인덱스 ${actualIndex}`);
+        }
+      }
+    } else {
+      Logger.debug('포커스할 오류가 없거나 인덱스가 범위를 벗어남');
+    }
   }
 
   /**
@@ -64,6 +402,15 @@ export class CorrectionPopup extends BaseComponent {
     
     // 이벤트 바인딩
     this.bindEvents();
+    
+    // 키보드 네비게이션 활성화
+    this.app.keymap.pushScope(this.keyboardScope);
+    
+    // 초기 포커스 설정
+    this.resetFocusToFirstError();
+    
+    // 키보드 네비게이션 힌트 표시
+    this.showKeyboardHint();
     
     // Body 스크롤 잠금
     document.body.classList.add('spell-popup-open');
@@ -1153,9 +1500,93 @@ export class CorrectionPopup extends BaseComponent {
   }
 
   /**
+   * 모든 오류를 일괄로 순환시킵니다.
+   */
+  private batchCycleCorrections(direction: 'next' | 'prev'): void {
+    const allCorrections = this.getCurrentCorrections();
+    if (allCorrections.length === 0) return;
+
+    let changedCount = 0;
+    
+    allCorrections.forEach((correction) => {
+      const actualIndex = this.config.corrections.findIndex(c => 
+        c.original === correction.original && c.help === correction.help
+      );
+      
+      if (actualIndex !== -1) {
+        this.cycleCorrectionState(actualIndex, direction);
+        changedCount++;
+      }
+    });
+
+    // 알림 표시
+    const notice = document.createElement('div');
+    notice.textContent = `✨ ${changedCount}개 오류가 일괄 ${direction === 'next' ? '다음' : '이전'} 제안으로 변경되었습니다.`;
+    notice.className = 'notification-toast notification-toast-info';
+    document.body.appendChild(notice);
+    setTimeout(() => notice.remove(), 2000);
+
+    Logger.log(`일괄 변경 완료: ${direction}, ${changedCount}개 항목`);
+  }
+
+  /**
+   * 키보드 네비게이션 힌트를 표시합니다.
+   */
+  private showKeyboardHint(): void {
+    const hint = document.createElement('div');
+    hint.className = 'keyboard-navigation-hint';
+    hint.id = 'keyboard-hint';
+    
+    const title = document.createElement('div');
+    title.className = 'hint-title';
+    title.textContent = '⌨️ 키보드 단축키';
+    hint.appendChild(title);
+    
+    const shortcuts = [
+      { key: 'Tab', desc: '다음 오류' },
+      { key: '←/→', desc: '수정 제안 순환' },
+      { key: 'Enter', desc: '적용' },
+      { key: 'A', desc: 'AI 분석' },
+      { key: '⌘⇧←/→', desc: '일괄 변경' },
+      { key: '↑/↓', desc: '페이지 이동' },
+      { key: 'Esc', desc: '닫기' }
+    ];
+    
+    shortcuts.forEach(shortcut => {
+      const item = document.createElement('div');
+      item.className = 'hint-item';
+      
+      const key = document.createElement('span');
+      key.className = 'hint-key';
+      key.textContent = shortcut.key;
+      
+      const desc = document.createElement('span');
+      desc.className = 'hint-desc';
+      desc.textContent = shortcut.desc;
+      
+      item.appendChild(key);
+      item.appendChild(desc);
+      hint.appendChild(item);
+    });
+    
+    document.body.appendChild(hint);
+    
+    // 5초 후 자동으로 숨김
+    setTimeout(() => {
+      hint.style.opacity = '0';
+      setTimeout(() => hint.remove(), 300);
+    }, 5000);
+    
+    Logger.log('키보드 네비게이션 힌트 표시됨');
+  }
+
+  /**
    * 팝업을 닫습니다.
    */
   close(): void {
+    // 키보드 네비게이션 비활성화
+    this.app.keymap.popScope(this.keyboardScope);
+    
     document.body.classList.remove('spell-popup-open');
     this.destroy();
   }
