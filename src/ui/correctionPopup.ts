@@ -98,7 +98,17 @@ export class CorrectionPopup extends BaseComponent {
     // A: AI 분석 트리거
     this.keyboardScope.register([], 'KeyA', (evt: KeyboardEvent) => {
       evt.preventDefault();
+      evt.stopPropagation();
+      evt.stopImmediatePropagation();
       this.triggerAIAnalysis();
+      return false;
+    });
+
+    // E: 오류 상세부분 펼침/접힘
+    this.keyboardScope.register([], 'KeyE', (evt: KeyboardEvent) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      this.toggleErrorSummary();
       return false;
     });
 
@@ -153,6 +163,7 @@ export class CorrectionPopup extends BaseComponent {
       this.currentFocusIndex = (this.currentFocusIndex + 1) % this.currentCorrections.length;
     }
     this.updateFocusHighlight();
+    this.scrollToFocusedError();
     Logger.debug(`포커스 이동: ${this.currentFocusIndex}/${this.currentCorrections.length}`);
   }
 
@@ -172,6 +183,7 @@ export class CorrectionPopup extends BaseComponent {
         : this.currentFocusIndex - 1;
     }
     this.updateFocusHighlight();
+    this.scrollToFocusedError();
     Logger.debug(`포커스 이동: ${this.currentFocusIndex}/${this.currentCorrections.length}`);
   }
 
@@ -398,6 +410,7 @@ export class CorrectionPopup extends BaseComponent {
    */
   render(): HTMLElement {
     this.element.id = 'correctionPopup';
+    this.element.setAttribute('tabindex', '-1');
     this.element.innerHTML = this.createPopupHTML();
     
     // 이벤트 바인딩
@@ -405,6 +418,12 @@ export class CorrectionPopup extends BaseComponent {
     
     // 키보드 네비게이션 활성화
     this.app.keymap.pushScope(this.keyboardScope);
+    
+    // 팝업에 포커스 설정하여 키보드 이벤트가 올바르게 전달되도록 함
+    setTimeout(() => {
+      this.element.focus();
+      Logger.log('팝업 포커스 설정 완료');
+    }, 50);
     
     // 초기 포커스 설정
     this.resetFocusToFirstError();
@@ -1569,6 +1588,7 @@ export class CorrectionPopup extends BaseComponent {
       { key: '←/→', desc: '수정 제안 순환' },
       { key: 'Enter', desc: '적용' },
       { key: 'A', desc: 'AI 분석' },
+      { key: 'E', desc: '오류 상세 토글' },
       { key: '⌘⇧←/→', desc: '일괄 변경' },
       { key: '↑/↓', desc: '페이지 이동' },
       { key: 'Esc', desc: '닫기' }
@@ -1594,6 +1614,86 @@ export class CorrectionPopup extends BaseComponent {
     document.body.appendChild(hint);
     
     Logger.log('키보드 네비게이션 힌트 표시됨 (데스크톱 전용)');
+  }
+
+  /**
+   * 오류 상세부분 펼침/접힘을 토글합니다.
+   */
+  private toggleErrorSummary(): void {
+    const errorSummary = document.getElementById('errorSummary');
+    if (!errorSummary) return;
+
+    const isCurrentlyCollapsed = errorSummary.classList.contains('collapsed');
+    
+    if (isCurrentlyCollapsed) {
+      errorSummary.classList.remove('collapsed');
+      Logger.log('오류 상세부분 펼침');
+    } else {
+      errorSummary.classList.add('collapsed');
+      Logger.log('오류 상세부분 접힘');
+    }
+
+    // 동적 페이지네이션 재계산
+    this.recalculatePagination();
+    this.updateDisplay();
+  }
+
+  /**
+   * 현재 포커스된 오류로 스크롤합니다.
+   */
+  private scrollToFocusedError(): void {
+    const currentCorrections = this.getCurrentCorrections();
+    if (currentCorrections.length === 0 || this.currentFocusIndex < 0) return;
+
+    const correction = currentCorrections[this.currentFocusIndex];
+    if (!correction) return;
+
+    const actualIndex = this.config.corrections.findIndex(c => 
+      c.original === correction.original && c.help === correction.help
+    );
+
+    if (actualIndex === -1) return;
+
+    // 오류 상세부분에서 해당 항목 찾기
+    const errorSummary = document.getElementById('errorSummary');
+    if (!errorSummary) return;
+
+    const errorItems = errorSummary.querySelectorAll('.error-item-compact');
+    let targetItem: HTMLElement | null = null;
+
+    // 실제 인덱스와 매칭되는 항목 찾기
+    errorItems.forEach((item, index) => {
+      const itemCorrection = currentCorrections[index];
+      if (itemCorrection && itemCorrection.original === correction.original && itemCorrection.help === correction.help) {
+        targetItem = item as HTMLElement;
+      }
+    });
+
+    if (targetItem) {
+      // 오류 상세부분이 접혀있으면 펼치기
+      if (errorSummary.classList.contains('collapsed')) {
+        errorSummary.classList.remove('collapsed');
+        this.recalculatePagination();
+        this.updateDisplay();
+        
+        // 레이아웃 변경 후 스크롤
+        setTimeout(() => {
+          (targetItem as HTMLElement).scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          });
+        }, 100);
+      } else {
+        (targetItem as HTMLElement).scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        });
+      }
+
+      Logger.log(`오류 상세부분 자동스크롤: ${correction.original}`);
+    }
   }
 
   /**
