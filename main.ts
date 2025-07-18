@@ -55,6 +55,33 @@ export default class KoreanGrammarPlugin extends Plugin {
       },
     });
 
+    // 현재 문단 맞춤법 검사 명령어 추가
+    this.addCommand({
+      id: "check-current-paragraph",
+      name: "현재 문단 맞춤법 검사",
+      callback: async () => {
+        await this.orchestrator.executeCurrentParagraph();
+      },
+    });
+
+    // 현재 단어 맞춤법 검사 명령어 추가
+    this.addCommand({
+      id: "check-current-word",
+      name: "현재 단어 맞춤법 검사",
+      callback: async () => {
+        await this.orchestrator.executeCurrentWord();
+      },
+    });
+
+    // 현재 문장 맞춤법 검사 명령어 추가
+    this.addCommand({
+      id: "check-current-sentence",
+      name: "현재 문장 맞춤법 검사",
+      callback: async () => {
+        await this.orchestrator.executeCurrentSentence();
+      },
+    });
+
     // 설정 탭 추가
     this.addSettingTab(new ModernSettingsTab(this.app, this));
   }

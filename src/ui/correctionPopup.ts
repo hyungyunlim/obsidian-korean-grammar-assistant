@@ -384,7 +384,8 @@ export class CorrectionPopup extends BaseComponent {
    * 페이지네이션을 초기화합니다.
    */
   private initializePagination(): void {
-    const textLength = this.config.selectedText.length;
+    const trimmedText = this.config.selectedText.trim();
+    const textLength = trimmedText.length;
     this.isLongText = textLength > 1000;
     
     // 초기값 설정. 실제 계산은 recalculatePagination에서 이루어짐.
@@ -392,7 +393,7 @@ export class CorrectionPopup extends BaseComponent {
     this.pageBreaks = [textLength]; // 임시
     this.totalPreviewPages = 1;
     this.currentPreviewPage = 0;
-    Logger.log(`Initial pagination setup: Long text: ${this.isLongText}`);
+    Logger.log(`Initial pagination setup: Long text: ${this.isLongText}, Trimmed length: ${textLength}`);
   }
 
   /**
@@ -583,7 +584,7 @@ export class CorrectionPopup extends BaseComponent {
    * 미리보기 HTML을 생성합니다.
    */
   private generatePreviewHTML(): string {
-    const previewText = this.isLongText ? this.getCurrentPreviewText() : this.config.selectedText;
+    const previewText = this.isLongText ? this.getCurrentPreviewText() : this.config.selectedText.trim();
     const currentCorrections = this.getCurrentCorrections();
 
     // Create a map to track processed positions and avoid duplicates
@@ -673,12 +674,12 @@ export class CorrectionPopup extends BaseComponent {
    * 현재 페이지의 미리보기 텍스트를 가져옵니다.
    */
   private getCurrentPreviewText(): string {
-    if (!this.isLongText) return this.config.selectedText;
+    if (!this.isLongText) return this.config.selectedText.trim();
     
     const previewStartIndex = this.currentPreviewPage === 0 ? 0 : this.pageBreaks[this.currentPreviewPage - 1];
     const previewEndIndex = this.pageBreaks[this.currentPreviewPage];
     
-    return this.config.selectedText.slice(previewStartIndex, previewEndIndex);
+    return this.config.selectedText.slice(previewStartIndex, previewEndIndex).trim();
   }
 
   /**
@@ -939,7 +940,8 @@ export class CorrectionPopup extends BaseComponent {
     const previewElement = this.element.querySelector('#resultPreview') as HTMLElement;
     
     this.charsPerPage = calculateDynamicCharsPerPage(previewElement, isErrorExpanded);
-    this.pageBreaks = splitTextIntoPages(this.config.selectedText, this.charsPerPage);
+    const trimmedText = this.config.selectedText.trim();
+    this.pageBreaks = splitTextIntoPages(trimmedText, this.charsPerPage);
     this.totalPreviewPages = this.pageBreaks.length;
     
     // 현재 페이지가 범위를 벗어나면 조정

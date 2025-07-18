@@ -7,6 +7,7 @@ import { CorrectionPopup } from './ui/correctionPopup';
 import { AIAnalysisService } from './services/aiAnalysisService';
 import { LoadingManager } from './ui/loadingManager';
 import { Logger } from './utils/logger';
+import { getCurrentParagraph, getCurrentWord, getCurrentSentence } from './utils/textUtils';
 
 /**
  * 맞춤법 검사 워크플로우를 관리하는 오케스트레이터 클래스
@@ -161,7 +162,7 @@ export class SpellCheckOrchestrator {
     // 교정 팝업 생성 및 표시
     const popup = new CorrectionPopup(this.app, {
       corrections: result.corrections,
-      selectedText: selectedText,
+      selectedText: selectedText.trim(),
       start: selectionStart,
       end: selectionEnd,
       editor: editor,
@@ -256,6 +257,189 @@ export class SpellCheckOrchestrator {
    */
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * 현재 문단의 맞춤법을 검사합니다.
+   */
+  async executeCurrentParagraph(): Promise<void> {
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!activeView) {
+      new Notice("활성화된 마크다운 편집기가 없습니다.");
+      return;
+    }
+
+    const editor = activeView.editor;
+    if (!editor) {
+      new Notice("편집기에 접근할 수 없습니다.");
+      return;
+    }
+
+    try {
+      // 현재 문단 감지 (개선된 버전)
+      const paragraphData = getCurrentParagraph(editor);
+      const selectedText = paragraphData.text.trim();
+      
+      if (!selectedText) {
+        new Notice("현재 문단에 검사할 텍스트가 없습니다.");
+        return;
+      }
+
+      Logger.log(`현재 문단 맞춤법 검사 시작: ${selectedText.length}자`);
+      
+      // 기존 execute 메서드의 로직 재사용
+      await this.performSpellCheck(selectedText, editor, paragraphData.from, paragraphData.to);
+      
+    } catch (error) {
+      Logger.error('현재 문단 맞춤법 검사 중 오류 발생:', error);
+      new Notice(`현재 문단 맞춤법 검사 중 오류가 발생했습니다: ${error.message}`);
+    }
+  }
+
+  /**
+   * 현재 단어의 맞춤법을 검사합니다.
+   */
+  async executeCurrentWord(): Promise<void> {
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!activeView) {
+      new Notice("활성화된 마크다운 편집기가 없습니다.");
+      return;
+    }
+
+    const editor = activeView.editor;
+    if (!editor) {
+      new Notice("편집기에 접근할 수 없습니다.");
+      return;
+    }
+
+    try {
+      // 현재 단어 감지
+      const wordData = getCurrentWord(editor);
+      
+      if (!wordData) {
+        new Notice("현재 위치에 검사할 단어가 없습니다.");
+        return;
+      }
+
+      const selectedText = wordData.text.trim();
+      
+      if (!selectedText) {
+        new Notice("현재 단어에 검사할 텍스트가 없습니다.");
+        return;
+      }
+
+      Logger.log(`현재 단어 맞춤법 검사 시작: "${selectedText}"`);
+      
+      // 기존 execute 메서드의 로직 재사용
+      await this.performSpellCheck(selectedText, editor, wordData.from, wordData.to);
+      
+    } catch (error) {
+      Logger.error('현재 단어 맞춤법 검사 중 오류 발생:', error);
+      new Notice(`현재 단어 맞춤법 검사 중 오류가 발생했습니다: ${error.message}`);
+    }
+  }
+
+  /**
+   * 현재 문장의 맞춤법을 검사합니다.
+   */
+  async executeCurrentSentence(): Promise<void> {
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!activeView) {
+      new Notice("활성화된 마크다운 편집기가 없습니다.");
+      return;
+    }
+
+    const editor = activeView.editor;
+    if (!editor) {
+      new Notice("편집기에 접근할 수 없습니다.");
+      return;
+    }
+
+    try {
+      // 현재 문장 감지
+      const sentenceData = getCurrentSentence(editor);
+      const selectedText = sentenceData.text.trim();
+      
+      if (!selectedText) {
+        new Notice("현재 문장에 검사할 텍스트가 없습니다.");
+        return;
+      }
+
+      Logger.log(`현재 문장 맞춤법 검사 시작: "${selectedText}"`);
+      
+      // 기존 execute 메서드의 로직 재사용
+      await this.performSpellCheck(selectedText, editor, sentenceData.from, sentenceData.to);
+      
+    } catch (error) {
+      Logger.error('현재 문장 맞춤법 검사 중 오류 발생:', error);
+      new Notice(`현재 문장 맞춤법 검사 중 오류가 발생했습니다: ${error.message}`);
+    }
+  }
+
+  /**
+   * 맞춤법 검사를 수행하는 공통 메서드
+   */
+  private async performSpellCheck(
+    selectedText: string, 
+    editor: Editor, 
+    from?: any, 
+    to?: any
+  ): Promise<void> {
+    // 설정 검증
+    const validation = SettingsService.validateSettings(this.settings);
+    if (!validation.isValid) {
+      new Notice(`설정 오류: ${validation.errors.join(', ')}`);
+      return;
+    }
+
+    // 로딩 시작
+    LoadingManager.getInstance().startLoading();
+
+    try {
+      // API 호출
+      const result = await this.apiService.checkSpelling(selectedText, this.settings);
+      
+      if (result.corrections && result.corrections.length > 0) {
+        Logger.log(`맞춤법 검사 완료: ${result.corrections.length}개 오류 발견`);
+        
+        // 팝업 설정
+        const popupConfig = {
+          selectedText: selectedText.trim(),
+          corrections: result.corrections,
+          ignoredWords: this.settings.ignoredWords || [],
+          editor,
+          start: from || { line: 0, ch: 0 },
+          end: to || { line: 0, ch: selectedText.length }
+        };
+        
+        // 팝업 표시
+        const popup = new CorrectionPopup(
+          this.app,
+          popupConfig,
+          this.aiService,
+          (newMaxTokens: number) => this.handleMaxTokensUpdate(newMaxTokens)
+        );
+        
+        const popupElement = popup.render();
+        document.body.appendChild(popupElement);
+        
+      } else {
+        new Notice("수정할 것이 없습니다. 훌륭합니다!");
+      }
+    } catch (error) {
+      Logger.error('맞춤법 검사 중 오류 발생:', error);
+      if (error.message.includes('API 키')) {
+        new Notice("API 키가 설정되지 않았습니다. 플러그인 설정에서 Bareun.ai API 키를 입력해주세요.");
+      } else if (error.message.includes('요청')) {
+        new Notice(`API 요청에 실패했습니다: ${error.message}`);
+      } else if (error.message.includes('네트워크')) {
+        new Notice("네트워크 연결을 확인해주세요.");
+      } else {
+        new Notice(`맞춤법 검사 중 오류가 발생했습니다: ${error.message}`);
+      }
+    } finally {
+      LoadingManager.getInstance().complete();
+    }
   }
 
   /**
