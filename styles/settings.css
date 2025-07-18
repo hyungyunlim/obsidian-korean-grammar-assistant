@@ -1,0 +1,218 @@
+/* styles/settings.css */
+
+.ai-disabled-desc {
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.ignored-words-empty {
+  text-align: center;
+}
+
+.ignored-word-tag {
+  display: inline-block;
+  background: var(--interactive-accent);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  margin: 0 4px 4px 0;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.ignored-word-tag:hover {
+  background: var(--interactive-accent-hover);
+}
+
+.remove-word-btn {
+  margin-left: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.7);
+  transition: opacity 0.2s ease;
+  opacity: 0.7;
+}
+
+.remove-word-btn:hover {
+  opacity: 1;
+}
+
+.settings-error {
+  color: var(--text-error);
+  margin-top: 10px;
+}
+
+.tag-cloud-section {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background: var(--background-secondary);
+  padding: 0;
+  margin-bottom: 20px;
+}
+
+.tag-cloud-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+}
+
+.tag-cloud-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.clear-all-button {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+}
+
+.ignored-words-container {
+  padding: 12px;
+  min-height: 80px;
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: flex-start;
+  align-content: flex-start;
+}
+
+.add-word-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.add-word-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+}
+
+.add-word-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+}
+
+.add-word-button {
+  padding: 8px 16px;
+  white-space: nowrap;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tag-preview-container {
+  min-height: 40px;
+  padding: 8px;
+  background: var(--background-secondary);
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.tag-preview-container.visible {
+  display: flex;
+}
+
+.preview-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-right: 8px;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.preview-tag {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 12px;
+  margin: 0 4px 4px 0;
+  font-size: 11px;
+  font-weight: 500;
+  transition: background 0.2s ease;
+}
+
+.preview-tag.already-ignored {
+  background: var(--background-modifier-border);
+  color: var(--text-muted);
+  text-decoration: line-through;
+  opacity: 0.8;
+}
+
+.preview-tag.new-tag {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+/* === 설정 탭 클래스들 === */
+.ksc-tag {
+  display: inline-block !important;
+  background: var(--interactive-accent) !important;
+  color: var(--text-on-accent) !important;
+  padding: 3px 8px !important;
+  border-radius: 12px !important;
+  margin: 0 4px 4px 0 !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: background 0.2s ease !important;
+}
+
+.ksc-tag:hover {
+  background: var(--interactive-accent-hover) !important;
+}
+
+.ksc-empty-state {
+  color: var(--text-muted) !important;
+  text-align: center !important;
+  padding: 20px !important;
+}
+
+.ksc-step-item {
+  margin-bottom: 4px !important;
+}
+
+.ksc-collapsible-container {
+  display: none !important;
+  margin-top: 16px !important;
+}
+
+.ksc-collapsible-container.visible {
+  display: block !important;
+}
+
+.ksc-backup-item {
+  margin-bottom: 8px !important;
+}
+
+.ksc-restore-button {
+  margin-top: 8px !important;
+  font-size: 12px !important;
+}

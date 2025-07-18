@@ -1,0 +1,23 @@
+/* styles/main.css */
+
+@import url("base.css");
+@import url("header.css");
+@import url("preview.css");
+@import url("error-summary.css");
+@import url("error-highlight.css");
+@import url("ai.css");
+@import url("modals.css");
+@import url("keyboard.css");
+@import url("settings.css");
+@import url("responsive.css");
+
+/* Additional CSS classes for replacing inline styles that were not component-specific */
+.preview-header-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-container-hidden {
+  display: none;
+}

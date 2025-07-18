@@ -1,0 +1,89 @@
+/* styles/header.css */
+
+#correctionPopup .header {
+    padding: 20px 24px 16px;
+    background: var(--background-primary);
+    border-bottom: 1px solid var(--background-modifier-border-hover);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+#correctionPopup .header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-normal);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+#correctionPopup .close-btn-header {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+#correctionPopup .close-btn-header:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+#correctionPopup .cancel-btn,
+#correctionPopup .apply-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+}
+
+#correctionPopup .cancel-btn {
+    background: var(--background-secondary);
+    color: var(--text-muted);
+}
+
+#correctionPopup .cancel-btn:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+#correctionPopup .apply-btn {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+#correctionPopup .header .apply-btn {
+    margin-left: 8px;
+}
+
+#correctionPopup .apply-btn:hover {
+    background: var(--interactive-accent-hover);
+}
+
+#correctionPopup .button-area {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 16px 24px 24px;
+    border-top: 1px solid var(--background-modifier-border);
+    flex-shrink: 0;
+    background: var(--background-primary);
+}

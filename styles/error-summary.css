@@ -1,0 +1,217 @@
+/* styles/error-summary.css */
+
+#correctionPopup .error-summary {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--background-modifier-border);
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+#correctionPopup .error-summary.collapsed .error-summary-content {
+    height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+#correctionPopup .error-summary:not(.collapsed) .error-summary-content {
+    height: 280px;
+    overflow-y: auto;
+    opacity: 1;
+    transition: all 0.3s ease;
+}
+
+#correctionPopup .error-summary-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 8px 0;
+    margin-bottom: 12px;
+    user-select: none;
+}
+
+#correctionPopup .error-summary-toggle .left-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#correctionPopup .error-summary-toggle:hover {
+    background: var(--background-modifier-hover);
+    border-radius: 4px;
+    margin: 0 -8px 12px -8px;
+    padding: 8px;
+}
+
+#correctionPopup .error-summary-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#correctionPopup .error-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    line-height: 1;
+}
+
+#correctionPopup .toggle-icon {
+    font-size: 12px;
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+}
+
+#correctionPopup .error-summary-content {
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+}
+
+#correctionPopup .error-summary-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+#correctionPopup .error-summary-content::-webkit-scrollbar-track {
+    background: var(--background-secondary);
+}
+
+#correctionPopup .error-summary-content::-webkit-scrollbar-thumb {
+    background: var(--background-modifier-border);
+    border-radius: 3px;
+}
+
+#correctionPopup .error-summary-content::-webkit-scrollbar-thumb:hover {
+    background: var(--background-modifier-border-hover);
+}
+
+/* Improved compact error item styles */
+#correctionPopup .error-item-compact {
+    margin-bottom: 4px !important;
+    padding: 6px 8px !important;
+    background: var(--background-secondary-alt) !important;
+    border-radius: 4px !important;
+    border: 1px solid var(--background-modifier-border) !important;
+    transition: all 0.15s ease !important;
+    display: block !important;
+    line-height: 1.3 !important;
+}
+
+#correctionPopup .error-item-compact:hover {
+    background: var(--background-modifier-hover) !important;
+}
+
+#correctionPopup .error-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin-bottom: 3px !important;
+}
+
+#correctionPopup .error-original-compact {
+    min-width: 60px !important;
+    font-weight: 600 !important;
+    color: var(--color-red) !important;
+    background: rgba(var(--color-red-rgb), 0.15) !important;
+    padding: 3px 6px !important;
+    border-radius: 3px !important;
+    font-size: 12px !important;
+    flex-shrink: 0 !important;
+}
+
+#correctionPopup .error-suggestions-compact {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+    flex: 1 !important;
+}
+
+#correctionPopup .suggestion-compact {
+    background: var(--background-primary) !important;
+    border: 1px solid var(--background-modifier-border) !important;
+    border-radius: 8px !important;
+    padding: 3px 6px !important;
+    font-size: 11px !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+    color: var(--text-normal) !important;
+    white-space: nowrap !important;
+    font-weight: 500 !important;
+}
+
+#correctionPopup .suggestion-compact:hover {
+    background: var(--interactive-hover) !important;
+    border-color: var(--interactive-accent) !important;
+}
+
+#correctionPopup .suggestion-compact.selected {
+    background: var(--interactive-accent) !important;
+    color: var(--text-on-accent) !important;
+    border-color: var(--interactive-accent) !important;
+}
+
+#correctionPopup .suggestion-compact.keep-original {
+    background: var(--background-modifier-hover) !important;
+    color: var(--text-muted) !important;
+    font-size: 10px !important;
+    font-weight: 400 !important;
+}
+
+#correctionPopup .suggestion-compact.keep-original.selected {
+    background: var(--text-muted) !important;
+    color: var(--background-primary) !important;
+}
+
+#correctionPopup .error-help-compact {
+    font-size: 10px !important;
+    color: var(--text-muted) !important;
+    font-style: italic !important;
+    line-height: 1.2 !important;
+    margin-left: 4px !important;
+    margin-top: 2px !important;
+    opacity: 0.8 !important;
+}
+
+/* Error placeholder styles */
+#correctionPopup .error-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+    background: var(--background-secondary);
+    border-radius: 8px;
+    margin: 20px 0;
+    border: 1px dashed var(--background-modifier-border);
+}
+
+#correctionPopup .placeholder-icon {
+    font-size: 32px;
+    color: var(--color-green);
+    margin-bottom: 12px;
+}
+
+#correctionPopup .placeholder-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-normal);
+    margin-bottom: 6px;
+}
+
+#correctionPopup .placeholder-subtext {
+    font-size: 12px;
+    color: var(--text-muted);
+    opacity: 0.8;
+}

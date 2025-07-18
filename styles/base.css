@@ -1,0 +1,108 @@
+/* styles/base.css */
+
+#correctionPopup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-interface);
+    color: var(--text-normal);
+    /* Prevent any interaction with background elements */
+    isolation: isolate;
+    contain: layout style paint;
+}
+
+#correctionPopup .popup-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 1;
+    pointer-events: auto;
+    will-change: auto;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height */
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#correctionPopup .popup-content {
+    position: relative;
+    width: min(98vw, 1200px);
+    height: 95vh;
+    max-height: 1000px;
+    min-height: 700px;
+    background: var(--background-primary);
+    border-radius: 12px;
+    box-shadow: 0 12px 60px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--background-modifier-border);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    z-index: 10000;
+}
+
+#correctionPopup .content {
+    padding: 20px 24px 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex: 1;
+    height: 100%;
+}
+
+/* Scrollbar styling */
+#correctionPopup .content::-webkit-scrollbar {
+    width: 6px;
+}
+
+#correctionPopup .content::-webkit-scrollbar-track {
+    background: var(--background-secondary);
+}
+
+#correctionPopup .content::-webkit-scrollbar-thumb {
+    background: var(--background-modifier-border);
+    border-radius: 3px;
+}
+
+#correctionPopup .content::-webkit-scrollbar-thumb:hover {
+    background: var(--background-modifier-border-hover);
+}
+
+/* Body scroll lock when popup is open */
+body.spell-popup-open {
+    overflow: hidden !important;
+    position: fixed !important;
+    width: 100% !important;
+    height: 100vh !important;
+    height: 100dvh !important; /* Dynamic viewport height */
+}
+
+/* Mobile: Prevent any input focus within body when popup is open */
+body.spell-popup-open input,
+body.spell-popup-open textarea,
+body.spell-popup-open [contenteditable] {
+    pointer-events: none !important;
+}
+
+/* But allow inputs within the popup to work */
+body.spell-popup-open #correctionPopup input,
+body.spell-popup-open #correctionPopup textarea,
+body.spell-popup-open #correctionPopup [contenteditable] {
+    pointer-events: auto !important;
+    height: 100% !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+}
