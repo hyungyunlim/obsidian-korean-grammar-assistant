@@ -10,6 +10,17 @@ export interface Correction {
 }
 
 /**
+ * 페이지별 교정 정보 (원본 인덱스 포함)
+ */
+export interface PageCorrection {
+  correction: Correction;
+  originalIndex: number;
+  positionInPage: number;
+  absolutePosition: number;  // 전체 텍스트에서의 절대 위치
+  uniqueId: string;          // 고유 식별자 (originalIndex_occurrenceCount)
+}
+
+/**
  * 플러그인 설정 인터페이스
  */
 export interface PluginSettings {

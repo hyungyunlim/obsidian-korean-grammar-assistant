@@ -1,5 +1,5 @@
 import { Editor, EditorPosition, App, Platform, Scope, Notice } from 'obsidian';
-import { Correction, PopupConfig, AIAnalysisResult, AIAnalysisRequest } from '../types/interfaces';
+import { Correction, PopupConfig, AIAnalysisResult, AIAnalysisRequest, PageCorrection } from '../types/interfaces';
 import { BaseComponent } from './baseComponent';
 import { CorrectionStateManager } from '../state/correctionState';
 import { escapeHtml } from '../utils/htmlUtils';
@@ -32,7 +32,15 @@ export class CorrectionPopup extends BaseComponent {
   // 키보드 네비게이션
   private keyboardScope: Scope;
   private currentFocusIndex: number = 0;
-  private currentCorrections: Correction[] = [];
+  private currentCorrections: PageCorrection[] = [];
+  
+  // 전체 오류 위치 캐시
+  private allErrorPositions: Array<{
+    correction: Correction;
+    originalIndex: number;
+    absolutePosition: number;
+    uniqueId: string;
+  }> = [];
 
   constructor(app: App, config: PopupConfig, aiService?: AIAnalysisService, onSettingsUpdate?: (newMaxTokens: number) => void) {
     super('div', 'correction-popup-container');
@@ -47,6 +55,7 @@ export class CorrectionPopup extends BaseComponent {
     this.setupKeyboardNavigation();
     
     this.initializePagination();
+    this.calculateAllErrorPositions();
   }
 
   /**
@@ -153,15 +162,43 @@ export class CorrectionPopup extends BaseComponent {
    * 다음 오류 항목으로 포커스를 이동합니다.
    */
   private focusNextError(): void {
-    this.currentCorrections = this.getCurrentCorrections();
-    if (this.currentCorrections.length === 0) return;
+    Logger.debug('========= focusNextError 시작 =========');
+    Logger.debug(`현재 포커스 인덱스: ${this.currentFocusIndex}`);
+    
+    const rawCorrections = this.getCurrentCorrections();
+    Logger.debug(`RAW 수정사항 개수: ${rawCorrections.length}`);
+    Logger.debug('RAW 수정사항 목록:', rawCorrections.map(pc => ({ 
+      original: pc.correction.original, 
+      originalIndex: pc.originalIndex,
+      uniqueId: pc.uniqueId,
+      absolutePosition: pc.absolutePosition
+    })));
+    
+    this.currentCorrections = this.removeDuplicateCorrections(rawCorrections);
+    Logger.debug(`중복 제거 전후: ${rawCorrections.length} → ${this.currentCorrections.length}`);
+    Logger.debug('중복 제거 후 목록:', this.currentCorrections.map(pc => ({ 
+      original: pc.correction.original, 
+      originalIndex: pc.originalIndex,
+      uniqueId: pc.uniqueId,
+      absolutePosition: pc.absolutePosition
+    })));
+    
+    if (this.currentCorrections.length === 0) {
+      Logger.debug('수정사항이 없어 함수 종료');
+      return;
+    }
 
+    const oldFocusIndex = this.currentFocusIndex;
     // 초기에 포커스가 없으면 첫 번째로 설정
     if (this.currentFocusIndex === -1) {
       this.currentFocusIndex = 0;
     } else {
       this.currentFocusIndex = (this.currentFocusIndex + 1) % this.currentCorrections.length;
     }
+    
+    Logger.debug(`포커스 인덱스 변경: ${oldFocusIndex} → ${this.currentFocusIndex}`);
+    Logger.debug(`포커스 대상: ${this.currentCorrections[this.currentFocusIndex]?.correction.original} (고유ID: ${this.currentCorrections[this.currentFocusIndex]?.uniqueId})`);
+    
     this.updateFocusHighlight();
     
     // 상세보기가 이미 펼쳐져 있을 때만 스크롤
@@ -172,14 +209,16 @@ export class CorrectionPopup extends BaseComponent {
       this.scrollToFocusedError(false); // 펼쳐진 상태에서는 상태 유지하며 스크롤
     }
     
-    Logger.debug(`포커스 이동: ${this.currentFocusIndex}/${this.currentCorrections.length}, 상세보기 펼쳐짐: ${isExpanded}`);
+    Logger.debug(`포커스 이동 완료: ${this.currentFocusIndex}/${this.currentCorrections.length}, 상세보기 펼쳐짐: ${isExpanded}`);
+    Logger.debug('========= focusNextError 종료 =========');
   }
 
   /**
    * 이전 오류 항목으로 포커스를 이동합니다.
    */
   private focusPrevError(): void {
-    this.currentCorrections = this.getCurrentCorrections();
+    const rawCorrections = this.getCurrentCorrections();
+    this.currentCorrections = this.removeDuplicateCorrections(rawCorrections);
     if (this.currentCorrections.length === 0) return;
 
     // 초기에 포커스가 없으면 마지막으로 설정
@@ -213,18 +252,13 @@ export class CorrectionPopup extends BaseComponent {
       return;
     }
 
-    const currentCorrection = this.currentCorrections[this.currentFocusIndex];
-    if (!currentCorrection) return;
+    const pageCorrection = this.currentCorrections[this.currentFocusIndex];
+    if (!pageCorrection) return;
 
-    const actualIndex = this.config.corrections.findIndex(c => 
-      c.original === currentCorrection.original && c.help === currentCorrection.help
-    );
-
-    if (actualIndex !== -1) {
-      const currentState = this.stateManager.getValue(actualIndex);
-      // 현재 선택된 수정사항을 적용 처리
-      Logger.log(`키보드로 수정사항 적용: ${currentState}`);
-    }
+    const actualIndex = pageCorrection.originalIndex;
+    const currentState = this.stateManager.getValue(actualIndex);
+    // 현재 선택된 수정사항을 적용 처리
+    Logger.log(`키보드로 수정사항 적용: ${currentState}`);
   }
 
   /**
@@ -233,16 +267,11 @@ export class CorrectionPopup extends BaseComponent {
   private cycleCurrentCorrectionNext(): void {
     if (this.currentCorrections.length === 0) return;
 
-    const currentCorrection = this.currentCorrections[this.currentFocusIndex];
-    if (!currentCorrection) return;
+    const pageCorrection = this.currentCorrections[this.currentFocusIndex];
+    if (!pageCorrection) return;
 
-    const actualIndex = this.config.corrections.findIndex(c => 
-      c.original === currentCorrection.original && c.help === currentCorrection.help
-    );
-
-    if (actualIndex !== -1) {
-      this.cycleCorrectionState(actualIndex, 'next');
-    }
+    const actualIndex = pageCorrection.originalIndex;
+    this.cycleCorrectionState(actualIndex, 'next');
   }
 
   /**
@@ -251,16 +280,11 @@ export class CorrectionPopup extends BaseComponent {
   private cycleCurrentCorrectionPrev(): void {
     if (this.currentCorrections.length === 0) return;
 
-    const currentCorrection = this.currentCorrections[this.currentFocusIndex];
-    if (!currentCorrection) return;
+    const pageCorrection = this.currentCorrections[this.currentFocusIndex];
+    if (!pageCorrection) return;
 
-    const actualIndex = this.config.corrections.findIndex(c => 
-      c.original === currentCorrection.original && c.help === currentCorrection.help
-    );
-
-    if (actualIndex !== -1) {
-      this.cycleCorrectionState(actualIndex, 'prev');
-    }
+    const actualIndex = pageCorrection.originalIndex;
+    this.cycleCorrectionState(actualIndex, 'prev');
   }
 
   /**
@@ -323,35 +347,54 @@ export class CorrectionPopup extends BaseComponent {
    * 포커스를 첫 번째 오류로 리셋합니다.
    */
   private resetFocusToFirstError(): void {
-    this.currentCorrections = this.getCurrentCorrections();
+    Logger.debug('========= resetFocusToFirstError 시작 =========');
+    
+    const rawCorrections = this.getCurrentCorrections();
+    Logger.debug(`RAW 오류 개수: ${rawCorrections.length}`);
+    
+    this.currentCorrections = this.removeDuplicateCorrections(rawCorrections);
+    Logger.debug(`중복 제거 후 오류 개수: ${this.currentCorrections.length}`);
+    
     if (this.currentCorrections.length > 0) {
       this.currentFocusIndex = 0;
+      Logger.debug(`포커스 인덱스를 0으로 설정`);
+      
       // 약간의 지연을 두고 포커스 설정 (DOM이 완전히 렌더링된 후)
       setTimeout(() => {
+        Logger.debug('지연 후 포커스 하이라이트 업데이트 실행');
         this.updateFocusHighlight();
       }, 100);
       
       // 디버깅을 위한 상세 로깅
-      const firstCorrection = this.currentCorrections[0];
-      const actualIndex = this.config.corrections.findIndex(c => 
-        c.original === firstCorrection.original && c.help === firstCorrection.help
-      );
+      const firstPageCorrection = this.currentCorrections[0];
+      const actualIndex = firstPageCorrection.originalIndex;
       
       Logger.log(`초기 포커스 설정: ${this.currentFocusIndex}/${this.currentCorrections.length}`);
-      Logger.log(`첫 번째 오류: "${firstCorrection.original}" (전체 배열 인덱스: ${actualIndex})`);
-      Logger.log('현재 페이지 오류 목록:', this.currentCorrections.map(c => c.original));
+      Logger.log(`첫 번째 오류: "${firstPageCorrection.correction.original}" (전체 배열 인덱스: ${actualIndex}, 고유ID: ${firstPageCorrection.uniqueId})`);
+      Logger.log('현재 페이지 오류 목록:', this.currentCorrections.map(pc => ({ 
+        original: pc.correction.original, 
+        originalIndex: pc.originalIndex,
+        uniqueId: pc.uniqueId
+      })));
     } else {
       this.currentFocusIndex = -1;
       Logger.log('오류가 없어 포커스 설정하지 않음');
     }
+    
+    Logger.debug('========= resetFocusToFirstError 종료 =========');
   }
 
   /**
    * 현재 포커스된 항목을 시각적으로 표시합니다.
    */
   private updateFocusHighlight(): void {
+    Logger.debug('========= updateFocusHighlight 시작 =========');
+    Logger.debug(`currentCorrections 길이: ${this.currentCorrections.length}`);
+    Logger.debug(`currentFocusIndex: ${this.currentFocusIndex}`);
+    
     // 기존 포커스 하이라이트 제거
     const prevFocused = this.element.querySelectorAll('.keyboard-focused');
+    Logger.debug(`기존 포커스 요소 ${prevFocused.length}개 제거`);
     prevFocused.forEach(el => el.removeClass('keyboard-focused'));
 
     // 현재 포커스 항목 하이라이트
@@ -359,25 +402,58 @@ export class CorrectionPopup extends BaseComponent {
         this.currentFocusIndex >= 0 && 
         this.currentFocusIndex < this.currentCorrections.length) {
       
-      const correction = this.currentCorrections[this.currentFocusIndex];
-      const actualIndex = this.config.corrections.findIndex(c => 
-        c.original === correction.original && c.help === correction.help
-      );
+      const pageCorrection = this.currentCorrections[this.currentFocusIndex];
+      const actualIndex = pageCorrection.originalIndex;
+      const uniqueId = pageCorrection.uniqueId;
 
-      if (actualIndex !== -1) {
-        const errorItem = this.element.querySelector(`[data-correction-index="${actualIndex}"]`);
-        if (errorItem) {
-          errorItem.addClass('keyboard-focused');
-          // 스크롤하여 보이게 하기
-          errorItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          Logger.debug(`포커스 하이라이트 적용: 인덱스 ${actualIndex}`);
-        } else {
-          Logger.warn(`포커스 대상 요소를 찾을 수 없음: 인덱스 ${actualIndex}`);
-        }
+      Logger.debug(`포커스 대상 정보:`, {
+        original: pageCorrection.correction.original,
+        actualIndex: actualIndex,
+        uniqueId: uniqueId,
+        absolutePosition: pageCorrection.absolutePosition
+      });
+
+      // 먼저 고유 ID로 찾기 시도
+      let errorItem = this.element.querySelector(`[data-unique-id="${uniqueId}"]`);
+      Logger.debug(`고유 ID로 검색: [data-unique-id="${uniqueId}"] → ${errorItem ? '발견' : '미발견'}`);
+      
+      // 고유 ID로 찾지 못하면 기존 방식으로 폴백
+      if (!errorItem) {
+        errorItem = this.element.querySelector(`[data-correction-index="${actualIndex}"]`);
+        Logger.debug(`인덱스로 검색: [data-correction-index="${actualIndex}"] → ${errorItem ? '발견' : '미발견'}`);
+      }
+      
+      if (errorItem) {
+        errorItem.addClass('keyboard-focused');
+        // 스크롤하여 보이게 하기
+        errorItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        Logger.debug(`포커스 하이라이트 적용 성공: 고유 ID ${uniqueId}, 원본 인덱스 ${actualIndex}, 절대 위치 ${pageCorrection.absolutePosition}`);
+        
+        // DOM 요소 정보 추가 로깅
+        Logger.debug(`포커스된 요소 정보:`, {
+          tagName: errorItem.tagName,
+          className: errorItem.className,
+          textContent: errorItem.textContent?.substring(0, 50) + '...',
+          dataset: (errorItem as HTMLElement).dataset
+        });
+      } else {
+        Logger.warn(`포커스 대상 요소를 찾을 수 없음: 고유 ID ${uniqueId}, 인덱스 ${actualIndex}`);
+        
+        // DOM 트리에서 관련 요소들 찾기 시도
+        const allUniqueIdElements = this.element.querySelectorAll('[data-unique-id]');
+        const allCorrectionIndexElements = this.element.querySelectorAll('[data-correction-index]');
+        
+        Logger.debug(`DOM 내 data-unique-id 속성 요소 ${allUniqueIdElements.length}개:`, 
+          Array.from(allUniqueIdElements).map(el => (el as HTMLElement).dataset.uniqueId));
+        Logger.debug(`DOM 내 data-correction-index 속성 요소 ${allCorrectionIndexElements.length}개:`, 
+          Array.from(allCorrectionIndexElements).map(el => (el as HTMLElement).dataset.correctionIndex));
       }
     } else {
       Logger.debug('포커스할 오류가 없거나 인덱스가 범위를 벗어남');
+      Logger.debug(`세부 정보: length=${this.currentCorrections.length}, index=${this.currentFocusIndex}, 인덱스 범위 내? ${this.currentFocusIndex >= 0 && this.currentFocusIndex < this.currentCorrections.length}`);
     }
+    
+    Logger.debug('========= updateFocusHighlight 종료 =========');
   }
 
   /**
@@ -525,34 +601,280 @@ export class CorrectionPopup extends BaseComponent {
   }
 
   /**
-   * 현재 페이지의 교정 목록을 가져옵니다.
+   * 현재 페이지의 교정 목록을 가져옵니다. (절대 위치 기반 정확한 순서)
    */
-  private getCurrentCorrections(): Correction[] {
-    if (!this.isLongText) return this.config.corrections;
+  private getCurrentCorrections(): PageCorrection[] {
+    Logger.debug('========= getCurrentCorrections 시작 =========');
+    Logger.debug(`isLongText: ${this.isLongText}`);
+    Logger.debug(`currentPreviewPage: ${this.currentPreviewPage}`);
+    Logger.debug(`allErrorPositions 개수: ${this.allErrorPositions.length}`);
+    
+    if (!this.isLongText) {
+      // 짧은 텍스트인 경우 전체 오류 위치 배열을 그대로 사용
+      const result = this.allErrorPositions.map(errorPos => ({
+        correction: errorPos.correction,
+        originalIndex: errorPos.originalIndex,
+        positionInPage: errorPos.absolutePosition,
+        absolutePosition: errorPos.absolutePosition,
+        uniqueId: errorPos.uniqueId
+      }));
+      
+      Logger.debug(`짧은 텍스트 모드: 전체 ${result.length}개 오류 반환`);
+      Logger.debug('반환 오류 목록:', result.map(pc => ({ 
+        original: pc.correction.original, 
+        originalIndex: pc.originalIndex,
+        uniqueId: pc.uniqueId,
+        absolutePosition: pc.absolutePosition
+      })));
+      Logger.debug('========= getCurrentCorrections 종료 (짧은 텍스트) =========');
+      
+      return result;
+    }
     
     const previewStartIndex = this.currentPreviewPage === 0 ? 0 : this.pageBreaks[this.currentPreviewPage - 1];
     const previewEndIndex = this.pageBreaks[this.currentPreviewPage];
-    const currentPreviewText = this.config.selectedText.slice(previewStartIndex, previewEndIndex);
     
-    // 현재 페이지에 포함된 오류들을 필터링하고 원본 순서대로 정렬
-    const filteredCorrections = this.config.corrections.filter(correction => {
-      return currentPreviewText.includes(correction.original);
+    Logger.debug(`페이지 범위: ${previewStartIndex} ~ ${previewEndIndex}`);
+    
+    // 현재 페이지 범위에 포함된 오류들만 필터링
+    const pageCorrections: PageCorrection[] = [];
+    
+    this.allErrorPositions.forEach((errorPos, index) => {
+      Logger.debug(`[${index}] 오류 위치 검사: "${errorPos.correction.original}" at ${errorPos.absolutePosition} (고유ID: ${errorPos.uniqueId})`);
+      
+      if (errorPos.absolutePosition >= previewStartIndex && 
+          errorPos.absolutePosition < previewEndIndex) {
+        
+        const pageCorrection = {
+          correction: errorPos.correction,
+          originalIndex: errorPos.originalIndex,
+          positionInPage: errorPos.absolutePosition - previewStartIndex,
+          absolutePosition: errorPos.absolutePosition,
+          uniqueId: errorPos.uniqueId
+        };
+        
+        pageCorrections.push(pageCorrection);
+        Logger.debug(`[${index}] 페이지 범위 내 오류 추가: positionInPage=${pageCorrection.positionInPage}`);
+      } else {
+        Logger.debug(`[${index}] 페이지 범위 밖 오류 제외`);
+      }
     });
     
-    // 원본 텍스트에서의 순서대로 정렬
-    const sortedCorrections = filteredCorrections.sort((a, b) => {
-      const aPos = currentPreviewText.indexOf(a.original);
-      const bPos = currentPreviewText.indexOf(b.original);
-      return aPos - bPos;
-    });
+    // 절대 위치 순서로 정렬 (이미 정렬된 상태이지만 안전성을 위해)
+    pageCorrections.sort((a, b) => a.absolutePosition - b.absolutePosition);
     
-    Logger.debug(`getCurrentCorrections: 페이지 ${this.currentPreviewPage + 1}, 오류 ${sortedCorrections.length}개`);
-    Logger.debug('오류 위치 순서:', sortedCorrections.map(c => ({ 
-      original: c.original, 
-      position: currentPreviewText.indexOf(c.original) 
+    Logger.debug(`getCurrentCorrections: 페이지 ${this.currentPreviewPage + 1}, 오류 ${pageCorrections.length}개`);
+    Logger.debug('최종 오류 위치 순서:', pageCorrections.map(pc => ({ 
+      original: pc.correction.original, 
+      originalIndex: pc.originalIndex,
+      positionInPage: pc.positionInPage,
+      absolutePosition: pc.absolutePosition,
+      uniqueId: pc.uniqueId
+    })));
+    Logger.debug('========= getCurrentCorrections 종료 (긴 텍스트) =========');
+    
+    return pageCorrections;
+  }
+
+  /**
+   * 중복된 교정 항목을 제거합니다.
+   * 같은 original 텍스트를 가진 corrections를 그룹화하여 대표 항목만 선택합니다.
+   */
+  private removeDuplicateCorrections(corrections: PageCorrection[]): PageCorrection[] {
+    Logger.debug('========= removeDuplicateCorrections 시작 =========');
+    Logger.debug(`입력 corrections 개수: ${corrections.length}`);
+    Logger.debug('입력 corrections:', corrections.map(pc => ({ 
+      original: pc.correction.original, 
+      originalIndex: pc.originalIndex,
+      uniqueId: pc.uniqueId,
+      absolutePosition: pc.absolutePosition
     })));
     
-    return sortedCorrections;
+    const uniqueMap = new Map<string, PageCorrection>();
+    const duplicateGroups = new Map<string, PageCorrection[]>();
+    
+    // 위치 기반 그룹화 (같은 위치에서 겹치는 단어들 처리)
+    corrections.forEach((correction, index) => {
+      const originalText = correction.correction.original;
+      const position = correction.absolutePosition;
+      Logger.debug(`[${index}] 그룹화 중: "${originalText}" (위치: ${position}, 고유ID: ${correction.uniqueId})`);
+      
+      // 같은 위치에서 겹치는 단어들을 찾기
+      let groupKey = originalText;
+      let foundOverlap = false;
+      
+      // 기존 그룹들과 겹치는지 확인
+      for (const [existingKey, existingGroup] of duplicateGroups) {
+        if (existingGroup.length > 0) {
+          const existingCorrection = existingGroup[0];
+          const existingPos = existingCorrection.absolutePosition;
+          const existingText = existingCorrection.correction.original;
+          
+          // 같은 위치에서 시작하고 한 단어가 다른 단어를 포함하는 경우
+          if (position === existingPos && 
+              (originalText.includes(existingText) || existingText.includes(originalText))) {
+            groupKey = existingKey;
+            foundOverlap = true;
+            Logger.debug(`[${index}] 위치 기반 중복 발견: "${originalText}" ↔ "${existingText}" (위치: ${position})`);
+            break;
+          }
+        }
+      }
+      
+      if (!duplicateGroups.has(groupKey)) {
+        duplicateGroups.set(groupKey, []);
+        Logger.debug(`[${index}] 새로운 그룹 생성: "${groupKey}"`);
+      }
+      duplicateGroups.get(groupKey)!.push(correction);
+      Logger.debug(`[${index}] 그룹 추가 완료. 현재 "${groupKey}" 그룹 크기: ${duplicateGroups.get(groupKey)!.length}`);
+    });
+    
+    Logger.debug(`그룹화 완료. 총 ${duplicateGroups.size}개 그룹 생성`);
+    
+    // 각 그룹에서 대표 항목 선택
+    duplicateGroups.forEach((group, originalText) => {
+      Logger.debug(`처리 중인 그룹: "${originalText}", 그룹 크기: ${group.length}`);
+      Logger.debug(`그룹 내 항목들:`, group.map(pc => ({ 
+        originalIndex: pc.originalIndex,
+        uniqueId: pc.uniqueId,
+        absolutePosition: pc.absolutePosition
+      })));
+      
+      if (group.length === 1) {
+        // 중복이 없는 경우 그대로 사용
+        uniqueMap.set(originalText, group[0]);
+        Logger.debug(`[단일 항목] "${originalText}" → 대표 항목: ${group[0].uniqueId}`);
+      } else {
+        // 중복이 있는 경우 선택 기준 적용
+        const representative = this.selectRepresentativeCorrection(group);
+        uniqueMap.set(originalText, representative);
+        
+        Logger.debug(`[중복 항목] "${originalText}", ${group.length}개 항목 → 대표 항목 선택 (uniqueId: ${representative.uniqueId}, originalIndex: ${representative.originalIndex})`);
+        Logger.debug(`제외된 항목들:`, group.filter(pc => pc.uniqueId !== representative.uniqueId).map(pc => ({ 
+          uniqueId: pc.uniqueId,
+          originalIndex: pc.originalIndex,
+          absolutePosition: pc.absolutePosition
+        })));
+      }
+    });
+    
+    Logger.debug(`대표 항목 선택 완료. uniqueMap 크기: ${uniqueMap.size}`);
+    
+    // 절대 위치 순서로 정렬하여 반환
+    const result = Array.from(uniqueMap.values())
+      .sort((a, b) => a.absolutePosition - b.absolutePosition);
+    
+    Logger.debug(`중복 제거 결과: ${corrections.length}개 → ${result.length}개`);
+    Logger.debug('최종 중복 제거 후 항목들:', result.map(pc => ({ 
+      original: pc.correction.original, 
+      originalIndex: pc.originalIndex,
+      uniqueId: pc.uniqueId,
+      absolutePosition: pc.absolutePosition
+    })));
+    Logger.debug('========= removeDuplicateCorrections 종료 =========');
+    
+    return result;
+  }
+  
+  /**
+   * 중복된 교정 항목들 중에서 대표 항목을 선택합니다.
+   * 선택 기준:
+   * 1. 가장 앞에 위치한 항목 (absolutePosition이 가장 작은 항목)
+   * 2. 동일한 위치인 경우 가장 많은 수정 제안을 가진 항목
+   * 3. 수정 제안이 같은 경우 더 좋은 도움말을 가진 항목 (문법 > 맞춤법 > 띄어쓰기)
+   * 4. 그 외에는 첫 번째 항목
+   */
+  private selectRepresentativeCorrection(corrections: PageCorrection[]): PageCorrection {
+    if (corrections.length === 0) {
+      throw new Error('빈 교정 배열에서는 대표 항목을 선택할 수 없습니다');
+    }
+    
+    if (corrections.length === 1) {
+      return corrections[0];
+    }
+    
+    // 우선순위 1: 가장 앞에 위치한 항목
+    const minPosition = Math.min(...corrections.map(c => c.absolutePosition));
+    const frontmostCorrections = corrections.filter(c => c.absolutePosition === minPosition);
+    
+    if (frontmostCorrections.length === 1) {
+      Logger.debug(`대표 항목 선택: 가장 앞 위치 기준 (위치: ${minPosition})`);
+      return frontmostCorrections[0];
+    }
+    
+    // 우선순위 2: 가장 많은 수정 제안을 가진 항목
+    const maxSuggestions = Math.max(...frontmostCorrections.map(c => c.correction.corrected.length));
+    const bestSuggestionCorrections = frontmostCorrections.filter(c => c.correction.corrected.length === maxSuggestions);
+    
+    if (bestSuggestionCorrections.length === 1) {
+      Logger.debug(`대표 항목 선택: 수정 제안 수 기준 (제안 수: ${maxSuggestions})`);
+      return bestSuggestionCorrections[0];
+    }
+    
+    // 우선순위 3: 더 좋은 도움말을 가진 항목 (문법 > 맞춤법 > 띄어쓰기)
+    const helpPriority = (help: string): number => {
+      const helpLower = help.toLowerCase();
+      if (helpLower.includes('문법')) return 3;
+      if (helpLower.includes('맞춤법')) return 2;
+      if (helpLower.includes('띄어쓰기')) return 1;
+      return 0;
+    };
+    
+    const maxHelpPriority = Math.max(...bestSuggestionCorrections.map(c => helpPriority(c.correction.help)));
+    const bestHelpCorrections = bestSuggestionCorrections.filter(c => helpPriority(c.correction.help) === maxHelpPriority);
+    
+    if (bestHelpCorrections.length === 1) {
+      Logger.debug(`대표 항목 선택: 도움말 우선순위 기준 (우선순위: ${maxHelpPriority})`);
+      return bestHelpCorrections[0];
+    }
+    
+    // 우선순위 4: 첫 번째 항목 (기본값)
+    Logger.debug(`대표 항목 선택: 첫 번째 항목 기본 선택`);
+    return bestHelpCorrections[0];
+  }
+
+  /**
+   * 전체 텍스트에서 모든 오류의 위치를 계산합니다.
+   */
+  private calculateAllErrorPositions(): void {
+    this.allErrorPositions = [];
+    
+    this.config.corrections.forEach((correction, originalIndex) => {
+      let searchPos = 0;
+      let occurrenceCount = 0;
+      
+      while (true) {
+        const foundPos = this.config.selectedText.indexOf(correction.original, searchPos);
+        if (foundPos === -1) break;
+        
+        // 실제로 이 위치에 오류가 있는지 확인 (단어 경계 등 고려)
+        const endPos = foundPos + correction.original.length;
+        if (this.config.selectedText.slice(foundPos, endPos) === correction.original) {
+          this.allErrorPositions.push({
+            correction,
+            originalIndex,
+            absolutePosition: foundPos,
+            uniqueId: `${originalIndex}_${occurrenceCount}`
+          });
+          occurrenceCount++;
+        }
+        
+        searchPos = foundPos + 1;
+      }
+    });
+    
+    // 절대 위치 순서로 정렬
+    this.allErrorPositions.sort((a, b) => a.absolutePosition - b.absolutePosition);
+    
+    Logger.debug('전체 오류 위치 계산 완료:', {
+      totalErrors: this.allErrorPositions.length,
+      positions: this.allErrorPositions.map(ep => ({
+        original: ep.correction.original,
+        originalIndex: ep.originalIndex,
+        absolutePosition: ep.absolutePosition,
+        uniqueId: ep.uniqueId
+      }))
+    });
   }
 
   /**
@@ -560,22 +882,20 @@ export class CorrectionPopup extends BaseComponent {
    */
   private getErrorStateCount(): number {
     const currentCorrections = this.getCurrentCorrections();
+    const uniqueCorrections = this.removeDuplicateCorrections(currentCorrections);
     let errorCount = 0;
     
-    currentCorrections.forEach(correction => {
-      const actualIndex = this.config.corrections.findIndex(c => 
-        c.original === correction.original && c.help === correction.help
-      );
+    uniqueCorrections.forEach(pageCorrection => {
+      const actualIndex = pageCorrection.originalIndex;
+      const correction = pageCorrection.correction;
       
-      if (actualIndex !== -1) {
-        const currentValue = this.stateManager.getValue(actualIndex);
-        const isException = this.stateManager.isExceptionState(actualIndex);
-        const isOriginalKept = this.stateManager.isOriginalKeptState(actualIndex);
-        
-        // 오류 상태: 원본 값이고, 예외처리나 원본유지 상태가 아닌 경우
-        if (currentValue === correction.original && !isException && !isOriginalKept) {
-          errorCount++;
-        }
+      const currentValue = this.stateManager.getValue(actualIndex);
+      const isException = this.stateManager.isExceptionState(actualIndex);
+      const isOriginalKept = this.stateManager.isOriginalKeptState(actualIndex);
+      
+      // 오류 상태: 원본 값이고, 예외처리나 원본유지 상태가 아닌 경우
+      if (currentValue === correction.original && !isException && !isOriginalKept) {
+        errorCount++;
       }
     });
     
@@ -587,7 +907,8 @@ export class CorrectionPopup extends BaseComponent {
    */
   private generatePreviewHTML(): string {
     const previewText = this.isLongText ? this.getCurrentPreviewText() : this.config.selectedText.trim();
-    const currentCorrections = this.getCurrentCorrections();
+    const rawCorrections = this.getCurrentCorrections();
+    const currentCorrections = this.removeDuplicateCorrections(rawCorrections);
     
     // 원본 텍스트와 정리된 텍스트 간의 오프셋 계산
     const originalText = this.config.selectedText;
@@ -610,61 +931,47 @@ export class CorrectionPopup extends BaseComponent {
     const processedPositions: Map<string, boolean> = new Map();
     const segments: { text: string; html: string; start: number; end: number }[] = [];
 
-    // Group corrections by original text to handle duplicates
-    const correctionsByOriginal = new Map<string, Correction[]>();
-    currentCorrections.forEach(correction => {
-      const original = correction.original;
-      if (!correctionsByOriginal.has(original)) {
-        correctionsByOriginal.set(original, []);
-      }
-      correctionsByOriginal.get(original)!.push(correction);
-    });
-
-    // Process each unique original text only once
-    correctionsByOriginal.forEach((corrections, originalText) => {
-      // Use the first correction for this original text (could be improved to use best match)
-      const correction = corrections[0];
-      const actualIndex = this.config.corrections.findIndex(c => 
-        c.original === correction.original && c.help === correction.help
-      );
-
-      if (actualIndex === -1) return;
+    // Process each correction individually to preserve unique IDs
+    currentCorrections.forEach(pageCorrection => {
+      const correction = pageCorrection.correction;
+      const actualIndex = pageCorrection.originalIndex;
+      const uniqueId = pageCorrection.uniqueId;
+      const positionInPage = pageCorrection.positionInPage;
 
       const displayClass = this.stateManager.getDisplayClass(actualIndex);
       const currentValue = this.stateManager.getValue(actualIndex);
       const escapedValue = escapeHtml(currentValue);
       
-      const replacementHtml = `<span class="${displayClass} clickable-error" data-correction-index="${actualIndex}">${escapedValue}</span>`;
+      const replacementHtml = `<span class="${displayClass} clickable-error" data-correction-index="${actualIndex}" data-unique-id="${uniqueId}">${escapedValue}</span>`;
       
-      // Find all occurrences of the original word within the previewText
-      const regex = new RegExp(escapeRegExp(correction.original), 'g');
-      let match;
-      let matchCount = 0;
+      // 정확한 위치에서 오류 텍스트 찾기
+      const expectedText = correction.original;
+      const expectedEnd = positionInPage + expectedText.length;
       
-      while ((match = regex.exec(previewText)) !== null) {
-        matchCount++;
-        const positionKey = `${match.index}-${match.index + match[0].length}`;
+      // 위치 범위 검증
+      if (positionInPage >= 0 && expectedEnd <= previewText.length) {
+        const actualText = previewText.slice(positionInPage, expectedEnd);
         
-        // Skip if this position has already been processed
-        if (processedPositions.has(positionKey)) {
-          continue;
+        // 텍스트가 정확히 일치하는지 확인
+        if (actualText === expectedText) {
+          const positionKey = `${positionInPage}-${expectedEnd}`;
+          if (!processedPositions.has(positionKey)) {
+            processedPositions.set(positionKey, true);
+            
+            segments.push({
+              text: actualText,
+              html: replacementHtml,
+              start: positionInPage,
+              end: expectedEnd
+            });
+            
+            Logger.debug(`미리보기 오류 처리: ${actualText} at ${positionInPage}-${expectedEnd}, 고유 ID: ${uniqueId}`);
+          }
+        } else {
+          Logger.warn(`텍스트 불일치: 예상 "${expectedText}", 실제 "${actualText}" at ${positionInPage}-${expectedEnd}`);
         }
-        processedPositions.set(positionKey, true);
-        
-        // Add the replacement segment for the current match
-        segments.push({ 
-          text: match[0], 
-          html: replacementHtml, 
-          start: match.index, 
-          end: match.index + match[0].length 
-        });
-        
-        Logger.log(`오류 매칭 발견: "${correction.original}" at ${match.index}-${match.index + match[0].length}`);
-      }
-      
-      if (matchCount === 0) {
-        Logger.warn(`오류 매칭 실패: "${correction.original}" not found in preview text`);
-        Logger.log('Preview text preview:', previewText.substring(0, 100));
+      } else {
+        Logger.warn(`위치 범위 초과: ${positionInPage}-${expectedEnd}, 텍스트 길이: ${previewText.length}`);
       }
     });
 
@@ -739,7 +1046,8 @@ export class CorrectionPopup extends BaseComponent {
    * 오류 요약 HTML을 생성합니다.
    */
   private generateErrorSummaryHTML(): string {
-    const currentCorrections = this.getCurrentCorrections();
+    const rawCorrections = this.getCurrentCorrections();
+    const currentCorrections = this.removeDuplicateCorrections(rawCorrections);
     
     if (currentCorrections.length === 0) {
       return `
@@ -751,10 +1059,12 @@ export class CorrectionPopup extends BaseComponent {
       `;
     }
 
-    return currentCorrections.map((correction, index) => {
-      const actualIndex = this.config.corrections.findIndex(c => 
-        c.original === correction.original && c.help === correction.help
-      );
+    // 중복 제거: originalIndex를 기준으로 그룹화하여 첫 번째 항목만 표시
+    const uniqueCorrections = this.removeDuplicateCorrections(currentCorrections);
+    
+    return uniqueCorrections.map((pageCorrection, index) => {
+      const actualIndex = pageCorrection.originalIndex;
+      const correction = pageCorrection.correction;
       const isOriginalKept = this.stateManager.isOriginalKeptState(actualIndex);
       const suggestions = correction.corrected.slice(0, 2);
       
@@ -1204,8 +1514,14 @@ export class CorrectionPopup extends BaseComponent {
    * 오류 요약 섹션의 DOM 구조를 생성합니다.
    */
   private generateErrorSummaryDOM(): HTMLElement {
+    Logger.debug('========= generateErrorSummaryDOM 시작 =========');
+    
     const container = document.createElement('div');
-    const currentCorrections = this.getCurrentCorrections();
+    const rawCorrections = this.getCurrentCorrections();
+    Logger.debug(`RAW corrections: ${rawCorrections.length}개`);
+    
+    const currentCorrections = this.removeDuplicateCorrections(rawCorrections);
+    Logger.debug(`중복 제거 후 corrections: ${currentCorrections.length}개`);
     
     if (currentCorrections.length === 0) {
       // 오류가 없는 경우의 플레이스홀더
@@ -1228,21 +1544,28 @@ export class CorrectionPopup extends BaseComponent {
       placeholder.appendChild(subtext);
       
       container.appendChild(placeholder);
+      Logger.debug('오류 없음 - 플레이스홀더 생성');
+      Logger.debug('========= generateErrorSummaryDOM 종료 (오류 없음) =========');
       return container;
     }
 
-    // 오류가 있는 경우 각 오류 항목 생성
-    currentCorrections.forEach((correction, index) => {
-      const actualIndex = this.config.corrections.findIndex(c => 
-        c.original === correction.original && c.help === correction.help
-      );
+    // 중복 제거는 이미 완료되었으므로 바로 사용 (중복 제거 중복 호출 방지)
+    Logger.debug('DOM 생성 시작 - 중복 제거 완료된 corrections 사용');
+    currentCorrections.forEach((pageCorrection, index) => {
+      const actualIndex = pageCorrection.originalIndex;
+      const correction = pageCorrection.correction;
       const isOriginalKept = this.stateManager.isOriginalKeptState(actualIndex);
       const suggestions = correction.corrected.slice(0, 2);
+      
+      Logger.debug(`[${index}] DOM 생성 중: "${correction.original}" (고유ID: ${pageCorrection.uniqueId}, 실제인덱스: ${actualIndex})`);
       
       // 에러 아이템 컨테이너
       const errorItem = document.createElement('div');
       errorItem.className = `error-item-compact ${isOriginalKept ? 'spell-original-kept' : ''}`;
       errorItem.setAttribute('data-correction-index', actualIndex.toString());
+      errorItem.setAttribute('data-unique-id', pageCorrection.uniqueId);
+      
+      Logger.debug(`[${index}] DOM 속성 설정: data-correction-index="${actualIndex}", data-unique-id="${pageCorrection.uniqueId}"`);
       
       // 에러 행 (원본 + 제안들)
       const errorRow = document.createElement('div');
@@ -1323,7 +1646,11 @@ export class CorrectionPopup extends BaseComponent {
       }
       
       container.appendChild(errorItem);
+      Logger.debug(`[${index}] DOM 생성 완료: "${correction.original}"`);
     });
+    
+    Logger.debug(`DOM 생성 완료: 총 ${currentCorrections.length}개 오류 항목`);
+    Logger.debug('========= generateErrorSummaryDOM 종료 =========');
     
     return container;
   }
@@ -1660,15 +1987,14 @@ export class CorrectionPopup extends BaseComponent {
    * 모든 오류를 일괄로 순환시킵니다.
    */
   private batchCycleCorrections(direction: 'next' | 'prev'): void {
-    const allCorrections = this.getCurrentCorrections();
-    if (allCorrections.length === 0) return;
+    const rawCorrections = this.getCurrentCorrections();
+    const uniqueCorrections = this.removeDuplicateCorrections(rawCorrections);
+    if (uniqueCorrections.length === 0) return;
 
     let changedCount = 0;
     
-    allCorrections.forEach((correction) => {
-      const actualIndex = this.config.corrections.findIndex(c => 
-        c.original === correction.original && c.help === correction.help
-      );
+    uniqueCorrections.forEach((pageCorrection) => {
+      const actualIndex = pageCorrection.originalIndex;
       
       if (actualIndex !== -1) {
         this.cycleCorrectionState(actualIndex, direction);
@@ -1781,17 +2107,14 @@ export class CorrectionPopup extends BaseComponent {
    * @param forceOpen 강제로 상세부분을 펼칠지 여부 (기본값: false)
    */
   private scrollToFocusedError(forceOpen: boolean = false): void {
-    const currentCorrections = this.getCurrentCorrections();
-    if (currentCorrections.length === 0 || this.currentFocusIndex < 0) return;
+    const rawCorrections = this.getCurrentCorrections();
+    const uniqueCorrections = this.removeDuplicateCorrections(rawCorrections);
+    if (uniqueCorrections.length === 0 || this.currentFocusIndex < 0) return;
 
-    const correction = currentCorrections[this.currentFocusIndex];
-    if (!correction) return;
+    const pageCorrection = uniqueCorrections[this.currentFocusIndex];
+    if (!pageCorrection) return;
 
-    const actualIndex = this.config.corrections.findIndex(c => 
-      c.original === correction.original && c.help === correction.help
-    );
-
-    if (actualIndex === -1) return;
+    const actualIndex = pageCorrection.originalIndex;
 
     // 오류 상세부분에서 해당 항목 찾기
     const errorSummary = document.getElementById('errorSummary');
@@ -1802,8 +2125,8 @@ export class CorrectionPopup extends BaseComponent {
 
     // 실제 인덱스와 매칭되는 항목 찾기
     errorItems.forEach((item, index) => {
-      const itemCorrection = currentCorrections[index];
-      if (itemCorrection && itemCorrection.original === correction.original && itemCorrection.help === correction.help) {
+      const itemPageCorrection = uniqueCorrections[index];
+      if (itemPageCorrection && itemPageCorrection.originalIndex === actualIndex) {
         targetItem = item as HTMLElement;
       }
     });
@@ -1836,7 +2159,7 @@ export class CorrectionPopup extends BaseComponent {
         this.highlightFocusedError(targetItem as HTMLElement);
       }
 
-      Logger.log(`오류 상세부분 자동스크롤: ${correction.original} (forceOpen: ${forceOpen}, collapsed: ${isCollapsed})`);
+      Logger.log(`오류 상세부분 자동스크롤: ${pageCorrection.correction.original} (forceOpen: ${forceOpen}, collapsed: ${isCollapsed})`);
     }
   }
 
