@@ -163,7 +163,7 @@ export class CorrectionPopup extends BaseComponent {
       this.currentFocusIndex = (this.currentFocusIndex + 1) % this.currentCorrections.length;
     }
     this.updateFocusHighlight();
-    this.scrollToFocusedError();
+    this.scrollToFocusedError(true); // Tab 키 사용 시 상세보기 펼치기
     Logger.debug(`포커스 이동: ${this.currentFocusIndex}/${this.currentCorrections.length}`);
   }
 
@@ -183,7 +183,7 @@ export class CorrectionPopup extends BaseComponent {
         : this.currentFocusIndex - 1;
     }
     this.updateFocusHighlight();
-    this.scrollToFocusedError();
+    this.scrollToFocusedError(false); // Shift+Tab 사용 시 상세보기 상태 유지
     Logger.debug(`포커스 이동: ${this.currentFocusIndex}/${this.currentCorrections.length}`);
   }
 
@@ -1452,7 +1452,7 @@ export class CorrectionPopup extends BaseComponent {
       modal.focus();
 
       // 이벤트 처리
-      const handleResponse = (action: 'cancel' | 'proceed' | 'updateSettings') => {
+      let handleResponse = (action: 'cancel' | 'proceed' | 'updateSettings') => {
         modal.remove();
         if (action === 'cancel') {
           resolve(false);
@@ -1466,22 +1466,42 @@ export class CorrectionPopup extends BaseComponent {
         }
       };
 
-      // 키보드 이벤트 처리
+      // 키보드 이벤트 처리 (모든 키 이벤트 차단)
       const handleKeyboard = (e: KeyboardEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        
         if (e.key === 'Enter') {
-          e.preventDefault();
-          e.stopPropagation();
           Logger.log('토큰 경고 모달: Enter키 감지 - 진행');
           handleResponse('proceed');
         } else if (e.key === 'Escape') {
-          e.preventDefault();
-          e.stopPropagation();
           Logger.log('토큰 경고 모달: Escape키 감지 - 취소');
           handleResponse('cancel');
         }
+        // 다른 모든 키 이벤트는 무시하고 전파 차단
       };
 
-      modal.addEventListener('keydown', handleKeyboard);
+      // 키보드 이벤트를 캡처 모드로 처리하여 우선순위 확보
+      modal.addEventListener('keydown', handleKeyboard, { capture: true });
+      
+      // 글로벌 키보드 이벤트도 차단 (백그라운드 이벤트 방지)
+      const globalKeyHandler = (e: KeyboardEvent) => {
+        if (document.body.contains(modal)) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+        }
+      };
+      
+      document.addEventListener('keydown', globalKeyHandler, { capture: true });
+      
+      // 모달 제거 시 글로벌 핸들러도 제거
+      const originalHandleResponse = handleResponse;
+      handleResponse = (action: 'cancel' | 'proceed' | 'updateSettings') => {
+        document.removeEventListener('keydown', globalKeyHandler, { capture: true });
+        originalHandleResponse(action);
+      };
 
       modal.querySelector('#token-warning-cancel')?.addEventListener('click', () => handleResponse('cancel'));
       modal.querySelector('#token-warning-proceed')?.addEventListener('click', () => handleResponse('proceed'));
@@ -1655,8 +1675,9 @@ export class CorrectionPopup extends BaseComponent {
 
   /**
    * 현재 포커스된 오류로 스크롤합니다.
+   * @param forceOpen 강제로 상세부분을 펼칠지 여부 (기본값: false)
    */
-  private scrollToFocusedError(): void {
+  private scrollToFocusedError(forceOpen: boolean = false): void {
     const currentCorrections = this.getCurrentCorrections();
     if (currentCorrections.length === 0 || this.currentFocusIndex < 0) return;
 
@@ -1685,8 +1706,10 @@ export class CorrectionPopup extends BaseComponent {
     });
 
     if (targetItem) {
-      // 오류 상세부분이 접혀있으면 펼치기
-      if (errorSummary.classList.contains('collapsed')) {
+      const isCollapsed = errorSummary.classList.contains('collapsed');
+      
+      // 상세부분이 접혀있고 강제로 펼치도록 설정된 경우에만 펼치기
+      if (isCollapsed && forceOpen) {
         errorSummary.classList.remove('collapsed');
         this.recalculatePagination();
         this.updateDisplay();
@@ -1698,17 +1721,41 @@ export class CorrectionPopup extends BaseComponent {
             block: 'center',
             inline: 'nearest'
           });
+          this.highlightFocusedError(targetItem as HTMLElement);
         }, 100);
-      } else {
+      } else if (!isCollapsed) {
+        // 상세부분이 펼쳐져 있을 때만 스크롤
         (targetItem as HTMLElement).scrollIntoView({ 
           behavior: 'smooth', 
           block: 'center',
           inline: 'nearest'
         });
+        this.highlightFocusedError(targetItem as HTMLElement);
       }
 
-      Logger.log(`오류 상세부분 자동스크롤: ${correction.original}`);
+      Logger.log(`오류 상세부분 자동스크롤: ${correction.original} (forceOpen: ${forceOpen}, collapsed: ${isCollapsed})`);
     }
+  }
+
+  /**
+   * 포커스된 오류 카드를 하이라이트합니다.
+   */
+  private highlightFocusedError(targetItem: HTMLElement): void {
+    // 기존 하이라이트 제거
+    const existingHighlight = document.querySelector('.error-item-highlighted');
+    if (existingHighlight) {
+      existingHighlight.classList.remove('error-item-highlighted');
+    }
+
+    // 새로운 하이라이트 추가
+    targetItem.classList.add('error-item-highlighted');
+    
+    // 2초 후 하이라이트 제거
+    setTimeout(() => {
+      targetItem.classList.remove('error-item-highlighted');
+    }, 2000);
+    
+    Logger.log('오류 카드 하이라이트 애니메이션 적용');
   }
 
   /**

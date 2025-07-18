@@ -1658,3 +1658,57 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   border: 1px solid var(--background-modifier-border);
 }
 
+/* 오류 카드 하이라이트 애니메이션 */
+.error-item-highlighted {
+  animation: error-card-highlight 2s ease-out forwards;
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes error-card-highlight {
+  0% {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    transform: scale(1.02);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+  50% {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    transform: scale(1.01);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  }
+  100% {
+    background: var(--background-primary);
+    color: var(--text-normal);
+    transform: scale(1);
+    box-shadow: none;
+  }
+}
+
+/* 다크 모드 대응 */
+.theme-dark .error-item-highlighted {
+  animation: error-card-highlight-dark 2s ease-out forwards;
+}
+
+@keyframes error-card-highlight-dark {
+  0% {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    transform: scale(1.02);
+    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    transform: scale(1.01);
+    box-shadow: 0 2px 12px rgba(255, 255, 255, 0.15);
+  }
+  100% {
+    background: var(--background-primary);
+    color: var(--text-normal);
+    transform: scale(1);
+    box-shadow: none;
+  }
+}
+
