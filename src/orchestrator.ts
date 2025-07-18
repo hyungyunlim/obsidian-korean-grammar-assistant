@@ -1,10 +1,12 @@
 import { App, Editor, Notice, MarkdownView } from 'obsidian';
 import { PluginSettings, SpellCheckResult } from './types/interfaces';
-import { SpellCheckApiService } from './services/api';
+import { OptimizedSpellCheckService } from './services/optimizedApiService';
 import { SettingsService } from './services/settings';
 import { IgnoredWordsService } from './services/ignoredWords';
 import { CorrectionPopup } from './ui/correctionPopup';
 import { AIAnalysisService } from './services/aiAnalysisService';
+import { LoadingManager } from './ui/loadingManager';
+import { Logger } from './utils/logger';
 
 /**
  * 맞춤법 검사 워크플로우를 관리하는 오케스트레이터 클래스
@@ -12,14 +14,24 @@ import { AIAnalysisService } from './services/aiAnalysisService';
 export class SpellCheckOrchestrator {
   private app: App;
   private settings: PluginSettings;
-  private apiService: SpellCheckApiService;
+  private apiService: OptimizedSpellCheckService;
   private aiService: AIAnalysisService;
   private onSettingsUpdated?: (settings: PluginSettings) => void;
 
   constructor(app: App, settings: PluginSettings, onSettingsUpdated?: (settings: PluginSettings) => void) {
     this.app = app;
     this.settings = settings;
-    this.apiService = new SpellCheckApiService();
+    this.apiService = new OptimizedSpellCheckService(
+      5,     // maxBatchSize
+      2000,  // batchTimeoutMs  
+      15000, // requestTimeoutMs
+      3,     // maxConcurrentBatches
+      {
+        maxSize: 1000,              // 캐시 최대 1000개
+        ttlMinutes: 30,             // 30분 TTL
+        cleanupIntervalMinutes: 5   // 5분마다 정리
+      }
+    );
     this.aiService = new AIAnalysisService(settings.ai);
     this.onSettingsUpdated = onSettingsUpdated;
   }
@@ -44,26 +56,46 @@ export class SpellCheckOrchestrator {
         return;
       }
 
-      // 3. API 호출 표시
-      const loadingNotice = new Notice("맞춤법을 검사하는 중...", 0);
+      // 3. 로딩 매니저 시작
+      const loadingManager = LoadingManager.getInstance();
+      loadingManager.startLoading(false); // AI 분석은 별도로 처리
 
       try {
-        // 4. 맞춤법 검사 API 호출
-        const result = await this.apiService.checkSpelling(selectedText, this.settings);
+        // 텍스트 분석 단계
+        loadingManager.setStep('text_analysis');
+        await this.sleep(300); // 시각적 피드백을 위한 짧은 대기
         
-        // 5. 로딩 표시 제거
-        loadingNotice.hide();
+        // API 요청 단계
+        loadingManager.setStep('api_request');
+        
+        // 4. 맞춤법 검사 API 호출 (긴 텍스트는 medium, 짧은 텍스트는 high 우선순위)
+        const priority = selectedText.length > 1000 ? 'medium' : 'high';
+        const result = await this.apiService.checkSpelling(selectedText, this.settings, priority);
+        
+        // 결과 처리 단계
+        loadingManager.setStep('result_parsing');
+        await this.sleep(200);
+        
+        // UI 준비 단계
+        loadingManager.setStep('ui_preparation');
+        await this.sleep(100);
+        
+        // 5. 로딩 완료
+        loadingManager.complete();
 
         // 6. 결과 처리
         this.handleSpellCheckResult(result, selectedText, selectionStart, selectionEnd, editor);
 
       } catch (error) {
-        loadingNotice.hide();
-        this.handleApiError(error);
+        // 6. 로딩 에러 처리
+        loadingManager.error('맞춤법 검사 중 오류가 발생했습니다');
+        
+        // 에러는 이미 OptimizedSpellCheckService에서 처리되므로 추가 처리 불필요
+        Logger.error('맞춤법 검사 실행 오류:', error);
       }
 
     } catch (error) {
-      console.error('Spell check orchestrator error:', error);
+      Logger.error('Spell check orchestrator error:', error);
       new Notice(`오류가 발생했습니다: ${error.message}`);
     }
   }
@@ -100,7 +132,7 @@ export class SpellCheckOrchestrator {
         selectionStart = { line: 0, ch: 0 };
         selectionEnd = { line: lastLine, ch: lastLineText.length };
       } catch (error) {
-        console.warn("Failed to get document bounds using API methods, using fallback:", error);
+        Logger.warn("Failed to get document bounds using API methods, using fallback:", error);
         // 폴백: 텍스트 기반 계산
         const lines = selectedText.split('\n');
         selectionStart = { line: 0, ch: 0 };
@@ -145,7 +177,7 @@ export class SpellCheckOrchestrator {
    * API 오류를 처리합니다.
    */
   private handleApiError(error: any): void {
-    console.error('API Error:', error);
+    Logger.error('API Error:', error);
     
     if (error.message?.includes('API 키')) {
       new Notice("API 키가 설정되지 않았습니다. 플러그인 설정에서 Bareun.ai API 키를 입력해주세요.");
@@ -186,6 +218,44 @@ export class SpellCheckOrchestrator {
     this.settings = newSettings;
     // AI 서비스 설정도 업데이트
     this.aiService.updateSettings(newSettings.ai);
+  }
+
+  /**
+   * API 서비스 성능 메트릭을 반환합니다.
+   */
+  getPerformanceMetrics(): any {
+    return this.apiService.getMetrics();
+  }
+
+  /**
+   * 캐시를 수동으로 정리합니다.
+   */
+  clearCache(): void {
+    this.apiService.clearCache();
+    new Notice("캐시가 정리되었습니다.");
+  }
+
+  /**
+   * 대기 중인 모든 요청을 취소합니다.
+   */
+  cancelPendingRequests(): void {
+    this.apiService.cancelPendingRequests();
+    new Notice("대기 중인 요청들이 취소되었습니다.");
+  }
+
+  /**
+   * 오케스트레이터를 종료하고 리소스를 정리합니다.
+   */
+  destroy(): void {
+    this.apiService.destroy();
+    LoadingManager.destroy();
+  }
+
+  /**
+   * 비동기 대기 헬퍼 함수
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**

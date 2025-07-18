@@ -1,6 +1,7 @@
 import { requestUrl } from 'obsidian';
 import { AIClient } from '../types/interfaces';
 import { API_ENDPOINTS } from '../constants/aiModels';
+import { Logger } from '../utils/logger';
 
 export class GoogleClient implements AIClient {
   constructor(private apiKey: string) {}
@@ -49,10 +50,10 @@ export class GoogleClient implements AIClient {
       if (candidate?.content?.parts?.[0]?.text) {
         return candidate.content.parts[0].text.trim();
       }
-      console.error('[Google] API 응답 형식 오류:', response.json);
+      Logger.error('[Google] API 응답 형식 오류:', response.json);
       throw new Error('Google API 응답 형식이 올바르지 않습니다.');
     } else {
-      console.error('[Google] API 응답 오류:', {
+      Logger.error('[Google] API 응답 오류:', {
         status: response.status,
         text: response.text,
         json: response.json

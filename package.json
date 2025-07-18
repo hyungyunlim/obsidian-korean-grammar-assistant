@@ -1,7 +1,7 @@
 {
   "name": "korean-grammar-assistant",
-  "version": "0.1.1",
-  "description": "Advanced Korean grammar and spelling checker for Obsidian powered by Bareun.ai API. Features smart pagination, mobile optimization, and interactive correction interface with real-time preview.",
+  "version": "0.2.0",
+  "description": "Korean grammar and spelling checker for Obsidian with AI-powered suggestions. Features interactive corrections, performance optimization, and comprehensive settings management.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
