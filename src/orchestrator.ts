@@ -159,10 +159,18 @@ export class SpellCheckOrchestrator {
       return;
     }
 
+    // 텍스트 정리 - API 호출과 일치시키기
+    const cleanedText = selectedText.trim();
+    Logger.log('handleSpellCheckResult 텍스트 정리:', {
+      originalLength: selectedText.length,
+      cleanedLength: cleanedText.length,
+      correctionsCount: result.corrections.length
+    });
+
     // 교정 팝업 생성 및 표시
     const popup = new CorrectionPopup(this.app, {
       corrections: result.corrections,
-      selectedText: selectedText.trim(),
+      selectedText: cleanedText,
       start: selectionStart,
       end: selectionEnd,
       editor: editor,
@@ -385,6 +393,9 @@ export class SpellCheckOrchestrator {
     from?: any, 
     to?: any
   ): Promise<void> {
+    // 텍스트 정리 - 모든 공백 문제 해결
+    const cleanedText = selectedText.trim();
+    
     // 설정 검증
     const validation = SettingsService.validateSettings(this.settings);
     if (!validation.isValid) {
@@ -396,20 +407,26 @@ export class SpellCheckOrchestrator {
     LoadingManager.getInstance().startLoading();
 
     try {
-      // API 호출
-      const result = await this.apiService.checkSpelling(selectedText, this.settings);
+      // API 호출 - 정리된 텍스트 사용
+      const result = await this.apiService.checkSpelling(cleanedText, this.settings);
       
       if (result.corrections && result.corrections.length > 0) {
         Logger.log(`맞춤법 검사 완료: ${result.corrections.length}개 오류 발견`);
+        Logger.log('API 호출 텍스트:', {
+          originalLength: selectedText.length,
+          cleanedLength: cleanedText.length,
+          originalFirst20: selectedText.substring(0, 20),
+          cleanedFirst20: cleanedText.substring(0, 20)
+        });
         
-        // 팝업 설정
+        // 팝업 설정 - 정리된 텍스트 사용 (API 응답과 일치)
         const popupConfig = {
-          selectedText: selectedText.trim(),
+          selectedText: cleanedText,
           corrections: result.corrections,
           ignoredWords: this.settings.ignoredWords || [],
           editor,
           start: from || { line: 0, ch: 0 },
-          end: to || { line: 0, ch: selectedText.length }
+          end: to || { line: 0, ch: cleanedText.length }
         };
         
         // 팝업 표시
@@ -420,8 +437,8 @@ export class SpellCheckOrchestrator {
           (newMaxTokens: number) => this.handleMaxTokensUpdate(newMaxTokens)
         );
         
-        const popupElement = popup.render();
-        document.body.appendChild(popupElement);
+        popup.render();
+        popup.show();
         
       } else {
         new Notice("수정할 것이 없습니다. 훌륭합니다!");
