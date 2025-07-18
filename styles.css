@@ -1599,13 +1599,18 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 16px;
+  font-size: 12px;
   line-height: 1;
-  padding: 2px 6px;
+  padding: 2px 4px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 2px;
   transition: all 0.2s ease;
   margin-left: 8px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .keyboard-navigation-hint .hint-close-btn:hover {
