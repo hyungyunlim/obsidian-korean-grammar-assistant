@@ -104,8 +104,8 @@ export class CorrectionPopup extends BaseComponent {
       return false;
     });
 
-    // Ctrl+E: 오류 상세부분 펼침/접힘
-    this.keyboardScope.register(['Ctrl'], 'KeyE', (evt: KeyboardEvent) => {
+    // Cmd+E: 오류 상세부분 펼침/접힘
+    this.keyboardScope.register(['Mod'], 'KeyE', (evt: KeyboardEvent) => {
       evt.preventDefault();
       evt.stopPropagation();
       this.toggleErrorSummary();
@@ -719,8 +719,8 @@ export class CorrectionPopup extends BaseComponent {
         return;
       }
       
-      // Ctrl+E: 오류 상세부분 토글
-      if (evt.code === 'KeyE' && evt.ctrlKey && !evt.shiftKey && !evt.metaKey) {
+      // Cmd+E: 오류 상세부분 토글
+      if (evt.code === 'KeyE' && ((evt.metaKey && !evt.ctrlKey) || (!evt.metaKey && evt.ctrlKey)) && !evt.shiftKey) {
         evt.preventDefault();
         evt.stopPropagation();
         this.toggleErrorSummary();
@@ -1400,6 +1400,11 @@ export class CorrectionPopup extends BaseComponent {
     proceedBtn.className = 'token-warning-btn token-warning-btn-proceed';
     proceedBtn.textContent = isOverMaxTokens ? '이번만 진행' : '계속 진행';
 
+    // 키보드 단축키 안내
+    const keyboardHint = content.appendChild(document.createElement('div'));
+    keyboardHint.className = 'token-warning-keyboard-hint';
+    keyboardHint.textContent = '💡 키보드 단축키: Enter(진행), Esc(취소)';
+
     return content;
   }
 
@@ -1442,6 +1447,10 @@ export class CorrectionPopup extends BaseComponent {
 
       document.body.appendChild(modal);
 
+      // 모달에 포커스 설정
+      modal.setAttribute('tabindex', '-1');
+      modal.focus();
+
       // 이벤트 처리
       const handleResponse = (action: 'cancel' | 'proceed' | 'updateSettings') => {
         modal.remove();
@@ -1456,6 +1465,23 @@ export class CorrectionPopup extends BaseComponent {
           resolve(true);
         }
       };
+
+      // 키보드 이벤트 처리
+      const handleKeyboard = (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.stopPropagation();
+          Logger.log('토큰 경고 모달: Enter키 감지 - 진행');
+          handleResponse('proceed');
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          Logger.log('토큰 경고 모달: Escape키 감지 - 취소');
+          handleResponse('cancel');
+        }
+      };
+
+      modal.addEventListener('keydown', handleKeyboard);
 
       modal.querySelector('#token-warning-cancel')?.addEventListener('click', () => handleResponse('cancel'));
       modal.querySelector('#token-warning-proceed')?.addEventListener('click', () => handleResponse('proceed'));
@@ -1573,7 +1599,7 @@ export class CorrectionPopup extends BaseComponent {
       { key: '←/→', desc: '수정 제안 순환' },
       { key: 'Enter', desc: '적용' },
       { key: 'Space', desc: 'AI 분석' },
-      { key: 'Ctrl+E', desc: '오류 상세 토글' },
+      { key: '⌘E', desc: '오류 상세 토글' },
       { key: '⌘⇧←/→', desc: '일괄 변경' },
       { key: '↑/↓', desc: '페이지 이동' },
       { key: 'Esc', desc: '닫기' }
@@ -1605,7 +1631,7 @@ export class CorrectionPopup extends BaseComponent {
    * 오류 상세부분 펼침/접힘을 토글합니다.
    */
   private toggleErrorSummary(): void {
-    Logger.log('오류 상세부분 토글 트리거됨 (키보드 단축키)');
+    Logger.log('오류 상세부분 토글 트리거됨 (키보드 단축키: ⌘E)');
     const errorSummary = document.getElementById('errorSummary');
     if (!errorSummary) {
       Logger.warn('errorSummary 요소를 찾을 수 없습니다.');
