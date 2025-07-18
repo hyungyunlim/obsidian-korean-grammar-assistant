@@ -410,8 +410,9 @@ export class CorrectionPopup extends BaseComponent {
     // 키보드 네비게이션 활성화
     this.app.keymap.pushScope(this.keyboardScope);
     
-    // 팝업에 포커스 설정하여 키보드 이벤트가 올바르게 전달되도록 함
+    // 포커스 설정 (DOM 추가는 show() 메서드에서 처리됨)
     setTimeout(() => {
+      // 팝업에 포커스 설정하여 키보드 이벤트가 올바르게 전달되도록 함
       this.element.focus();
       Logger.log('팝업 포커스 설정 완료');
     }, 50);
@@ -478,7 +479,8 @@ export class CorrectionPopup extends BaseComponent {
             </div>
             
             <div class="preview-text" id="resultPreview">
-              ${this.generatePreviewHTML()}
+              <!-- 초기 렌더링 시 플레이스홀더, 실제 내용은 show() 메서드에서 채워짐 -->
+              ${this.config.selectedText.trim()}
             </div>
           </div>
           
@@ -586,6 +588,23 @@ export class CorrectionPopup extends BaseComponent {
   private generatePreviewHTML(): string {
     const previewText = this.isLongText ? this.getCurrentPreviewText() : this.config.selectedText.trim();
     const currentCorrections = this.getCurrentCorrections();
+    
+    // 원본 텍스트와 정리된 텍스트 간의 오프셋 계산
+    const originalText = this.config.selectedText;
+    const trimmedStartOffset = originalText.length - originalText.trimStart().length;
+    
+    // 디버깅을 위한 로그
+    Logger.log('generatePreviewHTML 디버깅:', {
+      isLongText: this.isLongText,
+      originalLength: originalText.length,
+      trimmedLength: previewText.length,
+      trimmedStartOffset: trimmedStartOffset,
+      startsWithSpace: previewText.startsWith(' '),
+      endsWithSpace: previewText.endsWith(' '),
+      firstChars: previewText.substring(0, 20),
+      lastChars: previewText.substring(previewText.length - 20),
+      correctionsCount: currentCorrections.length
+    });
 
     // Create a map to track processed positions and avoid duplicates
     const processedPositions: Map<string, boolean> = new Map();
@@ -620,7 +639,10 @@ export class CorrectionPopup extends BaseComponent {
       // Find all occurrences of the original word within the previewText
       const regex = new RegExp(escapeRegExp(correction.original), 'g');
       let match;
+      let matchCount = 0;
+      
       while ((match = regex.exec(previewText)) !== null) {
+        matchCount++;
         const positionKey = `${match.index}-${match.index + match[0].length}`;
         
         // Skip if this position has already been processed
@@ -636,6 +658,13 @@ export class CorrectionPopup extends BaseComponent {
           start: match.index, 
           end: match.index + match[0].length 
         });
+        
+        Logger.log(`오류 매칭 발견: "${correction.original}" at ${match.index}-${match.index + match[0].length}`);
+      }
+      
+      if (matchCount === 0) {
+        Logger.warn(`오류 매칭 실패: "${correction.original}" not found in preview text`);
+        Logger.log('Preview text preview:', previewText.substring(0, 100));
       }
     });
 
@@ -651,7 +680,10 @@ export class CorrectionPopup extends BaseComponent {
     segments.forEach(segment => {
       // Add any text between the current position and the start of this segment
       if (segment.start > currentPos) {
-        finalHtml += escapeHtml(previewText.substring(currentPos, segment.start));
+        const betweenText = previewText.substring(currentPos, segment.start);
+        // 시작 부분의 공백 제거
+        const cleanedBetweenText = currentPos === 0 ? betweenText.trimStart() : betweenText;
+        finalHtml += escapeHtml(cleanedBetweenText);
       }
       
       // Add the segment (replacement HTML) if it's not overlapping
@@ -664,7 +696,10 @@ export class CorrectionPopup extends BaseComponent {
 
     // Add any remaining text after the last segment
     if (currentPos < previewText.length) {
-      finalHtml += escapeHtml(previewText.substring(currentPos));
+      const remainingText = previewText.substring(currentPos);
+      // 시작 부분의 공백 제거 (전체 텍스트의 시작인 경우)
+      const cleanedRemainingText = currentPos === 0 ? remainingText.trimStart() : remainingText;
+      finalHtml += escapeHtml(cleanedRemainingText);
     }
 
     return finalHtml;
@@ -679,7 +714,25 @@ export class CorrectionPopup extends BaseComponent {
     const previewStartIndex = this.currentPreviewPage === 0 ? 0 : this.pageBreaks[this.currentPreviewPage - 1];
     const previewEndIndex = this.pageBreaks[this.currentPreviewPage];
     
-    return this.config.selectedText.slice(previewStartIndex, previewEndIndex).trim();
+    const pageText = this.config.selectedText.slice(previewStartIndex, previewEndIndex);
+    
+    // 페이지 텍스트 정리 - 앞뒤 공백 제거
+    const cleanedPageText = pageText.trim();
+    
+    // 디버깅 로그 추가
+    Logger.log('getCurrentPreviewText 디버깅:', {
+      currentPage: this.currentPreviewPage,
+      startIndex: previewStartIndex,
+      endIndex: previewEndIndex,
+      originalLength: pageText.length,
+      cleanedLength: cleanedPageText.length,
+      startsWithSpace: pageText.startsWith(' '),
+      endsWithSpace: pageText.endsWith(' '),
+      firstChars: pageText.substring(0, 20),
+      cleanedFirstChars: cleanedPageText.substring(0, 20)
+    });
+    
+    return cleanedPageText;
   }
 
   /**
@@ -1052,8 +1105,10 @@ export class CorrectionPopup extends BaseComponent {
     // DOM에 추가된 후에 페이지네이션 계산 및 디스플레이 업데이트
     // requestAnimationFrame을 사용하여 브라우저가 레이아웃을 완료한 후 실행
     requestAnimationFrame(() => {
+      Logger.log('DOM 추가 후 페이지네이션 재계산 시작');
       this.recalculatePagination();
       this.updateDisplay();
+      Logger.log('DOM 추가 후 페이지네이션 재계산 완료');
     });
   }
 
