@@ -1439,57 +1439,6 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   opacity: 0.8;
 }
 
-/* === 알림 시스템 클래스들 === */
-/* 토스트 알림 기본 스타일 */
-.notification-toast {
-  position: fixed !important;
-  top: 50px !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  padding: 12px 20px !important;
-  border-radius: 8px !important;
-  font-size: 14px !important;
-  z-index: 10001 !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
-  pointer-events: auto !important;
-}
-
-/* 성공 토스트 */
-.notification-toast-success {
-  background: var(--color-green) !important;
-  color: white !important;
-}
-
-/* 오류 토스트 */
-.notification-toast-error {
-  background: var(--color-red) !important;
-  color: white !important;
-}
-
-/* 정보 토스트 */
-.notification-toast-info {
-  background: var(--interactive-accent) !important;
-  color: var(--text-on-accent) !important;
-}
-
-/* 중앙 모달 알림 */
-.notification-modal-center {
-  position: fixed !important;
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important;
-  background: var(--background-primary) !important;
-  border: 1px solid var(--background-modifier-border) !important;
-  padding: 20px !important;
-  border-radius: 8px !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3) !important;
-  z-index: 10001 !important;
-  color: var(--text-normal) !important;
-  max-width: 400px !important;
-  text-align: center !important;
-  pointer-events: auto !important;
-}
-
 /* === 설정 탭 클래스들 === */
 /* 예외 단어 태그 */
 .ksc-tag {

@@ -1,4 +1,4 @@
-import { Editor, EditorPosition, App, Platform, Scope } from 'obsidian';
+import { Editor, EditorPosition, App, Platform, Scope, Notice } from 'obsidian';
 import { Correction, PopupConfig, AIAnalysisResult, AIAnalysisRequest } from '../types/interfaces';
 import { BaseComponent } from './baseComponent';
 import { CorrectionStateManager } from '../state/correctionState';
@@ -1075,11 +1075,7 @@ export class CorrectionPopup extends BaseComponent {
     if (!this.aiService.isAvailable()) {
       Logger.error('AI 서비스 사용 불가: 기능 비활성화 또는 API 키 없음');
       // 기존 오류 처리 방식과 동일하게 처리
-      const errorNotice = document.createElement('div');
-      errorNotice.textContent = '❌ AI 기능이 비활성화되어 있거나 API 키가 설정되지 않았습니다. 플러그인 설정을 확인해주세요.';
-      errorNotice.className = 'notification-modal-center';
-      document.body.appendChild(errorNotice);
-      setTimeout(() => errorNotice.remove(), 5000);
+      new Notice('❌ AI 기능이 비활성화되어 있거나 API 키가 설정되지 않았습니다. 플러그인 설정을 확인해주세요.', 5000);
       return;
     }
 
@@ -1127,22 +1123,14 @@ export class CorrectionPopup extends BaseComponent {
       // UI 업데이트
       this.updateDisplay();
 
-      // 성공 알림
-      const notice = document.createElement('div');
-      notice.textContent = `🤖 AI가 ${this.aiAnalysisResults.length}개의 수정 제안을 분석했습니다.`;
-      notice.className = 'notification-toast notification-toast-success';
-      document.body.appendChild(notice);
-      setTimeout(() => notice.remove(), 3000);
+      // 성공 알림 (Obsidian Notice 시스템 사용 - 일관성 확보)
+      new Notice(`🤖 AI가 ${this.aiAnalysisResults.length}개의 수정 제안을 분석했습니다.`, 3000);
 
     } catch (error) {
       Logger.error('AI 분석 실패:', error);
       
-      // 오류 알림
-      const errorNotice = document.createElement('div');
-      errorNotice.textContent = `❌ AI 분석 실패: ${error.message}`;
-      errorNotice.className = 'notification-toast notification-toast-error';
-      document.body.appendChild(errorNotice);
-      setTimeout(() => errorNotice.remove(), 5000);
+      // 오류 알림 (Obsidian Notice 시스템 사용 - 일관성 확보)
+      new Notice(`❌ AI 분석 실패: ${error.message}`, 5000);
     } finally {
       this.isAiAnalyzing = false;
       
@@ -1605,11 +1593,7 @@ export class CorrectionPopup extends BaseComponent {
       Logger.log(`최대 토큰을 ${newMaxTokens}으로 업데이트했습니다.`);
       
       // 성공 알림 표시
-      const notice = document.createElement('div');
-      notice.textContent = `⚙️ 최대 토큰이 ${newMaxTokens.toLocaleString()}으로 업데이트되었습니다.`;
-      notice.className = 'notification-toast notification-toast-info';
-      document.body.appendChild(notice);
-      setTimeout(() => notice.remove(), 3000);
+      new Notice(`⚙️ 최대 토큰이 ${newMaxTokens.toLocaleString()}으로 업데이트되었습니다.`, 3000);
     } else {
       Logger.warn('설정 업데이트 콜백이 없습니다.');
     }
@@ -1636,11 +1620,7 @@ export class CorrectionPopup extends BaseComponent {
     });
 
     // 알림 표시
-    const notice = document.createElement('div');
-    notice.textContent = `✨ ${changedCount}개 오류가 일괄 ${direction === 'next' ? '다음' : '이전'} 제안으로 변경되었습니다.`;
-    notice.className = 'notification-toast notification-toast-info';
-    document.body.appendChild(notice);
-    setTimeout(() => notice.remove(), 2000);
+    new Notice(`✨ ${changedCount}개 오류가 일괄 ${direction === 'next' ? '다음' : '이전'} 제안으로 변경되었습니다.`, 2000);
 
     Logger.log(`일괄 변경 완료: ${direction}, ${changedCount}개 항목`);
   }
