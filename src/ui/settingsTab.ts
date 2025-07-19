@@ -771,6 +771,9 @@ export class ModernSettingsTab extends PluginSettingTab {
     // API 설정 섹션
     this.createAPISettingsSection(containerEl);
 
+    // 필터링 옵션 섹션
+    this.createFilteringOptionsSection(containerEl);
+
     // 예외 단어 관리 섹션
     this.createIgnoredWordsSection(containerEl);
   }
@@ -2052,5 +2055,86 @@ export class ModernSettingsTab extends PluginSettingTab {
       text: wordStatus,
       cls: wordCount > 100 ? 'ksc-status-warning' : 'ksc-status-ok'
     });
+  }
+
+  /**
+   * 필터링 옵션 섹션을 생성합니다
+   */
+  private createFilteringOptionsSection(containerEl: HTMLElement): void {
+    const section = containerEl.createEl('div', { cls: 'ksc-section' });
+    
+    // 필터링 옵션 헤딩
+    new Setting(section)
+      .setName('🔍 필터링 옵션')
+      .setDesc('맞춤법 검사 결과를 필터링하는 옵션을 설정합니다.')
+      .setHeading();
+
+    // 한 글자 오류 필터링 설정
+    new Setting(section)
+      .setName('한 글자 오류 필터링')
+      .setDesc('한 글자로 된 맞춤법 오류 제안을 필터링합니다. 의미있는 교정(조사, 어미 등)은 예외 처리됩니다.')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.filterSingleCharErrors)
+        .onChange(async (value) => {
+          this.plugin.settings.filterSingleCharErrors = value;
+          await this.plugin.saveSettings();
+        }));
+
+    // 필터링 예외 케이스 안내
+    const infoBox = section.createEl('div', { cls: 'ksc-info-box' });
+    infoBox.createEl('strong', { text: '🛡️ 예외 처리되는 한 글자 교정' });
+    infoBox.createEl('br');
+    infoBox.createEl('br');
+    
+    const exceptions = [
+      '• 숫자/영문 → 한글 변환 (예: "1" → "일")',
+      '• 특수문자 → 한글 변환 (예: "@" → "에")',
+      '• 자주 틀리는 조사/어미 (예: "되" ↔ "돼", "안" ↔ "않")',
+      '• 한 글자 → 여러 글자 확장 (예: "하" → "하여")'
+    ];
+    
+    exceptions.forEach(exception => {
+      infoBox.createEl('div', { 
+        text: exception,
+        attr: { style: 'margin-bottom: 4px; color: var(--text-muted);' }
+      });
+    });
+
+    // 필터링 통계 표시 (실시간)
+    const statsContainer = section.createEl('div', { cls: 'ksc-filter-stats' });
+    this.updateFilteringStats(statsContainer);
+  }
+
+  /**
+   * 필터링 통계를 업데이트합니다
+   */
+  private updateFilteringStats(container: HTMLElement): void {
+    container.empty();
+    
+    const statsBox = container.createEl('div', { 
+      cls: 'ksc-stats-box',
+      attr: { style: 'margin-top: 12px; padding: 12px; background: var(--background-secondary); border-radius: 6px;' }
+    });
+    
+    statsBox.createEl('div', { 
+      text: '📊 필터링 통계',
+      attr: { style: 'font-weight: 600; margin-bottom: 8px;' }
+    });
+    
+    const statusText = this.plugin.settings.filterSingleCharErrors ? 
+      '✅ 한 글자 오류 필터링이 활성화되어 있습니다.' :
+      '⚠️ 한 글자 오류 필터링이 비활성화되어 있습니다.';
+    
+    statsBox.createEl('div', { 
+      text: statusText,
+      attr: { style: 'color: var(--text-muted); font-size: 14px;' }
+    });
+    
+    if (this.plugin.settings.filterSingleCharErrors) {
+      statsBox.createEl('div', { 
+        text: '💡 팁: 의미있는 한 글자 교정(조사, 어미 등)은 자동으로 예외 처리됩니다.',
+        attr: { style: 'color: var(--text-accent); font-size: 13px; margin-top: 4px;' }
+      });
+    }
   }
 }

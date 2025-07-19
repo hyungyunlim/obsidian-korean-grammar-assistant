@@ -68,16 +68,17 @@ export class SpellCheckApiService {
     }
 
     const data: BareunResponse = await response.json();
-    return this.parseBareunResults(data, text);
+    return this.parseBareunResults(data, text, settings);
   }
 
   /**
    * Bareun.ai API 응답을 파싱하여 교정 정보를 추출합니다.
    * @param data API 응답 데이터
    * @param originalText 원본 텍스트
+   * @param settings 플러그인 설정
    * @returns 파싱된 결과
    */
-  private parseBareunResults(data: BareunResponse, originalText: string): SpellCheckResult {
+  private parseBareunResults(data: BareunResponse, originalText: string, settings: PluginSettings): SpellCheckResult {
     const corrections: Correction[] = [];
     let resultOutput = data.revised || originalText;
 
@@ -129,21 +130,30 @@ export class SpellCheckApiService {
                   const isValid = s !== blockOriginalText && 
                                  s.trim() !== blockOriginalText.trim() &&
                                  s.length > 0 &&
-                                 !s.includes('�'); // 깨진 문자 제외
+                                 !s.includes('�'); // 깨진 문자 제거
                   Logger.log(`    "${s}" 유효성:`, isValid);
                   return isValid;
                 });
               
               Logger.log('  유효한 제안들:', uniqueSuggestions);
               
+              // 한 글자 오류 필터링 적용
+              const filteredSuggestions = this.applySingleCharFilter(
+                blockOriginalText, 
+                uniqueSuggestions, 
+                settings.filterSingleCharErrors
+              );
+              
+              Logger.log('  필터링된 제안들:', filteredSuggestions);
+              
               // 유효한 제안이 있는 경우만 처리
-              if (uniqueSuggestions.length > 0) {
+              if (filteredSuggestions.length > 0) {
                 // 이미 있는 교정이면 제안을 추가, 없으면 새로 생성
                 if (correctionMap.has(blockOriginalText)) {
                   Logger.log('  -> 기존 교정에 제안 추가');
                   const existing = correctionMap.get(blockOriginalText)!;
                   // 새로운 제안들을 기존 제안들과 합치고 중복 제거
-                  const combinedSuggestions = [...new Set([...existing.corrected, ...uniqueSuggestions])];
+                  const combinedSuggestions = [...new Set([...existing.corrected, ...filteredSuggestions])];
                   correctionMap.set(blockOriginalText, {
                     ...existing,
                     corrected: combinedSuggestions
@@ -153,10 +163,10 @@ export class SpellCheckApiService {
                   Logger.log('  -> 새 교정 생성');
                   correctionMap.set(blockOriginalText, {
                     original: blockOriginalText,
-                    corrected: uniqueSuggestions,
+                    corrected: filteredSuggestions,
                     help: block.revisions[0]?.comment || "맞춤법 교정"
                   });
-                  Logger.log('  -> 새 교정 제안들:', uniqueSuggestions);
+                  Logger.log('  -> 새 교정 제안들:', filteredSuggestions);
                 }
               } else {
                 Logger.log('  -> 유효한 제안이 없어 건너뜀');
@@ -193,5 +203,90 @@ export class SpellCheckApiService {
     }
     
     return { resultOutput, corrections };
+  }
+
+  /**
+   * 한 글자 오류 필터링을 적용합니다.
+   * @param original 원본 텍스트
+   * @param suggestions 수정 제안들
+   * @param filterEnabled 필터링 활성화 여부
+   * @returns 필터링된 제안들
+   */
+  private applySingleCharFilter(original: string, suggestions: string[], filterEnabled: boolean): string[] {
+    if (!filterEnabled) {
+      Logger.log('    한 글자 필터링 비활성화됨');
+      return suggestions;
+    }
+
+    // 원본이 한 글자가 아니면 모든 제안 유지
+    if (original.length !== 1) {
+      Logger.log(`    원본이 한 글자가 아님 (${original.length}글자): "${original}"`);
+      return suggestions;
+    }
+
+    Logger.log(`    한 글자 원본 감지: "${original}"`);
+
+    // 의미있는 한 글자 교정인지 판단
+    const meaningfulSuggestions = suggestions.filter(suggestion => {
+      // 예외 케이스들
+      const exceptions = this.checkSingleCharExceptions(original, suggestion);
+      if (exceptions.isException) {
+        Logger.log(`      "${suggestion}": 예외 처리됨 (${exceptions.reason})`);
+        return true;
+      }
+
+      // 일반적으로 한 글자 교정은 필터링
+      Logger.log(`      "${suggestion}": 한 글자 교정으로 필터링됨`);
+      return false;
+    });
+
+    Logger.log(`    필터링 결과: ${suggestions.length} → ${meaningfulSuggestions.length}`);
+    return meaningfulSuggestions;
+  }
+
+  /**
+   * 한 글자 교정의 예외 케이스를 확인합니다.
+   * @param original 원본 글자
+   * @param suggestion 제안 글자
+   * @returns 예외 처리 결과
+   */
+  private checkSingleCharExceptions(original: string, suggestion: string): { isException: boolean; reason: string } {
+    // 1. 숫자/영문 → 한글 변환 (의미있는 교정)
+    if (/[0-9a-zA-Z]/.test(original) && /[가-힣]/.test(suggestion)) {
+      return { isException: true, reason: '숫자/영문 → 한글 변환' };
+    }
+
+    // 2. 특수문자 → 한글 변환
+    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(original) && /[가-힣]/.test(suggestion)) {
+      return { isException: true, reason: '특수문자 → 한글 변환' };
+    }
+
+    // 3. 자주 틀리는 한 글자 교정 (화이트리스트)
+    const commonSingleCharCorrections: Record<string, string[]> = {
+      '되': ['된', '됨', '돼'],  // 되/돼 혼용
+      '돼': ['된', '되'],
+      '안': ['않'],            // 안/않 혼용  
+      '않': ['안'],
+      '의': ['에', '을', '를'], // 조사 혼용
+      '에': ['의', '을'],
+      '을': ['를', '의'],
+      '를': ['을', '의'],
+      '이': ['가', '히'],       // 이/가, 이/히 혼용
+      '가': ['이', '가'],
+      '히': ['이', '게'],
+      '게': ['히', '에']
+    };
+
+    if (commonSingleCharCorrections[original]?.includes(suggestion)) {
+      return { isException: true, reason: '자주 틀리는 한 글자 교정' };
+    }
+
+    // 4. 제안이 한 글자가 아닌 경우 (한 글자 → 여러 글자는 의미있는 교정)
+    if (suggestion.length > 1) {
+      return { isException: true, reason: '한 글자 → 여러 글자 확장' };
+    }
+
+    // 일반적인 한 글자 → 한 글자 교정은 필터링
+    return { isException: false, reason: '일반적인 한 글자 교정' };
   }
 }

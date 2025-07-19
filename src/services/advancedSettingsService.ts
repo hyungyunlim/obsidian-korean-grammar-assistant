@@ -359,7 +359,8 @@ export class AdvancedSettingsService {
         temperature: 0.3,
         showTokenWarning: true,
         tokenWarningThreshold: 1500
-      }
+      },
+      filterSingleCharErrors: true
     };
 
     Logger.log('설정을 기본값으로 재설정');

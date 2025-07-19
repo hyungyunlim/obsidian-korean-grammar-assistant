@@ -29,7 +29,8 @@ function loadApiConfig(): PluginSettings {
     apiHost: 'bareun-api.junlim.org',
     apiPort: 443,
     ignoredWords: [],
-    ai: DEFAULT_AI_SETTINGS
+    ai: DEFAULT_AI_SETTINGS,
+    filterSingleCharErrors: true // 기본적으로 한 글자 오류 필터링 활성화
   };
 }
 
@@ -82,6 +83,11 @@ export class SettingsService {
       mergedSettings.ai = Object.assign({}, DEFAULT_AI_SETTINGS, userSettings.ai);
     } else {
       mergedSettings.ai = Object.assign({}, DEFAULT_AI_SETTINGS);
+    }
+    
+    // 새로 추가된 필터링 옵션이 없으면 기본값 설정
+    if (userSettings.filterSingleCharErrors === undefined) {
+      mergedSettings.filterSingleCharErrors = DEFAULT_SETTINGS.filterSingleCharErrors;
     }
     
     return mergedSettings;

@@ -29,6 +29,7 @@ export interface PluginSettings {
   apiPort: number;
   ignoredWords: string[]; // 예외 처리된 단어들
   ai: AISettings; // AI 설정 추가
+  filterSingleCharErrors: boolean; // 한 글자 오류 필터링 옵션
 }
 
 /**
