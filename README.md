@@ -1,96 +1,96 @@
-# Korean Grammar Assistant
+# 한국어 맞춤법 검사기 (Korean Grammar Assistant)
 
-An advanced Korean grammar and spelling checker plugin for Obsidian, powered by Bareun.ai and various AI providers. This plugin provides comprehensive Korean text correction with modern UI/UX features.
+Bareun.ai와 다양한 AI 제공자를 활용한 Obsidian용 고급 한국어 맞춤법 및 문법 검사 플러그인입니다. 현대적인 UI/UX와 함께 포괄적인 한국어 텍스트 교정 기능을 제공합니다.
 
-## ✨ Features
+## ✨ 주요 기능
 
-### Core Functionality
-- **Advanced Grammar & Spelling Check**: Powered by Bareun.ai's state-of-the-art Korean language processing.
-- **AI-Powered Corrections**: Integrates with OpenAI, Anthropic (Claude), Google (Gemini), and Ollama for intelligent, context-aware suggestions.
-- **Interactive Correction Interface**: Click-to-cycle through corrections (Error → Suggestions → Keep Original).
-- **Real-time Preview**: See corrections applied instantly with color-coded status.
-- **Multi-suggestion Support**: Multiple correction options for each detected error.
+### 핵심 기능
+- **고급 문법 및 맞춤법 검사**: Bareun.ai의 최첨단 한국어 처리 기술 활용
+- **AI 기반 교정**: OpenAI, Anthropic (Claude), Google (Gemini), Ollama와 통합된 지능형 상황 인식 제안
+- **대화형 교정 인터페이스**: 클릭으로 교정 옵션 순환 (오류 → 제안 → 원본 유지)
+- **실시간 미리보기**: 색상으로 구분된 상태와 함께 교정 사항 즉시 확인
+- **다중 제안 지원**: 감지된 각 오류에 대한 여러 교정 옵션 제공
 
-### Modern UI/UX
-- **Smart Pagination**: Dynamic page sizing based on screen space and content.
-- **Mobile Optimized**: Touch-friendly interface with Safe Area support for iPhone notches.
-- **Responsive Design**: Adapts seamlessly to different screen sizes.
-- **Color-coded Status**: Visual indicators for errors (red), corrections (green), and intentional originals (orange).
-- **Large Modal Interface**: A spacious workspace for comfortable editing.
+### 현대적인 UI/UX
+- **스마트 페이지네이션**: 화면 공간과 콘텐츠에 따른 동적 페이지 크기 조정
+- **모바일 최적화**: iPhone 노치를 위한 Safe Area 지원과 터치 친화적 인터페이스
+- **반응형 디자인**: 다양한 화면 크기에 완벽하게 적응
+- **색상 코딩**: 오류(빨강), 교정(초록), 의도적 원본 유지(주황)를 위한 시각적 표시
+- **대형 모달 인터페이스**: 편안한 편집을 위한 넓은 작업 공간
 
-### AI-Specific Features
-- **Multiple AI Providers**: Choose from OpenAI, Anthropic, Google, or a local Ollama instance.
-- **Intelligent Analysis**: AI considers the full context to provide the best correction.
-- **Confidence Scores**: Each AI suggestion comes with a confidence score (0-100%).
-- **Detailed Reasoning**: Understand *why* the AI chose a particular correction.
-- **Automatic Exception Handling**: AI can identify and preserve proper nouns, URLs, and technical terms.
-- **One-Click Application**: Review the AI's suggestions and apply them with a single click.
+### AI 전용 기능
+- **다중 AI 제공자**: OpenAI, Anthropic, Google 또는 로컬 Ollama 인스턴스 중 선택
+- **지능형 분석**: AI가 전체 맥락을 고려하여 최적의 교정 제공
+- **신뢰도 점수**: 각 AI 제안에 신뢰도 점수(0-100%) 제공
+- **상세한 추론**: AI가 특정 교정을 선택한 *이유* 이해
+- **자동 예외 처리**: AI가 고유명사, URL, 기술 용어를 식별하고 보존
+- **원클릭 적용**: AI 제안을 검토하고 한 번의 클릭으로 적용
 
-## 🚀 Quick Start
+## 🚀 빠른 시작
 
-### Prerequisites
-1. **Bareun.ai Account**: Sign up at [https://bareun.ai/](https://bareun.ai/) for the base grammar check.
-2. **API Key**: Obtain your personal API key from the Bareun.ai dashboard.
-3. **(Optional) AI Provider Account**: For AI features, you'll need an API key from OpenAI, Anthropic, or Google, or a running Ollama instance.
+### 사전 요구사항
+1. **Bareun.ai 계정**: 기본 문법 검사를 위해 [https://bareun.ai/](https://bareun.ai/)에서 가입
+2. **API 키**: Bareun.ai 대시보드에서 개인 API 키 획득
+3. **(선택사항) AI 제공자 계정**: AI 기능을 위해 OpenAI, Anthropic, Google의 API 키 또는 실행 중인 Ollama 인스턴스 필요
 
-### Installation
+### 설치
 
-#### Method 1: Manual Installation (Recommended)
-1. Download or clone this repository.
-2. Run `npm install && npm run build`.
-3. Copy `main.js`, `manifest.json`, and `styles.css` to your Obsidian vault's `.obsidian/plugins/korean-grammar-assistant/` folder.
-4. Enable the plugin in Obsidian settings.
+#### 방법 1: 수동 설치 (권장)
+1. 이 저장소를 다운로드하거나 클론합니다.
+2. `npm install && npm run build`를 실행합니다.
+3. `main.js`, `manifest.json`, `styles.css`를 Obsidian 볼트의 `.obsidian/plugins/korean-grammar-assistant/` 폴더에 복사합니다.
+4. Obsidian 설정에서 플러그인을 활성화합니다.
 
-#### Method 2: BRAT Plugin
-1. Install the BRAT plugin in Obsidian.
-2. Add this repository's URL to BRAT.
-3. Install and enable the Korean Grammar Assistant.
+#### 방법 2: BRAT 플러그인
+1. Obsidian에서 BRAT 플러그인을 설치합니다.
+2. BRAT에 이 저장소의 URL을 추가합니다.
+3. Korean Grammar Assistant를 설치하고 활성화합니다.
 
-### Configuration
+### 설정
 
-1. **Enable the Plugin**: Go to `Settings` → `Community Plugins` → `Korean Grammar Assistant` → `Enable`.
-2. **Configure API Settings**: Navigate to `Settings` → `Korean Grammar Assistant`.
-    - **Bareun.ai API Key (Required)**: Your personal Bareun.ai API key.
-    - **AI Provider (Optional)**: Select your preferred AI provider and enter the corresponding API key or endpoint.
+1. **플러그인 활성화**: `설정` → `커뮤니티 플러그인` → `Korean Grammar Assistant` → `활성화`로 이동
+2. **API 설정 구성**: `설정` → `Korean Grammar Assistant`로 이동
+    - **Bareun.ai API 키 (필수)**: 개인 Bareun.ai API 키
+    - **AI 제공자 (선택사항)**: 선호하는 AI 제공자를 선택하고 해당 API 키 또는 엔드포인트 입력
 
-## 📱 Usage
+## 📱 사용법
 
-### Basic Workflow
-1. **Select Text**: Highlight the Korean text you want to check.
-2. **Launch Checker**: Click the ribbon icon or use the Command Palette → "Check Spelling".
-3. **Review Errors**: Examine the detected issues in the preview pane.
-4. **Apply Corrections**: Click on highlighted errors to cycle through options.
-5. **Finalize**: Click "Apply" to commit changes to your document.
+### 기본 워크플로우
+1. **텍스트 선택**: 검사하려는 한국어 텍스트를 하이라이트합니다.
+2. **검사기 실행**: 리본 아이콘을 클릭하거나 명령 팔레트 → "맞춤법 검사"를 사용합니다.
+3. **오류 검토**: 미리보기 창에서 감지된 문제점을 확인합니다.
+4. **교정 적용**: 하이라이트된 오류를 클릭하여 옵션을 순환합니다.
+5. **완료**: "적용"을 클릭하여 문서에 변경 사항을 저장합니다.
 
-### AI-Powered Workflow
-1. **Perform Basic Check**: Follow the basic workflow above.
-2. **Run AI Analysis**: Click the "🤖 AI 분석" button in the popup header.
-3. **Review AI Suggestions**: The AI will automatically select the best corrections. Review the confidence scores and reasoning.
-4. **Apply**: Click "Apply" to save the AI-powered corrections.
+### AI 기반 워크플로우
+1. **기본 검사 수행**: 위의 기본 워크플로우를 따릅니다.
+2. **AI 분석 실행**: 팝업 헤더의 "🤖 AI 분석" 버튼을 클릭합니다.
+3. **AI 제안 검토**: AI가 자동으로 최적의 교정을 선택합니다. 신뢰도 점수와 추론을 검토합니다.
+4. **적용**: "적용"을 클릭하여 AI 기반 교정을 저장합니다.
 
-## 🎨 Interface Guide
+## 🎨 인터페이스 가이드
 
-### Color Coding
-- 🔴 **Red**: Original text with detected errors.
-- 🟢 **Green**: Text with applied corrections.
-- 🔵 **Blue**: Original text intentionally preserved by the user (exception).
-- 🟠 **Orange**: Original text kept by the user.
+### 색상 코딩
+- 🔴 **빨강**: 감지된 오류가 있는 원본 텍스트
+- 🟢 **초록**: 교정이 적용된 텍스트
+- 🔵 **파랑**: 사용자가 의도적으로 보존한 원본 텍스트 (예외)
+- 🟠 **주황**: 사용자가 유지한 원본 텍스트
 
-## 🛠️ Technical Architecture
+## 🛠️ 기술 아키텍처
 
-- **Frontend**: TypeScript, CSS3, Obsidian API
-- **Backend**: Bareun.ai API, OpenAI API, Anthropic API, Google API, Ollama API
-- **Build Tool**: ESBuild
+- **프론트엔드**: TypeScript, CSS3, Obsidian API
+- **백엔드**: Bareun.ai API, OpenAI API, Anthropic API, Google API, Ollama API
+- **빌드 도구**: ESBuild
 
-## 🤝 Contributing
+## 🤝 기여하기
 
-Contributions are welcome! Please feel free to submit a pull request or open an issue.
+기여를 환영합니다! 풀 리퀘스트를 제출하거나 이슈를 열어주세요.
 
-## 📄 License
+## 📄 라이선스
 
-MIT License - see the LICENSE file for details.
+MIT 라이선스 - 자세한 내용은 LICENSE 파일을 참조하세요.
 
-## 🙏 Acknowledgments
+## 🙏 감사의 말
 
-- **Bareun.ai**: For their excellent Korean language processing API.
-- **Obsidian Community**: For their inspiration and feedback.
+- **Bareun.ai**: 훌륭한 한국어 처리 API 제공
+- **Obsidian 커뮤니티**: 영감과 피드백 제공
