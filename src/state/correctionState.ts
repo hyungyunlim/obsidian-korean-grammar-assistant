@@ -163,6 +163,93 @@ export class CorrectionStateManager {
   }
 
   /**
+   * 4단계 역방향 토글을 수행합니다.
+   * - 오류(빨간색) → 원본유지(주황색) → 예외처리(파란색) → 수정N, 수정1(초록색) → 오류(빨간색)
+   * @param correctionIndex 교정 인덱스
+   * @returns 새로운 상태 정보
+   */
+  toggleStatePrev(correctionIndex: number): { value: string; isExceptionState: boolean } {
+    Logger.log(`🔄 toggleStatePrev 호출됨! correctionIndex: ${correctionIndex}`);
+    
+    if (correctionIndex < 0 || correctionIndex >= this.corrections.length) {
+      throw new Error(`Invalid correction index: ${correctionIndex}`);
+    }
+
+    const correction = this.corrections[correctionIndex];
+    const suggestions = [correction.original, ...correction.corrected];
+    const currentValue = this.getValue(correctionIndex);
+    const isCurrentlyException = this.isExceptionState(correctionIndex);
+    const isCurrentlyOriginalKept = this.isOriginalKeptState(correctionIndex);
+    
+    Logger.log('toggleStatePrev Initial state:', {
+      correctionIndex,
+      currentValue,
+      isCurrentlyException,
+      isCurrentlyOriginalKept,
+      originalText: correction.original,
+      suggestions
+    });
+
+    let newValue: string;
+    let newIsException: boolean;
+    let newIsOriginalKept: boolean;
+
+    // 1. 오류 상태에서 원본유지 상태로 (역방향)
+    if (currentValue === correction.original && !isCurrentlyException && !isCurrentlyOriginalKept) {
+        newValue = correction.original;
+        newIsException = false;
+        newIsOriginalKept = true;
+        Logger.log('toggleStatePrev Error -> OriginalKept');
+    }
+    // 2. 원본유지 상태에서 예외처리 상태로
+    else if (isCurrentlyOriginalKept) {
+        newValue = correction.original;
+        newIsException = true;
+        newIsOriginalKept = false;
+        Logger.log('toggleStatePrev OriginalKept -> Exception');
+    }
+    // 3. 예외처리 상태에서 마지막 제안으로
+    else if (isCurrentlyException) {
+        if (correction.corrected.length > 0) {
+            newValue = correction.corrected[correction.corrected.length - 1]; // 마지막 제안
+            newIsException = false;
+            newIsOriginalKept = false;
+            Logger.log('toggleStatePrev Exception -> Last Suggestion');
+        } else {
+            // 제안이 없으면 오류 상태로
+            newValue = correction.original;
+            newIsException = false;
+            newIsOriginalKept = false;
+            Logger.log('toggleStatePrev Exception -> Error (no suggestions)');
+        }
+    }
+    else {
+        // 4. 현재 값의 이전 제안으로 이동 (수정안들 간 역순환)
+        let currentIndex = suggestions.indexOf(currentValue);
+        let prevIndex = currentIndex - 1;
+
+        if (prevIndex < 0) {
+            // 첫 번째 제안에서 오류 상태로
+            newValue = correction.original;
+            newIsException = false;
+            newIsOriginalKept = false;
+            Logger.log('toggleStatePrev First Suggestion -> Error');
+        } else {
+            // 이전 제안으로 이동
+            newValue = suggestions[prevIndex];
+            newIsException = false;
+            newIsOriginalKept = false;
+            Logger.log('toggleStatePrev Previous Suggestion:', newValue);
+        }
+    }
+
+    // 같은 원본 텍스트를 가진 모든 교정 항목에 동일한 상태 적용 (일괄 시각적 업데이트)
+    this.syncSameWordStates(correction.original, newValue, newIsException, newIsOriginalKept);
+
+    return { value: newValue, isExceptionState: newIsException };
+  }
+
+  /**
    * 같은 원본 텍스트를 가진 모든 교정 항목의 상태를 동기화합니다.
    * @param originalText 원본 텍스트
    * @param newValue 새로운 값

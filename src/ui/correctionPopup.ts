@@ -294,8 +294,10 @@ export class CorrectionPopup extends BaseComponent {
     const correction = this.config.corrections[correctionIndex];
     if (!correction) return;
 
-    // StateManager의 toggleState 메서드 사용
-    const result = this.stateManager.toggleState(correctionIndex);
+    // StateManager의 toggleState 또는 toggleStatePrev 메서드 사용
+    const result = direction === 'next' 
+      ? this.stateManager.toggleState(correctionIndex)
+      : this.stateManager.toggleStatePrev(correctionIndex);
     
     Logger.debug(`수정 제안 순환: ${direction}, index: ${correctionIndex}, 새로운 값: ${result.value}`);
     
