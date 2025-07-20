@@ -478,7 +478,7 @@ export class CorrectionPopup extends BaseComponent {
   render(): HTMLElement {
     this.element.id = 'correctionPopup';
     this.element.setAttribute('tabindex', '-1');
-    this.element.innerHTML = this.createPopupHTML();
+    this.createPopupStructure();
     
     // 이벤트 바인딩
     this.bindEvents();
@@ -506,80 +506,98 @@ export class CorrectionPopup extends BaseComponent {
   }
 
   /**
-   * 팝업 HTML을 생성합니다.
+   * 팝업 DOM 구조를 생성합니다.
    */
-  private createPopupHTML(): string {
-    return `
-      <div class="popup-overlay"></div>
-      <div class="popup-content">
-        <div class="header">
-          <h2>한국어 맞춤법 검사</h2>
-          <div class="preview-header-top">
-            ${this.aiService?.isAvailable() ? `
-              <button class="ai-analyze-btn" id="aiAnalyzeBtn" ${this.isAiAnalyzing ? 'disabled' : ''}>
-                ${this.isAiAnalyzing ? '🤖 분석 중...' : '🤖 AI 분석'}
-              </button>
-            ` : ''}
-            <button class="close-btn-header">×</button>
-          </div>
-        </div>
-        
-        <div class="content">
-          <div class="preview-section">
-            <div class="preview-header">
-              <div class="preview-label">
-                미리보기
-                <span class="preview-hint">클릭하여 수정사항 적용</span>
-              </div>
-              
-              <div class="color-legend">
-                <div class="color-legend-item">
-                  <div class="color-legend-dot error"></div>
-                  <span>오류</span>
-                </div>
-                <div class="color-legend-item">
-                  <div class="color-legend-dot corrected"></div>
-                  <span>수정</span>
-                </div>
-                <div class="color-legend-item">
-                  <div class="color-legend-dot exception-processed"></div>
-                  <span>예외처리</span>
-                </div>
-                <div class="color-legend-item">
-                  <div class="color-legend-dot original-kept"></div>
-                  <span>원본유지</span>
-                </div>
-              </div>
-              
-              ${this.createPaginationHTML()}
-            </div>
-            
-            <div class="preview-text" id="resultPreview">
-              <!-- 초기 렌더링 시 플레이스홀더, 실제 내용은 show() 메서드에서 채워짐 -->
-              ${this.config.selectedText.trim()}
-            </div>
-          </div>
-          
-          <div class="error-summary collapsed" id="errorSummary">
-            <div class="error-summary-toggle">
-              <div class="left-section">
-                <span class="error-summary-label">오류 상세</span>
-                <span class="error-count-badge" id="errorCountBadge">${this.getErrorStateCount()}</span>
-              </div>
-              <span class="toggle-icon">▼</span>
-            </div>
-            <div class="error-summary-content" id="errorSummaryContent">
-              ${this.generateErrorSummaryHTML()}
-            </div>
-          </div>
-        </div>
-        
-        <div class="button-area">
-          <button class="cancel-btn">취소</button>
-          <button class="apply-btn" id="applyCorrectionsButton">적용</button>
-        </div>
-      </div>
-    `;
+  private createPopupStructure(): void {
+    // Clear existing content
+    this.element.empty();
+    
+    // Popup overlay
+    const overlay = this.element.createDiv('popup-overlay');
+    
+    // Popup content
+    const content = this.element.createDiv('popup-content');
+    
+    // Header
+    const header = content.createDiv('header');
+    header.createEl('h2', { text: '한국어 맞춤법 검사' });
+    
+    const headerTop = header.createDiv('preview-header-top');
+    if (this.aiService?.isAvailable()) {
+      const aiBtn = headerTop.createEl('button', {
+        cls: 'ai-analyze-btn',
+        attr: { id: 'aiAnalyzeBtn' }
+      });
+      aiBtn.textContent = this.isAiAnalyzing ? '🤖 분석 중...' : '🤖 AI 분석';
+      if (this.isAiAnalyzing) {
+        aiBtn.disabled = true;
+      }
+    }
+    headerTop.createEl('button', { cls: 'close-btn-header', text: '×' });
+    
+    // Main content
+    const mainContent = content.createDiv('content');
+    
+    // Preview section
+    const previewSection = mainContent.createDiv('preview-section');
+    const previewHeader = previewSection.createDiv('preview-header');
+    
+    const previewLabel = previewHeader.createDiv('preview-label');
+    previewLabel.createSpan({ text: '미리보기' });
+    previewLabel.createSpan({ cls: 'preview-hint', text: '클릭하여 수정사항 적용' });
+    
+    // Color legend
+    const colorLegend = previewHeader.createDiv('color-legend');
+    const legendItems = [
+      { cls: 'error', text: '오류' },
+      { cls: 'corrected', text: '수정' },
+      { cls: 'exception-processed', text: '예외처리' },
+      { cls: 'original-kept', text: '원본유지' }
+    ];
+    
+    legendItems.forEach(item => {
+      const legendItem = colorLegend.createDiv('color-legend-item');
+      legendItem.createDiv(`color-legend-dot ${item.cls}`);
+      legendItem.createSpan({ text: item.text });
+    });
+    
+    // Pagination (temporarily use innerHTML - should be improved later)
+    const paginationDiv = previewHeader.createDiv();
+    paginationDiv.innerHTML = this.createPaginationHTML();
+    
+    // Preview content
+    const previewContent = previewSection.createDiv('preview-text');
+    previewContent.id = 'resultPreview';
+    previewContent.createEl('span', { text: this.config.selectedText.trim() });
+    
+    // Error summary
+    const errorSummary = mainContent.createDiv('error-summary collapsed');
+    errorSummary.id = 'errorSummary';
+    
+    const errorToggle = errorSummary.createDiv('error-summary-toggle');
+    const leftSection = errorToggle.createDiv('left-section');
+    leftSection.createSpan({ cls: 'error-summary-label', text: '오류 상세' });
+    const badge = leftSection.createSpan({ 
+      cls: 'error-count-badge', 
+      text: this.getErrorStateCount().toString(),
+      attr: { id: 'errorCountBadge' }
+    });
+    
+    errorToggle.createSpan({ cls: 'toggle-icon', text: '▼' });
+    
+    const errorContent = errorSummary.createDiv('error-summary-content');
+    errorContent.id = 'errorSummaryContent';
+    // Temporarily use innerHTML for complex error summary (should be improved later)
+    errorContent.innerHTML = this.generateErrorSummaryHTML();
+    
+    // Button area
+    const buttonArea = content.createDiv('button-area');
+    buttonArea.createEl('button', { cls: 'cancel-btn', text: '취소' });
+    buttonArea.createEl('button', { 
+      cls: 'apply-btn', 
+      text: '적용',
+      attr: { id: 'applyCorrectionsButton' }
+    });
   }
 
   /**
@@ -900,6 +918,14 @@ export class CorrectionPopup extends BaseComponent {
     });
     
     return errorCount;
+  }
+
+  /**
+   * 미리보기 콘텐츠를 업데이트합니다 (DOM API 사용).
+   */
+  private updatePreviewContent(previewElement: HTMLElement): void {
+    // 임시로 innerHTML 사용 (향후 개선 예정)
+    previewElement.innerHTML = this.generatePreviewHTML();
   }
 
   /**
@@ -1321,7 +1347,7 @@ export class CorrectionPopup extends BaseComponent {
     // 미리보기 업데이트
     const previewElement = this.element.querySelector('#resultPreview');
     if (previewElement) {
-      previewElement.innerHTML = this.generatePreviewHTML();
+      this.updatePreviewContent(previewElement as HTMLElement);
     }
 
     // 오류 요약 업데이트
