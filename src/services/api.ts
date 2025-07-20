@@ -1,5 +1,6 @@
 import { PluginSettings, Correction, SpellCheckResult } from '../types/interfaces';
 import { Logger } from '../utils/logger';
+import { ErrorHandlerService } from './errorHandler';
 
 /**
  * Bareun.ai API 응답 인터페이스
@@ -64,13 +65,42 @@ interface MorphemeResponse {
  * Bareun.ai API 맞춤법 검사 서비스
  */
 export class SpellCheckApiService {
+  private morphemeCache: Map<string, MorphemeResponse> = new Map();
+  private readonly maxCacheSize = 100; // 최대 100개 캐시 유지
   /**
-   * 텍스트의 형태소를 분석합니다.
+   * 텍스트의 형태소를 분석합니다 (캐싱 및 최적화 적용).
    * @param text 분석할 텍스트
    * @param settings 플러그인 설정
    * @returns 형태소 분석 결과
    */
   async analyzeMorphemes(text: string, settings: PluginSettings): Promise<MorphemeResponse> {
+    // 1. 캐시 확인 (텍스트 기반 캐싱)
+    const cacheKey = `morpheme_${this.hashText(text)}`;
+    const cachedResult = this.morphemeCache.get(cacheKey);
+    if (cachedResult) {
+      Logger.log('형태소 분석 캐시에서 결과 반환:', { textLength: text.length });
+      return cachedResult;
+    }
+
+    // 2. 재시도 로직을 포함한 API 호출
+    try {
+      const result = await this.executeMorphemeRequest(text, settings);
+      
+      // 3. 캐시에 저장 (성공한 경우만)
+      this.morphemeCache.set(cacheKey, result);
+      this.manageCacheSize();
+      
+      return result;
+    } catch (error) {
+      Logger.error('형태소 분석 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 실제 형태소 분석 API 요청을 수행합니다.
+   */
+  private async executeMorphemeRequest(text: string, settings: PluginSettings): Promise<MorphemeResponse> {
     const protocol = settings.apiPort === 443 ? 'https' : 'http';
     const port = (settings.apiPort === 443 || settings.apiPort === 80) ? '' : `:${settings.apiPort}`;
     const apiUrl = `${protocol}://${settings.apiHost}${port}/bareun/api/v1/analyze`;
@@ -86,31 +116,106 @@ export class SpellCheckApiService {
 
     Logger.log('형태소 분석 API 요청:', {
       url: apiUrl,
-      body: requestBody
+      textLength: text.length,
+      cached: false
     });
 
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "api-key": settings.apiKey
+    // 재시도 로직 적용 + 타임아웃 설정
+    return await ErrorHandlerService.withRetry(
+      async () => {
+        // AbortController를 사용한 타임아웃 처리
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10초 타임아웃
+
+        try {
+          const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "api-key": settings.apiKey
+            },
+            body: JSON.stringify(requestBody),
+            signal: controller.signal
+          });
+
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            Logger.error('형태소 분석 API 오류:', {
+              status: response.status,
+              statusText: response.statusText,
+              errorBody: errorText
+            });
+            throw new Error(`형태소 분석 API 요청 실패: ${response.status} ${response.statusText}`);
+          }
+
+          const data = await response.json();
+          Logger.log('형태소 분석 API 응답 성공:', { 
+            textLength: text.length,
+            tokensCount: data.sentences?.reduce((count: number, sentence: any) => count + sentence.tokens.length, 0) || 0,
+            sentencesCount: data.sentences?.length || 0
+          });
+          return data;
+        } catch (error) {
+          clearTimeout(timeoutId);
+          if (error.name === 'AbortError') {
+            throw new Error('형태소 분석 요청 타임아웃 (10초)');
+          }
+          throw error;
+        }
       },
-      body: JSON.stringify(requestBody)
-    });
+      `morpheme-analysis-${text.substring(0, 50)}`,
+      {
+        maxRetries: 2,
+        baseDelay: 1000,
+        maxDelay: 3000,
+        backoffFactor: 1.5
+      }
+    );
+  }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      Logger.error('형태소 분석 API 오류:', {
-        status: response.status,
-        statusText: response.statusText,
-        errorBody: errorText
-      });
-      throw new Error(`형태소 분석 API 요청 실패: ${response.status} ${response.statusText}`);
+  /**
+   * 텍스트를 해시합니다 (캐시 키 생성용).
+   */
+  private hashText(text: string): string {
+    let hash = 0;
+    for (let i = 0; i < text.length; i++) {
+      const char = text.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // 32비트 정수로 변환
     }
+    return hash.toString(36);
+  }
 
-    const data = await response.json();
-    Logger.log('형태소 분석 API 응답:', data);
-    return data;
+  /**
+   * 캐시 크기를 관리합니다 (LRU 방식).
+   */
+  private manageCacheSize(): void {
+    if (this.morphemeCache.size > this.maxCacheSize) {
+      // 가장 오래된 항목부터 제거 (Map은 삽입 순서를 유지)
+      const firstKey = this.morphemeCache.keys().next().value;
+      this.morphemeCache.delete(firstKey);
+      Logger.log('형태소 캐시 크기 관리: 오래된 항목 삭제');
+    }
+  }
+
+  /**
+   * 캐시를 수동으로 정리합니다.
+   */
+  clearMorphemeCache(): void {
+    this.morphemeCache.clear();
+    Logger.log('형태소 캐시 정리 완료');
+  }
+
+  /**
+   * 캐시 통계를 반환합니다.
+   */
+  getMorphemeCacheStats(): { size: number; maxSize: number } {
+    return {
+      size: this.morphemeCache.size,
+      maxSize: this.maxCacheSize
+    };
   }
 
   /**
@@ -207,6 +312,7 @@ export class SpellCheckApiService {
               
               // 여러 수정 제안이 있을 경우 모두 포함
               const suggestions = block.revisions.map(rev => rev.revised);
+              Logger.log(`  🔍 API에서 받은 제안 수: ${suggestions.length}개`);
               Logger.log('  제안들:', suggestions);
               
               // 중복 제거 및 원문과 다른 제안만 포함
@@ -220,6 +326,7 @@ export class SpellCheckApiService {
                   return isValid;
                 });
               
+              Logger.log(`  ✅ 중복제거 후 유효한 제안 수: ${uniqueSuggestions.length}개`);
               Logger.log('  유효한 제안들:', uniqueSuggestions);
               
               // 한 글자 오류 필터링 적용
@@ -229,6 +336,7 @@ export class SpellCheckApiService {
                 settings.filterSingleCharErrors
               );
               
+              Logger.log(`  🚀 최종 필터링된 제안 수: ${filteredSuggestions.length}개`);
               Logger.log('  필터링된 제안들:', filteredSuggestions);
               
               // 유효한 제안이 있는 경우만 처리

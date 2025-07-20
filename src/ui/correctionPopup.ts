@@ -1066,7 +1066,7 @@ export class CorrectionPopup extends BaseComponent {
       const actualIndex = pageCorrection.originalIndex;
       const correction = pageCorrection.correction;
       const isOriginalKept = this.stateManager.isOriginalKeptState(actualIndex);
-      const suggestions = correction.corrected.slice(0, 2);
+      const suggestions = correction.corrected.slice(0, 3);
       
       const aiResult = this.aiAnalysisResults.find(result => result.correctionIndex === actualIndex);
       const reasoningHTML = aiResult
@@ -1332,6 +1332,9 @@ export class CorrectionPopup extends BaseComponent {
       errorSummaryContent.appendChild(errorSummaryDOM);
     }
 
+    // ⭐ NEW: 오류 상세 항목의 색상 상태 업데이트
+    this.updateErrorDetailStyles();
+
     // 페이지네이션 컨트롤 업데이트
     this.updatePaginationControls();
 
@@ -1340,6 +1343,43 @@ export class CorrectionPopup extends BaseComponent {
     if (errorCountBadge) {
       errorCountBadge.textContent = this.getErrorStateCount().toString();
     }
+  }
+
+  /**
+   * 오류 상세 항목의 스타일을 상태에 따라 업데이트합니다.
+   */
+  private updateErrorDetailStyles(): void {
+    const errorItems = this.element.querySelectorAll('.error-item-compact');
+    
+    errorItems.forEach((item, index) => {
+      const correctionIndex = parseInt(item.getAttribute('data-correction-index') || '0');
+      const originalText = item.querySelector('.error-original-compact');
+      
+      if (originalText) {
+        // 기존 상태 클래스 제거
+        originalText.classList.remove('corrected', 'exception-processed', 'original-kept');
+        
+        // 현재 상태 확인
+        const currentValue = this.stateManager.getValue(correctionIndex);
+        const isException = this.stateManager.isExceptionState(correctionIndex);
+        const isOriginalKept = this.stateManager.isOriginalKeptState(correctionIndex);
+        const correction = this.config.corrections[correctionIndex];
+        
+        if (correction) {
+          if (isException) {
+            // 예외처리 상태 - 파란색
+            originalText.classList.add('exception-processed');
+          } else if (isOriginalKept) {
+            // 원본 유지 상태 - 주황색
+            originalText.classList.add('original-kept');
+          } else if (currentValue !== correction.original) {
+            // 수정된 상태 - 초록색
+            originalText.classList.add('corrected');
+          }
+          // 그 외는 기본 빨간색 유지 (클래스 추가 안함)
+        }
+      }
+    });
   }
 
   /**
@@ -1578,7 +1618,7 @@ export class CorrectionPopup extends BaseComponent {
       const actualIndex = pageCorrection.originalIndex;
       const correction = pageCorrection.correction;
       const isOriginalKept = this.stateManager.isOriginalKeptState(actualIndex);
-      const suggestions = correction.corrected.slice(0, 2);
+      const suggestions = correction.corrected.slice(0, 3);
       
       Logger.debug(`[${index}] DOM 생성 중: "${correction.original}" (고유ID: ${pageCorrection.uniqueId}, 실제인덱스: ${actualIndex})`);
       
