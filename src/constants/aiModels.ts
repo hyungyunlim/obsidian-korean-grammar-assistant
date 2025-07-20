@@ -203,7 +203,43 @@ ${correctionContexts.map((ctx, index) =>
 
 예시:
 - 오류: "어" → 수정안: ["**어", "**아"] → selectedValue: "**어" (정확한 형태 사용)
-- 오류: "총" → 수정안: ["** 총", "**총"] → selectedValue: "** 총" (공백 포함 정확히 사용)`
+- 오류: "총" → 수정안: ["** 총", "**총"] → selectedValue: "** 총" (공백 포함 정확히 사용)`,
+
+  // 새로운 형태소 기반 프롬프트 ⭐ NEW
+  analysisUserWithMorphemes: (correctionContexts: any[], morphemeInfo?: any) => {
+    let prompt = `총 ${correctionContexts.length}개의 맞춤법 오류 분석:
+
+${correctionContexts.map((ctx, index) => 
+  `${index}. 오류: "${ctx.original}"
+   수정안: [${ctx.corrected.join(', ')}]
+   설명: ${ctx.help}
+   문맥: "${ctx.fullContext}"
+`).join('\n')}`;
+
+    // 형태소 정보가 있으면 추가 (간소화된 버전)
+    if (morphemeInfo && morphemeInfo.tokens && morphemeInfo.tokens.length > 0) {
+      // 🔧 핵심 품사 정보만 추출 (토큰 절약)
+      const coreTokens = morphemeInfo.tokens.slice(0, 10); // 최대 10개 토큰만
+      const morphemeData = coreTokens.map((token: any) => {
+        const mainTag = token.morphemes[0]?.tag || 'UNK';
+        return `${token.text.content}(${mainTag})`;
+      }).join(', ');
+      
+      prompt += `\n\n📋 품사 정보: ${morphemeData}
+💡 품사를 고려한 문법적 교정을 선택하세요.`;
+    }
+
+    prompt += `
+
+⚠️ 중요 응답 규칙:
+1. 위의 모든 ${correctionContexts.length}개 오류에 대해 반드시 분석 결과를 제공해주세요.
+2. correctionIndex는 반드시 0부터 ${correctionContexts.length - 1}까지의 순서를 사용하세요.
+3. selectedValue는 반드시 제공된 수정안 중 하나 또는 원본 텍스트와 정확히 일치해야 합니다.
+4. 형태소 정보를 고려하여 문법적으로 올바른 선택을 하세요.
+5. 누락된 오류가 있으면 안 됩니다.`;
+
+    return prompt;
+  }
 } as const;
 
 // 타입 정의

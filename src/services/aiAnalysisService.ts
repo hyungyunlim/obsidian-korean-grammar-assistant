@@ -79,9 +79,10 @@ export class AIAnalysisService {
 
   /**
    * 최적의 배치 크기를 계산합니다.
+   * ⭐ JSON 잘림 방지를 위해 보수적 배치 크기 적용
    */
-  private calculateOptimalBatchSize(correctionContexts: CorrectionContext[]): number {
-    if (correctionContexts.length === 0) return 10;
+  private calculateOptimalBatchSize(correctionContexts: CorrectionContext[], hasMorphemeInfo = false): number {
+    if (correctionContexts.length === 0) return 5;
     
     // 평균 컨텍스트 길이 계산
     const avgContextLength = correctionContexts.reduce((sum, ctx) => sum + ctx.fullContext.length, 0) / correctionContexts.length;
@@ -90,22 +91,29 @@ export class AIAnalysisService {
     // 모델별 입력 토큰 제한 (대략적으로 계산)
     const maxInputTokens = this.getModelMaxInputTokens(this.settings.model);
     
-    // 안전 마진을 고려한 배치 크기 계산
-    let optimalSize = 10; // 기본값
+    // 🔧 JSON 응답 잘림 방지를 위해 보수적으로 계산
+    // 각 교정당 JSON 응답: ~120자 예상 
+    // 15개 = 1800자 → 토큰 제한 초과 위험
+    let optimalSize = 6; // 안전한 기본값
     
-    if (avgContextLength < 100) {
-      optimalSize = 15; // 짧은 컨텍스트면 더 많이
+    if (avgContextLength < 50) {
+      optimalSize = 8; // 매우 짧은 컨텍스트
+    } else if (avgContextLength < 100) {
+      optimalSize = 6; // 짧은 컨텍스트  
     } else if (avgContextLength < 200) {
-      optimalSize = 10; // 보통
-    } else if (avgContextLength < 400) {
-      optimalSize = 7; // 긴 컨텍스트면 적게
+      optimalSize = 4; // 보통 컨텍스트
     } else {
-      optimalSize = 5; // 매우 긴 컨텍스트
+      optimalSize = 3; // 긴 컨텍스트
     }
     
-    Logger.debug(`배치 크기 계산: 평균 컨텍스트 ${avgContextLength}자 → ${optimalSize}개씩 처리`);
+    // 형태소 정보가 있으면 약간 더 보수적으로
+    if (hasMorphemeInfo) {
+      optimalSize = Math.max(3, optimalSize - 1);
+    }
     
-    return Math.min(optimalSize, 15); // 최대 15개로 제한
+    Logger.debug(`JSON 잘림 방지 배치 크기: 평균 컨텍스트 ${avgContextLength}자, 형태소: ${hasMorphemeInfo} → ${optimalSize}개씩 처리`);
+    
+    return Math.min(optimalSize, 8); // 최대 8개로 안전하게 제한
   }
 
   /**
@@ -137,12 +145,23 @@ export class AIAnalysisService {
     totalBatches: number,
     client: any,
     adjustedMaxTokens: number,
-    model: string
+    model: string,
+    morphemeInfo?: any  // ⭐ NEW: 형태소 정보 추가
   ): Promise<AIAnalysisResult[]> {
     Logger.debug(`배치 ${batchIndex + 1}/${totalBatches} 처리 중 (${batch.length}개 오류)`);
 
     const systemPrompt = AI_PROMPTS.analysisSystem;
-    const userPrompt = AI_PROMPTS.analysisUserWithContext(batch);
+    
+    // ⭐ NEW: 형태소 정보가 있으면 새로운 프롬프트 사용
+    const userPrompt = morphemeInfo 
+      ? AI_PROMPTS.analysisUserWithMorphemes(batch, morphemeInfo)
+      : AI_PROMPTS.analysisUserWithContext(batch);
+    
+    // ⭐ NEW: 형태소 정보 로깅
+    if (morphemeInfo) {
+      Logger.debug(`형태소 정보와 함께 AI 분석 진행 (토큰 절약 모드)`);
+      Logger.debug(`형태소 토큰 수: ${morphemeInfo.tokens?.length || 0}개`);
+    }
     
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -157,8 +176,9 @@ export class AIAnalysisService {
 
   /**
    * AI를 사용하여 맞춤법 오류를 분석하고 최적의 수정사항을 제안합니다.
+   * ⭐ NEW: 형태소 정보 통합 지원
    */
-  async analyzeCorrections(request: AIAnalysisRequest): Promise<AIAnalysisResult[]> {
+  async analyzeCorrections(request: AIAnalysisRequest, morphemeInfo?: any): Promise<AIAnalysisResult[]> {
     Logger.debug('analyzeCorrections 시작:', {
       enabled: this.settings.enabled,
       provider: this.settings.provider,
@@ -203,8 +223,8 @@ export class AIAnalysisService {
       let aiResults: AIAnalysisResult[] = [];
 
       if (contextsToAnalyze.length > 0) {
-        // 배치 크기 결정
-        const maxBatchSize = this.calculateOptimalBatchSize(contextsToAnalyze);
+        // 배치 크기 결정 (형태소 정보 유무 고려)
+        const maxBatchSize = this.calculateOptimalBatchSize(contextsToAnalyze, !!morphemeInfo);
         
         Logger.debug('분석 요청 전송 중...', {
           provider: this.settings.provider,
@@ -224,12 +244,23 @@ export class AIAnalysisService {
         // 모델별 토큰 제한에 맞게 조정
         const adjustedMaxTokens = this.adjustTokensForModel(this.settings.maxTokens, this.settings.model);
         
+        // ⭐ NEW: 형태소 정보 로깅
+        if (morphemeInfo) {
+          Logger.debug('형태소 정보 활용 AI 분석 시작:', {
+            tokensCount: morphemeInfo.tokens?.length || 0,
+            sentences: morphemeInfo.sentences?.length || 0,
+            language: morphemeInfo.language || 'unknown'
+          });
+        }
+
         // 모든 배치 처리
         for (let i = 0; i < batches.length; i++) {
           try {
             if (request.onProgress) {
-              const progress = Math.round(((i + 1) / batches.length) * 100);
-              request.onProgress(i + 1, batches.length, `AI 분석 중... (${progress}%)`);
+              const progressMsg = morphemeInfo 
+                ? `AI + 형태소 분석 중... (${Math.round(((i + 1) / batches.length) * 100)}%)`
+                : `AI 분석 중... (${Math.round(((i + 1) / batches.length) * 100)}%)`;
+              request.onProgress(i + 1, batches.length, progressMsg);
             }
             
             const batchResults = await this.processBatch(
@@ -238,7 +269,8 @@ export class AIAnalysisService {
               batches.length, 
               client, 
               adjustedMaxTokens, 
-              this.settings.model
+              this.settings.model,
+              morphemeInfo  // ⭐ NEW: 형태소 정보 전달
             );
             
             aiResults.push(...batchResults);
@@ -302,19 +334,93 @@ export class AIAnalysisService {
         jsonString = cleanedResponse;
       }
       
-      // 3. 잘린 JSON 복구 시도
+      // 3. 잘린 JSON 복구 시도 (개선된 로직)
       if (!jsonString.endsWith(']') && jsonString.includes('[')) {
-        Logger.warn('JSON이 잘린 것으로 보임, 복구 시도');
-        // 마지막 완전한 객체까지만 취하고 배열을 닫기
-        const lastCompleteObjectIndex = jsonString.lastIndexOf('}');
+        Logger.warn('JSON이 잘린 것으로 보임, 강화된 복구 시도');
+        
+        // 3-1. 마지막 완전한 객체 찾기
+        let lastCompleteObjectIndex = -1;
+        let braceCount = 0;
+        let inString = false;
+        let escapeNext = false;
+        
+        for (let i = 0; i < jsonString.length; i++) {
+          const char = jsonString[i];
+          
+          if (escapeNext) {
+            escapeNext = false;
+            continue;
+          }
+          
+          if (char === '\\') {
+            escapeNext = true;
+            continue;
+          }
+          
+          if (char === '"') {
+            inString = !inString;
+            continue;
+          }
+          
+          if (!inString) {
+            if (char === '{') {
+              braceCount++;
+            } else if (char === '}') {
+              braceCount--;
+              if (braceCount === 0) {
+                lastCompleteObjectIndex = i;
+              }
+            }
+          }
+        }
+        
+        // 3-2. 복구 시도
         if (lastCompleteObjectIndex > 0) {
           jsonString = jsonString.substring(0, lastCompleteObjectIndex + 1) + ']';
-          Logger.debug('JSON 복구 완료');
+          Logger.debug('고급 JSON 복구 완료');
+        } else {
+          // 3-3. 간단한 복구 (기존 방식)
+          const lastBraceIndex = jsonString.lastIndexOf('}');
+          if (lastBraceIndex > 0) {
+            jsonString = jsonString.substring(0, lastBraceIndex + 1) + ']';
+            Logger.debug('기본 JSON 복구 완료');
+          }
         }
       }
       
       Logger.debug('파싱할 JSON (첫 200자):', jsonString.substring(0, 200) + (jsonString.length > 200 ? '...' : ''));
-      parsedResponse = JSON.parse(jsonString);
+      
+      // 🔧 JSON 파싱 시도 + 추가 복구 로직
+      try {
+        parsedResponse = JSON.parse(jsonString);
+      } catch (parseError) {
+        Logger.warn('초기 JSON 파싱 실패, 추가 복구 시도:', parseError);
+        
+        // 마지막 쉼표 제거 시도
+        let fixedJson = jsonString.replace(/,\s*$/, '');
+        if (!fixedJson.endsWith(']')) {
+          fixedJson += ']';
+        }
+        
+        try {
+          parsedResponse = JSON.parse(fixedJson);
+          Logger.debug('쉼표 제거로 JSON 복구 성공');
+        } catch (secondError) {
+          // 마지막 불완전한 객체 제거 시도
+          const lastCommaIndex = jsonString.lastIndexOf(',');
+          if (lastCommaIndex > 0) {
+            const cutJson = jsonString.substring(0, lastCommaIndex) + ']';
+            try {
+              parsedResponse = JSON.parse(cutJson);
+              Logger.debug('불완전 객체 제거로 JSON 복구 성공');
+            } catch (thirdError) {
+              throw parseError; // 원래 오류 다시 던지기
+            }
+          } else {
+            throw parseError;
+          }
+        }
+      }
 
       const results: AIAnalysisResult[] = [];
 
