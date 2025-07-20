@@ -136,7 +136,7 @@ export class OptimizedSpellCheckService {
   /**
    * 서비스 성능 메트릭을 반환합니다
    */
-  getMetrics(): ApiMetrics & { cache: any } {
+  getMetrics(): ApiMetrics & { cache: any; morphemeCache: any } {
     const avgResponseTime = this.metrics.responseTimes.length > 0
       ? this.metrics.responseTimes.reduce((a, b) => a + b, 0) / this.metrics.responseTimes.length
       : 0;
@@ -148,7 +148,8 @@ export class OptimizedSpellCheckService {
       averageResponseTime: Math.round(avgResponseTime),
       queueLength: this.requestQueue.length,
       activeBatches: this.activeBatches,
-      cache: this.cacheService.getStats()
+      cache: this.cacheService.getStats(),
+      morphemeCache: this.apiService.getMorphemeCacheStats() // ⭐ NEW: 형태소 캐시 통계
     };
   }
 
@@ -157,6 +158,7 @@ export class OptimizedSpellCheckService {
    */
   clearCache(): void {
     this.cacheService.clear();
+    this.apiService.clearMorphemeCache(); // ⭐ NEW: 형태소 캐시도 정리
   }
 
   /**

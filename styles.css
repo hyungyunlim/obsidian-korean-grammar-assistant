@@ -437,9 +437,23 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   color: var(--color-red) !important;
   background: rgba(var(--color-red-rgb), 0.15) !important;
   padding: 3px 6px !important;
+  text-align: center !important;
   border-radius: 3px !important;
   font-size: 12px !important;
   flex-shrink: 0 !important;
+  transition: all 0.2s ease !important;
+}
+#correctionPopup .error-original-compact.corrected {
+  color: var(--color-green) !important;
+  background: rgba(var(--color-green-rgb), 0.15) !important;
+}
+#correctionPopup .error-original-compact.exception-processed {
+  color: var(--color-blue) !important;
+  background: rgba(var(--color-blue-rgb), 0.15) !important;
+}
+#correctionPopup .error-original-compact.original-kept {
+  color: var(--color-orange) !important;
+  background: rgba(var(--color-orange-rgb), 0.15) !important;
 }
 #correctionPopup .error-suggestions-compact {
   display: flex !important;
