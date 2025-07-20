@@ -73,6 +73,18 @@ export class SpellCheckOrchestrator {
         const priority = selectedText.length > 1000 ? 'medium' : 'high';
         const result = await this.apiService.checkSpelling(selectedText, this.settings, priority);
         
+        // 5. 형태소 분석을 통한 교정 개선 (선택적)
+        if (result.corrections && result.corrections.length > 1) {
+          try {
+            Logger.log('형태소 분석을 통한 교정 개선 시도...');
+            result.corrections = await this.apiService.improveCorrectionsWithMorphemes(
+              selectedText, result.corrections, this.settings
+            );
+          } catch (morphemeError) {
+            Logger.log('형태소 분석 개선 실패, 원본 교정 사용:', morphemeError);
+          }
+        }
+        
         // 결과 처리 단계
         loadingManager.setStep('result_parsing');
         await this.sleep(200);

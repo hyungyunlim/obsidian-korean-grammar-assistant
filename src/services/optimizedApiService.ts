@@ -1,4 +1,4 @@
-import { PluginSettings, SpellCheckResult } from '../types/interfaces';
+import { PluginSettings, SpellCheckResult, Correction } from '../types/interfaces';
 import { SpellCheckApiService } from './api';
 import { SpellCheckCacheService } from './cacheService';
 import { ErrorHandlerService } from './errorHandler';
@@ -378,5 +378,20 @@ export class OptimizedSpellCheckService {
     if (this.metrics.responseTimes.length > 100) {
       this.metrics.responseTimes = this.metrics.responseTimes.slice(-100);
     }
+  }
+
+  /**
+   * 형태소 분석을 활용하여 겹치는 오류를 해결합니다.
+   * @param text 원본 텍스트
+   * @param corrections 교정 배열
+   * @param settings 플러그인 설정
+   * @returns 개선된 교정 배열
+   */
+  async improveCorrectionsWithMorphemes(
+    text: string, 
+    corrections: Correction[], 
+    settings: PluginSettings
+  ): Promise<Correction[]> {
+    return await this.apiService.improveCorrectionsWithMorphemes(text, corrections, settings);
   }
 }
