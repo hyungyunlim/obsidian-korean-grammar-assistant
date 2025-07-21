@@ -1835,9 +1835,16 @@ export class ModernSettingsTab extends PluginSettingTab {
       const blob = new Blob([jsonString], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       
+      // 현재 시간으로 파일명 생성 (YYYY-MM-DD_HH-MM-SS 형식)
+      const now = new Date();
+      const timestamp = now.toISOString()
+        .replace(/T/, '_')           // T를 _로 변경
+        .replace(/:/g, '-')          // :를 -로 변경 (파일명에서 :는 사용 불가)
+        .replace(/\.\d{3}Z$/, '');   // 밀리초와 Z 제거
+      
       const a = document.createElement('a');
       a.href = url;
-      a.download = `korean-grammar-logs-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `korean-grammar-logs-${timestamp}.json`;
       a.click();
       
       URL.revokeObjectURL(url);
