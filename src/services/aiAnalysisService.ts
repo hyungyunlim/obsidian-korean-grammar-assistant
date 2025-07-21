@@ -10,8 +10,8 @@ export class AIAnalysisService {
   /**
    * 각 오류에 대한 컨텍스트를 추출합니다.
    */
-  private extractCorrectionContexts(request: AIAnalysisRequest): CorrectionContext[] {
-    const { originalText, corrections, contextWindow = 50, currentStates } = request;
+  private extractCorrectionContexts(request: AIAnalysisRequest, morphemeInfo?: any): CorrectionContext[] {
+    const { originalText, corrections, contextWindow = 50, currentStates, editor, file, enhancedContext = true } = request;
     const contexts: CorrectionContext[] = [];
 
     corrections.forEach((correction, index) => {
@@ -32,7 +32,7 @@ export class AIAnalysisService {
         return;
       }
 
-      // 앞뒤 컨텍스트 추출
+      // 기본 앞뒤 컨텍스트 추출
       const startIndex = Math.max(0, errorIndex - contextWindow);
       const endIndex = Math.min(originalText.length, errorIndex + correction.original.length + contextWindow);
       
@@ -42,7 +42,8 @@ export class AIAnalysisService {
 
       const stateInfo = currentStates ? currentStates[index] : undefined;
 
-      contexts.push({
+      // 기본 컨텍스트 정보
+      const context: CorrectionContext = {
         correctionIndex: index,
         original: correction.original,
         corrected: correction.corrected,
@@ -52,10 +53,250 @@ export class AIAnalysisService {
         fullContext: fullContext.trim(),
         currentState: stateInfo?.state,
         currentValue: stateInfo?.value,
-      });
+      };
+
+      // 향상된 컨텍스트 추출 (Editor API 활용)
+      if (enhancedContext && editor) {
+        try {
+          const enhancedInfo = this.extractEnhancedContext(
+            editor, 
+            file, 
+            originalText, 
+            correction, 
+            errorIndex,
+            morphemeInfo
+          );
+          
+          // 고유명사 등 특별한 경우에만 확장된 컨텍스트 추가
+          if (enhancedInfo.isLikelyProperNoun) {
+            context.sentenceContext = enhancedInfo.sentenceContext;
+            context.isLikelyProperNoun = true;
+            context.documentType = enhancedInfo.documentType;
+            
+            Logger.log(`🔍 고유명사 감지: "${correction.original}" - 감지 방법: ${enhancedInfo.detectionMethod} - 문장 컨텍스트 추가`);
+          }
+        } catch (error) {
+          Logger.warn('향상된 컨텍스트 추출 실패:', error);
+        }
+      }
+
+      contexts.push(context);
     });
 
     return contexts;
+  }
+
+  /**
+   * 형태소 분석 결과 전체를 로깅합니다.
+   */
+  private logMorphemeAnalysis(morphemeInfo: any, corrections: any[]): void {
+    Logger.log('📋 형태소 분석 결과 요약:');
+    
+    if (!morphemeInfo || !morphemeInfo.sentences) {
+      Logger.warn('형태소 분석 데이터가 유효하지 않음');
+      return;
+    }
+
+    // 전체 토큰 수와 문장 수
+    const totalSentences = morphemeInfo.sentences.length;
+    const totalTokens = morphemeInfo.sentences.reduce((sum: number, sentence: any) => 
+      sum + (sentence.tokens ? sentence.tokens.length : 0), 0);
+    
+    Logger.log(`  총 ${totalSentences}개 문장, ${totalTokens}개 토큰 분석됨`);
+
+    // 고유명사 및 특수 품사 추출
+    const properNouns: string[] = [];
+    const foreignWords: string[] = [];
+    const allTokens: {text: string, tags: string[]}[] = [];
+
+    morphemeInfo.sentences.forEach((sentence: any, sentenceIdx: number) => {
+      if (!sentence.tokens) return;
+      
+      sentence.tokens.forEach((token: any) => {
+        const tokenText = token.text?.content || '';
+        const tags = token.morphemes?.map((m: any) => m.tag) || [];
+        
+        allTokens.push({text: tokenText, tags});
+        
+        // 고유명사 분류
+        if (tags.some((tag: string) => ['NNP'].includes(tag))) {
+          if (!properNouns.includes(tokenText)) {
+            properNouns.push(tokenText);
+          }
+        }
+        
+        // 외국어/특수어 분류
+        if (tags.some((tag: string) => ['SL', 'SH', 'SN'].includes(tag))) {
+          if (!foreignWords.includes(tokenText)) {
+            foreignWords.push(tokenText);
+          }
+        }
+      });
+    });
+
+    // 결과 로깅
+    if (properNouns.length > 0) {
+      Logger.log(`  🏷️  고유명사 (NNP): [${properNouns.map(noun => `"${noun}"`).join(', ')}]`);
+    }
+    
+    if (foreignWords.length > 0) {
+      Logger.log(`  🌐 외국어/특수어 (SL/SH/SN): [${foreignWords.map(word => `"${word}"`).join(', ')}]`);
+    }
+
+    // 오류 단어들과 매칭
+    const errorWords = corrections.map(c => c.original);
+    const matchedErrors = errorWords.filter(word => 
+      properNouns.includes(word) || foreignWords.includes(word)
+    );
+    
+    if (matchedErrors.length > 0) {
+      Logger.log(`  ✨ 맞춤법 오류 중 형태소 분석으로 감지된 고유명사/외국어: [${matchedErrors.map(word => `"${word}"`).join(', ')}]`);
+    } else {
+      Logger.log('  ❓ 맞춤법 오류 중 형태소 분석으로 고유명사/외국어로 분류된 단어 없음');
+    }
+
+    // 상세 토큰 정보 (처음 10개만)
+    Logger.debug('상세 토큰 정보 (처음 10개):');
+    allTokens.slice(0, 10).forEach((token, idx) => {
+      Logger.debug(`  ${idx + 1}. "${token.text}" → [${token.tags.join(', ')}]`);
+    });
+    
+    if (allTokens.length > 10) {
+      Logger.debug(`  ... 및 ${allTokens.length - 10}개 토큰 더 있음`);
+    }
+  }
+
+  /**
+   * 형태소 분석 결과에서 고유명사를 감지합니다.
+   */
+  private isProperNounFromMorphemes(text: string, morphemeInfo: any): boolean {
+    if (!morphemeInfo || !morphemeInfo.sentences) return false;
+
+    for (const sentence of morphemeInfo.sentences) {
+      for (const token of sentence.tokens) {
+        if (token.text.content === text) {
+          // 품사 태그에서 고유명사 확인
+          for (const morpheme of token.morphemes) {
+            const tag = morpheme.tag;
+            // 한국어 품사 태그: NNP(고유명사), SL(외국어), SH(한자) 등
+            if (['NNP', 'SL', 'SH', 'SN'].includes(tag)) {
+              const tagDescriptions: {[key: string]: string} = {
+                'NNP': '고유명사',
+                'SL': '외국어',
+                'SH': '한자',
+                'SN': '숫자'
+              };
+              const tagDescription = tagDescriptions[tag] || tag;
+              Logger.log(`🏷️ 형태소 고유명사 감지: "${text}" - 품사: ${tag}(${tagDescription})`);
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Obsidian Editor를 활용한 향상된 컨텍스트 추출
+   */
+  private extractEnhancedContext(editor: any, file: any, originalText: string, correction: any, errorIndex: number, morphemeInfo?: any): {
+    sentenceContext?: string;
+    isLikelyProperNoun: boolean;
+    documentType?: string;
+    detectionMethod?: string;
+  } {
+    // 오프셋을 에디터 위치로 변환
+    const errorPosition = editor.offsetToPos(errorIndex);
+    
+    // 현재 문장 추출
+    const sentenceContext = this.extractCurrentSentence(editor, errorPosition);
+    
+    // 문서 타입 감지 (마크다운, 일반 텍스트 등)
+    const documentType = file?.extension || 'unknown';
+    
+    // 형태소 분석 우선, 없으면 패턴 기반으로 고유명사 감지
+    let isLikelyProperNoun = false;
+    let detectionMethod = '';
+    
+    if (morphemeInfo) {
+      const morphemeDetected = this.isProperNounFromMorphemes(correction.original, morphemeInfo);
+      const patternDetected = this.detectProperNounPatterns(correction.original, sentenceContext);
+      
+      if (morphemeDetected) {
+        isLikelyProperNoun = true;
+        detectionMethod = '형태소 분석';
+      } else if (patternDetected) {
+        isLikelyProperNoun = true;
+        detectionMethod = '패턴 매칭';
+      }
+    } else {
+      const patternDetected = this.detectProperNounPatterns(correction.original, sentenceContext);
+      if (patternDetected) {
+        isLikelyProperNoun = true;
+        detectionMethod = '패턴 매칭 (형태소 분석 없음)';
+      }
+    }
+
+    return {
+      sentenceContext,
+      isLikelyProperNoun,
+      documentType,
+      detectionMethod
+    };
+  }
+
+  /**
+   * 현재 문장을 추출합니다.
+   */
+  private extractCurrentSentence(editor: any, position: any): string {
+    const currentLine = editor.getLine(position.line);
+    
+    // 한국어 문장 끝 패턴
+    const sentenceEndPattern = /[.!?。！？]/g;
+    
+    // 문장 시작점 찾기
+    let sentenceStart = 0;
+    for (let i = position.ch - 1; i >= 0; i--) {
+      if (sentenceEndPattern.test(currentLine[i])) {
+        sentenceStart = i + 1;
+        break;
+      }
+    }
+    
+    // 문장 끝점 찾기
+    let sentenceEnd = currentLine.length;
+    for (let i = position.ch; i < currentLine.length; i++) {
+      if (sentenceEndPattern.test(currentLine[i])) {
+        sentenceEnd = i + 1;
+        break;
+      }
+    }
+    
+    return currentLine.slice(sentenceStart, sentenceEnd).trim();
+  }
+
+  /**
+   * 패턴 기반 고유명사 감지 (형태소 분석이 없을 때 폴백)
+   */
+  private detectProperNounPatterns(text: string, sentenceContext: string): boolean {
+    const patterns = [
+      { pattern: /^[A-Z][a-z]+/, name: '영어 고유명사' },           // GitHub, React 등
+      { pattern: /^[A-Z]{2,}$/, name: '영어 약어' },            // API, URL, HTTP
+      { pattern: /\w+님$/, name: '존칭' },                 // 김철수님
+      { pattern: /^[가-힣]{2,4}[시도군구]$/, name: '지명' }, // 서울시, 부산광역시
+      { pattern: /\d{4}년/, name: '연도' },                // 2018년
+      { pattern: /^[가-힣]+\.(js|ts|py|css|html|md)$/, name: '파일명' },  // 파일명
+    ];
+    
+    for (const { pattern, name } of patterns) {
+      if (pattern.test(text)) {
+        Logger.log(`🔍 패턴 고유명사 감지: "${text}" - 패턴: ${name}`);
+        return true;
+      }
+    }
+    
+    return false;
   }
 
   /**
@@ -186,6 +427,11 @@ export class AIAnalysisService {
       correctionsCount: request.corrections.length
     });
 
+    // 🔍 형태소 분석 결과 전체 로깅
+    if (morphemeInfo) {
+      this.logMorphemeAnalysis(morphemeInfo, request.corrections);
+    }
+
     if (!this.settings.enabled) {
       throw new Error('AI 기능이 비활성화되어 있습니다.');
     }
@@ -207,8 +453,8 @@ export class AIAnalysisService {
     const client = AIClientFactory.createClient(this.settings);
     
     try {
-      // 컨텍스트 추출
-      const allContexts = this.extractCorrectionContexts(request);
+      // 컨텍스트 추출 (형태소 정보 포함)
+      const allContexts = this.extractCorrectionContexts(request, morphemeInfo);
       
       // 분석이 필요한 컨텍스트와 이미 처리된 컨텍스트 분리
       const contextsToAnalyze = allContexts.filter(
@@ -276,7 +522,8 @@ export class AIAnalysisService {
             aiResults.push(...batchResults);
             
             if (i < batches.length - 1) {
-              await new Promise(resolve => setTimeout(resolve, 500));
+              // API 과부하 방지를 위한 배치 간격 (529 오류 방지)
+              await new Promise(resolve => setTimeout(resolve, 1500));
             }
           } catch (error) {
             Logger.error(`배치 ${i + 1} 처리 실패:`, error);
@@ -438,20 +685,31 @@ export class AIAnalysisService {
         let selectedValue = item.selectedValue || '';
         
         const validOptions = [...context.corrected, context.original];
+        
+        // 🔍 AI 선택 분석 로깅 (공백/띄어쓰기 문제 디버깅용)
+        Logger.debug(`AI 선택 분석 - 오류 "${context.original}":`);
+        Logger.debug(`  AI 선택값: "${selectedValue}"`);
+        Logger.debug(`  유효한 옵션들: [${validOptions.map(opt => `"${opt}"`).join(', ')}]`);
+        Logger.debug(`  추천 이유: "${item.reasoning}"`);
+        
         if (!validOptions.includes(selectedValue)) {
+          Logger.warn(`🔴 AI가 유효하지 않은 값을 선택했습니다: "${selectedValue}"`);
+          
           if (selectedValue === '원본유지' || selectedValue === '예외처리' || !selectedValue) {
             selectedValue = context.original;
             Logger.debug(`"${item.selectedValue}"를 원본 "${context.original}"로 변경`);
           } else {
             const matchedOption = this.findBestMatch(selectedValue, validOptions);
             if (matchedOption) {
-              Logger.debug(`"${selectedValue}"를 가장 유사한 옵션 "${matchedOption}"로 매칭`);
+              Logger.warn(`⚠️ AI 선택 불일치: "${selectedValue}" → "${matchedOption}" (자동 매칭)`);
               selectedValue = matchedOption;
             } else {
-              Logger.warn('유효하지 않은 선택값:', selectedValue, '가능한 옵션:', validOptions);
+              Logger.error(`❌ 매칭 실패 - 원본으로 대체: "${selectedValue}" → "${context.original}"`);
               selectedValue = context.original;
             }
           }
+        } else {
+          Logger.debug(`✅ AI 선택값이 유효함: "${selectedValue}"`);
         }
 
         const isOriginalSelected = selectedValue === context.original;

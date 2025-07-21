@@ -433,6 +433,36 @@ export class SpellCheckApiService {
   }
 
   /**
+   * 이미 분석된 형태소 데이터를 사용하여 교정을 개선합니다 (중복 API 호출 방지).
+   * @param text 원본 텍스트
+   * @param corrections 교정 배열
+   * @param settings 플러그인 설정
+   * @param morphemeData 이미 분석된 형태소 데이터
+   * @returns 개선된 교정 배열
+   */
+  async improveCorrectionsWithMorphemeData(
+    text: string, 
+    corrections: Correction[], 
+    settings: PluginSettings,
+    morphemeData: MorphemeResponse
+  ): Promise<Correction[]> {
+    try {
+      Logger.log('\n=== 형태소 데이터 기반 교정 개선 (재사용) ===');
+      Logger.log('기존 형태소 데이터 재사용:', morphemeData);
+
+      // 겹치는 오류들을 형태소 단위로 그룹화
+      const improvedCorrections = this.groupCorrectionsByMorphemes(corrections, morphemeData, text);
+      
+      Logger.log(`교정 개선 결과 (재사용): ${corrections.length}개 → ${improvedCorrections.length}개`);
+      return improvedCorrections;
+      
+    } catch (error) {
+      Logger.log('형태소 데이터 기반 교정 개선 실패, 원본 교정 사용:', error);
+      return corrections; // 실패 시 원본 교정 반환
+    }
+  }
+
+  /**
    * 형태소 정보를 기반으로 교정을 그룹화합니다.
    * @param corrections 원본 교정 배열
    * @param morphemeData 형태소 분석 결과

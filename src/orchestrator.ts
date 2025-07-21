@@ -43,7 +43,7 @@ export class SpellCheckOrchestrator {
   async execute(): Promise<void> {
     try {
       // 1. 활성 마크다운 뷰와 에디터 가져오기
-      const { editor, selectedText, selectionStart, selectionEnd } = this.getEditorInfo();
+      const { editor, selectedText, selectionStart, selectionEnd, file } = this.getEditorInfo();
       
       if (!selectedText || selectedText.trim().length === 0) {
         new Notice("검사할 텍스트가 없습니다.");
@@ -73,15 +73,29 @@ export class SpellCheckOrchestrator {
         const priority = selectedText.length > 1000 ? 'medium' : 'high';
         const result = await this.apiService.checkSpelling(selectedText, this.settings, priority);
         
-        // 5. 형태소 분석을 통한 교정 개선 (선택적)
-        if (result.corrections && result.corrections.length > 1) {
+        // 5. 형태소 분석 및 교정 개선 (통합 처리)
+        let morphemeInfo = null;
+        if (result.corrections && result.corrections.length > 0) {
           try {
-            Logger.log('형태소 분석을 통한 교정 개선 시도...');
-            result.corrections = await this.apiService.improveCorrectionsWithMorphemes(
-              selectedText, result.corrections, this.settings
-            );
+            Logger.log('형태소 분석 수행 중...');
+            // 1차: 형태소 분석 수행 (AI용으로도 사용할 데이터)
+            morphemeInfo = await this.apiService.analyzeMorphemes(selectedText, this.settings);
+            Logger.log('형태소 분석 완료:', {
+              hasMorphemeInfo: !!morphemeInfo,
+              sentences: morphemeInfo?.sentences?.length || 0
+            });
+
+            // 2차: 오류가 2개 이상일 때만 교정 개선 수행 (이미 분석된 morphemeInfo 재사용)
+            if (result.corrections.length > 1) {
+              Logger.log('형태소 기반 교정 개선 수행...');
+              result.corrections = await this.apiService.improveCorrectionsWithMorphemeData(
+                selectedText, result.corrections, this.settings, morphemeInfo
+              );
+              Logger.log(`교정 개선 완료: ${result.corrections.length}개 오류`);
+            }
           } catch (morphemeError) {
-            Logger.log('형태소 분석 개선 실패, 원본 교정 사용:', morphemeError);
+            Logger.log('형태소 분석 실패, 원본 교정 및 패턴 매칭 사용:', morphemeError);
+            morphemeInfo = null;
           }
         }
         
@@ -96,8 +110,8 @@ export class SpellCheckOrchestrator {
         // 5. 로딩 완료
         loadingManager.complete();
 
-        // 6. 결과 처리
-        this.handleSpellCheckResult(result, selectedText, selectionStart, selectionEnd, editor);
+        // 7. 결과 처리
+        this.handleSpellCheckResult(result, selectedText, selectionStart, selectionEnd, editor, file, morphemeInfo);
 
       } catch (error) {
         // 6. 로딩 에러 처리
@@ -119,6 +133,7 @@ export class SpellCheckOrchestrator {
   private getEditorInfo() {
     const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
     const editor = markdownView?.editor;
+    const file = markdownView?.file; // ⭐ NEW: File 정보 추가
     
     if (!editor) {
       throw new Error("에디터를 찾을 수 없습니다.");
@@ -153,7 +168,7 @@ export class SpellCheckOrchestrator {
       }
     }
 
-    return { editor, selectedText, selectionStart, selectionEnd };
+    return { editor, selectedText, selectionStart, selectionEnd, file };
   }
 
   /**
@@ -164,7 +179,9 @@ export class SpellCheckOrchestrator {
     selectedText: string,
     selectionStart: any,
     selectionEnd: any,
-    editor: Editor
+    editor: Editor,
+    file?: any,
+    morphemeInfo?: any
   ): void {
     if (result.corrections.length === 0) {
       new Notice("수정할 것이 없습니다. 훌륭합니다!");
@@ -186,6 +203,8 @@ export class SpellCheckOrchestrator {
       start: selectionStart,
       end: selectionEnd,
       editor: editor,
+      file: file, // ⭐ NEW: File 인스턴스 전달 (메타데이터 정보용)
+      morphemeInfo: morphemeInfo, // ⭐ NEW: 형태소 분석 정보 전달 (AI 분석용)
       ignoredWords: IgnoredWordsService.getIgnoredWords(this.settings),
       onExceptionWordsAdded: (words: string[]) => this.handleExceptionWords(words)
     }, this.aiService, (newMaxTokens: number) => this.handleMaxTokensUpdate(newMaxTokens));
@@ -405,6 +424,9 @@ export class SpellCheckOrchestrator {
     from?: any, 
     to?: any
   ): Promise<void> {
+    // File 인스턴스 가져오기
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const file = activeView?.file;
     // 텍스트 정리 - 모든 공백 문제 해결
     const cleanedText = selectedText.trim();
     
@@ -437,6 +459,7 @@ export class SpellCheckOrchestrator {
           corrections: result.corrections,
           ignoredWords: this.settings.ignoredWords || [],
           editor,
+          file: file, // ⭐ NEW: File 인스턴스 전달
           start: from || { line: 0, ch: 0 },
           end: to || { line: 0, ch: cleanedText.length }
         };

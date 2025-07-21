@@ -1516,6 +1516,7 @@ export class CorrectionPopup extends BaseComponent {
     }
 
     try {
+      Logger.log('🔍 performAIAnalysis 메인 try 블록 진입');
       this.isAiAnalyzing = true;
       
       // UI 업데이트 (버튼 비활성화)
@@ -1527,25 +1528,19 @@ export class CorrectionPopup extends BaseComponent {
 
       Logger.log('AI 분석 시작 중...');
 
-      // ⭐ NEW: 형태소 분석 정보 획득 시도 (항상 활용으로 토큰 최적화)
-      let morphemeInfo = null;
-      try {
-        // apiService를 통해 형태소 분석 호출 (조건 없이 항상 시도)
-        const apiService = (this.aiService as any).apiService || 
-                          (window as any).plugin?.apiService ||
-                          (window as any).plugin?.orchestrator?.apiService;
-        
-        if (apiService && typeof apiService.analyzeMorphemes === 'function') {
-          Logger.log('형태소 분석을 통한 AI 토큰 최적화 시도 (단일/다중 교정 모두 지원)...');
-          morphemeInfo = await apiService.analyzeMorphemes(
-            this.config.selectedText, 
-            (window as any).plugin?.settings || {}
-          );
-          Logger.log('형태소 분석 완료, AI 분석에 통합 - 토큰 절약 및 정확도 향상');
-        }
-      } catch (morphemeError) {
-        Logger.log('형태소 분석 실패, 기본 AI 분석으로 진행:', morphemeError);
-        morphemeInfo = null;
+      // ⭐ NEW: 형태소 분석 정보 사용 (orchestrator에서 전달받은 정보)
+      Logger.log('🔍 형태소 분석 정보 확인 중...');
+      let morphemeInfo = this.config.morphemeInfo || null;
+      
+      if (morphemeInfo) {
+        Logger.log('✅ orchestrator에서 형태소 분석 정보 전달받음:', {
+          hasMorphemeInfo: !!morphemeInfo,
+          sentencesCount: morphemeInfo?.sentences?.length || 0,
+          tokensCount: morphemeInfo?.sentences?.reduce((sum: number, s: any) => sum + (s.tokens?.length || 0), 0) || 0,
+          firstFewTokens: morphemeInfo?.sentences?.[0]?.tokens?.slice(0, 3)?.map((t: any) => t.text?.content) || []
+        });
+      } else {
+        Logger.warn('❌ 형태소 분석 정보 없음 - 패턴 매칭만 사용');
       }
 
       // AI 분석 요청 준비
@@ -1555,6 +1550,9 @@ export class CorrectionPopup extends BaseComponent {
         corrections: this.config.corrections,
         contextWindow: morphemeInfo ? 30 : 100, // ⭐ NEW: 형태소 정보 있으면 더 적은 컨텍스트 (토큰 절약)
         currentStates: currentStates, // 현재 상태 전달
+        editor: this.config.editor, // ⭐ NEW: Editor 인스턴스 전달 (구조화된 컨텍스트 추출용)
+        file: this.config.file, // ⭐ NEW: File 인스턴스 전달 (메타데이터 정보용)
+        enhancedContext: true, // ⭐ NEW: 향상된 컨텍스트 추출 활성화
         onProgress: (current: number, total: number, status: string) => {
           // 배치 진행 상황을 버튼 텍스트로 표시
           const aiBtn = this.element.querySelector('#aiAnalyzeBtn') as HTMLButtonElement;
@@ -1919,7 +1917,7 @@ export class CorrectionPopup extends BaseComponent {
   }
 
   /**
-   * 형태소 정보를 고려한 토큰 사용량을 추정합니다.
+   * 형태소 최적화를 고려한 토큰 사용량을 추정합니다.
    * ⭐ NEW: 실제 사용될 프롬프트 기반 정확한 추정
    */
   private async estimateTokenUsageWithMorphemes(request: AIAnalysisRequest): Promise<{
@@ -1930,19 +1928,15 @@ export class CorrectionPopup extends BaseComponent {
     morphemeOptimized: boolean;
   }> {
     try {
-      // 형태소 정보 획득 시도 (토큰 경고용이므로 빠르게)
-      let morphemeInfo = null;
-      let morphemeOptimized = false;
-      
       // 🔧 효율성을 위해 토큰 경고에서는 형태소 분석 호출하지 않음
       // 대신 교정 개수를 기반으로 최적화 효과 추정
       const hasMultipleCorrections = request.corrections.length > 1;
-      morphemeOptimized = hasMultipleCorrections; // 복수 교정 시 최적화 효과 예상
+      const morphemeOptimized = hasMultipleCorrections; // 복수 교정 시 최적화 효과 예상
       
-      Logger.debug('토큰 경고용 최적화 추정:', {
+      Logger.debug('토큰 경고용 형태소 최적화 추정:', {
         correctionsCount: request.corrections.length,
         estimatedOptimization: morphemeOptimized,
-        reason: morphemeOptimized ? '복수 교정으로 최적화 예상' : '단일 교정으로 최적화 불필요'
+        reason: morphemeOptimized ? '복수 교정으로 컨텍스트 축소 예상' : '단일 교정으로 최적화 불필요'
       });
       
       // 형태소 정보 고려한 컨텍스트 윈도우 적용
@@ -1960,20 +1954,22 @@ export class CorrectionPopup extends BaseComponent {
       };
       
       // 형태소 정보 토큰 추가 (간소화된 형태)
-      const morphemeTokens = morphemeOptimized ? 50 : 0; // 실제 형태소 분석 결과 기반
+      const morphemeTokens = morphemeOptimized ? 50 : 0; // 형태소 분석 메타데이터
       
       const finalEstimation = {
         inputTokens: baseEstimation.inputTokens + morphemeTokens,
         estimatedOutputTokens: baseEstimation.estimatedOutputTokens,
         totalEstimated: baseEstimation.totalEstimated + morphemeTokens,
         estimatedCost: baseEstimation.estimatedCost,
-        morphemeOptimized // 실제 형태소 분석 성공 여부
+        morphemeOptimized
       };
       
-      Logger.debug('형태소 반영 토큰 추정:', {
+      Logger.debug('형태소 최적화 반영 토큰 추정:', {
         before: baseEstimation.totalEstimated,
         after: finalEstimation.totalEstimated,
+        contextReduction: morphemeOptimized ? (100 - 30) : 0, // 70토큰 절약
         morphemeTokens,
+        netChange: morphemeOptimized ? (morphemeTokens - 70) : 0, // 순 변화량
         optimized: morphemeOptimized
       });
       

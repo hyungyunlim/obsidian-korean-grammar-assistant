@@ -49,6 +49,8 @@ export interface PopupConfig {
   start: EditorPosition;
   end: EditorPosition;
   editor: Editor;
+  file?: any; // TFile 인스턴스 (메타데이터 및 파일 정보용)
+  morphemeInfo?: any; // 형태소 분석 정보 (AI 분석용)
   ignoredWords: string[];
   onExceptionWordsAdded?: (words: string[]) => void;
 }
@@ -149,6 +151,10 @@ export interface CorrectionContext {
   fullContext: string;   // 전체 컨텍스트 (앞 + 오류 + 뒤)
   currentState?: 'error' | 'corrected' | 'exception-processed' | 'original-kept'; // 현재 상태 정보
   currentValue?: string; // 현재 선택된 값
+  sentenceContext?: string; // 현재 문장 전체 (고유명사 판단용)
+  paragraphContext?: string; // 현재 문단 전체 (문맥 파악용)
+  isLikelyProperNoun?: boolean; // 고유명사 가능성
+  documentType?: string; // 문서 유형 (마크다운, 일반 텍스트 등)
 }
 
 /**
@@ -161,6 +167,9 @@ export interface AIAnalysisRequest {
   correctionContexts?: CorrectionContext[]; // 오류별 컨텍스트 정보
   onProgress?: (current: number, total: number, status: string) => void; // 배치 진행 상황 콜백
   currentStates?: {[correctionIndex: number]: {state: 'error' | 'corrected' | 'exception-processed' | 'original-kept', value: string}}; // 현재 상태 정보
+  editor?: any; // Obsidian Editor 인스턴스 (구조화된 컨텍스트 추출용)
+  file?: any; // TFile 인스턴스 (메타데이터 정보용)
+  enhancedContext?: boolean; // 향상된 컨텍스트 추출 활성화 여부
 }
 
 /**

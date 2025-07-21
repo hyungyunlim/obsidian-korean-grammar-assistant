@@ -396,4 +396,28 @@ export class OptimizedSpellCheckService {
   ): Promise<Correction[]> {
     return await this.apiService.improveCorrectionsWithMorphemes(text, corrections, settings);
   }
+
+  /**
+   * 이미 분석된 형태소 데이터를 사용하여 교정을 개선합니다 (중복 API 호출 방지).
+   * @param text 원본 텍스트
+   * @param corrections 교정 배열
+   * @param settings 플러그인 설정
+   * @param morphemeData 이미 분석된 형태소 데이터
+   * @returns 개선된 교정 배열
+   */
+  async improveCorrectionsWithMorphemeData(
+    text: string, 
+    corrections: Correction[], 
+    settings: PluginSettings,
+    morphemeData: any
+  ): Promise<Correction[]> {
+    return await this.apiService.improveCorrectionsWithMorphemeData(text, corrections, settings, morphemeData);
+  }
+
+  /**
+   * 형태소 분석을 수행합니다.
+   */
+  async analyzeMorphemes(text: string, settings: PluginSettings): Promise<any> {
+    return await this.apiService.analyzeMorphemes(text, settings);
+  }
 }
