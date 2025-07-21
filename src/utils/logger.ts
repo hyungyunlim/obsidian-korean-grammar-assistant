@@ -21,6 +21,15 @@ export class Logger {
   private static logHistory: LogEntry[] = [];
   private static maxLogHistory = 1000;
   private static enableHistory = true;
+  private static currentLogLevel: LogLevel = 'INFO'; // 기본 로그 레벨
+  
+  // 로그 레벨 우선순위 (낮을수록 중요)
+  private static logLevelPriority: Record<LogLevel, number> = {
+    'DEBUG': 0,
+    'INFO': 1,
+    'WARN': 2,
+    'ERROR': 3
+  };
 
   private static isDevelopment(): boolean {
     // Check if we're in development mode
@@ -29,9 +38,18 @@ export class Logger {
   }
 
   /**
+   * 현재 로그 레벨이 출력 가능한지 확인합니다
+   */
+  private static shouldLog(level: LogLevel): boolean {
+    return this.logLevelPriority[level] >= this.logLevelPriority[this.currentLogLevel];
+  }
+
+  /**
    * 일반 정보 로그
    */
   static log(message: string, ...args: any[]): void {
+    if (!this.shouldLog('INFO')) return;
+    
     this.writeLog('INFO', message, args.length > 0 ? args : undefined);
     if (this.isDevelopment()) {
       console.log(`[Korean Grammar Assistant] ${message}`, ...args);
@@ -42,6 +60,8 @@ export class Logger {
    * 디버그 로그 (개발 모드에서만)
    */
   static debug(message: string, ...args: any[]): void {
+    if (!this.shouldLog('DEBUG')) return;
+    
     this.writeLog('DEBUG', message, args.length > 0 ? args : undefined);
     if (this.isDevelopment()) {
       console.debug(`[Korean Grammar Assistant DEBUG] ${message}`, ...args);
@@ -52,6 +72,8 @@ export class Logger {
    * 경고 로그
    */
   static warn(message: string, ...args: any[]): void {
+    if (!this.shouldLog('WARN')) return;
+    
     this.writeLog('WARN', message, args.length > 0 ? args : undefined);
     if (this.isDevelopment()) {
       console.warn(`[Korean Grammar Assistant WARN] ${message}`, ...args);
@@ -62,6 +84,8 @@ export class Logger {
    * 에러 로그 (프로덕션에서도 표시)
    */
   static error(message: string, ...args: any[]): void {
+    if (!this.shouldLog('ERROR')) return;
+    
     this.writeLog('ERROR', message, args.length > 0 ? args : undefined);
     // 프로덕션에서도 에러는 표시하되, 간단하게
     if (this.isDevelopment()) {
@@ -179,10 +203,44 @@ export class Logger {
   }
 
   /**
+   * 로그 레벨을 설정합니다 (성능 최적화)
+   * @param level - 최소 출력 로그 레벨
+   */
+  static setLogLevel(level: LogLevel): void {
+    this.currentLogLevel = level;
+    this.debug(`로그 레벨이 ${level}로 설정됨`);
+  }
+
+  /**
+   * 현재 로그 레벨을 반환합니다
+   */
+  static getLogLevel(): LogLevel {
+    return this.currentLogLevel;
+  }
+
+  /**
+   * 프로덕션 환경에 최적화된 설정을 적용합니다
+   */
+  static configureForProduction(): void {
+    this.setLogLevel('WARN'); // 경고와 에러만 로깅
+    this.setHistoryEnabled(false); // 히스토리 비활성화로 메모리 절약
+    this.debug('프로덕션 모드 로깅 설정 적용됨');
+  }
+
+  /**
+   * 개발 환경에 최적화된 설정을 적용합니다
+   */
+  static configureForDevelopment(): void {
+    this.setLogLevel('DEBUG'); // 모든 로그 출력
+    this.setHistoryEnabled(true); // 히스토리 활성화
+    this.debug('개발 모드 로깅 설정 적용됨');
+  }
+
+  /**
    * 실제 로그 작성 (히스토리 관리)
    */
   private static writeLog(level: LogLevel, message: string, data?: any): void {
-    if (!this.enableHistory) return;
+    if (!this.enableHistory || !this.shouldLog(level)) return;
 
     const logEntry: LogEntry = {
       timestamp: new Date(),

@@ -525,16 +525,15 @@ export class CorrectionPopup extends BaseComponent {
     header.createEl('h2', { text: '한국어 맞춤법 검사' });
     
     const headerTop = header.createDiv('preview-header-top');
-    if (this.aiService?.isAvailable()) {
-      const aiBtn = headerTop.createEl('button', {
-        cls: 'ai-analyze-btn',
-        attr: { id: 'aiAnalyzeBtn' }
-      });
-      aiBtn.textContent = this.isAiAnalyzing ? '🤖 분석 중...' : '🤖 AI 분석';
-      if (this.isAiAnalyzing) {
-        aiBtn.disabled = true;
-      }
-    }
+    
+    // AI 분석 버튼 (항상 표시, 상태에 따라 활성화/비활성화)
+    const aiBtn = headerTop.createEl('button', {
+      cls: 'ai-analyze-btn',
+      attr: { id: 'aiAnalyzeBtn' }
+    });
+    
+    // AI 서비스 상태에 따른 버튼 설정
+    this.updateAiButtonState(aiBtn);
     headerTop.createEl('button', { cls: 'close-btn-header', text: '×' });
     
     // Main content
@@ -1289,6 +1288,49 @@ export class CorrectionPopup extends BaseComponent {
   }
 
   /**
+   * AI 분석 버튼 상태를 업데이트합니다.
+   */
+  private async updateAiButtonState(aiBtn: HTMLButtonElement): Promise<void> {
+    try {
+      if (this.isAiAnalyzing) {
+        // 분석 중인 경우
+        aiBtn.textContent = '🤖 분석 중...';
+        aiBtn.disabled = true;
+        aiBtn.classList.remove('ai-disabled');
+        aiBtn.title = 'AI 분석이 진행 중입니다...';
+      } else if (this.aiService && (await this.aiService.isAvailable())) {
+        // AI 서비스 사용 가능한 경우
+        aiBtn.textContent = '🤖 AI 분석';
+        aiBtn.disabled = false;
+        aiBtn.classList.remove('ai-disabled');
+        aiBtn.title = 'AI가 최적의 수정사항을 자동으로 선택합니다 (Space키)';
+      } else {
+        // AI 서비스 사용 불가능한 경우
+        aiBtn.textContent = '🤖 AI 미설정';
+        aiBtn.disabled = true;
+        aiBtn.classList.add('ai-disabled');
+        if (!this.aiService) {
+          aiBtn.title = 'AI 서비스를 초기화할 수 없습니다. 플러그인을 다시 로드해보세요.';
+        } else {
+          // AI 서비스는 있지만 설정이 부족한 경우
+          const providerInfo = this.aiService.getProviderInfo();
+          if (!providerInfo.available) {
+            aiBtn.title = `AI 기능이 비활성화되었습니다. 설정에서 ${providerInfo.provider} API 키를 입력하고 AI 기능을 활성화하세요.`;
+          } else {
+            aiBtn.title = 'AI 서비스를 사용할 수 없습니다. 설정을 확인해주세요.';
+          }
+        }
+      }
+    } catch (error) {
+      Logger.error('AI 버튼 상태 업데이트 실패:', error);
+      aiBtn.textContent = '🤖 AI 오류';
+      aiBtn.disabled = true;
+      aiBtn.classList.add('ai-disabled');
+      aiBtn.title = 'AI 서비스 상태 확인 중 오류가 발생했습니다.';
+    }
+  }
+
+  /**
    * AI 분석 버튼 이벤트를 바인딩합니다.
    */
   private bindAIAnalysisEvents(): void {
@@ -1590,11 +1632,10 @@ export class CorrectionPopup extends BaseComponent {
     } finally {
       this.isAiAnalyzing = false;
       
-      // 버튼 재활성화
+      // 버튼 상태 업데이트
       const aiBtn = this.element.querySelector('#aiAnalyzeBtn') as HTMLButtonElement;
       if (aiBtn) {
-        aiBtn.disabled = false;
-        aiBtn.textContent = '🤖 AI 분석';
+        await this.updateAiButtonState(aiBtn);
       }
     }
   }

@@ -13,6 +13,7 @@ import { DEFAULT_SETTINGS, SettingsService } from './src/services/settings';
 import { IgnoredWordsService } from './src/services/ignoredWords';
 import { SpellCheckOrchestrator } from './src/orchestrator';
 import { ModernSettingsTab } from './src/ui/settingsTab';
+import { Logger } from './src/utils/logger';
 
 // 한글 맞춤법 검사 아이콘 등록
 addIcon(
@@ -28,6 +29,15 @@ export default class KoreanGrammarPlugin extends Plugin {
   orchestrator: SpellCheckOrchestrator;
 
   async onload() {
+    // 환경에 따른 로거 최적화 설정
+    if (process.env.NODE_ENV === 'production') {
+      Logger.configureForProduction();
+    } else {
+      Logger.configureForDevelopment();
+    }
+    
+    Logger.log('Korean Grammar Assistant 플러그인 로딩 시작');
+
     // 설정 로드
     await this.loadSettings();
 

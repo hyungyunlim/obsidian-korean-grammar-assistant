@@ -1,11 +1,28 @@
 import { AISettings, AIAnalysisRequest, AIAnalysisResult, Correction, CorrectionContext } from '../types/interfaces';
-import { AIClientFactory } from '../api/clientFactory';
 import { AI_PROMPTS, MODEL_TOKEN_LIMITS } from '../constants/aiModels';
 import { estimateAnalysisTokenUsage, estimateCost } from '../utils/tokenEstimator';
 import { Logger } from '../utils/logger';
 
 export class AIAnalysisService {
   constructor(private settings: AISettings) {}
+
+  /**
+   * AI 클라이언트 팩토리를 지연 로딩합니다 (성능 최적화)
+   * @private
+   */
+  private async getClientFactory() {
+    const { AIClientFactory } = await import('../api/clientFactory');
+    return AIClientFactory;
+  }
+
+  /**
+   * API 키 유효성을 확인합니다 (lazy loading 팩토리 사용)
+   * @private
+   */
+  private async hasValidApiKey(settings: AISettings): Promise<boolean> {
+    const ClientFactory = await this.getClientFactory();
+    return ClientFactory.hasValidApiKey(settings);
+  }
 
   /**
    * 각 오류에 대한 컨텍스트를 추출합니다.
@@ -436,7 +453,7 @@ export class AIAnalysisService {
       throw new Error('AI 기능이 비활성화되어 있습니다.');
     }
 
-    if (!AIClientFactory.hasValidApiKey(this.settings)) {
+    if (!(await this.hasValidApiKey(this.settings))) {
       const provider = this.settings.provider;
       const keyName = provider === 'openai' ? 'OpenAI API 키' :
                      provider === 'anthropic' ? 'Anthropic API 키' :
@@ -445,12 +462,14 @@ export class AIAnalysisService {
       throw new Error(`${keyName}가 설정되지 않았습니다. 플러그인 설정에서 ${provider} 제공자의 ${keyName}를 입력해주세요.`);
     }
 
+    const ClientFactory = await this.getClientFactory();
+
     // 모델명 유효성 검사
     if (!this.settings.model || this.settings.model.trim() === '') {
       throw new Error(`모델이 설정되지 않았습니다. 플러그인 설정에서 ${this.settings.provider} 모델을 선택해주세요.`);
     }
 
-    const client = AIClientFactory.createClient(this.settings);
+    const client = ClientFactory.createClient(this.settings);
     
     try {
       // 컨텍스트 추출 (형태소 정보 포함)
@@ -768,7 +787,8 @@ export class AIAnalysisService {
    */
   async fetchAvailableModels(): Promise<string[]> {
     try {
-      return await AIClientFactory.fetchModels(this.settings);
+      const ClientFactory = await this.getClientFactory();
+      return await ClientFactory.fetchModels(this.settings);
     } catch (error) {
       Logger.error('모델 목록 가져오기 실패:', error);
       return [];
@@ -785,18 +805,19 @@ export class AIAnalysisService {
   /**
    * AI 서비스가 사용 가능한지 확인합니다.
    */
-  isAvailable(): boolean {
-    return this.settings.enabled && AIClientFactory.hasValidApiKey(this.settings);
+  async isAvailable(): Promise<boolean> {
+    return this.settings.enabled && (await this.hasValidApiKey(this.settings));
   }
 
   /**
    * 현재 설정된 제공자 및 모델 정보를 반환합니다.
    */
   getProviderInfo(): { provider: string; model: string; available: boolean } {
+    // 기본적인 동기 체크만 수행 (API 키는 비동기 체크 필요하므로 제외)
     return {
       provider: this.settings.provider,
       model: this.settings.model,
-      available: this.isAvailable()
+      available: this.settings.enabled // 기본적인 활성화 상태만 체크
     };
   }
 

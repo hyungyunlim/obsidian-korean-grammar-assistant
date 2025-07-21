@@ -658,6 +658,18 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   opacity: 0.6 !important;
   cursor: not-allowed !important;
 }
+#correctionPopup .ai-analyze-btn.ai-disabled {
+  border-color: var(--text-muted) !important;
+  background: rgba(var(--text-muted-rgb), 0.1) !important;
+  color: var(--text-muted) !important;
+  opacity: 0.7 !important;
+  cursor: not-allowed !important;
+}
+#correctionPopup .ai-analyze-btn.ai-disabled:hover {
+  background: rgba(var(--text-muted-rgb), 0.1) !important;
+  color: var(--text-muted) !important;
+  border-color: var(--text-muted) !important;
+}
 
 /* styles/modals.css */
 .error-notice-overlay,
