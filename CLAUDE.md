@@ -56,18 +56,33 @@
 ```
 obsidian-korean-spellchecker/
 ├── main.ts                    # 메인 플러그인 코드
-├── styles.css                 # UI 스타일링 
+├── styles.css                 # 메인 UI 스타일링 
 ├── manifest.json              # 플러그인 매니페스트
 ├── esbuild.config.mjs         # 빌드 설정
 ├── package.json               # 의존성 관리
 ├── CLAUDE.md                  # 프로젝트 문서 (이 파일)
 ├── api-config.example.json    # API 설정 템플릿
 ├── api-config.json            # 로컬 API 설정 (git ignored)
+├── log/                       # 개발용 로그 파일들 (git ignored)
 ├── docs-reference/            # Obsidian 개발자 문서 (git ignored)
 │   └── en/Reference/TypeScript API/  # API 참조 문서
+├── styles/                    # 모듈화된 CSS 파일들 ⭐ NEW
+│   ├── ai.css                 # AI 분석 관련 스타일
+│   ├── base.css               # 기본 스타일 및 변수
+│   ├── error-highlight.css    # 오류 하이라이트 스타일
+│   ├── error-summary.css      # 오류 요약 영역 스타일
+│   ├── header.css             # 팝업 헤더 스타일
+│   ├── keyboard.css           # 키보드 네비게이션 스타일
+│   ├── main.css               # 메인 팝업 스타일
+│   ├── modals.css             # 모달 및 다이얼로그 스타일
+│   ├── preview.css            # 미리보기 영역 스타일
+│   ├── responsive.css         # 반응형 디자인 스타일
+│   └── settings.css           # 설정 탭 스타일
 └── src/                       # 모듈화된 소스 코드
     ├── types/interfaces.ts    # 타입 정의 (AI 관련 포함)
-    ├── constants/aiModels.ts  # AI 모델 및 프롬프트 상수
+    ├── constants/             # 상수 및 설정
+    │   ├── aiModels.ts        # AI 모델 정의 및 설정
+    │   └── aiPrompts.ts       # AI 프롬프트 템플릿
     ├── api/                   # AI API 클라이언트들
     │   ├── openai-client.ts   # OpenAI API 클라이언트
     │   ├── anthropic-client.ts # Anthropic API 클라이언트
@@ -78,15 +93,27 @@ obsidian-korean-spellchecker/
     │   ├── api.ts             # Bareun.ai API 서비스
     │   ├── settings.ts        # 설정 관리 서비스
     │   ├── ignoredWords.ts    # 예외 단어 관리 서비스
-    │   └── aiAnalysisService.ts # AI 분석 서비스 ⭐ NEW
+    │   ├── aiAnalysisService.ts # AI 분석 서비스
+    │   ├── advancedSettingsService.ts # 고급 설정 서비스
+    │   ├── cacheService.ts    # 캐싱 서비스
+    │   ├── errorHandler.ts    # 오류 처리 서비스
+    │   └── optimizedApiService.ts # 최적화된 API 서비스
     ├── ui/                    # UI 컴포넌트
     │   ├── baseComponent.ts   # 기본 컴포넌트 클래스
-    │   └── correctionPopup.ts # 교정 팝업 (AI 통합)
+    │   ├── correctionPopup.ts # 교정 팝업 (AI 통합)
+    │   ├── loadingManager.ts  # 로딩 상태 관리
+    │   ├── settingsTab.ts     # 설정 탭 UI
+    │   └── virtualScroller.ts # 가상 스크롤러
     ├── state/                 # 상태 관리
     │   └── correctionState.ts # 교정 상태 관리자
     ├── utils/                 # 유틸리티 함수들
-    │   ├── htmlUtils.ts       # HTML 유틸리티
-    │   └── textUtils.ts       # 텍스트 처리 유틸리티
+    │   ├── domOptimizer.ts    # DOM 최적화 유틸리티
+    │   ├── domUtils.ts        # DOM 조작 유틸리티
+    │   ├── htmlUtils.ts       # HTML 처리 유틸리티
+    │   ├── logger.ts          # 로깅 시스템
+    │   ├── memoryOptimizer.ts # 메모리 최적화 유틸리티
+    │   ├── textUtils.ts       # 텍스트 처리 유틸리티
+    │   └── tokenEstimator.ts  # 토큰 사용량 추정
     └── orchestrator.ts        # 워크플로우 오케스트레이터 (AI 통합)
 ```
 
