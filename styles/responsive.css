@@ -201,6 +201,13 @@
         font-size: 20px;
     }
     
+    /* AI 분석 버튼 모바일 최적화 */
+    #correctionPopup .ai-analyze-btn {
+        padding: 4px 8px !important;
+        font-size: 11px !important;
+        border-radius: 4px !important;
+    }
+    
     @media (max-height: 700px) {
         /* 작은 화면에서 오류 상세 영역 높이 조정 */
         #correctionPopup .error-summary:not(.collapsed) .error-summary-content {

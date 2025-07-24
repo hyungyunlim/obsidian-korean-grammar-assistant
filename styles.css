@@ -1571,6 +1571,11 @@ body.spell-popup-open #correctionPopup [contenteditable] {
     height: 36px;
     font-size: 20px;
   }
+  #correctionPopup .ai-analyze-btn {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+    border-radius: 4px !important;
+  }
   @media (max-height: 700px) {
     #correctionPopup .error-summary:not(.collapsed) .error-summary-content {
       height: 250px;
