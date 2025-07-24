@@ -4688,6 +4688,69 @@ var CorrectionPopup = class extends BaseComponent {
         this.handlePreviewRightClick(target);
       }
     });
+    this.bindTouchHoldEvents();
+  }
+  /**
+   * 모바일용 터치홀드 이벤트를 바인딩합니다.
+   */
+  bindTouchHoldEvents() {
+    if (!import_obsidian2.Platform.isMobile) {
+      Logger.debug("\uB370\uC2A4\uD06C\uD1B1 \uD658\uACBD\uC5D0\uC11C\uB294 \uD130\uCE58\uD640\uB4DC \uC774\uBCA4\uD2B8\uB97C \uB4F1\uB85D\uD558\uC9C0 \uC54A\uC74C");
+      return;
+    }
+    let touchTimer = null;
+    let touchTarget = null;
+    const TOUCH_HOLD_DURATION = 500;
+    this.addEventListener(this.element, "touchstart", (e) => {
+      const target = e.target;
+      if (target.classList.contains("clickable-error")) {
+        touchTarget = target;
+        touchTimer = setTimeout(() => {
+          if (touchTarget) {
+            Logger.log(`\u{1F4F1} \uD130\uCE58\uD640\uB4DC \uD3B8\uC9D1 \uBAA8\uB4DC \uC9C4\uC785: ${touchTarget.textContent}`);
+            if ("vibrate" in navigator) {
+              navigator.vibrate(50);
+            }
+            this.handlePreviewRightClick(touchTarget);
+            touchTarget = null;
+            touchTimer = null;
+          }
+        }, TOUCH_HOLD_DURATION);
+        Logger.debug(`\u{1F4F1} \uD130\uCE58\uD640\uB4DC \uD0C0\uC774\uBA38 \uC2DC\uC791: ${target.textContent}`);
+      }
+    });
+    this.addEventListener(this.element, "touchend", () => {
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+        Logger.debug("\u{1F4F1} \uD130\uCE58\uD640\uB4DC \uD0C0\uC774\uBA38 \uCDE8\uC18C (touchend)");
+      }
+      touchTarget = null;
+    });
+    this.addEventListener(this.element, "touchcancel", () => {
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+        Logger.debug("\u{1F4F1} \uD130\uCE58\uD640\uB4DC \uD0C0\uC774\uBA38 \uCDE8\uC18C (touchcancel)");
+      }
+      touchTarget = null;
+    });
+    this.addEventListener(this.element, "touchmove", (e) => {
+      if (touchTimer && touchTarget) {
+        const touch = e.touches[0];
+        const rect = touchTarget.getBoundingClientRect();
+        const moveThreshold = 10;
+        const distanceX = Math.abs(touch.clientX - (rect.left + rect.width / 2));
+        const distanceY = Math.abs(touch.clientY - (rect.top + rect.height / 2));
+        if (distanceX > moveThreshold || distanceY > moveThreshold) {
+          clearTimeout(touchTimer);
+          touchTimer = null;
+          touchTarget = null;
+          Logger.debug("\u{1F4F1} \uD130\uCE58\uD640\uB4DC \uD0C0\uC774\uBA38 \uCDE8\uC18C (\uC774\uB3D9 \uAC10\uC9C0)");
+        }
+      }
+    });
+    Logger.log("\u{1F4F1} \uBAA8\uBC14\uC77C \uD130\uCE58\uD640\uB4DC \uC774\uBCA4\uD2B8 \uB4F1\uB85D \uC644\uB8CC");
   }
   /**
    * 적용 버튼 이벤트를 바인딩합니다.

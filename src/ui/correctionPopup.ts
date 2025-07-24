@@ -1413,6 +1413,96 @@ export class CorrectionPopup extends BaseComponent {
         this.handlePreviewRightClick(target);
       }
     });
+
+    // 모바일용 터치홀드 이벤트 (터치홀드로 편집 모드 진입)
+    this.bindTouchHoldEvents();
+  }
+
+  /**
+   * 모바일용 터치홀드 이벤트를 바인딩합니다.
+   */
+  private bindTouchHoldEvents(): void {
+    // 모바일에서만 터치홀드 이벤트 활성화
+    if (!Platform.isMobile) {
+      Logger.debug('데스크톱 환경에서는 터치홀드 이벤트를 등록하지 않음');
+      return;
+    }
+
+    let touchTimer: NodeJS.Timeout | null = null;
+    let touchTarget: HTMLElement | null = null;
+    const TOUCH_HOLD_DURATION = 500; // 500ms 터치홀드
+
+    // 터치 시작
+    this.addEventListener(this.element, 'touchstart', (e: TouchEvent) => {
+      const target = e.target as HTMLElement;
+      
+      // 미리보기 영역의 오류 텍스트에서만 터치홀드 처리
+      if (target.classList.contains('clickable-error')) {
+        touchTarget = target;
+        
+        touchTimer = setTimeout(() => {
+          if (touchTarget) {
+            Logger.log(`📱 터치홀드 편집 모드 진입: ${touchTarget.textContent}`);
+            
+            // 햅틱 피드백 (지원되는 경우)
+            if ('vibrate' in navigator) {
+              navigator.vibrate(50);
+            }
+            
+            // 우클릭과 동일한 편집 모드 로직 호출
+            this.handlePreviewRightClick(touchTarget);
+            
+            // 터치홀드 처리 완료 후 정리
+            touchTarget = null;
+            touchTimer = null;
+          }
+        }, TOUCH_HOLD_DURATION);
+        
+        Logger.debug(`📱 터치홀드 타이머 시작: ${target.textContent}`);
+      }
+    });
+
+    // 터치 끝 (타이머 취소)
+    this.addEventListener(this.element, 'touchend', () => {
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+        Logger.debug('📱 터치홀드 타이머 취소 (touchend)');
+      }
+      touchTarget = null;
+    });
+
+    // 터치 취소 (드래그 등으로 인한 취소)
+    this.addEventListener(this.element, 'touchcancel', () => {
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+        Logger.debug('📱 터치홀드 타이머 취소 (touchcancel)');
+      }
+      touchTarget = null;
+    });
+
+    // 터치 이동 (일정 거리 이상 이동 시 취소)
+    this.addEventListener(this.element, 'touchmove', (e: TouchEvent) => {
+      if (touchTimer && touchTarget) {
+        // 터치 이동이 감지되면 홀드 취소 (스크롤 등과 구분)
+        const touch = e.touches[0];
+        const rect = touchTarget.getBoundingClientRect();
+        const moveThreshold = 10; // 10px 이상 이동 시 취소
+        
+        const distanceX = Math.abs(touch.clientX - (rect.left + rect.width / 2));
+        const distanceY = Math.abs(touch.clientY - (rect.top + rect.height / 2));
+        
+        if (distanceX > moveThreshold || distanceY > moveThreshold) {
+          clearTimeout(touchTimer);
+          touchTimer = null;
+          touchTarget = null;
+          Logger.debug('📱 터치홀드 타이머 취소 (이동 감지)');
+        }
+      }
+    });
+
+    Logger.log('📱 모바일 터치홀드 이벤트 등록 완료');
   }
 
   /**
