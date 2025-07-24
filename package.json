@@ -1,6 +1,6 @@
 {
   "name": "korean-grammar-assistant",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Korean grammar and spelling checker for Obsidian with AI-powered suggestions. Features interactive corrections, performance optimization, and comprehensive settings management.",
   "main": "main.js",
   "scripts": {
