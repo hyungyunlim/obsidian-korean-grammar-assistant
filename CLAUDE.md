@@ -290,8 +290,8 @@ keyboardScope.register(['Shift', 'Tab'], 'prev-error', () => this.focusPrevError
 keyboardScope.register(['Cmd', 'E'], 'edit-error', () => this.editCurrentError());
 ```
 
-#### 17개 키보드 단축키
-- **네비게이션**: Tab, Shift+Tab, ←/→, Enter, Escape
+#### 18개 키보드 단축키
+- **네비게이션**: Tab, Shift+Tab, ←/→, Enter, CMD+Enter, Escape
 - **편집**: CMD+E, Shift+CMD+A, CMD+Shift+E
 - **일괄 작업**: CMD+Shift+←/→
 - **페이지**: ↑/↓ (긴 텍스트)
@@ -539,6 +539,7 @@ private applyAIAnalysisResults(): void {
 - **Shift+Tab**: 이전 오류로 이동
 - **←/→**: 현재 오류의 수정 제안 순환 (앞/뒤)
 - **Enter**: 현재 선택된 수정사항 적용
+- **CMD+Enter**: 모든 변경사항을 에디터에 저장
 - **Escape**: 팝업 닫기
 
 ### 편집 및 AI 기능
@@ -782,7 +783,7 @@ npm run dev         # 개발 모드 (파일 변경 감지)
   - ✅ **현재 상태 정보 전달**: 각 오류의 현재 UI 상태를 AI에게 실시간 전달하여 더 정확한 분석 지원
   - ✅ **3가지 편집 방법 인식**: CMD+E/우클릭/카드클릭으로 편집한 텍스트를 AI가 모두 고려
 - ✅ **문서화 시스템 대폭 확장**: 기술 아키텍처 및 사용성 가이드 완성
-  - ✅ **17개 키보드 단축키 완전 문서화**: 마우스 없이 완전한 워크플로우 가능
+  - ✅ **18개 키보드 단축키 완전 문서화**: 마우스 없이 완전한 워크플로우 가능
   - ✅ **3단계 분석 파이프라인 공개**: 맞춤법→형태소→AI 분석 과정 상세 설명
   - ✅ **토큰 최적화 전략 완전 공개**: 최대 70% 토큰 절약 효과 정량적 표시
   - ✅ **성능 최적화 기법 문서화**: LRU 캐싱, API 재사용, 비동기 처리 등

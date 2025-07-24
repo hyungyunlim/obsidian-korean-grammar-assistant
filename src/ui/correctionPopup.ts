@@ -180,6 +180,15 @@ export class CorrectionPopup extends BaseComponent {
       return false;
     });
 
+    // Cmd/Ctrl+Enter: 모든 변경사항을 에디터에 적용
+    this.keyboardScope.register(['Mod'], 'Enter', (evt: KeyboardEvent) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      evt.stopImmediatePropagation();
+      this.applyCorrections();
+      return false;
+    });
+
     Logger.log('키보드 네비게이션 설정 완료');
   }
 
@@ -2717,6 +2726,7 @@ export class CorrectionPopup extends BaseComponent {
       { key: 'Tab', desc: '다음 오류' },
       { key: '←/→', desc: '수정 제안 순환' },
       { key: 'Enter', desc: '적용' },
+      { key: '⌘Enter', desc: '모든 변경사항 저장' },
       { key: '⌘E', desc: '편집 모드' },
       { key: '⇧⌘A', desc: 'AI 분석' },
       { key: '⌘⇧E', desc: '오류 상세 토글' },

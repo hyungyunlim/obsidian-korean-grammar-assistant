@@ -3764,6 +3764,13 @@ var CorrectionPopup = class extends BaseComponent {
       this.batchCycleCorrections("prev");
       return false;
     });
+    this.keyboardScope.register(["Mod"], "Enter", (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      evt.stopImmediatePropagation();
+      this.applyCorrections();
+      return false;
+    });
     Logger.log("\uD0A4\uBCF4\uB4DC \uB124\uBE44\uAC8C\uC774\uC158 \uC124\uC815 \uC644\uB8CC");
   }
   /**
@@ -5676,6 +5683,7 @@ var CorrectionPopup = class extends BaseComponent {
       { key: "Tab", desc: "\uB2E4\uC74C \uC624\uB958" },
       { key: "\u2190/\u2192", desc: "\uC218\uC815 \uC81C\uC548 \uC21C\uD658" },
       { key: "Enter", desc: "\uC801\uC6A9" },
+      { key: "\u2318Enter", desc: "\uBAA8\uB4E0 \uBCC0\uACBD\uC0AC\uD56D \uC800\uC7A5" },
       { key: "\u2318E", desc: "\uD3B8\uC9D1 \uBAA8\uB4DC" },
       { key: "\u21E7\u2318A", desc: "AI \uBD84\uC11D" },
       { key: "\u2318\u21E7E", desc: "\uC624\uB958 \uC0C1\uC138 \uD1A0\uAE00" },
