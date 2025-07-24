@@ -11,26 +11,38 @@
 
 @media (max-width: 768px) {
     #correctionPopup {
-        align-items: flex-start;
-        padding-top: max(env(safe-area-inset-top, 0px), 20px);
-        padding-bottom: max(env(safe-area-inset-bottom, 0px), 20px);
-        padding-left: max(env(safe-area-inset-left, 0px), 10px);
-        padding-right: max(env(safe-area-inset-right, 0px), 10px);
+        align-items: stretch;
+        justify-content: stretch;
+        padding: 0;
         box-sizing: border-box;
     }
 
     #correctionPopup .popup-content {
-        width: calc(100vw - 20px);
-        height: calc(100vh - max(env(safe-area-inset-top, 0px), 20px) - max(env(safe-area-inset-bottom, 0px), 20px) - 40px);
+        /* 화면 전체를 가득 채움 */
+        width: 100vw;
+        height: 100vh;
+        max-width: none;
         max-height: none;
-        min-height: 500px;
-        border-radius: 8px;
-        margin-top: auto;
-        margin-bottom: auto;
+        min-height: auto;
+        border-radius: 0;
+        box-shadow: none;
+        border: none;
+        margin: 0;
+        
+        /* Safe area 고려한 내부 패딩 */
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        padding-left: env(safe-area-inset-left, 0px);
+        padding-right: env(safe-area-inset-right, 0px);
+        box-sizing: border-box;
     }
     
     #correctionPopup .header {
         padding: 16px 20px 12px;
+        /* Safe area 추가 패딩 */
+        padding-left: max(20px, env(safe-area-inset-left, 0px) + 20px);
+        padding-right: max(20px, env(safe-area-inset-right, 0px) + 20px);
+        padding-top: max(16px, env(safe-area-inset-top, 0px) + 16px);
     }
     
     #correctionPopup .header h2 {
@@ -39,6 +51,9 @@
     
     #correctionPopup .content {
         padding: 16px 20px 0;
+        /* Safe area 추가 패딩 */
+        padding-left: max(20px, env(safe-area-inset-left, 0px) + 20px);
+        padding-right: max(20px, env(safe-area-inset-right, 0px) + 20px);
     }
     
     #correctionPopup .preview-section {
@@ -124,6 +139,10 @@
     #correctionPopup .button-area {
         gap: 10px;
         padding: 16px 20px 20px;
+        /* Safe area 추가 패딩 */
+        padding-left: max(20px, env(safe-area-inset-left, 0px) + 20px);
+        padding-right: max(20px, env(safe-area-inset-right, 0px) + 20px);
+        padding-bottom: max(20px, env(safe-area-inset-bottom, 0px) + 20px);
     }
     
     #correctionPopup .cancel-btn,
