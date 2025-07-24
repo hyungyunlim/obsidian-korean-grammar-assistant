@@ -8,6 +8,7 @@ export class CorrectionStateManager {
   private states: Map<string | number, any> = new Map();
   private corrections: Correction[] = [];
   private ignoredWords: string[] = [];
+  private userEditedValues: Map<number, string> = new Map();
 
   constructor(corrections: Correction[], ignoredWords: string[] = []) {
     this.corrections = corrections;
@@ -33,12 +34,20 @@ export class CorrectionStateManager {
    * @param value 설정할 값
    * @param isExceptionState 예외 처리 상태 여부
    * @param isOriginalKept 원본유지 상태 여부
+   * @param isUserEdited 사용자 편집 상태 여부
    */
-  setState(correctionIndex: number, value: string, isExceptionState: boolean = false, isOriginalKept: boolean = false): void {
+  setState(correctionIndex: number, value: string, isExceptionState: boolean = false, isOriginalKept: boolean = false, isUserEdited: boolean = false): void {
+    // 호출 위치 추적을 위한 스택 트레이스
+    const stack = new Error().stack;
+    const caller = stack?.split('\n')[2]?.trim() || 'unknown';
+    
+    Logger.log(`🔧 setState 호출됨: index=${correctionIndex}, value="${value}", isUserEdited=${isUserEdited}, caller=${caller}`);
+    
     this.states.set(correctionIndex, value);
     
     const exceptionKey = `${correctionIndex}_exception`;
     const originalKeptKey = `${correctionIndex}_originalKept`;
+    const userEditedKey = `${correctionIndex}_userEdited`;
 
     if (isExceptionState) {
       this.states.set(exceptionKey, true);
@@ -51,6 +60,24 @@ export class CorrectionStateManager {
     } else {
         this.states.delete(originalKeptKey);
     }
+
+    if (isUserEdited) {
+        this.states.set(userEditedKey, true);
+        this.userEditedValues.set(correctionIndex, value);
+        Logger.log(`🔧 setState: 사용자 편집 상태 설정 - userEditedKey="${userEditedKey}", value="${value}"`);
+    } else {
+        // 사용자 편집 상태가 해제되는 경우 추적
+        const wasUserEdited = this.states.has(userEditedKey);
+        const existingUserValue = this.userEditedValues.get(correctionIndex);
+        
+        this.states.delete(userEditedKey);
+        // 중요: userEditedValues는 삭제하지 않고 보존 - 토글 순환에서 재사용
+        // this.userEditedValues.delete(correctionIndex); // 삭제하지 않음
+        
+        if (wasUserEdited) {
+          Logger.log(`🔧 setState: 사용자 편집 상태 해제 (편집값 보존) - userEditedKey="${userEditedKey}", 보존값="${existingUserValue}", caller=${caller}`);
+        }
+    }
   }
 
   /**
@@ -59,7 +86,20 @@ export class CorrectionStateManager {
    * @returns 현재 값
    */
   getValue(correctionIndex: number): string {
-    return this.states.get(correctionIndex) || '';
+    const isUserEdited = this.isUserEditedState(correctionIndex);
+    const userEditedValue = this.userEditedValues.get(correctionIndex);
+    const statesValue = this.states.get(correctionIndex) || '';
+    
+    // 사용자 편집 상태이고 편집값이 있으면 편집값 반환, 없으면 상태값 반환
+    const finalValue = isUserEdited && userEditedValue !== undefined ? userEditedValue : statesValue;
+    
+    // 디버깅: 사용자 편집 상태인데 편집값이 없는 경우 경고
+    if (isUserEdited && !userEditedValue) {
+      Logger.warn(`⚠️ 사용자 편집 상태인데 편집값이 없음: index=${correctionIndex}`);
+    }
+    
+    Logger.log(`getValue(${correctionIndex}): states="${statesValue}", userEdited=${isUserEdited}, userEditedValue="${userEditedValue}", finalValue="${finalValue}"`);
+    return finalValue;
   }
 
   /**
@@ -83,6 +123,43 @@ export class CorrectionStateManager {
   }
 
   /**
+   * 특정 교정이 사용자 편집 상태인지 확인합니다.
+   * @param correctionIndex 교정 인덱스
+   * @returns 사용자 편집 상태 여부
+   */
+  isUserEditedState(correctionIndex: number): boolean {
+    const userEditedKey = `${correctionIndex}_userEdited`;
+    return !!this.states.get(userEditedKey);
+  }
+
+  /**
+   * 사용자 편집된 값을 설정합니다.
+   * @param correctionIndex 교정 인덱스
+   * @param userValue 사용자가 입력한 값
+   */
+  setUserEdited(correctionIndex: number, userValue: string): void {
+    Logger.log(`🔧 setUserEdited 호출: index=${correctionIndex}, value="${userValue}"`);
+    
+    const beforeStates = this.states.get(correctionIndex);
+    const beforeUserEdited = this.isUserEditedState(correctionIndex);
+    const beforeUserValue = this.userEditedValues.get(correctionIndex);
+    
+    Logger.log(`🔧 Before setState: states="${beforeStates}", userEdited=${beforeUserEdited}, userValue="${beforeUserValue}"`);
+    
+    // 중요: syncSameWordStates 호출하지 않고 직접 설정
+    this.setState(correctionIndex, userValue, false, false, true);
+    
+    // 동기화는 하지 않음 - 사용자 편집은 개별 항목에만 적용
+    Logger.log(`🔧 사용자 편집은 동기화하지 않음 - 개별 항목만 적용`);
+    
+    const afterStates = this.states.get(correctionIndex);
+    const afterUserEdited = this.isUserEditedState(correctionIndex);
+    const afterUserValue = this.userEditedValues.get(correctionIndex);
+    
+    Logger.log(`🔧 After setState: states="${afterStates}", userEdited=${afterUserEdited}, userValue="${afterUserValue}"`);
+  }
+
+  /**
    * 특정 단어가 초기에 무시된 단어인지 확인합니다.
    * @param word 확인할 단어
    * @returns 초기에 무시된 단어 여부
@@ -92,8 +169,8 @@ export class CorrectionStateManager {
   }
 
   /**
-   * 4단계 토글을 수행합니다.
-   * - 오류(빨간색) → 수정1, 수정2...(초록색) → 예외처리(파란색) → 원본유지(주황색) → 오류(빨간색)
+   * 5단계 토글을 수행합니다.
+   * - 오류(빨간색) → 수정1, 수정2...(초록색) → 예외처리(파란색) → 원본유지(주황색) → 사용자편집(보라색) → 오류(빨간색)
    * @param correctionIndex 교정 인덱스
    * @returns 새로운 상태 정보
    */
@@ -109,12 +186,14 @@ export class CorrectionStateManager {
     const currentValue = this.getValue(correctionIndex);
     const isCurrentlyException = this.isExceptionState(correctionIndex);
     const isCurrentlyOriginalKept = this.isOriginalKeptState(correctionIndex);
+    const isCurrentlyUserEdited = this.isUserEditedState(correctionIndex);
     
     Logger.log('toggleState Initial state:', {
       correctionIndex,
       currentValue,
       isCurrentlyException,
       isCurrentlyOriginalKept,
+      isCurrentlyUserEdited,
       originalText: correction.original,
       suggestions
     });
@@ -122,23 +201,53 @@ export class CorrectionStateManager {
     let newValue: string;
     let newIsException: boolean;
     let newIsOriginalKept: boolean;
+    let newIsUserEdited: boolean;
 
-    // 1. 원본유지 상태에서 오류 상태로
-    if (isCurrentlyOriginalKept) {
+    // 분기 진단용 상세 로그
+    Logger.log(`🔍 toggleState 분기 진단: isCurrentlyUserEdited=${isCurrentlyUserEdited}, isCurrentlyOriginalKept=${isCurrentlyOriginalKept}, isCurrentlyException=${isCurrentlyException}`);
+
+    // 1. 사용자편집 상태에서 오류 상태로
+    if (isCurrentlyUserEdited) {
+        Logger.log('🔄 toggleState 분기 1 진입: UserEdited -> Error');
         newValue = correction.original;
         newIsException = false;
         newIsOriginalKept = false;
-        Logger.log('toggleState OriginalKept -> Error');
+        newIsUserEdited = false;
+        Logger.log('toggleState UserEdited -> Error');
     }
-    // 2. 예외처리 상태에서 원본유지 상태로
+    // 2. 원본유지 상태에서 사용자편집 상태로 (편집값이 있는 경우만)
+    else if (isCurrentlyOriginalKept) {
+        Logger.log('🔄 toggleState 분기 2 진입: OriginalKept -> ?');
+        const userEditedValue = this.userEditedValues.get(correctionIndex);
+        
+        if (userEditedValue) {
+            // 사용자 편집값이 있으면 사용자 편집 상태로
+            newValue = userEditedValue;
+            newIsException = false;
+            newIsOriginalKept = false;
+            newIsUserEdited = true;
+            Logger.log(`toggleState OriginalKept -> UserEdited: userEditedValue="${userEditedValue}"`);
+        } else {
+            // 사용자 편집값이 없으면 오류 상태로 건너뜀
+            newValue = correction.original;
+            newIsException = false;
+            newIsOriginalKept = false;
+            newIsUserEdited = false;
+            Logger.log('toggleState OriginalKept -> Error (편집값 없음, 사용자편집 건너뜀)');
+        }
+    }
+    // 3. 예외처리 상태에서 원본유지 상태로
     else if (isCurrentlyException) {
+        Logger.log('🔄 toggleState 분기 3 진입: Exception -> OriginalKept');
         newValue = correction.original;
         newIsException = false;
         newIsOriginalKept = true;
+        newIsUserEdited = false;
         Logger.log('toggleState Exception -> OriginalKept');
     }
     else {
-        // 3. 현재 값의 다음 제안으로 이동
+        Logger.log('🔄 toggleState 분기 4 진입: 제안 순환 로직');
+        // 4. 현재 값의 다음 제안으로 이동
         let nextIndex = suggestions.indexOf(currentValue) + 1;
 
         if (nextIndex >= suggestions.length) {
@@ -146,25 +255,34 @@ export class CorrectionStateManager {
             newValue = correction.original;
             newIsException = true;
             newIsOriginalKept = false;
+            newIsUserEdited = false;
             Logger.log('toggleState Last Suggestion -> Exception');
         } else {
-            // 4. 다음 제안으로 이동 (오류 → 첫 번째 수정안, 수정안 → 다음 수정안)
+            // 5. 다음 제안으로 이동 (오류 → 첫 번째 수정안, 수정안 → 다음 수정안)
             newValue = suggestions[nextIndex];
             newIsException = false;
             newIsOriginalKept = false;
+            newIsUserEdited = false;
             Logger.log('toggleState Next Suggestion:', newValue);
         }
     }
 
-    // 같은 원본 텍스트를 가진 모든 교정 항목에 동일한 상태 적용 (일괄 시각적 업데이트)
-    this.syncSameWordStates(correction.original, newValue, newIsException, newIsOriginalKept);
+    // 사용자 편집 관련 상태 변화는 항상 개별적으로만 적용
+    if (isCurrentlyUserEdited || newIsUserEdited) {
+      // 사용자 편집 상태에서 나가거나 들어가는 경우는 현재 항목에만 적용
+      this.setState(correctionIndex, newValue, newIsException, newIsOriginalKept, newIsUserEdited);
+      Logger.log(`사용자 편집 관련 상태 변화는 개별 적용만 수행: index ${correctionIndex}, from=${isCurrentlyUserEdited} to=${newIsUserEdited}`);
+    } else {
+      // 일반적인 상태 변화는 동기화
+      this.syncSameWordStates(correction.original, newValue, newIsException, newIsOriginalKept, newIsUserEdited, correctionIndex);
+    }
 
     return { value: newValue, isExceptionState: newIsException };
   }
 
   /**
-   * 4단계 역방향 토글을 수행합니다.
-   * - 오류(빨간색) → 원본유지(주황색) → 예외처리(파란색) → 수정N, 수정1(초록색) → 오류(빨간색)
+   * 5단계 역방향 토글을 수행합니다.
+   * - 오류(빨간색) → 사용자편집(보라색) → 원본유지(주황색) → 예외처리(파란색) → 수정N, 수정1(초록색) → 오류(빨간색)
    * @param correctionIndex 교정 인덱스
    * @returns 새로운 상태 정보
    */
@@ -180,12 +298,14 @@ export class CorrectionStateManager {
     const currentValue = this.getValue(correctionIndex);
     const isCurrentlyException = this.isExceptionState(correctionIndex);
     const isCurrentlyOriginalKept = this.isOriginalKeptState(correctionIndex);
+    const isCurrentlyUserEdited = this.isUserEditedState(correctionIndex);
     
     Logger.log('toggleStatePrev Initial state:', {
       correctionIndex,
       currentValue,
       isCurrentlyException,
       isCurrentlyOriginalKept,
+      isCurrentlyUserEdited,
       originalText: correction.original,
       suggestions
     });
@@ -193,38 +313,73 @@ export class CorrectionStateManager {
     let newValue: string;
     let newIsException: boolean;
     let newIsOriginalKept: boolean;
+    let newIsUserEdited: boolean;
 
-    // 1. 오류 상태에서 원본유지 상태로 (역방향)
-    if (currentValue === correction.original && !isCurrentlyException && !isCurrentlyOriginalKept) {
+    // 1. 오류 상태에서 사용자편집 상태로 (역방향, 편집값이 있는 경우만)
+    if (currentValue === correction.original && !isCurrentlyException && !isCurrentlyOriginalKept && !isCurrentlyUserEdited) {
+        const userEditedValue = this.userEditedValues.get(correctionIndex);
+        
+        if (userEditedValue) {
+            // 사용자 편집값이 있으면 사용자 편집 상태로
+            newValue = userEditedValue;
+            newIsException = false;
+            newIsOriginalKept = false;
+            newIsUserEdited = true;
+            Logger.log(`toggleStatePrev Error -> UserEdited: userEditedValue="${userEditedValue}"`);
+        } else {
+            // 사용자 편집값이 없으면 원본유지 상태로 건너뜀
+            newValue = correction.original;
+            newIsException = false;
+            newIsOriginalKept = true;
+            newIsUserEdited = false;
+            Logger.log('toggleStatePrev Error -> OriginalKept (편집값 없음, 사용자편집 건너뜀)');
+        }
+    }
+    // 2. 사용자편집 상태에서 원본유지 상태로
+    else if (isCurrentlyUserEdited) {
         newValue = correction.original;
         newIsException = false;
         newIsOriginalKept = true;
-        Logger.log('toggleStatePrev Error -> OriginalKept');
+        newIsUserEdited = false;
+        Logger.log('toggleStatePrev UserEdited -> OriginalKept');
     }
-    // 2. 원본유지 상태에서 예외처리 상태로
+    // 3. 원본유지 상태에서 예외처리 상태로
     else if (isCurrentlyOriginalKept) {
         newValue = correction.original;
         newIsException = true;
         newIsOriginalKept = false;
+        newIsUserEdited = false;
         Logger.log('toggleStatePrev OriginalKept -> Exception');
     }
-    // 3. 예외처리 상태에서 마지막 제안으로
+    // 4. 예외처리 상태에서 마지막 제안으로
     else if (isCurrentlyException) {
         if (correction.corrected.length > 0) {
             newValue = correction.corrected[correction.corrected.length - 1]; // 마지막 제안
             newIsException = false;
             newIsOriginalKept = false;
+            newIsUserEdited = false;
             Logger.log('toggleStatePrev Exception -> Last Suggestion');
         } else {
-            // 제안이 없으면 오류 상태로
-            newValue = correction.original;
-            newIsException = false;
-            newIsOriginalKept = false;
-            Logger.log('toggleStatePrev Exception -> Error (no suggestions)');
+            // 제안이 없고 편집값이 있으면 사용자편집 상태로, 없으면 원본유지 상태로
+            const userEditedValue = this.userEditedValues.get(correctionIndex);
+            
+            if (userEditedValue) {
+                newValue = userEditedValue;
+                newIsException = false;
+                newIsOriginalKept = false;
+                newIsUserEdited = true;
+                Logger.log(`toggleStatePrev Exception -> UserEdited (no suggestions): userEditedValue="${userEditedValue}"`);
+            } else {
+                newValue = correction.original;
+                newIsException = false;
+                newIsOriginalKept = true;
+                newIsUserEdited = false;
+                Logger.log('toggleStatePrev Exception -> OriginalKept (no suggestions, 편집값 없음)');
+            }
         }
     }
     else {
-        // 4. 현재 값의 이전 제안으로 이동 (수정안들 간 역순환)
+        // 5. 현재 값의 이전 제안으로 이동 (수정안들 간 역순환)
         let currentIndex = suggestions.indexOf(currentValue);
         let prevIndex = currentIndex - 1;
 
@@ -233,18 +388,27 @@ export class CorrectionStateManager {
             newValue = correction.original;
             newIsException = false;
             newIsOriginalKept = false;
+            newIsUserEdited = false;
             Logger.log('toggleStatePrev First Suggestion -> Error');
         } else {
             // 이전 제안으로 이동
             newValue = suggestions[prevIndex];
             newIsException = false;
             newIsOriginalKept = false;
+            newIsUserEdited = false;
             Logger.log('toggleStatePrev Previous Suggestion:', newValue);
         }
     }
 
-    // 같은 원본 텍스트를 가진 모든 교정 항목에 동일한 상태 적용 (일괄 시각적 업데이트)
-    this.syncSameWordStates(correction.original, newValue, newIsException, newIsOriginalKept);
+    // 사용자 편집 관련 상태 변화는 항상 개별적으로만 적용
+    if (isCurrentlyUserEdited || newIsUserEdited) {
+      // 사용자 편집 상태에서 나가거나 들어가는 경우는 현재 항목에만 적용
+      this.setState(correctionIndex, newValue, newIsException, newIsOriginalKept, newIsUserEdited);
+      Logger.log(`사용자 편집 관련 상태 변화는 개별 적용만 수행: index ${correctionIndex}, from=${isCurrentlyUserEdited} to=${newIsUserEdited}`);
+    } else {
+      // 일반적인 상태 변화는 동기화
+      this.syncSameWordStates(correction.original, newValue, newIsException, newIsOriginalKept, newIsUserEdited, correctionIndex);
+    }
 
     return { value: newValue, isExceptionState: newIsException };
   }
@@ -255,8 +419,9 @@ export class CorrectionStateManager {
    * @param newValue 새로운 값
    * @param isException 예외 처리 상태
    * @param isOriginalKept 원본 유지 상태
+   * @param isUserEdited 사용자 편집 상태
    */
-  private syncSameWordStates(originalText: string, newValue: string, isException: boolean, isOriginalKept: boolean): void {
+  private syncSameWordStates(originalText: string, newValue: string, isException: boolean, isOriginalKept: boolean, isUserEdited: boolean = false, currentCorrectionIndex?: number): void {
     let syncedCount = 0;
     
     // 핵심 단어 추출 (괄호, 조사 등 제거)
@@ -272,11 +437,28 @@ export class CorrectionStateManager {
       
       Logger.log(`교정 ${i}: "${targetOriginal}" → 핵심: "${targetCoreWord}"`);
       
-      // 핵심 단어가 같은 경우 동기화
+      // 핵심 단어가 같은 경우 동기화 (단, 다른 사용자 편집 상태는 개별적으로 유지)
       if (targetCoreWord === coreWord) {
-        Logger.log(`  → 매치! 동기화 실행`);
-        this.setState(i, newValue, isException, isOriginalKept);
-        syncedCount++;
+        const existingUserEdited = this.isUserEditedState(i);
+        
+        if (existingUserEdited && i !== currentCorrectionIndex) {
+          // 현재 수정 중인 항목이 아니고, 이미 사용자 편집된 다른 항목은 그대로 유지
+          Logger.log(`  → 매치하지만 기존 사용자 편집 상태 유지 (index ${i})`);
+          // 아무것도 하지 않음 - 기존 상태 보존
+        } else if (isUserEdited && i !== currentCorrectionIndex) {
+          // 새로운 사용자 편집은 다른 항목에 동기화하지 않음
+          Logger.log(`  → 매치하지만 사용자 편집은 개별 항목만 적용 (index ${i})`);
+          // 아무것도 하지 않음 - 동기화하지 않음
+        } else {
+          // 현재 항목이거나 사용자 편집이 아닌 경우에만 동기화
+          const shouldPreserveUserEdited = existingUserEdited && !isUserEdited;
+          const finalIsUserEdited = shouldPreserveUserEdited ? true : isUserEdited;
+          const finalValue = shouldPreserveUserEdited ? this.userEditedValues.get(i) || newValue : newValue;
+          
+          Logger.log(`  → 매치! 동기화 실행 (index ${i}), preserveUserEdited=${shouldPreserveUserEdited}, finalIsUserEdited=${finalIsUserEdited}, finalValue="${finalValue}"`);
+          this.setState(i, finalValue, isException, isOriginalKept, finalIsUserEdited);
+          syncedCount++;
+        }
       } else {
         Logger.log(`  → 매치 안됨 ("${targetCoreWord}" ≠ "${coreWord}")`);
       }
@@ -319,6 +501,11 @@ export class CorrectionStateManager {
   getDisplayClass(correctionIndex: number): string {
     const correction = this.corrections[correctionIndex];
     if (!correction) return '';
+
+    if (this.isUserEditedState(correctionIndex)) {
+        Logger.log(`DisplayClass for ${correction.original} (index ${correctionIndex}): spell-user-edited`);
+        return 'spell-user-edited';
+    }
 
     if (this.isOriginalKeptState(correctionIndex)) {
         Logger.log(`DisplayClass for ${correction.original} (index ${correctionIndex}): spell-original-kept`);
@@ -364,14 +551,16 @@ export class CorrectionStateManager {
    * 모든 상태를 가져옵니다.
    * @returns 상태 맵
    */
-  getAllStates(): { [key: number]: { state: 'error' | 'corrected' | 'exception-processed' | 'original-kept', value: string } } {
-    const allStates: { [key: number]: { state: 'error' | 'corrected' | 'exception-processed' | 'original-kept', value: string } } = {};
+  getAllStates(): { [key: number]: { state: 'error' | 'corrected' | 'exception-processed' | 'original-kept' | 'user-edited', value: string } } {
+    const allStates: { [key: number]: { state: 'error' | 'corrected' | 'exception-processed' | 'original-kept' | 'user-edited', value: string } } = {};
     for (let i = 0; i < this.corrections.length; i++) {
       const correction = this.corrections[i];
       const value = this.getValue(i);
-      let state: 'error' | 'corrected' | 'exception-processed' | 'original-kept';
+      let state: 'error' | 'corrected' | 'exception-processed' | 'original-kept' | 'user-edited';
 
-      if (this.isOriginalKeptState(i)) {
+      if (this.isUserEditedState(i)) {
+        state = 'user-edited';
+      } else if (this.isOriginalKeptState(i)) {
         state = 'original-kept';
       } else if (this.isExceptionState(i)) {
         state = 'exception-processed';

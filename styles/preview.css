@@ -80,6 +80,11 @@
     border: 1px solid rgba(255, 165, 0, 0.5);
 }
 
+#correctionPopup .color-legend-dot.user-edited {
+    background: #8b5cf6; /* 보라색 */
+    border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
 #correctionPopup .preview-header {
     display: flex;
     justify-content: space-between;

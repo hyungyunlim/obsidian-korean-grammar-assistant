@@ -60,9 +60,10 @@ export interface PopupConfig {
  */
 export interface CorrectionState {
   correctionIndex: number;
-  currentState: 'error' | 'corrected' | 'exception-processed' | 'original-kept';
+  currentState: 'error' | 'corrected' | 'exception-processed' | 'original-kept' | 'user-edited';
   selectedValue: string;
   isExceptionState?: boolean;
+  isUserEdited?: boolean;
 }
 
 /**
@@ -89,7 +90,7 @@ export interface UIComponent {
  */
 export interface TextSegment {
   text: string;
-  type: 'normal' | 'error' | 'corrected' | 'exception-processed' | 'original-kept';
+  type: 'normal' | 'error' | 'corrected' | 'exception-processed' | 'original-kept' | 'user-edited';
   suggestion?: string;
   correctionIndex?: number;
 }
@@ -149,7 +150,7 @@ export interface CorrectionContext {
   contextBefore: string; // 오류 앞 컨텍스트
   contextAfter: string;  // 오류 뒤 컨텍스트
   fullContext: string;   // 전체 컨텍스트 (앞 + 오류 + 뒤)
-  currentState?: 'error' | 'corrected' | 'exception-processed' | 'original-kept'; // 현재 상태 정보
+  currentState?: 'error' | 'corrected' | 'exception-processed' | 'original-kept' | 'user-edited'; // 현재 상태 정보
   currentValue?: string; // 현재 선택된 값
   sentenceContext?: string; // 현재 문장 전체 (고유명사 판단용)
   paragraphContext?: string; // 현재 문단 전체 (문맥 파악용)
@@ -166,7 +167,7 @@ export interface AIAnalysisRequest {
   contextWindow?: number; // 앞뒤 몇 글자를 컨텍스트로 포함할지
   correctionContexts?: CorrectionContext[]; // 오류별 컨텍스트 정보
   onProgress?: (current: number, total: number, status: string) => void; // 배치 진행 상황 콜백
-  currentStates?: {[correctionIndex: number]: {state: 'error' | 'corrected' | 'exception-processed' | 'original-kept', value: string}}; // 현재 상태 정보
+  currentStates?: {[correctionIndex: number]: {state: 'error' | 'corrected' | 'exception-processed' | 'original-kept' | 'user-edited', value: string}}; // 현재 상태 정보
   editor?: any; // Obsidian Editor 인스턴스 (구조화된 컨텍스트 추출용)
   file?: any; // TFile 인스턴스 (메타데이터 정보용)
   enhancedContext?: boolean; // 향상된 컨텍스트 추출 활성화 여부

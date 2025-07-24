@@ -241,6 +241,10 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   background: #e67e00;
   border: 1px solid rgba(255, 165, 0, 0.5);
 }
+#correctionPopup .color-legend-dot.user-edited {
+  background: #8b5cf6;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
 #correctionPopup .preview-header {
   display: flex;
   justify-content: space-between;
@@ -455,6 +459,24 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   color: var(--color-orange) !important;
   background: rgba(var(--color-orange-rgb), 0.15) !important;
 }
+#correctionPopup .error-original-compact.user-edited {
+  color: #8b5cf6 !important;
+  background: rgba(139, 92, 246, 0.15) !important;
+}
+#correctionPopup .error-original-input {
+  min-width: 60px !important;
+  font-weight: 600 !important;
+  color: #8b5cf6 !important;
+  background: rgba(139, 92, 246, 0.15) !important;
+  padding: 3px 6px !important;
+  text-align: center !important;
+  border-radius: 3px !important;
+  font-size: 12px !important;
+  flex-shrink: 0 !important;
+  border: 2px solid #8b5cf6 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3) !important;
+}
 #correctionPopup .error-suggestions-compact {
   display: flex !important;
   flex-wrap: wrap !important;
@@ -605,6 +627,24 @@ body.spell-popup-open #correctionPopup [contenteditable] {
 }
 .spell-original-kept.clickable-error:active {
   background: rgba(255, 165, 0, 0.35);
+}
+.spell-user-edited {
+  background: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
+  padding: 2px 0;
+  border-bottom: 2px solid #8b5cf6;
+  font-weight: 500;
+}
+.spell-user-edited.clickable-error {
+  cursor: pointer;
+  position: relative;
+}
+.spell-user-edited.clickable-error:hover {
+  background: rgba(139, 92, 246, 0.25);
+  border-bottom: 2px solid #8b5cf6;
+}
+.spell-user-edited.clickable-error:active {
+  background: rgba(139, 92, 246, 0.35);
 }
 
 /* styles/ai.css */

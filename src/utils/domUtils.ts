@@ -90,8 +90,20 @@ export function appendChildren(parent: HTMLElement, ...children: HTMLElement[]):
  * @param element 대상 요소
  */
 export function clearElement(element: HTMLElement): void {
-  while (element.firstChild) {
-    element.removeChild(element.firstChild);
+  try {
+    // 안전한 방법으로 모든 자식 요소 제거
+    while (element.firstChild) {
+      const child = element.firstChild;
+      if (child.parentNode === element) {
+        element.removeChild(child);
+      } else {
+        // 이미 다른 곳으로 이동된 경우 루프 탈출
+        break;
+      }
+    }
+  } catch (error) {
+    // 오류 발생 시 더 안전한 방법 사용
+    element.textContent = '';
   }
 }
 

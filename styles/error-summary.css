@@ -150,6 +150,28 @@
     background: rgba(var(--color-orange-rgb), 0.15) !important;
 }
 
+/* 사용자 편집된 상태의 원본 텍스트 스타일 */
+#correctionPopup .error-original-compact.user-edited {
+    color: #8b5cf6 !important;
+    background: rgba(139, 92, 246, 0.15) !important;
+}
+
+/* 편집 모드 input 스타일 */
+#correctionPopup .error-original-input {
+    min-width: 60px !important;
+    font-weight: 600 !important;
+    color: #8b5cf6 !important;
+    background: rgba(139, 92, 246, 0.15) !important;
+    padding: 3px 6px !important;
+    text-align: center !important;
+    border-radius: 3px !important;
+    font-size: 12px !important;
+    flex-shrink: 0 !important;
+    border: 2px solid #8b5cf6 !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3) !important;
+}
+
 #correctionPopup .error-suggestions-compact {
     display: flex !important;
     flex-wrap: wrap !important;

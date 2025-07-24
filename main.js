@@ -2686,8 +2686,17 @@ function parseHTMLSafely(htmlString) {
   return template.content;
 }
 function clearElement(element) {
-  while (element.firstChild) {
-    element.removeChild(element.firstChild);
+  try {
+    while (element.firstChild) {
+      const child = element.firstChild;
+      if (child.parentNode === element) {
+        element.removeChild(child);
+      } else {
+        break;
+      }
+    }
+  } catch (error) {
+    element.textContent = "";
   }
 }
 function createMetricsDisplay(parent, metrics) {
@@ -2844,6 +2853,7 @@ var CorrectionStateManager = class {
     this.states = /* @__PURE__ */ new Map();
     this.corrections = [];
     this.ignoredWords = [];
+    this.userEditedValues = /* @__PURE__ */ new Map();
     this.corrections = corrections;
     this.ignoredWords = ignoredWords;
     this.initializeStates(ignoredWords);
@@ -2865,11 +2875,17 @@ var CorrectionStateManager = class {
    * @param value 설정할 값
    * @param isExceptionState 예외 처리 상태 여부
    * @param isOriginalKept 원본유지 상태 여부
+   * @param isUserEdited 사용자 편집 상태 여부
    */
-  setState(correctionIndex, value, isExceptionState = false, isOriginalKept = false) {
+  setState(correctionIndex, value, isExceptionState = false, isOriginalKept = false, isUserEdited = false) {
+    var _a;
+    const stack = new Error().stack;
+    const caller = ((_a = stack == null ? void 0 : stack.split("\n")[2]) == null ? void 0 : _a.trim()) || "unknown";
+    Logger.log(`\u{1F527} setState \uD638\uCD9C\uB428: index=${correctionIndex}, value="${value}", isUserEdited=${isUserEdited}, caller=${caller}`);
     this.states.set(correctionIndex, value);
     const exceptionKey = `${correctionIndex}_exception`;
     const originalKeptKey = `${correctionIndex}_originalKept`;
+    const userEditedKey = `${correctionIndex}_userEdited`;
     if (isExceptionState) {
       this.states.set(exceptionKey, true);
     } else {
@@ -2880,6 +2896,18 @@ var CorrectionStateManager = class {
     } else {
       this.states.delete(originalKeptKey);
     }
+    if (isUserEdited) {
+      this.states.set(userEditedKey, true);
+      this.userEditedValues.set(correctionIndex, value);
+      Logger.log(`\u{1F527} setState: \uC0AC\uC6A9\uC790 \uD3B8\uC9D1 \uC0C1\uD0DC \uC124\uC815 - userEditedKey="${userEditedKey}", value="${value}"`);
+    } else {
+      const wasUserEdited = this.states.has(userEditedKey);
+      const existingUserValue = this.userEditedValues.get(correctionIndex);
+      this.states.delete(userEditedKey);
+      if (wasUserEdited) {
+        Logger.log(`\u{1F527} setState: \uC0AC\uC6A9\uC790 \uD3B8\uC9D1 \uC0C1\uD0DC \uD574\uC81C (\uD3B8\uC9D1\uAC12 \uBCF4\uC874) - userEditedKey="${userEditedKey}", \uBCF4\uC874\uAC12="${existingUserValue}", caller=${caller}`);
+      }
+    }
   }
   /**
    * 특정 교정의 현재 값을 가져옵니다.
@@ -2887,7 +2915,15 @@ var CorrectionStateManager = class {
    * @returns 현재 값
    */
   getValue(correctionIndex) {
-    return this.states.get(correctionIndex) || "";
+    const isUserEdited = this.isUserEditedState(correctionIndex);
+    const userEditedValue = this.userEditedValues.get(correctionIndex);
+    const statesValue = this.states.get(correctionIndex) || "";
+    const finalValue = isUserEdited && userEditedValue !== void 0 ? userEditedValue : statesValue;
+    if (isUserEdited && !userEditedValue) {
+      Logger.warn(`\u26A0\uFE0F \uC0AC\uC6A9\uC790 \uD3B8\uC9D1 \uC0C1\uD0DC\uC778\uB370 \uD3B8\uC9D1\uAC12\uC774 \uC5C6\uC74C: index=${correctionIndex}`);
+    }
+    Logger.log(`getValue(${correctionIndex}): states="${statesValue}", userEdited=${isUserEdited}, userEditedValue="${userEditedValue}", finalValue="${finalValue}"`);
+    return finalValue;
   }
   /**
    * 특정 교정이 예외 처리 상태인지 확인합니다.
@@ -2908,6 +2944,33 @@ var CorrectionStateManager = class {
     return !!this.states.get(originalKeptKey);
   }
   /**
+   * 특정 교정이 사용자 편집 상태인지 확인합니다.
+   * @param correctionIndex 교정 인덱스
+   * @returns 사용자 편집 상태 여부
+   */
+  isUserEditedState(correctionIndex) {
+    const userEditedKey = `${correctionIndex}_userEdited`;
+    return !!this.states.get(userEditedKey);
+  }
+  /**
+   * 사용자 편집된 값을 설정합니다.
+   * @param correctionIndex 교정 인덱스
+   * @param userValue 사용자가 입력한 값
+   */
+  setUserEdited(correctionIndex, userValue) {
+    Logger.log(`\u{1F527} setUserEdited \uD638\uCD9C: index=${correctionIndex}, value="${userValue}"`);
+    const beforeStates = this.states.get(correctionIndex);
+    const beforeUserEdited = this.isUserEditedState(correctionIndex);
+    const beforeUserValue = this.userEditedValues.get(correctionIndex);
+    Logger.log(`\u{1F527} Before setState: states="${beforeStates}", userEdited=${beforeUserEdited}, userValue="${beforeUserValue}"`);
+    this.setState(correctionIndex, userValue, false, false, true);
+    Logger.log(`\u{1F527} \uC0AC\uC6A9\uC790 \uD3B8\uC9D1\uC740 \uB3D9\uAE30\uD654\uD558\uC9C0 \uC54A\uC74C - \uAC1C\uBCC4 \uD56D\uBAA9\uB9CC \uC801\uC6A9`);
+    const afterStates = this.states.get(correctionIndex);
+    const afterUserEdited = this.isUserEditedState(correctionIndex);
+    const afterUserValue = this.userEditedValues.get(correctionIndex);
+    Logger.log(`\u{1F527} After setState: states="${afterStates}", userEdited=${afterUserEdited}, userValue="${afterUserValue}"`);
+  }
+  /**
    * 특정 단어가 초기에 무시된 단어인지 확인합니다.
    * @param word 확인할 단어
    * @returns 초기에 무시된 단어 여부
@@ -2916,8 +2979,8 @@ var CorrectionStateManager = class {
     return this.ignoredWords.includes(word);
   }
   /**
-   * 4단계 토글을 수행합니다.
-   * - 오류(빨간색) → 수정1, 수정2...(초록색) → 예외처리(파란색) → 원본유지(주황색) → 오류(빨간색)
+   * 5단계 토글을 수행합니다.
+   * - 오류(빨간색) → 수정1, 수정2...(초록색) → 예외처리(파란색) → 원본유지(주황색) → 사용자편집(보라색) → 오류(빨간색)
    * @param correctionIndex 교정 인덱스
    * @returns 새로운 상태 정보
    */
@@ -2931,47 +2994,79 @@ var CorrectionStateManager = class {
     const currentValue = this.getValue(correctionIndex);
     const isCurrentlyException = this.isExceptionState(correctionIndex);
     const isCurrentlyOriginalKept = this.isOriginalKeptState(correctionIndex);
+    const isCurrentlyUserEdited = this.isUserEditedState(correctionIndex);
     Logger.log("toggleState Initial state:", {
       correctionIndex,
       currentValue,
       isCurrentlyException,
       isCurrentlyOriginalKept,
+      isCurrentlyUserEdited,
       originalText: correction.original,
       suggestions
     });
     let newValue;
     let newIsException;
     let newIsOriginalKept;
-    if (isCurrentlyOriginalKept) {
+    let newIsUserEdited;
+    Logger.log(`\u{1F50D} toggleState \uBD84\uAE30 \uC9C4\uB2E8: isCurrentlyUserEdited=${isCurrentlyUserEdited}, isCurrentlyOriginalKept=${isCurrentlyOriginalKept}, isCurrentlyException=${isCurrentlyException}`);
+    if (isCurrentlyUserEdited) {
+      Logger.log("\u{1F504} toggleState \uBD84\uAE30 1 \uC9C4\uC785: UserEdited -> Error");
       newValue = correction.original;
       newIsException = false;
       newIsOriginalKept = false;
-      Logger.log("toggleState OriginalKept -> Error");
+      newIsUserEdited = false;
+      Logger.log("toggleState UserEdited -> Error");
+    } else if (isCurrentlyOriginalKept) {
+      Logger.log("\u{1F504} toggleState \uBD84\uAE30 2 \uC9C4\uC785: OriginalKept -> ?");
+      const userEditedValue = this.userEditedValues.get(correctionIndex);
+      if (userEditedValue) {
+        newValue = userEditedValue;
+        newIsException = false;
+        newIsOriginalKept = false;
+        newIsUserEdited = true;
+        Logger.log(`toggleState OriginalKept -> UserEdited: userEditedValue="${userEditedValue}"`);
+      } else {
+        newValue = correction.original;
+        newIsException = false;
+        newIsOriginalKept = false;
+        newIsUserEdited = false;
+        Logger.log("toggleState OriginalKept -> Error (\uD3B8\uC9D1\uAC12 \uC5C6\uC74C, \uC0AC\uC6A9\uC790\uD3B8\uC9D1 \uAC74\uB108\uB700)");
+      }
     } else if (isCurrentlyException) {
+      Logger.log("\u{1F504} toggleState \uBD84\uAE30 3 \uC9C4\uC785: Exception -> OriginalKept");
       newValue = correction.original;
       newIsException = false;
       newIsOriginalKept = true;
+      newIsUserEdited = false;
       Logger.log("toggleState Exception -> OriginalKept");
     } else {
+      Logger.log("\u{1F504} toggleState \uBD84\uAE30 4 \uC9C4\uC785: \uC81C\uC548 \uC21C\uD658 \uB85C\uC9C1");
       let nextIndex = suggestions.indexOf(currentValue) + 1;
       if (nextIndex >= suggestions.length) {
         newValue = correction.original;
         newIsException = true;
         newIsOriginalKept = false;
+        newIsUserEdited = false;
         Logger.log("toggleState Last Suggestion -> Exception");
       } else {
         newValue = suggestions[nextIndex];
         newIsException = false;
         newIsOriginalKept = false;
+        newIsUserEdited = false;
         Logger.log("toggleState Next Suggestion:", newValue);
       }
     }
-    this.syncSameWordStates(correction.original, newValue, newIsException, newIsOriginalKept);
+    if (isCurrentlyUserEdited || newIsUserEdited) {
+      this.setState(correctionIndex, newValue, newIsException, newIsOriginalKept, newIsUserEdited);
+      Logger.log(`\uC0AC\uC6A9\uC790 \uD3B8\uC9D1 \uAD00\uB828 \uC0C1\uD0DC \uBCC0\uD654\uB294 \uAC1C\uBCC4 \uC801\uC6A9\uB9CC \uC218\uD589: index ${correctionIndex}, from=${isCurrentlyUserEdited} to=${newIsUserEdited}`);
+    } else {
+      this.syncSameWordStates(correction.original, newValue, newIsException, newIsOriginalKept, newIsUserEdited, correctionIndex);
+    }
     return { value: newValue, isExceptionState: newIsException };
   }
   /**
-   * 4단계 역방향 토글을 수행합니다.
-   * - 오류(빨간색) → 원본유지(주황색) → 예외처리(파란색) → 수정N, 수정1(초록색) → 오류(빨간색)
+   * 5단계 역방향 토글을 수행합니다.
+   * - 오류(빨간색) → 사용자편집(보라색) → 원본유지(주황색) → 예외처리(파란색) → 수정N, 수정1(초록색) → 오류(빨간색)
    * @param correctionIndex 교정 인덱스
    * @returns 새로운 상태 정보
    */
@@ -2985,38 +3080,69 @@ var CorrectionStateManager = class {
     const currentValue = this.getValue(correctionIndex);
     const isCurrentlyException = this.isExceptionState(correctionIndex);
     const isCurrentlyOriginalKept = this.isOriginalKeptState(correctionIndex);
+    const isCurrentlyUserEdited = this.isUserEditedState(correctionIndex);
     Logger.log("toggleStatePrev Initial state:", {
       correctionIndex,
       currentValue,
       isCurrentlyException,
       isCurrentlyOriginalKept,
+      isCurrentlyUserEdited,
       originalText: correction.original,
       suggestions
     });
     let newValue;
     let newIsException;
     let newIsOriginalKept;
-    if (currentValue === correction.original && !isCurrentlyException && !isCurrentlyOriginalKept) {
+    let newIsUserEdited;
+    if (currentValue === correction.original && !isCurrentlyException && !isCurrentlyOriginalKept && !isCurrentlyUserEdited) {
+      const userEditedValue = this.userEditedValues.get(correctionIndex);
+      if (userEditedValue) {
+        newValue = userEditedValue;
+        newIsException = false;
+        newIsOriginalKept = false;
+        newIsUserEdited = true;
+        Logger.log(`toggleStatePrev Error -> UserEdited: userEditedValue="${userEditedValue}"`);
+      } else {
+        newValue = correction.original;
+        newIsException = false;
+        newIsOriginalKept = true;
+        newIsUserEdited = false;
+        Logger.log("toggleStatePrev Error -> OriginalKept (\uD3B8\uC9D1\uAC12 \uC5C6\uC74C, \uC0AC\uC6A9\uC790\uD3B8\uC9D1 \uAC74\uB108\uB700)");
+      }
+    } else if (isCurrentlyUserEdited) {
       newValue = correction.original;
       newIsException = false;
       newIsOriginalKept = true;
-      Logger.log("toggleStatePrev Error -> OriginalKept");
+      newIsUserEdited = false;
+      Logger.log("toggleStatePrev UserEdited -> OriginalKept");
     } else if (isCurrentlyOriginalKept) {
       newValue = correction.original;
       newIsException = true;
       newIsOriginalKept = false;
+      newIsUserEdited = false;
       Logger.log("toggleStatePrev OriginalKept -> Exception");
     } else if (isCurrentlyException) {
       if (correction.corrected.length > 0) {
         newValue = correction.corrected[correction.corrected.length - 1];
         newIsException = false;
         newIsOriginalKept = false;
+        newIsUserEdited = false;
         Logger.log("toggleStatePrev Exception -> Last Suggestion");
       } else {
-        newValue = correction.original;
-        newIsException = false;
-        newIsOriginalKept = false;
-        Logger.log("toggleStatePrev Exception -> Error (no suggestions)");
+        const userEditedValue = this.userEditedValues.get(correctionIndex);
+        if (userEditedValue) {
+          newValue = userEditedValue;
+          newIsException = false;
+          newIsOriginalKept = false;
+          newIsUserEdited = true;
+          Logger.log(`toggleStatePrev Exception -> UserEdited (no suggestions): userEditedValue="${userEditedValue}"`);
+        } else {
+          newValue = correction.original;
+          newIsException = false;
+          newIsOriginalKept = true;
+          newIsUserEdited = false;
+          Logger.log("toggleStatePrev Exception -> OriginalKept (no suggestions, \uD3B8\uC9D1\uAC12 \uC5C6\uC74C)");
+        }
       }
     } else {
       let currentIndex = suggestions.indexOf(currentValue);
@@ -3025,15 +3151,22 @@ var CorrectionStateManager = class {
         newValue = correction.original;
         newIsException = false;
         newIsOriginalKept = false;
+        newIsUserEdited = false;
         Logger.log("toggleStatePrev First Suggestion -> Error");
       } else {
         newValue = suggestions[prevIndex];
         newIsException = false;
         newIsOriginalKept = false;
+        newIsUserEdited = false;
         Logger.log("toggleStatePrev Previous Suggestion:", newValue);
       }
     }
-    this.syncSameWordStates(correction.original, newValue, newIsException, newIsOriginalKept);
+    if (isCurrentlyUserEdited || newIsUserEdited) {
+      this.setState(correctionIndex, newValue, newIsException, newIsOriginalKept, newIsUserEdited);
+      Logger.log(`\uC0AC\uC6A9\uC790 \uD3B8\uC9D1 \uAD00\uB828 \uC0C1\uD0DC \uBCC0\uD654\uB294 \uAC1C\uBCC4 \uC801\uC6A9\uB9CC \uC218\uD589: index ${correctionIndex}, from=${isCurrentlyUserEdited} to=${newIsUserEdited}`);
+    } else {
+      this.syncSameWordStates(correction.original, newValue, newIsException, newIsOriginalKept, newIsUserEdited, correctionIndex);
+    }
     return { value: newValue, isExceptionState: newIsException };
   }
   /**
@@ -3042,8 +3175,9 @@ var CorrectionStateManager = class {
    * @param newValue 새로운 값
    * @param isException 예외 처리 상태
    * @param isOriginalKept 원본 유지 상태
+   * @param isUserEdited 사용자 편집 상태
    */
-  syncSameWordStates(originalText, newValue, isException, isOriginalKept) {
+  syncSameWordStates(originalText, newValue, isException, isOriginalKept, isUserEdited = false, currentCorrectionIndex) {
     let syncedCount = 0;
     const coreWord = this.extractCoreWord(originalText);
     Logger.log(`=== \uB3D9\uAE30\uD654 \uC2DC\uC791 ===`);
@@ -3054,9 +3188,19 @@ var CorrectionStateManager = class {
       const targetCoreWord = this.extractCoreWord(targetOriginal);
       Logger.log(`\uAD50\uC815 ${i}: "${targetOriginal}" \u2192 \uD575\uC2EC: "${targetCoreWord}"`);
       if (targetCoreWord === coreWord) {
-        Logger.log(`  \u2192 \uB9E4\uCE58! \uB3D9\uAE30\uD654 \uC2E4\uD589`);
-        this.setState(i, newValue, isException, isOriginalKept);
-        syncedCount++;
+        const existingUserEdited = this.isUserEditedState(i);
+        if (existingUserEdited && i !== currentCorrectionIndex) {
+          Logger.log(`  \u2192 \uB9E4\uCE58\uD558\uC9C0\uB9CC \uAE30\uC874 \uC0AC\uC6A9\uC790 \uD3B8\uC9D1 \uC0C1\uD0DC \uC720\uC9C0 (index ${i})`);
+        } else if (isUserEdited && i !== currentCorrectionIndex) {
+          Logger.log(`  \u2192 \uB9E4\uCE58\uD558\uC9C0\uB9CC \uC0AC\uC6A9\uC790 \uD3B8\uC9D1\uC740 \uAC1C\uBCC4 \uD56D\uBAA9\uB9CC \uC801\uC6A9 (index ${i})`);
+        } else {
+          const shouldPreserveUserEdited = existingUserEdited && !isUserEdited;
+          const finalIsUserEdited = shouldPreserveUserEdited ? true : isUserEdited;
+          const finalValue = shouldPreserveUserEdited ? this.userEditedValues.get(i) || newValue : newValue;
+          Logger.log(`  \u2192 \uB9E4\uCE58! \uB3D9\uAE30\uD654 \uC2E4\uD589 (index ${i}), preserveUserEdited=${shouldPreserveUserEdited}, finalIsUserEdited=${finalIsUserEdited}, finalValue="${finalValue}"`);
+          this.setState(i, finalValue, isException, isOriginalKept, finalIsUserEdited);
+          syncedCount++;
+        }
       } else {
         Logger.log(`  \u2192 \uB9E4\uCE58 \uC548\uB428 ("${targetCoreWord}" \u2260 "${coreWord}")`);
       }
@@ -3090,6 +3234,10 @@ var CorrectionStateManager = class {
     const correction = this.corrections[correctionIndex];
     if (!correction)
       return "";
+    if (this.isUserEditedState(correctionIndex)) {
+      Logger.log(`DisplayClass for ${correction.original} (index ${correctionIndex}): spell-user-edited`);
+      return "spell-user-edited";
+    }
     if (this.isOriginalKeptState(correctionIndex)) {
       Logger.log(`DisplayClass for ${correction.original} (index ${correctionIndex}): spell-original-kept`);
       return "spell-original-kept";
@@ -3133,7 +3281,9 @@ var CorrectionStateManager = class {
       const correction = this.corrections[i];
       const value = this.getValue(i);
       let state;
-      if (this.isOriginalKeptState(i)) {
+      if (this.isUserEditedState(i)) {
+        state = "user-edited";
+      } else if (this.isOriginalKeptState(i)) {
         state = "original-kept";
       } else if (this.isExceptionState(i)) {
         state = "exception-processed";
@@ -3473,26 +3623,46 @@ var CorrectionPopup = class extends BaseComponent {
       return false;
     });
     this.keyboardScope.register([], "Enter", (evt) => {
+      var _a;
+      const target = evt.target;
+      if (target && (((_a = target.dataset) == null ? void 0 : _a.editMode) === "true" || target.classList.contains("error-original-input"))) {
+        Logger.log("Enter key in edit mode - allowing default behavior");
+        return true;
+      }
       evt.preventDefault();
       this.applyCurrentSelection();
       return false;
     });
     this.keyboardScope.register([], "Escape", (evt) => {
+      var _a;
+      const target = evt.target;
+      if (target && (((_a = target.dataset) == null ? void 0 : _a.editMode) === "true" || target.classList.contains("error-original-input"))) {
+        Logger.log("Escape key in edit mode - allowing default behavior");
+        return true;
+      }
       evt.preventDefault();
       this.close();
       return false;
     });
     this.keyboardScope.register([], "ArrowRight", (evt) => {
+      if (this.isInEditMode()) {
+        Logger.log("\u{1F6AB} \uD3B8\uC9D1 \uBAA8\uB4DC \uC911 - ArrowRight \uBE44\uD65C\uC131\uD654");
+        return;
+      }
       evt.preventDefault();
       this.cycleCurrentCorrectionNext();
       return false;
     });
     this.keyboardScope.register([], "ArrowLeft", (evt) => {
+      if (this.isInEditMode()) {
+        Logger.log("\u{1F6AB} \uD3B8\uC9D1 \uBAA8\uB4DC \uC911 - ArrowLeft \uBE44\uD65C\uC131\uD654");
+        return;
+      }
       evt.preventDefault();
       this.cycleCurrentCorrectionPrev();
       return false;
     });
-    this.keyboardScope.register([], "Space", (evt) => {
+    this.keyboardScope.register(["Shift", "Mod"], "KeyA", (evt) => {
       evt.preventDefault();
       evt.stopPropagation();
       evt.stopImmediatePropagation();
@@ -3514,6 +3684,9 @@ var CorrectionPopup = class extends BaseComponent {
       return true;
     });
     this.keyboardScope.register([], "ArrowDown", (evt) => {
+      if (this.isInEditMode()) {
+        return;
+      }
       if (this.isLongText && this.currentPreviewPage < this.totalPreviewPages - 1) {
         evt.preventDefault();
         this.goToNextPage();
@@ -3522,11 +3695,19 @@ var CorrectionPopup = class extends BaseComponent {
       return true;
     });
     this.keyboardScope.register(["Mod", "Shift"], "ArrowRight", (evt) => {
+      if (this.isInEditMode()) {
+        Logger.log("\u{1F6AB} \uD3B8\uC9D1 \uBAA8\uB4DC \uC911 - \uC77C\uAD04 \uBCC0\uACBD \uBE44\uD65C\uC131\uD654");
+        return;
+      }
       evt.preventDefault();
       this.batchCycleCorrections("next");
       return false;
     });
     this.keyboardScope.register(["Mod", "Shift"], "ArrowLeft", (evt) => {
+      if (this.isInEditMode()) {
+        Logger.log("\u{1F6AB} \uD3B8\uC9D1 \uBAA8\uB4DC \uC911 - \uC77C\uAD04 \uBCC0\uACBD \uBE44\uD65C\uC131\uD654");
+        return;
+      }
       evt.preventDefault();
       this.batchCycleCorrections("prev");
       return false;
@@ -3829,7 +4010,8 @@ var CorrectionPopup = class extends BaseComponent {
       { cls: "error", text: "\uC624\uB958" },
       { cls: "corrected", text: "\uC218\uC815" },
       { cls: "exception-processed", text: "\uC608\uC678\uCC98\uB9AC" },
-      { cls: "original-kept", text: "\uC6D0\uBCF8\uC720\uC9C0" }
+      { cls: "original-kept", text: "\uC6D0\uBCF8\uC720\uC9C0" },
+      { cls: "user-edited", text: "\uD3B8\uC9D1\uB428" }
     ];
     legendItems.forEach((item) => {
       const legendItem = colorLegend.createDiv("color-legend-item");
@@ -4149,6 +4331,10 @@ var CorrectionPopup = class extends BaseComponent {
       const displayClass = this.stateManager.getDisplayClass(actualIndex);
       const currentValue = this.stateManager.getValue(actualIndex);
       const escapedValue = escapeHtml(currentValue);
+      const isUserEdited = this.stateManager.isUserEditedState(actualIndex);
+      if (isUserEdited) {
+        Logger.log(`\u{1F3A8} \uBBF8\uB9AC\uBCF4\uAE30 \uC0AC\uC6A9\uC790\uD3B8\uC9D1: index=${actualIndex}, original="${correction.original}", currentValue="${currentValue}", displayClass="${displayClass}"`);
+      }
       const replacementHtml = `<span class="${displayClass} clickable-error" data-correction-index="${actualIndex}" data-unique-id="${uniqueId}">${escapedValue}</span>`;
       const expectedText = correction.original;
       const expectedEnd = positionInPage + expectedText.length;
@@ -4221,9 +4407,12 @@ var CorrectionPopup = class extends BaseComponent {
    * 오류 요약 HTML을 생성합니다.
    */
   generateErrorSummaryHTML() {
+    Logger.log(`\u{1F3D7}\uFE0F generateErrorSummaryHTML \uC2DC\uC791`);
     const rawCorrections = this.getCurrentCorrections();
     const currentCorrections = this.removeDuplicateCorrections(rawCorrections);
+    Logger.log(`\u{1F3D7}\uFE0F rawCorrections: ${rawCorrections.length}, currentCorrections: ${currentCorrections.length}`);
     if (currentCorrections.length === 0) {
+      Logger.log(`\u{1F3D7}\uFE0F \uC624\uB958 \uC5C6\uC74C - \uD50C\uB808\uC774\uC2A4\uD640\uB354 \uBC18\uD658`);
       return `
         <div class="error-placeholder">
           <div class="placeholder-icon">\u2713</div>
@@ -4233,11 +4422,14 @@ var CorrectionPopup = class extends BaseComponent {
       `;
     }
     const uniqueCorrections = this.removeDuplicateCorrections(currentCorrections);
+    Logger.log(`\u{1F3D7}\uFE0F uniqueCorrections: ${uniqueCorrections.length}`);
     return uniqueCorrections.map((pageCorrection, index) => {
       const actualIndex = pageCorrection.originalIndex;
       const correction = pageCorrection.correction;
       const isOriginalKept = this.stateManager.isOriginalKeptState(actualIndex);
+      const isUserEdited = this.stateManager.isUserEditedState(actualIndex);
       const suggestions = correction.corrected.slice(0, 3);
+      Logger.log(`\u{1F3D7}\uFE0F HTML \uC0DD\uC131: "${correction.original}" \u2192 actualIndex=${actualIndex}, pageIndex=${index}`);
       const aiResult = this.aiAnalysisResults.find((result) => result.correctionIndex === actualIndex);
       const reasoningHTML = aiResult ? `<div class="ai-analysis-result">
              <div class="ai-confidence">\u{1F916} \uC2E0\uB8B0\uB3C4: <span class="confidence-score">${aiResult.confidence}%</span></div>
@@ -4253,10 +4445,11 @@ var CorrectionPopup = class extends BaseComponent {
           ${escapeHtml(suggestion)}
         </span>`
       ).join("");
-      return `
+      const stateClass = isUserEdited ? "user-edited" : isOriginalKept ? "original-kept" : this.stateManager.isExceptionState(actualIndex) ? "exception-processed" : this.stateManager.getValue(actualIndex) !== correction.original ? "corrected" : "";
+      const htmlString = `
         <div class="error-item-compact ${isOriginalKept ? "spell-original-kept" : ""}" data-correction-index="${actualIndex}">
           <div class="error-row">
-            <div class="error-original-compact">${escapeHtml(correction.original)}</div>
+            <div class="error-original-compact ${stateClass}" data-correction-index="${actualIndex}">${escapeHtml(this.stateManager.getValue(actualIndex))}</div>
             <div class="error-suggestions-compact">
               ${suggestionsHTML}
               <span class="suggestion-compact ${this.stateManager.isSelected(actualIndex, correction.original) ? "selected" : ""} keep-original" 
@@ -4271,6 +4464,8 @@ var CorrectionPopup = class extends BaseComponent {
           ${reasoningHTML}
         </div>
       `;
+      Logger.log(`\u{1F3D7}\uFE0F HTML \uCCAB \uBD80\uBD84 - actualIndex=${actualIndex}: ${htmlString.substring(0, 200)}...`);
+      return htmlString;
     }).join("");
   }
   /**
@@ -4278,7 +4473,7 @@ var CorrectionPopup = class extends BaseComponent {
    */
   bindEvents() {
     this.addEventListener(this.element, "keydown", (evt) => {
-      if (evt.code === "Space" && !evt.shiftKey && !evt.ctrlKey && !evt.metaKey) {
+      if (evt.code === "KeyA" && evt.shiftKey && evt.metaKey && !evt.ctrlKey) {
         evt.preventDefault();
         evt.stopPropagation();
         this.triggerAIAnalysis();
@@ -4369,8 +4564,14 @@ var CorrectionPopup = class extends BaseComponent {
   bindCorrectionEvents() {
     this.addEventListener(this.element, "click", (e) => {
       const target = e.target;
+      Logger.log(`\u{1F5B1}\uFE0F \uD074\uB9AD \uC774\uBCA4\uD2B8 \uBC1C\uC0DD: target="${target.tagName}.${target.className}", textContent="${target.textContent}"`);
       if (target.classList.contains("clickable-error")) {
+        Logger.log(`\u{1F5B1}\uFE0F \uBBF8\uB9AC\uBCF4\uAE30 \uD074\uB9AD \uCC98\uB9AC: ${target.textContent}`);
         this.handlePreviewClick(target);
+      }
+      if (target.classList.contains("error-original-compact")) {
+        Logger.log(`\u{1F5B1}\uFE0F \uC624\uB958 \uCE74\uB4DC \uD14D\uC2A4\uD2B8 \uD074\uB9AD \uAC10\uC9C0: ${target.textContent}`);
+        this.handleCardTextClick(target);
       }
       if (target.classList.contains("suggestion-compact")) {
         this.handleSuggestionClick(target);
@@ -4402,7 +4603,7 @@ var CorrectionPopup = class extends BaseComponent {
         aiBtn.textContent = "\u{1F916} AI \uBD84\uC11D";
         aiBtn.disabled = false;
         aiBtn.classList.remove("ai-disabled");
-        aiBtn.title = "AI\uAC00 \uCD5C\uC801\uC758 \uC218\uC815\uC0AC\uD56D\uC744 \uC790\uB3D9\uC73C\uB85C \uC120\uD0DD\uD569\uB2C8\uB2E4 (Space\uD0A4)";
+        aiBtn.title = "AI\uAC00 \uCD5C\uC801\uC758 \uC218\uC815\uC0AC\uD56D\uC744 \uC790\uB3D9\uC73C\uB85C \uC120\uD0DD\uD569\uB2C8\uB2E4 (Shift+Cmd+A)";
       } else {
         aiBtn.textContent = "\u{1F916} AI \uBBF8\uC124\uC815";
         aiBtn.disabled = true;
@@ -4455,6 +4656,100 @@ var CorrectionPopup = class extends BaseComponent {
     const correctionIndex = parseInt(target.dataset.correction || "0");
     const value = target.dataset.value || "";
     this.stateManager.setState(correctionIndex, value, value === ((_a = this.config.corrections[correctionIndex]) == null ? void 0 : _a.original), false);
+    this.updateDisplay();
+  }
+  /**
+   * 현재 편집 모드인지 확인합니다.
+   */
+  isInEditMode() {
+    const editingInput = document.querySelector('input[data-edit-mode="true"]');
+    return editingInput !== null && document.activeElement === editingInput;
+  }
+  /**
+   * 오류 상세 카드의 원본 텍스트 클릭 시 편집 모드로 전환합니다.
+   */
+  handleCardTextClick(target) {
+    const correctionIndex = parseInt(target.dataset.correctionIndex || "0");
+    Logger.log(`\u{1F527} handleCardTextClick \uD638\uCD9C: index=${correctionIndex}, text="${target.textContent}"`);
+    Logger.log(`\u{1F527} target.dataset: ${JSON.stringify(target.dataset)}`);
+    Logger.log(`\u{1F527} target HTML: ${target.outerHTML}`);
+    if (isNaN(correctionIndex) || correctionIndex < 0 || correctionIndex >= this.config.corrections.length) {
+      Logger.log("Invalid correction index for card text click:", correctionIndex);
+      return;
+    }
+    Logger.log(`\u{1F527} enterCardEditMode \uD638\uCD9C \uC608\uC815: index=${correctionIndex}`);
+    this.enterCardEditMode(target, correctionIndex);
+  }
+  /**
+   * 카드 편집 모드로 진입합니다.
+   */
+  enterCardEditMode(originalElement, correctionIndex) {
+    var _a;
+    const currentText = originalElement.textContent || "";
+    Logger.log(`\u{1F527} enterCardEditMode \uC2DC\uC791: index=${correctionIndex}, currentText="${currentText}"`);
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = currentText;
+    input.className = "error-original-input";
+    input.dataset.correctionIndex = correctionIndex.toString();
+    input.dataset.editMode = "true";
+    let isFinished = false;
+    (_a = originalElement.parentElement) == null ? void 0 : _a.replaceChild(input, originalElement);
+    input.focus();
+    input.select();
+    const finishEdit = () => {
+      if (isFinished)
+        return;
+      isFinished = true;
+      this.finishCardEdit(input, correctionIndex);
+    };
+    const cancelEdit = () => {
+      if (isFinished)
+        return;
+      isFinished = true;
+      this.cancelCardEdit(input, correctionIndex);
+    };
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        finishEdit();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        cancelEdit();
+      }
+    });
+    input.addEventListener("blur", () => {
+      finishEdit();
+    });
+  }
+  /**
+   * 카드 편집을 완료합니다.
+   */
+  finishCardEdit(input, correctionIndex) {
+    const newValue = input.value.trim();
+    const currentValue = this.stateManager.getValue(correctionIndex);
+    Logger.log(`\u{1F527} finishCardEdit \uD638\uCD9C: index=${correctionIndex}, newValue="${newValue}", currentValue="${currentValue}"`);
+    if (newValue === "") {
+      Logger.log(`\u{1F527} \uBE48 \uAC12\uC73C\uB85C \uD3B8\uC9D1 \uCDE8\uC18C: index=${correctionIndex}`);
+      this.cancelCardEdit(input, correctionIndex);
+      return;
+    }
+    if (newValue === currentValue) {
+      Logger.log(`\u{1F527} \uAC12\uC774 \uBCC0\uACBD\uB418\uC9C0 \uC54A\uC544\uC11C \uD3B8\uC9D1 \uCDE8\uC18C: index=${correctionIndex}, value="${newValue}"`);
+      this.cancelCardEdit(input, correctionIndex);
+      return;
+    }
+    Logger.log(`\u{1F527} setUserEdited \uD638\uCD9C \uC608\uC815: index=${correctionIndex}, value="${newValue}"`);
+    this.stateManager.setUserEdited(correctionIndex, newValue);
+    Logger.log(`\u{1F527} updateDisplay \uD638\uCD9C \uC608\uC815`);
+    this.updateDisplay();
+  }
+  /**
+   * 카드 편집을 취소합니다.
+   */
+  cancelCardEdit(input, correctionIndex) {
     this.updateDisplay();
   }
   /**
@@ -4715,8 +5010,11 @@ var CorrectionPopup = class extends BaseComponent {
       const errorRow = document.createElement("div");
       errorRow.className = "error-row";
       const errorOriginal = document.createElement("div");
-      errorOriginal.className = "error-original-compact";
-      errorOriginal.textContent = correction.original;
+      const isUserEdited = this.stateManager.isUserEditedState(actualIndex);
+      const stateClass = isUserEdited ? "user-edited" : isOriginalKept ? "original-kept" : this.stateManager.isExceptionState(actualIndex) ? "exception-processed" : this.stateManager.getValue(actualIndex) !== correction.original ? "corrected" : "";
+      errorOriginal.className = `error-original-compact ${stateClass}`;
+      errorOriginal.setAttribute("data-correction-index", actualIndex.toString());
+      errorOriginal.textContent = this.stateManager.getValue(actualIndex);
       errorRow.appendChild(errorOriginal);
       const suggestionsContainer = document.createElement("div");
       suggestionsContainer.className = "error-suggestions-compact";
@@ -5141,7 +5439,7 @@ var CorrectionPopup = class extends BaseComponent {
       { key: "Tab", desc: "\uB2E4\uC74C \uC624\uB958" },
       { key: "\u2190/\u2192", desc: "\uC218\uC815 \uC81C\uC548 \uC21C\uD658" },
       { key: "Enter", desc: "\uC801\uC6A9" },
-      { key: "Space", desc: "AI \uBD84\uC11D" },
+      { key: "\u21E7\u2318A", desc: "AI \uBD84\uC11D" },
       { key: "\u2318E", desc: "\uC624\uB958 \uC0C1\uC138 \uD1A0\uAE00" },
       { key: "\u2318\u21E7\u2190/\u2192", desc: "\uC77C\uAD04 \uBCC0\uACBD" },
       { key: "\u2191/\u2193", desc: "\uD398\uC774\uC9C0 \uC774\uB3D9" },

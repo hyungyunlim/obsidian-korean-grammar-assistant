@@ -91,3 +91,25 @@
 .spell-original-kept.clickable-error:active {
     background: rgba(255, 165, 0, 0.35);
 }
+
+.spell-user-edited {
+    background: rgba(139, 92, 246, 0.15); /* 보라색 배경 */
+    color: #8b5cf6; /* 진한 보라색 텍스트 */
+    padding: 2px 0;
+    border-bottom: 2px solid #8b5cf6;
+    font-weight: 500;
+}
+
+.spell-user-edited.clickable-error {
+    cursor: pointer;
+    position: relative;
+}
+
+.spell-user-edited.clickable-error:hover {
+    background: rgba(139, 92, 246, 0.25);
+    border-bottom: 2px solid #8b5cf6;
+}
+
+.spell-user-edited.clickable-error:active {
+    background: rgba(139, 92, 246, 0.35);
+}
