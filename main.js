@@ -4983,12 +4983,7 @@ var CorrectionPopup = class extends BaseComponent {
   enterMobileEditingMode() {
     if (!import_obsidian2.Platform.isMobile)
       return;
-    const previewArea = document.getElementById("resultPreview");
     const errorSummary = document.getElementById("errorSummary");
-    if (previewArea) {
-      previewArea.style.display = "none";
-      Logger.debug(`\u{1F4F1} \uBBF8\uB9AC\uBCF4\uAE30 \uC601\uC5ED \uC228\uAE40 (\uD3B8\uC9D1 \uBAA8\uB4DC)`);
-    }
     if (errorSummary) {
       errorSummary.style.height = "auto";
       errorSummary.style.maxHeight = "none";
@@ -5003,12 +4998,7 @@ var CorrectionPopup = class extends BaseComponent {
   exitMobileEditingMode() {
     if (!import_obsidian2.Platform.isMobile)
       return;
-    const previewArea = document.getElementById("resultPreview");
     const errorSummary = document.getElementById("errorSummary");
-    if (previewArea) {
-      previewArea.style.display = "";
-      Logger.debug(`\u{1F4F1} \uBBF8\uB9AC\uBCF4\uAE30 \uC601\uC5ED \uBCF5\uC6D0`);
-    }
     if (errorSummary) {
       errorSummary.style.height = "";
       errorSummary.style.maxHeight = "";

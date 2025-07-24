@@ -1789,16 +1789,9 @@ export class CorrectionPopup extends BaseComponent {
   private enterMobileEditingMode(): void {
     if (!Platform.isMobile) return;
     
-    const previewArea = document.getElementById('resultPreview');
     const errorSummary = document.getElementById('errorSummary');
     
-    // 미리보기 영역 숨김
-    if (previewArea) {
-      previewArea.style.display = 'none';
-      Logger.debug(`📱 미리보기 영역 숨김 (편집 모드)`);
-    }
-    
-    // 오류 상세 영역 전체 확장
+    // 오류 상세 영역 전체 확장 (미리보기는 유지)
     if (errorSummary) {
       errorSummary.style.height = 'auto';
       errorSummary.style.maxHeight = 'none';
@@ -1814,14 +1807,7 @@ export class CorrectionPopup extends BaseComponent {
   private exitMobileEditingMode(): void {
     if (!Platform.isMobile) return;
     
-    const previewArea = document.getElementById('resultPreview');
     const errorSummary = document.getElementById('errorSummary');
-    
-    // 미리보기 영역 복원
-    if (previewArea) {
-      previewArea.style.display = '';
-      Logger.debug(`📱 미리보기 영역 복원`);
-    }
     
     // 오류 상세 영역 원래 크기로 복원
     if (errorSummary) {
