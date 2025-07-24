@@ -172,6 +172,105 @@
     box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3) !important;
 }
 
+/* 모바일 편집 모드 개선 */
+@media (max-width: 768px) {
+    #correctionPopup .error-original-input {
+        min-width: 80px !important;
+        font-size: 14px !important;
+        padding: 6px 8px !important;
+        border-radius: 4px !important;
+    }
+}
+
+/* 모바일 편집 버튼 컨테이너 */
+#correctionPopup .mobile-edit-container {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+}
+
+/* 편집 모드일 때 input이 최대한 공간 차지 */
+#correctionPopup .mobile-edit-container .error-original-input {
+    flex: 1 !important;
+    max-width: none !important;
+    min-width: auto !important;
+}
+
+/* 모바일 편집 버튼 스타일 */
+#correctionPopup .mobile-edit-btn {
+    padding: 6px 8px !important;
+    font-size: 12px !important;
+    border: none !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-weight: 500 !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+#correctionPopup .mobile-edit-btn.save {
+    background: #10b981 !important;
+    color: white !important;
+}
+
+#correctionPopup .mobile-edit-btn.cancel {
+    background: #ef4444 !important;
+    color: white !important;
+}
+
+#correctionPopup .mobile-edit-btn:hover {
+    opacity: 0.8 !important;
+}
+
+#correctionPopup .mobile-edit-btn:active {
+    transform: scale(0.95) !important;
+}
+
+/* 모바일 편집 모드일 때 수정 제안 및 예외 처리 버튼 강제 숨김 */
+@media (max-width: 768px) {
+    #correctionPopup .mobile-edit-container ~ .error-suggestions-compact,
+    #correctionPopup .mobile-edit-container ~ .error-exception-btn,
+    #correctionPopup .error-card:has(.mobile-edit-container) .error-suggestions-compact,
+    #correctionPopup .error-card:has(.mobile-edit-container) .error-exception-btn,
+    #correctionPopup .error-card:has(.mobile-edit-container) .suggestion-compact,
+    #correctionPopup .error-card:has(.mobile-edit-container) .keep-original {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        width: 0 !important;
+        overflow: hidden !important;
+        position: absolute !important;
+        left: -9999px !important;
+    }
+}
+
+/* 편집 모드일 때 수정 제안 및 예외 처리 버튼 숨기기 (폴백) */
+#correctionPopup .error-card.editing-mode .error-suggestions-compact,
+#correctionPopup .error-card.editing-mode .error-exception-btn,
+#correctionPopup .error-card.editing-mode .suggestion-compact,
+#correctionPopup .error-card.editing-mode .keep-original {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+/* 편집 모드일 때 카드 레이아웃 조정 */
+#correctionPopup .error-card.editing-mode {
+    padding: 8px !important;
+}
+
+#correctionPopup .error-card.editing-mode .error-content-compact {
+    gap: 4px !important;
+}
+
 #correctionPopup .error-suggestions-compact {
     display: flex !important;
     flex-wrap: wrap !important;

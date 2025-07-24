@@ -1436,8 +1436,8 @@ export class CorrectionPopup extends BaseComponent {
     this.addEventListener(this.element, 'touchstart', (e: TouchEvent) => {
       const target = e.target as HTMLElement;
       
-      // 미리보기 영역의 오류 텍스트에서만 터치홀드 처리
-      if (target.classList.contains('clickable-error')) {
+      // 미리보기 영역의 오류 텍스트 또는 오류 카드의 원본 텍스트에서 터치홀드 처리
+      if (target.classList.contains('clickable-error') || target.classList.contains('error-original-compact')) {
         touchTarget = target;
         
         touchTimer = setTimeout(() => {
@@ -1449,8 +1449,18 @@ export class CorrectionPopup extends BaseComponent {
               navigator.vibrate(50);
             }
             
-            // 우클릭과 동일한 편집 모드 로직 호출
-            this.handlePreviewRightClick(touchTarget);
+            // 편집 모드 로직 먼저 호출 (미리보기가 보이는 상태에서)
+            let editingStarted = false;
+            if (touchTarget.classList.contains('clickable-error')) {
+              editingStarted = this.handlePreviewRightClick(touchTarget);
+            } else if (touchTarget.classList.contains('error-original-compact')) {
+              editingStarted = this.handleCardTextClick(touchTarget);
+            }
+            
+            // 편집 모드가 성공적으로 시작된 후에만 모바일 UI 적용
+            if (editingStarted) {
+              this.enterMobileEditingMode();
+            }
             
             // 터치홀드 처리 완료 후 정리
             touchTarget = null;
@@ -1606,13 +1616,13 @@ export class CorrectionPopup extends BaseComponent {
    * 미리보기 영역에서 우클릭 시 편집 모드로 전환합니다.
    * 일괄 동작: 펼치기 + 오토스크롤 + 편집 모드 진입
    */
-  private handlePreviewRightClick(target: HTMLElement): void {
+  private handlePreviewRightClick(target: HTMLElement): boolean {
     const correctionIndex = parseInt(target.dataset.correctionIndex || '0');
     Logger.debug(`🔧 handlePreviewRightClick 호출: index=${correctionIndex}, text="${target.textContent}"`);
     
     if (isNaN(correctionIndex) || correctionIndex < 0 || correctionIndex >= this.config.corrections.length) {
       Logger.debug('Invalid correction index for preview right click:', correctionIndex);
-      return;
+      return false;
     }
 
     // 오류 상세 영역 상태 확인 및 펼치기
@@ -1647,12 +1657,14 @@ export class CorrectionPopup extends BaseComponent {
         Logger.debug(`🔧 오류 상세 카드를 찾을 수 없음: index=${correctionIndex}`);
       }
     }, wasCollapsed ? 100 : 0); // 펼쳐졌다면 DOM 업데이트 대기
+    
+    return true; // 편집 모드 진입 프로세스 시작됨
   }
 
   /**
    * 오류 상세 카드의 원본 텍스트 클릭 시 편집 모드로 전환합니다.
    */
-  private handleCardTextClick(target: HTMLElement): void {
+  private handleCardTextClick(target: HTMLElement): boolean {
     const correctionIndex = parseInt(target.dataset.correctionIndex || '0');
     Logger.debug(`🔧 handleCardTextClick 호출: index=${correctionIndex}, text="${target.textContent}"`);
     Logger.debug(`🔧 target.dataset: ${JSON.stringify(target.dataset)}`);
@@ -1660,11 +1672,12 @@ export class CorrectionPopup extends BaseComponent {
     
     if (isNaN(correctionIndex) || correctionIndex < 0 || correctionIndex >= this.config.corrections.length) {
       Logger.debug('Invalid correction index for card text click:', correctionIndex);
-      return;
+      return false;
     }
 
     Logger.debug(`🔧 enterCardEditMode 호출 예정: index=${correctionIndex}`);
     this.enterCardEditMode(target, correctionIndex);
+    return true; // 편집 모드 진입 시작됨
   }
 
   /**
@@ -1685,26 +1698,71 @@ export class CorrectionPopup extends BaseComponent {
     // 편집 완료 플래그 (중복 호출 방지)
     let isFinished = false;
     
+    // 모바일에서는 컨테이너와 버튼 추가
+    if (Platform.isMobile) {
+      this.createMobileEditContainer(originalElement, input, correctionIndex, () => isFinished, (flag) => isFinished = flag);
+    } else {
+      // 데스크톱: 기존 방식
+      this.createDesktopEditMode(originalElement, input, correctionIndex, () => isFinished, (flag) => isFinished = flag);
+    }
+  }
+
+  /**
+   * 데스크톱용 편집 모드를 생성합니다.
+   */
+  private createDesktopEditMode(originalElement: HTMLElement, input: HTMLInputElement, correctionIndex: number, getIsFinished: () => boolean, setIsFinished: (flag: boolean) => void): void {
+    // 해당 오류 카드 찾기 및 수정 제안 버튼들 숨기기
+    const errorCard = originalElement.closest('.error-card');
+    let hiddenElements: HTMLElement[] = [];
+    
+    if (errorCard) {
+      // 수정 제안 버튼들 찾아서 숨기기 (데스크톱에서는 선택사항)
+      const suggestions = errorCard.querySelector('.error-suggestions-compact') as HTMLElement;
+      const exceptionBtn = errorCard.querySelector('.error-exception-btn') as HTMLElement;
+      
+      if (suggestions) {
+        suggestions.style.display = 'none';
+        hiddenElements.push(suggestions);
+        Logger.debug(`🖥️ 수정 제안 버튼 숨김: index=${correctionIndex}`);
+      }
+      
+      if (exceptionBtn) {
+        exceptionBtn.style.display = 'none';
+        hiddenElements.push(exceptionBtn);
+        Logger.debug(`🖥️ 예외 처리 버튼 숨김: index=${correctionIndex}`);
+      }
+    }
+    
+    // 편집 완료 함수 (중복 호출 방지)
+    const finishEdit = () => {
+      if (getIsFinished()) return;
+      setIsFinished(true);
+      // 숨겨둔 요소들 다시 표시
+      hiddenElements.forEach(el => {
+        el.style.display = '';
+        Logger.debug(`🖥️ 숨겨진 요소 복원: ${el.className}`);
+      });
+      this.finishCardEdit(input, correctionIndex);
+    };
+    
+    // 편집 취소 함수 (중복 호출 방지)
+    const cancelEdit = () => {
+      if (getIsFinished()) return;
+      setIsFinished(true);
+      // 숨겨둔 요소들 다시 표시
+      hiddenElements.forEach(el => {
+        el.style.display = '';
+        Logger.debug(`🖥️ 숨겨진 요소 복원 (취소): ${el.className}`);
+      });
+      this.cancelCardEdit(input, correctionIndex);
+    };
+    
     // 원본 요소를 input으로 교체
     originalElement.parentElement?.replaceChild(input, originalElement);
     
     // input에 포커스를 주고 텍스트 선택
     input.focus();
     input.select();
-    
-    // 편집 완료 함수 (중복 호출 방지)
-    const finishEdit = () => {
-      if (isFinished) return;
-      isFinished = true;
-      this.finishCardEdit(input, correctionIndex);
-    };
-    
-    // 편집 취소 함수 (중복 호출 방지)
-    const cancelEdit = () => {
-      if (isFinished) return;
-      isFinished = true;
-      this.cancelCardEdit(input, correctionIndex);
-    };
     
     // 엔터키 이벤트 처리
     input.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -1723,6 +1781,223 @@ export class CorrectionPopup extends BaseComponent {
     input.addEventListener('blur', () => {
       finishEdit();
     });
+  }
+
+  /**
+   * 모바일 편집 모드로 진입합니다.
+   */
+  private enterMobileEditingMode(): void {
+    if (!Platform.isMobile) return;
+    
+    const previewArea = document.getElementById('resultPreview');
+    const errorSummary = document.getElementById('errorSummary');
+    
+    // 미리보기 영역 숨김
+    if (previewArea) {
+      previewArea.style.display = 'none';
+      Logger.debug(`📱 미리보기 영역 숨김 (편집 모드)`);
+    }
+    
+    // 오류 상세 영역 전체 확장
+    if (errorSummary) {
+      errorSummary.style.height = 'auto';
+      errorSummary.style.maxHeight = 'none';
+      errorSummary.style.flex = '1';
+      errorSummary.classList.remove('collapsed');
+      Logger.debug(`📱 오류 상세 영역 전체 확장 (편집 모드)`);
+    }
+  }
+
+  /**
+   * 모바일 편집 모드에서 복원합니다.
+   */
+  private exitMobileEditingMode(): void {
+    if (!Platform.isMobile) return;
+    
+    const previewArea = document.getElementById('resultPreview');
+    const errorSummary = document.getElementById('errorSummary');
+    
+    // 미리보기 영역 복원
+    if (previewArea) {
+      previewArea.style.display = '';
+      Logger.debug(`📱 미리보기 영역 복원`);
+    }
+    
+    // 오류 상세 영역 원래 크기로 복원
+    if (errorSummary) {
+      errorSummary.style.height = '';
+      errorSummary.style.maxHeight = '';
+      errorSummary.style.flex = '';
+      Logger.debug(`📱 오류 상세 영역 원래 크기로 복원`);
+    }
+  }
+
+  /**
+   * 모바일용 편집 컨테이너를 생성합니다.
+   */
+  private createMobileEditContainer(originalElement: HTMLElement, input: HTMLInputElement, correctionIndex: number, getIsFinished: () => boolean, setIsFinished: (flag: boolean) => void): void {
+    let hiddenElements: HTMLElement[] = [];
+    
+    // 해당 오류 카드 찾기 및 수정 제안 버튼들 숨기기
+    const errorCard = originalElement.closest('.error-card');
+    
+    if (errorCard) {
+      // editing-mode 클래스 추가 (CSS 폴백용)
+      errorCard.classList.add('editing-mode');
+      Logger.debug(`📱 editing-mode 클래스 추가: index=${correctionIndex}`);
+      
+      // 수정 제안 버튼들 모두 찾아서 숨기기
+      const suggestions = errorCard.querySelectorAll('.suggestion-compact');
+      const keepOriginals = errorCard.querySelectorAll('.keep-original');
+      const suggestionsContainer = errorCard.querySelector('.error-suggestions-compact') as HTMLElement;
+      const exceptionBtn = errorCard.querySelector('.error-exception-btn') as HTMLElement;
+      
+      // 개별 수정 제안 버튼들 강제 숨기기
+      suggestions.forEach((btn) => {
+        const button = btn as HTMLElement;
+        button.style.display = 'none';
+        button.style.visibility = 'hidden';
+        button.style.opacity = '0';
+        hiddenElements.push(button);
+      });
+      
+      // 원본 유지 버튼들 강제 숨기기
+      keepOriginals.forEach((btn) => {
+        const button = btn as HTMLElement;
+        button.style.display = 'none';
+        button.style.visibility = 'hidden';
+        button.style.opacity = '0';
+        hiddenElements.push(button);
+      });
+      
+      // 수정 제안 컨테이너 강제 숨기기
+      if (suggestionsContainer) {
+        suggestionsContainer.style.display = 'none';
+        suggestionsContainer.style.visibility = 'hidden';
+        suggestionsContainer.style.opacity = '0';
+        hiddenElements.push(suggestionsContainer);
+        Logger.debug(`📱 수정 제안 컨테이너 강제 숨김: index=${correctionIndex}`);
+      }
+      
+      // 예외 처리 버튼 강제 숨기기
+      if (exceptionBtn) {
+        exceptionBtn.style.display = 'none';
+        exceptionBtn.style.visibility = 'hidden';
+        exceptionBtn.style.opacity = '0';
+        hiddenElements.push(exceptionBtn);
+        Logger.debug(`📱 예외 처리 버튼 강제 숨김: index=${correctionIndex}`);
+      }
+    }
+    
+    // 컨테이너 생성 (Obsidian createEl 사용)
+    const container = document.createElement('div');
+    container.className = 'mobile-edit-container';
+    
+    // 완료 버튼
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'mobile-edit-btn save';
+    saveBtn.textContent = '✓';
+    saveBtn.title = '저장';
+    
+    // 취소 버튼
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'mobile-edit-btn cancel';
+    cancelBtn.textContent = '✕';
+    cancelBtn.title = '취소';
+    
+    // 편집 완료 함수
+    const finishEdit = () => {
+      if (getIsFinished()) return;
+      setIsFinished(true);
+      
+      // 모바일 편집 모드 종료 - 미리보기 복원 및 오류 상세 영역 원래 크기로 복원
+      this.exitMobileEditingMode();
+      
+      // editing-mode 클래스 제거
+      if (errorCard) {
+        errorCard.classList.remove('editing-mode');
+        Logger.debug(`📱 editing-mode 클래스 제거: index=${correctionIndex}`);
+      }
+      
+      // 숨겨둔 요소들 다시 표시
+      hiddenElements.forEach(el => {
+        el.style.display = '';
+        el.style.visibility = '';
+        el.style.opacity = '';
+        Logger.debug(`📱 숨겨진 요소 복원: ${el.className}`);
+      });
+      
+      Logger.debug(`📱 모바일 편집 모드 종료 - 레이아웃 복원`);
+      this.finishCardEdit(input, correctionIndex);
+    };
+    
+    // 편집 취소 함수
+    const cancelEdit = () => {
+      if (getIsFinished()) return;
+      setIsFinished(true);
+      
+      // 모바일 편집 모드 종료 - 미리보기 복원 및 오류 상세 영역 원래 크기로 복원
+      this.exitMobileEditingMode();
+      
+      // editing-mode 클래스 제거
+      if (errorCard) {
+        errorCard.classList.remove('editing-mode');
+        Logger.debug(`📱 editing-mode 클래스 제거 (취소): index=${correctionIndex}`);
+      }
+      
+      // 숨겨진 요소들 다시 표시
+      hiddenElements.forEach(el => {
+        el.style.display = '';
+        el.style.visibility = '';
+        el.style.opacity = '';
+        Logger.debug(`📱 숨겨진 요소 복원 (취소): ${el.className}`);
+      });
+      
+      Logger.debug(`📱 모바일 편집 모드 취소 - 레이아웃 복원`);
+      this.cancelCardEdit(input, correctionIndex);
+    };
+    
+    // 버튼 이벤트
+    saveBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      finishEdit();
+    });
+    
+    cancelBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      cancelEdit();
+    });
+    
+    // 모바일에서는 blur 이벤트 비활성화 (버튼 클릭으로만 제어)
+    input.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        finishEdit();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        cancelEdit();
+      }
+    });
+    
+    // 컨테이너 구성
+    container.appendChild(input);
+    container.appendChild(saveBtn);
+    container.appendChild(cancelBtn);
+    
+    // 원본 요소를 컨테이너로 교체
+    originalElement.parentElement?.replaceChild(container, originalElement);
+    
+    // input에 포커스를 주고 텍스트 선택
+    setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 100);
+    
+    Logger.log(`📱 모바일 편집 컨테이너 생성 완료: index=${correctionIndex}`);
   }
 
   /**

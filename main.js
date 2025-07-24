@@ -4703,7 +4703,7 @@ var CorrectionPopup = class extends BaseComponent {
     const TOUCH_HOLD_DURATION = 500;
     this.addEventListener(this.element, "touchstart", (e) => {
       const target = e.target;
-      if (target.classList.contains("clickable-error")) {
+      if (target.classList.contains("clickable-error") || target.classList.contains("error-original-compact")) {
         touchTarget = target;
         touchTimer = setTimeout(() => {
           if (touchTarget) {
@@ -4711,7 +4711,15 @@ var CorrectionPopup = class extends BaseComponent {
             if ("vibrate" in navigator) {
               navigator.vibrate(50);
             }
-            this.handlePreviewRightClick(touchTarget);
+            let editingStarted = false;
+            if (touchTarget.classList.contains("clickable-error")) {
+              editingStarted = this.handlePreviewRightClick(touchTarget);
+            } else if (touchTarget.classList.contains("error-original-compact")) {
+              editingStarted = this.handleCardTextClick(touchTarget);
+            }
+            if (editingStarted) {
+              this.enterMobileEditingMode();
+            }
             touchTarget = null;
             touchTimer = null;
           }
@@ -4848,7 +4856,7 @@ var CorrectionPopup = class extends BaseComponent {
     Logger.debug(`\u{1F527} handlePreviewRightClick \uD638\uCD9C: index=${correctionIndex}, text="${target.textContent}"`);
     if (isNaN(correctionIndex) || correctionIndex < 0 || correctionIndex >= this.config.corrections.length) {
       Logger.debug("Invalid correction index for preview right click:", correctionIndex);
-      return;
+      return false;
     }
     const errorSummary = this.element.querySelector("#errorSummary");
     const wasCollapsed = errorSummary && errorSummary.classList.contains("collapsed");
@@ -4873,6 +4881,7 @@ var CorrectionPopup = class extends BaseComponent {
         Logger.debug(`\u{1F527} \uC624\uB958 \uC0C1\uC138 \uCE74\uB4DC\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC74C: index=${correctionIndex}`);
       }
     }, wasCollapsed ? 100 : 0);
+    return true;
   }
   /**
    * 오류 상세 카드의 원본 텍스트 클릭 시 편집 모드로 전환합니다.
@@ -4884,16 +4893,16 @@ var CorrectionPopup = class extends BaseComponent {
     Logger.debug(`\u{1F527} target HTML: ${target.outerHTML}`);
     if (isNaN(correctionIndex) || correctionIndex < 0 || correctionIndex >= this.config.corrections.length) {
       Logger.debug("Invalid correction index for card text click:", correctionIndex);
-      return;
+      return false;
     }
     Logger.debug(`\u{1F527} enterCardEditMode \uD638\uCD9C \uC608\uC815: index=${correctionIndex}`);
     this.enterCardEditMode(target, correctionIndex);
+    return true;
   }
   /**
    * 카드 편집 모드로 진입합니다.
    */
   enterCardEditMode(originalElement, correctionIndex) {
-    var _a;
     const currentText = originalElement.textContent || "";
     Logger.debug(`\u{1F527} enterCardEditMode \uC2DC\uC791: index=${correctionIndex}, currentText="${currentText}"`);
     const input = document.createElement("input");
@@ -4903,21 +4912,56 @@ var CorrectionPopup = class extends BaseComponent {
     input.dataset.correctionIndex = correctionIndex.toString();
     input.dataset.editMode = "true";
     let isFinished = false;
-    (_a = originalElement.parentElement) == null ? void 0 : _a.replaceChild(input, originalElement);
-    input.focus();
-    input.select();
+    if (import_obsidian2.Platform.isMobile) {
+      this.createMobileEditContainer(originalElement, input, correctionIndex, () => isFinished, (flag) => isFinished = flag);
+    } else {
+      this.createDesktopEditMode(originalElement, input, correctionIndex, () => isFinished, (flag) => isFinished = flag);
+    }
+  }
+  /**
+   * 데스크톱용 편집 모드를 생성합니다.
+   */
+  createDesktopEditMode(originalElement, input, correctionIndex, getIsFinished, setIsFinished) {
+    var _a;
+    const errorCard = originalElement.closest(".error-card");
+    let hiddenElements = [];
+    if (errorCard) {
+      const suggestions = errorCard.querySelector(".error-suggestions-compact");
+      const exceptionBtn = errorCard.querySelector(".error-exception-btn");
+      if (suggestions) {
+        suggestions.style.display = "none";
+        hiddenElements.push(suggestions);
+        Logger.debug(`\u{1F5A5}\uFE0F \uC218\uC815 \uC81C\uC548 \uBC84\uD2BC \uC228\uAE40: index=${correctionIndex}`);
+      }
+      if (exceptionBtn) {
+        exceptionBtn.style.display = "none";
+        hiddenElements.push(exceptionBtn);
+        Logger.debug(`\u{1F5A5}\uFE0F \uC608\uC678 \uCC98\uB9AC \uBC84\uD2BC \uC228\uAE40: index=${correctionIndex}`);
+      }
+    }
     const finishEdit = () => {
-      if (isFinished)
+      if (getIsFinished())
         return;
-      isFinished = true;
+      setIsFinished(true);
+      hiddenElements.forEach((el) => {
+        el.style.display = "";
+        Logger.debug(`\u{1F5A5}\uFE0F \uC228\uACA8\uC9C4 \uC694\uC18C \uBCF5\uC6D0: ${el.className}`);
+      });
       this.finishCardEdit(input, correctionIndex);
     };
     const cancelEdit = () => {
-      if (isFinished)
+      if (getIsFinished())
         return;
-      isFinished = true;
+      setIsFinished(true);
+      hiddenElements.forEach((el) => {
+        el.style.display = "";
+        Logger.debug(`\u{1F5A5}\uFE0F \uC228\uACA8\uC9C4 \uC694\uC18C \uBCF5\uC6D0 (\uCDE8\uC18C): ${el.className}`);
+      });
       this.cancelCardEdit(input, correctionIndex);
     };
+    (_a = originalElement.parentElement) == null ? void 0 : _a.replaceChild(input, originalElement);
+    input.focus();
+    input.select();
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -4932,6 +4976,165 @@ var CorrectionPopup = class extends BaseComponent {
     input.addEventListener("blur", () => {
       finishEdit();
     });
+  }
+  /**
+   * 모바일 편집 모드로 진입합니다.
+   */
+  enterMobileEditingMode() {
+    if (!import_obsidian2.Platform.isMobile)
+      return;
+    const previewArea = document.getElementById("resultPreview");
+    const errorSummary = document.getElementById("errorSummary");
+    if (previewArea) {
+      previewArea.style.display = "none";
+      Logger.debug(`\u{1F4F1} \uBBF8\uB9AC\uBCF4\uAE30 \uC601\uC5ED \uC228\uAE40 (\uD3B8\uC9D1 \uBAA8\uB4DC)`);
+    }
+    if (errorSummary) {
+      errorSummary.style.height = "auto";
+      errorSummary.style.maxHeight = "none";
+      errorSummary.style.flex = "1";
+      errorSummary.classList.remove("collapsed");
+      Logger.debug(`\u{1F4F1} \uC624\uB958 \uC0C1\uC138 \uC601\uC5ED \uC804\uCCB4 \uD655\uC7A5 (\uD3B8\uC9D1 \uBAA8\uB4DC)`);
+    }
+  }
+  /**
+   * 모바일 편집 모드에서 복원합니다.
+   */
+  exitMobileEditingMode() {
+    if (!import_obsidian2.Platform.isMobile)
+      return;
+    const previewArea = document.getElementById("resultPreview");
+    const errorSummary = document.getElementById("errorSummary");
+    if (previewArea) {
+      previewArea.style.display = "";
+      Logger.debug(`\u{1F4F1} \uBBF8\uB9AC\uBCF4\uAE30 \uC601\uC5ED \uBCF5\uC6D0`);
+    }
+    if (errorSummary) {
+      errorSummary.style.height = "";
+      errorSummary.style.maxHeight = "";
+      errorSummary.style.flex = "";
+      Logger.debug(`\u{1F4F1} \uC624\uB958 \uC0C1\uC138 \uC601\uC5ED \uC6D0\uB798 \uD06C\uAE30\uB85C \uBCF5\uC6D0`);
+    }
+  }
+  /**
+   * 모바일용 편집 컨테이너를 생성합니다.
+   */
+  createMobileEditContainer(originalElement, input, correctionIndex, getIsFinished, setIsFinished) {
+    var _a;
+    let hiddenElements = [];
+    const errorCard = originalElement.closest(".error-card");
+    if (errorCard) {
+      errorCard.classList.add("editing-mode");
+      Logger.debug(`\u{1F4F1} editing-mode \uD074\uB798\uC2A4 \uCD94\uAC00: index=${correctionIndex}`);
+      const suggestions = errorCard.querySelectorAll(".suggestion-compact");
+      const keepOriginals = errorCard.querySelectorAll(".keep-original");
+      const suggestionsContainer = errorCard.querySelector(".error-suggestions-compact");
+      const exceptionBtn = errorCard.querySelector(".error-exception-btn");
+      suggestions.forEach((btn) => {
+        const button = btn;
+        button.style.display = "none";
+        button.style.visibility = "hidden";
+        button.style.opacity = "0";
+        hiddenElements.push(button);
+      });
+      keepOriginals.forEach((btn) => {
+        const button = btn;
+        button.style.display = "none";
+        button.style.visibility = "hidden";
+        button.style.opacity = "0";
+        hiddenElements.push(button);
+      });
+      if (suggestionsContainer) {
+        suggestionsContainer.style.display = "none";
+        suggestionsContainer.style.visibility = "hidden";
+        suggestionsContainer.style.opacity = "0";
+        hiddenElements.push(suggestionsContainer);
+        Logger.debug(`\u{1F4F1} \uC218\uC815 \uC81C\uC548 \uCEE8\uD14C\uC774\uB108 \uAC15\uC81C \uC228\uAE40: index=${correctionIndex}`);
+      }
+      if (exceptionBtn) {
+        exceptionBtn.style.display = "none";
+        exceptionBtn.style.visibility = "hidden";
+        exceptionBtn.style.opacity = "0";
+        hiddenElements.push(exceptionBtn);
+        Logger.debug(`\u{1F4F1} \uC608\uC678 \uCC98\uB9AC \uBC84\uD2BC \uAC15\uC81C \uC228\uAE40: index=${correctionIndex}`);
+      }
+    }
+    const container = document.createElement("div");
+    container.className = "mobile-edit-container";
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "mobile-edit-btn save";
+    saveBtn.textContent = "\u2713";
+    saveBtn.title = "\uC800\uC7A5";
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "mobile-edit-btn cancel";
+    cancelBtn.textContent = "\u2715";
+    cancelBtn.title = "\uCDE8\uC18C";
+    const finishEdit = () => {
+      if (getIsFinished())
+        return;
+      setIsFinished(true);
+      this.exitMobileEditingMode();
+      if (errorCard) {
+        errorCard.classList.remove("editing-mode");
+        Logger.debug(`\u{1F4F1} editing-mode \uD074\uB798\uC2A4 \uC81C\uAC70: index=${correctionIndex}`);
+      }
+      hiddenElements.forEach((el) => {
+        el.style.display = "";
+        el.style.visibility = "";
+        el.style.opacity = "";
+        Logger.debug(`\u{1F4F1} \uC228\uACA8\uC9C4 \uC694\uC18C \uBCF5\uC6D0: ${el.className}`);
+      });
+      Logger.debug(`\u{1F4F1} \uBAA8\uBC14\uC77C \uD3B8\uC9D1 \uBAA8\uB4DC \uC885\uB8CC - \uB808\uC774\uC544\uC6C3 \uBCF5\uC6D0`);
+      this.finishCardEdit(input, correctionIndex);
+    };
+    const cancelEdit = () => {
+      if (getIsFinished())
+        return;
+      setIsFinished(true);
+      this.exitMobileEditingMode();
+      if (errorCard) {
+        errorCard.classList.remove("editing-mode");
+        Logger.debug(`\u{1F4F1} editing-mode \uD074\uB798\uC2A4 \uC81C\uAC70 (\uCDE8\uC18C): index=${correctionIndex}`);
+      }
+      hiddenElements.forEach((el) => {
+        el.style.display = "";
+        el.style.visibility = "";
+        el.style.opacity = "";
+        Logger.debug(`\u{1F4F1} \uC228\uACA8\uC9C4 \uC694\uC18C \uBCF5\uC6D0 (\uCDE8\uC18C): ${el.className}`);
+      });
+      Logger.debug(`\u{1F4F1} \uBAA8\uBC14\uC77C \uD3B8\uC9D1 \uBAA8\uB4DC \uCDE8\uC18C - \uB808\uC774\uC544\uC6C3 \uBCF5\uC6D0`);
+      this.cancelCardEdit(input, correctionIndex);
+    };
+    saveBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      finishEdit();
+    });
+    cancelBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      cancelEdit();
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        finishEdit();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        cancelEdit();
+      }
+    });
+    container.appendChild(input);
+    container.appendChild(saveBtn);
+    container.appendChild(cancelBtn);
+    (_a = originalElement.parentElement) == null ? void 0 : _a.replaceChild(container, originalElement);
+    setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 100);
+    Logger.log(`\u{1F4F1} \uBAA8\uBC14\uC77C \uD3B8\uC9D1 \uCEE8\uD14C\uC774\uB108 \uC0DD\uC131 \uC644\uB8CC: index=${correctionIndex}`);
   }
   /**
    * 카드 편집을 완료합니다.
