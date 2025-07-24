@@ -584,23 +584,45 @@ export class CorrectionStateManager {
     let finalText = originalText;
     const exceptionWords: string[] = [];
     
+    Logger.log('🔧 applyCorrections 시작:', {
+      originalTextLength: originalText.length,
+      correctionsCount: this.corrections.length,
+      originalPreview: originalText.substring(0, 100) + (originalText.length > 100 ? '...' : '')
+    });
+    
     // 역순으로 처리하여 인덱스 변화 방지
     for (let i = this.corrections.length - 1; i >= 0; i--) {
       const correction = this.corrections[i];
       const selectedValue = this.getValue(i);
       const isException = this.isExceptionState(i);
+      const isUserEdited = this.isUserEditedState(i);
+      
+      Logger.debug(`🔧 교정 처리 [${i}]: "${correction.original}" → "${selectedValue}" (userEdited=${isUserEdited}, exception=${isException})`);
       
       if (isException) {
         // 예외 처리된 단어 수집
         if (!exceptionWords.includes(correction.original)) {
           exceptionWords.push(correction.original);
         }
+        Logger.debug(`🔧 예외처리로 추가: "${correction.original}"`);
       } else if (selectedValue !== correction.original) {
         // 예외 처리 상태가 아니고, 원본과 다른 값이 선택된 경우에만 교정 적용
-        // 모든 발생 위치를 일괄 수정 (자동 일괄 수정)
+        Logger.log(`🔧 텍스트 교체 실행: "${correction.original}" → "${selectedValue}" (userEdited=${isUserEdited})`);
+        const beforeReplace = finalText;
         finalText = this.replaceAllOccurrences(finalText, correction.original, selectedValue);
+        const changed = beforeReplace !== finalText;
+        Logger.debug(`🔧 교체 결과: 변경됨=${changed}, 텍스트길이 ${beforeReplace.length} → ${finalText.length}`);
+      } else {
+        Logger.debug(`🔧 교정 건너뜀: 원본과 동일하거나 예외처리됨`);
       }
     }
+    
+    Logger.log('🔧 applyCorrections 완료:', {
+      finalTextLength: finalText.length,
+      exceptionWordsCount: exceptionWords.length,
+      changed: originalText !== finalText,
+      finalPreview: finalText.substring(0, 100) + (finalText.length > 100 ? '...' : '')
+    });
     
     return { finalText, exceptionWords };
   }

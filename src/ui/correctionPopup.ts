@@ -1,4 +1,4 @@
-import { Editor, EditorPosition, App, Platform, Scope, Notice } from 'obsidian';
+import { Editor, EditorPosition, App, Platform, Scope, Notice, MarkdownView } from 'obsidian';
 import { Correction, PopupConfig, AIAnalysisResult, AIAnalysisRequest, PageCorrection } from '../types/interfaces';
 import { BaseComponent } from './baseComponent';
 import { CorrectionStateManager } from '../state/correctionState';
@@ -1412,8 +1412,8 @@ export class CorrectionPopup extends BaseComponent {
   private bindApplyEvents(): void {
     const applyButton = this.element.querySelector('#applyCorrectionsButton');
     if (applyButton) {
-      this.addEventListener(applyButton as HTMLElement, 'click', () => {
-        this.applyCorrections();
+      this.addEventListener(applyButton as HTMLElement, 'click', async () => {
+        await this.applyCorrections();
       });
     }
   }
@@ -1852,11 +1852,76 @@ export class CorrectionPopup extends BaseComponent {
   /**
    * 교정사항을 적용합니다.
    */
-  private applyCorrections(): void {
+  private async applyCorrections(): Promise<void> {
+    Logger.log('🚀 applyCorrections 시작');
+    
+    // 현재 에디터 모드 확인
+    const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const currentMode = markdownView?.getMode ? markdownView.getMode() : 'unknown';
+    Logger.log(`📝 현재 에디터 모드: ${currentMode}`);
+    
     const result = this.stateManager.applyCorrections(this.config.selectedText);
     
-    // 에디터에 변경사항 적용
-    this.config.editor.replaceRange(result.finalText, this.config.start, this.config.end);
+    Logger.log('🔄 에디터 적용 시작:', {
+      originalTextLength: this.config.selectedText.length,
+      finalTextLength: result.finalText.length,
+      start: this.config.start,
+      end: this.config.end,
+      changed: this.config.selectedText !== result.finalText,
+      exceptionWordsCount: result.exceptionWords.length,
+      mode: currentMode
+    });
+    
+    try {
+      if (currentMode === 'preview') {
+        // 읽기모드에서는 Vault.process() 사용 (공식 권장 방법)
+        Logger.log('📖 읽기모드 감지 - Vault.process() 사용');
+        
+        const file = markdownView?.file;
+        if (!file) {
+          throw new Error('파일 정보를 가져올 수 없습니다.');
+        }
+        
+        await this.app.vault.process(file, (content) => {
+          // 전체 파일에서 선택된 영역 찾기 및 교체
+          const lines = content.split('\n');
+          let currentLine = 0;
+          let currentCol = 0;
+          
+          // 시작 위치까지 찾기
+          for (let i = 0; i < this.config.start.line; i++) {
+            currentLine++;
+          }
+          
+          // 텍스트 교체 로직
+          const beforeStart = content.substring(0, this.getOffsetFromPosition(content, this.config.start));
+          const afterEnd = content.substring(this.getOffsetFromPosition(content, this.config.end));
+          
+          return beforeStart + result.finalText + afterEnd;
+        });
+        
+        Logger.log('✅ Vault.process() 성공적으로 완료됨');
+        
+      } else {
+        // 원문모드에서는 기존 Editor API 사용
+        this.config.editor.replaceRange(result.finalText, this.config.start, this.config.end);
+        Logger.log('✅ editor.replaceRange 성공적으로 호출됨');
+        
+        // 적용 후 실제 텍스트 확인 (검증)
+        const appliedText = this.config.editor.getRange(this.config.start, this.config.end);
+        const actuallyApplied = appliedText === result.finalText;
+        Logger.log(`🔍 적용 검증: 성공=${actuallyApplied}`, {
+          expected: result.finalText.substring(0, 50) + (result.finalText.length > 50 ? '...' : ''),
+          actual: appliedText.substring(0, 50) + (appliedText.length > 50 ? '...' : ''),
+          lengthMatch: appliedText.length === result.finalText.length
+        });
+      }
+      
+    } catch (error) {
+      Logger.error('❌ 텍스트 적용 실패:', error);
+      new Notice('텍스트 적용 중 오류가 발생했습니다.');
+      return;
+    }
     
     // 예외 처리된 단어들이 있으면 콜백 호출
     if (result.exceptionWords.length > 0 && this.config.onExceptionWordsAdded) {
@@ -1864,6 +1929,21 @@ export class CorrectionPopup extends BaseComponent {
     }
     
     this.close();
+  }
+  
+  /**
+   * 에디터 위치를 문자열 오프셋으로 변환합니다.
+   */
+  private getOffsetFromPosition(content: string, pos: EditorPosition): number {
+    const lines = content.split('\n');
+    let offset = 0;
+    
+    for (let i = 0; i < pos.line; i++) {
+      offset += lines[i].length + 1; // +1 for newline
+    }
+    
+    offset += pos.ch;
+    return offset;
   }
 
   /**

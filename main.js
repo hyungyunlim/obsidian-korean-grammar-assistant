@@ -3342,18 +3342,38 @@ var CorrectionStateManager = class {
   applyCorrections(originalText) {
     let finalText = originalText;
     const exceptionWords = [];
+    Logger.log("\u{1F527} applyCorrections \uC2DC\uC791:", {
+      originalTextLength: originalText.length,
+      correctionsCount: this.corrections.length,
+      originalPreview: originalText.substring(0, 100) + (originalText.length > 100 ? "..." : "")
+    });
     for (let i = this.corrections.length - 1; i >= 0; i--) {
       const correction = this.corrections[i];
       const selectedValue = this.getValue(i);
       const isException = this.isExceptionState(i);
+      const isUserEdited = this.isUserEditedState(i);
+      Logger.debug(`\u{1F527} \uAD50\uC815 \uCC98\uB9AC [${i}]: "${correction.original}" \u2192 "${selectedValue}" (userEdited=${isUserEdited}, exception=${isException})`);
       if (isException) {
         if (!exceptionWords.includes(correction.original)) {
           exceptionWords.push(correction.original);
         }
+        Logger.debug(`\u{1F527} \uC608\uC678\uCC98\uB9AC\uB85C \uCD94\uAC00: "${correction.original}"`);
       } else if (selectedValue !== correction.original) {
+        Logger.log(`\u{1F527} \uD14D\uC2A4\uD2B8 \uAD50\uCCB4 \uC2E4\uD589: "${correction.original}" \u2192 "${selectedValue}" (userEdited=${isUserEdited})`);
+        const beforeReplace = finalText;
         finalText = this.replaceAllOccurrences(finalText, correction.original, selectedValue);
+        const changed = beforeReplace !== finalText;
+        Logger.debug(`\u{1F527} \uAD50\uCCB4 \uACB0\uACFC: \uBCC0\uACBD\uB428=${changed}, \uD14D\uC2A4\uD2B8\uAE38\uC774 ${beforeReplace.length} \u2192 ${finalText.length}`);
+      } else {
+        Logger.debug(`\u{1F527} \uAD50\uC815 \uAC74\uB108\uB700: \uC6D0\uBCF8\uACFC \uB3D9\uC77C\uD558\uAC70\uB098 \uC608\uC678\uCC98\uB9AC\uB428`);
       }
     }
+    Logger.log("\u{1F527} applyCorrections \uC644\uB8CC:", {
+      finalTextLength: finalText.length,
+      exceptionWordsCount: exceptionWords.length,
+      changed: originalText !== finalText,
+      finalPreview: finalText.substring(0, 100) + (finalText.length > 100 ? "..." : "")
+    });
     return { finalText, exceptionWords };
   }
   /**
@@ -4668,8 +4688,8 @@ var CorrectionPopup = class extends BaseComponent {
   bindApplyEvents() {
     const applyButton = this.element.querySelector("#applyCorrectionsButton");
     if (applyButton) {
-      this.addEventListener(applyButton, "click", () => {
-        this.applyCorrections();
+      this.addEventListener(applyButton, "click", async () => {
+        await this.applyCorrections();
       });
     }
   }
@@ -5011,13 +5031,72 @@ var CorrectionPopup = class extends BaseComponent {
   /**
    * 교정사항을 적용합니다.
    */
-  applyCorrections() {
+  async applyCorrections() {
+    Logger.log("\u{1F680} applyCorrections \uC2DC\uC791");
+    const markdownView = this.app.workspace.getActiveViewOfType(import_obsidian2.MarkdownView);
+    const currentMode = (markdownView == null ? void 0 : markdownView.getMode) ? markdownView.getMode() : "unknown";
+    Logger.log(`\u{1F4DD} \uD604\uC7AC \uC5D0\uB514\uD130 \uBAA8\uB4DC: ${currentMode}`);
     const result = this.stateManager.applyCorrections(this.config.selectedText);
-    this.config.editor.replaceRange(result.finalText, this.config.start, this.config.end);
+    Logger.log("\u{1F504} \uC5D0\uB514\uD130 \uC801\uC6A9 \uC2DC\uC791:", {
+      originalTextLength: this.config.selectedText.length,
+      finalTextLength: result.finalText.length,
+      start: this.config.start,
+      end: this.config.end,
+      changed: this.config.selectedText !== result.finalText,
+      exceptionWordsCount: result.exceptionWords.length,
+      mode: currentMode
+    });
+    try {
+      if (currentMode === "preview") {
+        Logger.log("\u{1F4D6} \uC77D\uAE30\uBAA8\uB4DC \uAC10\uC9C0 - Vault.process() \uC0AC\uC6A9");
+        const file = markdownView == null ? void 0 : markdownView.file;
+        if (!file) {
+          throw new Error("\uD30C\uC77C \uC815\uBCF4\uB97C \uAC00\uC838\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+        }
+        await this.app.vault.process(file, (content) => {
+          const lines = content.split("\n");
+          let currentLine = 0;
+          let currentCol = 0;
+          for (let i = 0; i < this.config.start.line; i++) {
+            currentLine++;
+          }
+          const beforeStart = content.substring(0, this.getOffsetFromPosition(content, this.config.start));
+          const afterEnd = content.substring(this.getOffsetFromPosition(content, this.config.end));
+          return beforeStart + result.finalText + afterEnd;
+        });
+        Logger.log("\u2705 Vault.process() \uC131\uACF5\uC801\uC73C\uB85C \uC644\uB8CC\uB428");
+      } else {
+        this.config.editor.replaceRange(result.finalText, this.config.start, this.config.end);
+        Logger.log("\u2705 editor.replaceRange \uC131\uACF5\uC801\uC73C\uB85C \uD638\uCD9C\uB428");
+        const appliedText = this.config.editor.getRange(this.config.start, this.config.end);
+        const actuallyApplied = appliedText === result.finalText;
+        Logger.log(`\u{1F50D} \uC801\uC6A9 \uAC80\uC99D: \uC131\uACF5=${actuallyApplied}`, {
+          expected: result.finalText.substring(0, 50) + (result.finalText.length > 50 ? "..." : ""),
+          actual: appliedText.substring(0, 50) + (appliedText.length > 50 ? "..." : ""),
+          lengthMatch: appliedText.length === result.finalText.length
+        });
+      }
+    } catch (error) {
+      Logger.error("\u274C \uD14D\uC2A4\uD2B8 \uC801\uC6A9 \uC2E4\uD328:", error);
+      new import_obsidian2.Notice("\uD14D\uC2A4\uD2B8 \uC801\uC6A9 \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
     if (result.exceptionWords.length > 0 && this.config.onExceptionWordsAdded) {
       this.config.onExceptionWordsAdded(result.exceptionWords);
     }
     this.close();
+  }
+  /**
+   * 에디터 위치를 문자열 오프셋으로 변환합니다.
+   */
+  getOffsetFromPosition(content, pos) {
+    const lines = content.split("\n");
+    let offset = 0;
+    for (let i = 0; i < pos.line; i++) {
+      offset += lines[i].length + 1;
+    }
+    offset += pos.ch;
+    return offset;
   }
   /**
    * 팝업을 표시합니다.

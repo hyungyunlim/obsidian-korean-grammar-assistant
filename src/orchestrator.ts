@@ -43,7 +43,7 @@ export class SpellCheckOrchestrator {
   async execute(): Promise<void> {
     try {
       // 1. 활성 마크다운 뷰와 에디터 가져오기
-      const { editor, selectedText, selectionStart, selectionEnd, file } = this.getEditorInfo();
+      const { editor, selectedText, selectionStart, selectionEnd, file } = this.getEditorInfo()!;
       
       if (!selectedText || selectedText.trim().length === 0) {
         new Notice("검사할 텍스트가 없습니다.");
@@ -135,9 +135,13 @@ export class SpellCheckOrchestrator {
     const editor = markdownView?.editor;
     const file = markdownView?.file; // ⭐ NEW: File 정보 추가
     
+
+    
     if (!editor) {
       throw new Error("에디터를 찾을 수 없습니다.");
     }
+    
+    
 
     let selectedText = editor.getSelection();
     let selectionStart = editor.getCursor("from");
