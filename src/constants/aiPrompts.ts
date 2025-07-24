@@ -13,6 +13,13 @@ export const AI_PROMPTS = {
 3. 애매한 경우나 원문이 적절한 경우 원본유지를 선택하세요
 4. 각 선택에 대한 신뢰도(0-100)와 간단한 이유를 제공하세요
 
+🎨 UI 상태 색상 가이드:
+- 🔴 빨간색: 오류 상태 (원본 오류 텍스트)
+- 🟢 초록색: 수정 제안 상태 (AI/시스템 제안 수정안)
+- 🔵 파란색: 예외처리 상태 (향후 검사 제외)
+- 🟠 주황색: 원본유지 상태 (이번만 유지, 다음에 다시 검사)
+- 🟣 보라색: 사용자편집 상태 (사용자가 CMD+E/우클릭/카드클릭으로 직접 편집한 텍스트)
+
 📋 예외처리 vs 원본유지 가이드라인:
 
 🔵 예외처리 (isExceptionProcessed: true) - 향후 맞춤법 검사에서 제외
@@ -29,6 +36,12 @@ export const AI_PROMPTS = {
 - 문맥상 적절한 표현이지만 확신이 없는 경우
 - 맞춤법 규칙이 애매한 경우
 - 작성자의 의도가 명확해 보이는 표현
+
+🟣 사용자편집 상태 처리 가이드:
+- **사용자가 이미 직접 편집한 텍스트는 사용자의 의도를 최대한 존중하세요**
+- 사용자 편집 텍스트가 문법적으로 올바르다면 그대로 유지 권장
+- 명백한 오타가 있더라도 사용자 의도를 고려하여 신중하게 판단
+- 사용자 편집이 불완전해 보이면 비슷한 방향의 수정안 제안 고려
 
 ❌ 구분 원칙:
 - 고유명사이면서 재사용 가능한 용어 → 예외처리
@@ -93,13 +106,28 @@ ${corrections.map((correction, index) =>
   analysisUserWithContext: (correctionContexts: any[]) => 
     `총 ${correctionContexts.length}개의 맞춤법 오류들과 주변 문맥:
 
-${correctionContexts.map((ctx, index) => 
-  `${index}. 오류: "${ctx.original}"
+${correctionContexts.map((ctx, index) => {
+  let contextInfo = `${index}. 오류: "${ctx.original}"
    문맥: "${ctx.fullContext}"
    수정안: [${ctx.corrected.join(', ')}]
-   설명: ${ctx.help}
+   설명: ${ctx.help}`;
    
-`).join('')}⚠️ 중요 응답 규칙:
+  // 🎨 현재 UI 상태 정보 추가
+  if (ctx.currentState && ctx.currentValue) {
+    const stateNames = {
+      'error': '🔴 오류',
+      'corrected': '🟢 수정',
+      'exception-processed': '🔵 예외처리',
+      'original-kept': '🟠 원본유지',
+      'user-edited': '🟣 사용자편집'
+    };
+    const stateName = stateNames[ctx.currentState as keyof typeof stateNames] || `🔘 ${ctx.currentState}`;
+    contextInfo += `
+   현재 상태: ${stateName} (값: "${ctx.currentValue}")`;
+  }
+  
+  return contextInfo + '\n   \n';
+}).join('')}⚠️ 중요 응답 규칙:
 1. 위의 모든 ${correctionContexts.length}개 오류에 대해 반드시 분석 결과를 제공해주세요.
 2. correctionIndex는 반드시 0부터 ${correctionContexts.length - 1}까지의 순서를 사용하세요.
 3. selectedValue는 반드시 제공된 수정안 중 하나 또는 원본 텍스트와 정확히 일치해야 합니다.
@@ -121,6 +149,20 @@ ${correctionContexts.map((ctx, index) => {
    수정안: [${ctx.corrected.join(', ')}]
    설명: ${ctx.help}
    문맥: "${ctx.fullContext}"`;
+   
+  // 🎨 현재 UI 상태 정보 추가
+  if (ctx.currentState && ctx.currentValue) {
+    const stateNames = {
+      'error': '🔴 오류',
+      'corrected': '🟢 수정',
+      'exception-processed': '🔵 예외처리',
+      'original-kept': '🟠 원본유지',
+      'user-edited': '🟣 사용자편집'
+    };
+    const stateName = stateNames[ctx.currentState as keyof typeof stateNames] || `🔘 ${ctx.currentState}`;
+    contextInfo += `
+   현재 상태: ${stateName} (값: "${ctx.currentValue}")`;
+  }
    
   // 🔧 고유명사인 경우 문장 컨텍스트 추가 (선별적 확장)
   if (ctx.isLikelyProperNoun && ctx.sentenceContext) {
