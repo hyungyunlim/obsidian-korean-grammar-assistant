@@ -28,21 +28,23 @@
         box-shadow: none;
         border: none;
         margin: 0;
-        
-        /* Safe area 고려한 내부 패딩 */
-        padding-top: env(safe-area-inset-top, 0px);
-        padding-bottom: env(safe-area-inset-bottom, 0px);
-        padding-left: env(safe-area-inset-left, 0px);
-        padding-right: env(safe-area-inset-right, 0px);
+        padding: 0;
         box-sizing: border-box;
+        
+        /* Flex 레이아웃 조정 - 콘텐츠 영역 확대 */
+        display: flex;
+        flex-direction: column;
     }
     
     #correctionPopup .header {
-        padding: 16px 20px 12px;
-        /* Safe area 추가 패딩 */
-        padding-left: max(20px, env(safe-area-inset-left, 0px) + 20px);
-        padding-right: max(20px, env(safe-area-inset-right, 0px) + 20px);
-        padding-top: max(16px, env(safe-area-inset-top, 0px) + 16px);
+        /* 상단 safe area + 최소 패딩만 적용 */
+        padding: 8px 16px 8px 16px;
+        padding-top: max(8px, env(safe-area-inset-top, 0px) + 8px);
+        padding-left: max(16px, env(safe-area-inset-left, 0px) + 16px);
+        padding-right: max(16px, env(safe-area-inset-right, 0px) + 16px);
+        
+        /* 헤더 고정 높이로 공간 절약 */
+        flex-shrink: 0;
     }
     
     #correctionPopup .header h2 {
@@ -50,15 +52,21 @@
     }
     
     #correctionPopup .content {
-        padding: 16px 20px 0;
-        /* Safe area 추가 패딩 */
-        padding-left: max(20px, env(safe-area-inset-left, 0px) + 20px);
-        padding-right: max(20px, env(safe-area-inset-right, 0px) + 20px);
+        /* 콘텐츠 영역 확대 - 남은 공간 모두 사용 */
+        flex: 1;
+        padding: 8px 16px 0;
+        padding-left: max(16px, env(safe-area-inset-left, 0px) + 16px);
+        padding-right: max(16px, env(safe-area-inset-right, 0px) + 16px);
+        
+        /* 스크롤 가능하도록 설정 */
+        overflow-y: auto;
+        min-height: 0; /* flex 항목이 축소될 수 있도록 */
     }
     
     #correctionPopup .preview-section {
-        padding: 12px;
-        margin-bottom: 16px;
+        /* 미리보기 영역 컴팩트화 */
+        padding: 8px;
+        margin-bottom: 8px;
     }
     
     #correctionPopup .preview-header {
@@ -137,12 +145,13 @@
     }
     
     #correctionPopup .button-area {
+        /* 버튼 영역 최소화 - 하단 safe area + 최소 패딩만 */
+        flex-shrink: 0;
         gap: 10px;
-        padding: 16px 20px 20px;
-        /* Safe area 추가 패딩 */
-        padding-left: max(20px, env(safe-area-inset-left, 0px) + 20px);
-        padding-right: max(20px, env(safe-area-inset-right, 0px) + 20px);
-        padding-bottom: max(20px, env(safe-area-inset-bottom, 0px) + 20px);
+        padding: 8px 16px 8px 16px;
+        padding-left: max(16px, env(safe-area-inset-left, 0px) + 16px);
+        padding-right: max(16px, env(safe-area-inset-right, 0px) + 16px);
+        padding-bottom: max(8px, env(safe-area-inset-bottom, 0px) + 8px);
     }
     
     #correctionPopup .cancel-btn,
@@ -166,12 +175,14 @@
     #correctionPopup .preview-text {
         font-size: 14px;
         line-height: 1.6;
-        min-height: 150px;
+        min-height: 120px; /* 미리보기 최소 높이 줄임 */
         -webkit-overflow-scrolling: touch;
     }
     
     #correctionPopup .error-summary:not(.collapsed) .error-summary-content {
-        height: 220px;
+        /* 전체 화면에 맞게 오류 상세 영역 확대 */
+        height: 320px;
+        max-height: 40vh; /* 뷰포트 높이의 40%까지 사용 */
     }
     
     #correctionPopup .error-suggestions {
@@ -179,8 +190,9 @@
     }
     
     #correctionPopup .error-summary {
-        margin-top: 12px;
-        padding-top: 12px;
+        /* 상단 여백 줄임 */
+        margin-top: 8px;
+        padding-top: 8px;
     }
     
     #correctionPopup .close-btn-header {
@@ -190,19 +202,36 @@
     }
     
     @media (max-height: 700px) {
-        #correctionPopup .popup-content {
-            min-height: 400px;
+        /* 작은 화면에서 오류 상세 영역 높이 조정 */
+        #correctionPopup .error-summary:not(.collapsed) .error-summary-content {
+            height: 250px;
+            max-height: 35vh;
+        }
+        
+        #correctionPopup .preview-text {
+            min-height: 100px;
         }
     }
     
     @media (max-width: 896px) and (orientation: landscape) {
-        #correctionPopup {
-            padding-top: max(env(safe-area-inset-top, 0px), 10px);
-            padding-bottom: max(env(safe-area-inset-bottom, 0px), 10px);
+        /* 가로 모드에서 더 컴팩트한 레이아웃 */
+        #correctionPopup .header {
+            padding: 6px 16px 6px 16px;
+            padding-top: max(6px, env(safe-area-inset-top, 0px) + 6px);
         }
         
-        #correctionPopup .popup-content {
-            height: calc(100vh - max(env(safe-area-inset-top, 0px), 10px) - max(env(safe-area-inset-bottom, 0px), 10px) - 20px);
+        #correctionPopup .content {
+            padding: 6px 16px 0;
+        }
+        
+        #correctionPopup .button-area {
+            padding: 6px 16px 6px 16px;
+            padding-bottom: max(6px, env(safe-area-inset-bottom, 0px) + 6px);
+        }
+        
+        #correctionPopup .error-summary:not(.collapsed) .error-summary-content {
+            height: 200px;
+            max-height: 30vh;
         }
     }
     
