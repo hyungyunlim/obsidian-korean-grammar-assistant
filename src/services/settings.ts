@@ -15,12 +15,12 @@ function loadApiConfig(): PluginSettings {
       
       if (fs.existsSync(configPath)) {
         const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-        Logger.log('로컬 API 설정 파일을 로드했습니다.');
+        Logger.debug('로컬 API 설정 파일을 로드했습니다.');
         return config;
       }
     }
   } catch (error) {
-    Logger.log('로컬 API 설정 파일을 로드할 수 없습니다. 기본값을 사용합니다.');
+    Logger.debug('로컬 API 설정 파일을 로드할 수 없습니다. 기본값을 사용합니다.');
   }
   
   // 기본값 (배포용)

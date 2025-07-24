@@ -132,7 +132,7 @@ export class LoadingManager {
     this.currentStep = 0;
     this.startTime = Date.now();
     
-    Logger.log('로딩 시작:', { includeAI, totalSteps: this.steps.length });
+    Logger.debug('로딩 시작:', { includeAI, totalSteps: this.steps.length });
     
     this.showProgressNotice();
     this.updateProgress();
@@ -173,7 +173,7 @@ export class LoadingManager {
     this.hideNotice();
     
     const totalTime = Date.now() - this.startTime;
-    Logger.log('로딩 완료:', { totalTime: `${totalTime}ms` });
+    Logger.debug('로딩 완료:', { totalTime: `${totalTime}ms` });
     
     if (this.onStateChangeCallback) {
       this.onStateChangeCallback('idle');
@@ -248,7 +248,7 @@ export class LoadingManager {
     this.currentState = 'idle';
     this.hideNotice();
     
-    Logger.log('로딩 취소됨');
+    Logger.debug('로딩 취소됨');
     
     if (this.onStateChangeCallback) {
       this.onStateChangeCallback('idle');

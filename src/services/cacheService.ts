@@ -50,7 +50,7 @@ export class SpellCheckCacheService {
     this.ttl = ttlMinutes * 60 * 1000;
     this.cleanupInterval = cleanupIntervalMinutes * 60 * 1000;
     
-    Logger.log('SpellCheckCacheService 초기화:', {
+    Logger.debug('SpellCheckCacheService 초기화:', {
       maxSize,
       ttlMinutes,
       cleanupIntervalMinutes
@@ -72,7 +72,7 @@ export class SpellCheckCacheService {
     
     if (!item) {
       this.stats.cacheMisses++;
-      Logger.log('캐시 미스:', { key: key.substring(0, 50) + '...' });
+      Logger.debug('캐시 미스:', { key: key.substring(0, 50) + '...' });
       return null;
     }
     
@@ -82,7 +82,7 @@ export class SpellCheckCacheService {
     if (now - item.timestamp > this.ttl) {
       this.cache.delete(key);
       this.stats.cacheMisses++;
-      Logger.log('캐시 만료:', { key: key.substring(0, 50) + '...' });
+      Logger.debug('캐시 만료:', { key: key.substring(0, 50) + '...' });
       return null;
     }
     
@@ -95,7 +95,7 @@ export class SpellCheckCacheService {
     this.cache.set(key, item);
     
     this.stats.cacheHits++;
-    Logger.log('캐시 히트:', { 
+    Logger.debug('캐시 히트:', { 
       key: key.substring(0, 50) + '...',
       accessCount: item.accessCount 
     });
@@ -126,7 +126,7 @@ export class SpellCheckCacheService {
     
     this.cache.set(key, item);
     
-    Logger.log('캐시 저장:', { 
+    Logger.debug('캐시 저장:', { 
       key: key.substring(0, 50) + '...',
       cacheSize: this.cache.size,
       corrections: result.corrections.length
@@ -162,7 +162,7 @@ export class SpellCheckCacheService {
       cacheMisses: 0
     };
     
-    Logger.log('캐시 전체 삭제 완료');
+    Logger.debug('캐시 전체 삭제 완료');
   }
 
   /**
@@ -180,7 +180,7 @@ export class SpellCheckCacheService {
     }
     
     if (removedCount > 0) {
-      Logger.log('캐시 정리 완료:', { 
+      Logger.debug('캐시 정리 완료:', { 
         removedCount, 
         remainingSize: this.cache.size 
       });
@@ -196,7 +196,7 @@ export class SpellCheckCacheService {
       this.cleanupTimer = undefined;
     }
     this.clear();
-    Logger.log('SpellCheckCacheService 종료');
+    Logger.debug('SpellCheckCacheService 종료');
   }
 
   /**
@@ -235,7 +235,7 @@ export class SpellCheckCacheService {
     
     if (oldestKey) {
       this.cache.delete(oldestKey);
-      Logger.log('LRU 제거:', { 
+      Logger.debug('LRU 제거:', { 
         key: oldestKey.substring(0, 50) + '...',
         age: Date.now() - oldestTime
       });

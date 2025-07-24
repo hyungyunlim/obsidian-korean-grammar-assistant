@@ -10,7 +10,7 @@ export class AIClientFactory {
     const provider = settings.provider;
     const apiKey = this.getApiKey(settings);
     
-    Logger.log('클라이언트 생성:', {
+    Logger.debug('클라이언트 생성:', {
       provider: provider,
       hasApiKey: !!apiKey,
       apiKeyLength: apiKey ? apiKey.length : 0,

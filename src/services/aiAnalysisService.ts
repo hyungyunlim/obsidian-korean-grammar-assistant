@@ -90,7 +90,7 @@ export class AIAnalysisService {
             context.isLikelyProperNoun = true;
             context.documentType = enhancedInfo.documentType;
             
-            Logger.log(`🔍 고유명사 감지: "${correction.original}" - 감지 방법: ${enhancedInfo.detectionMethod} - 문장 컨텍스트 추가`);
+            Logger.debug(`🔍 고유명사 감지: "${correction.original}" - 감지 방법: ${enhancedInfo.detectionMethod} - 문장 컨텍스트 추가`);
           }
         } catch (error) {
           Logger.warn('향상된 컨텍스트 추출 실패:', error);
@@ -107,7 +107,7 @@ export class AIAnalysisService {
    * 형태소 분석 결과 전체를 로깅합니다.
    */
   private logMorphemeAnalysis(morphemeInfo: any, corrections: any[]): void {
-    Logger.log('📋 형태소 분석 결과 요약:');
+    Logger.debug('📋 형태소 분석 결과 요약:');
     
     if (!morphemeInfo || !morphemeInfo.sentences) {
       Logger.warn('형태소 분석 데이터가 유효하지 않음');
@@ -119,7 +119,7 @@ export class AIAnalysisService {
     const totalTokens = morphemeInfo.sentences.reduce((sum: number, sentence: any) => 
       sum + (sentence.tokens ? sentence.tokens.length : 0), 0);
     
-    Logger.log(`  총 ${totalSentences}개 문장, ${totalTokens}개 토큰 분석됨`);
+    Logger.debug(`  총 ${totalSentences}개 문장, ${totalTokens}개 토큰 분석됨`);
 
     // 고유명사 및 특수 품사 추출
     const properNouns: string[] = [];
@@ -153,11 +153,11 @@ export class AIAnalysisService {
 
     // 결과 로깅
     if (properNouns.length > 0) {
-      Logger.log(`  🏷️  고유명사 (NNP): [${properNouns.map(noun => `"${noun}"`).join(', ')}]`);
+      Logger.debug(`  🏷️  고유명사 (NNP): [${properNouns.map(noun => `"${noun}"`).join(', ')}]`);
     }
     
     if (foreignWords.length > 0) {
-      Logger.log(`  🌐 외국어/특수어 (SL/SH/SN): [${foreignWords.map(word => `"${word}"`).join(', ')}]`);
+      Logger.debug(`  🌐 외국어/특수어 (SL/SH/SN): [${foreignWords.map(word => `"${word}"`).join(', ')}]`);
     }
 
     // 오류 단어들과 매칭
@@ -167,9 +167,9 @@ export class AIAnalysisService {
     );
     
     if (matchedErrors.length > 0) {
-      Logger.log(`  ✨ 맞춤법 오류 중 형태소 분석으로 감지된 고유명사/외국어: [${matchedErrors.map(word => `"${word}"`).join(', ')}]`);
+      Logger.debug(`  ✨ 맞춤법 오류 중 형태소 분석으로 감지된 고유명사/외국어: [${matchedErrors.map(word => `"${word}"`).join(', ')}]`);
     } else {
-      Logger.log('  ❓ 맞춤법 오류 중 형태소 분석으로 고유명사/외국어로 분류된 단어 없음');
+      Logger.debug('  ❓ 맞춤법 오류 중 형태소 분석으로 고유명사/외국어로 분류된 단어 없음');
     }
 
     // 상세 토큰 정보 (처음 10개만)
@@ -204,7 +204,7 @@ export class AIAnalysisService {
                 'SN': '숫자'
               };
               const tagDescription = tagDescriptions[tag] || tag;
-              Logger.log(`🏷️ 형태소 고유명사 감지: "${text}" - 품사: ${tag}(${tagDescription})`);
+              Logger.debug(`🏷️ 형태소 고유명사 감지: "${text}" - 품사: ${tag}(${tagDescription})`);
               return true;
             }
           }
@@ -308,7 +308,7 @@ export class AIAnalysisService {
     
     for (const { pattern, name } of patterns) {
       if (pattern.test(text)) {
-        Logger.log(`🔍 패턴 고유명사 감지: "${text}" - 패턴: ${name}`);
+        Logger.debug(`🔍 패턴 고유명사 감지: "${text}" - 패턴: ${name}`);
         return true;
       }
     }
@@ -548,7 +548,7 @@ export class AIAnalysisService {
             Logger.error(`배치 ${i + 1} 처리 실패:`, error);
           }
         }
-        Logger.debug(`AI 분석 완료: ${aiResults.length}개 결과 수집됨`);
+        Logger.log(`AI 분석 완료: ${aiResults.length}개 결과 수집됨`);
       }
 
       // 이미 처리된 컨텍스트를 결과에 추가

@@ -78,7 +78,7 @@ export class SpellCheckApiService {
     const cacheKey = `morpheme_${this.hashText(text)}`;
     const cachedResult = this.morphemeCache.get(cacheKey);
     if (cachedResult) {
-      Logger.log('형태소 분석 캐시에서 결과 반환:', { textLength: text.length });
+      Logger.debug('형태소 분석 캐시에서 결과 반환:', { textLength: text.length });
       return cachedResult;
     }
 
@@ -114,7 +114,7 @@ export class SpellCheckApiService {
       encoding_type: "UTF8"
     };
 
-    Logger.log('형태소 분석 API 요청:', {
+    Logger.debug('형태소 분석 API 요청:', {
       url: apiUrl,
       textLength: text.length,
       cached: false
@@ -151,7 +151,7 @@ export class SpellCheckApiService {
           }
 
           const data = await response.json();
-          Logger.log('형태소 분석 API 응답 성공:', { 
+          Logger.debug('형태소 분석 API 응답 성공:', { 
             textLength: text.length,
             tokensCount: data.sentences?.reduce((count: number, sentence: any) => count + sentence.tokens.length, 0) || 0,
             sentencesCount: data.sentences?.length || 0
@@ -196,7 +196,7 @@ export class SpellCheckApiService {
       // 가장 오래된 항목부터 제거 (Map은 삽입 순서를 유지)
       const firstKey = this.morphemeCache.keys().next().value;
       this.morphemeCache.delete(firstKey);
-      Logger.log('형태소 캐시 크기 관리: 오래된 항목 삭제');
+      Logger.debug('형태소 캐시 크기 관리: 오래된 항목 삭제');
     }
   }
 
@@ -205,7 +205,7 @@ export class SpellCheckApiService {
    */
   clearMorphemeCache(): void {
     this.morphemeCache.clear();
-    Logger.log('형태소 캐시 정리 완료');
+    Logger.debug('형태소 캐시 정리 완료');
   }
 
   /**
@@ -274,46 +274,47 @@ export class SpellCheckApiService {
     // revisedSentences에서 상세 오류 정보 추출
     const correctionMap = new Map<string, Correction>(); // 원문별로 교정 정보 통합
     
-    Logger.log('=== Bareun API 응답 분석 ===');
-    Logger.log('원본 텍스트:', originalText);
-    Logger.log('교정된 텍스트:', data.revised);
-    Logger.log('revisedSentences 수:', data.revisedSentences?.length || 0);
+    Logger.debug('=== Bareun API 응답 분석 ===');
+    Logger.debug('원본 텍스트:', originalText);
+    Logger.debug('교정된 텍스트:', data.revised);
+    Logger.debug('revisedSentences 수:', data.revisedSentences?.length || 0);
     
     if (data.revisedSentences && Array.isArray(data.revisedSentences)) {
       data.revisedSentences.forEach((sentence, sentenceIndex) => {
-        Logger.log(`\n--- 문장 ${sentenceIndex + 1} ---`);
-        Logger.log('원본 문장:', sentence.origin);
-        Logger.log('교정된 문장:', sentence.revised);
-        Logger.log('revisedBlocks 수:', sentence.revisedBlocks?.length || 0);
+        Logger.debug(`\n--- 문장 ${sentenceIndex + 1} ---`);
+        Logger.debug('원본 문장:', sentence.origin);
+        Logger.debug('교정된 문장:', sentence.revised);
+        Logger.debug('revisedBlocks 수:', sentence.revisedBlocks?.length || 0);
         
         if (sentence.revisedBlocks && Array.isArray(sentence.revisedBlocks)) {
           sentence.revisedBlocks.forEach((block, blockIndex) => {
-            Logger.log(`\n  블록 ${blockIndex + 1}:`);
-            Logger.log(`  전체 블록 정보:`, JSON.stringify(block, null, 2));
-            Logger.log('  원본 내용:', block.origin?.content);
-            Logger.log('  원본 위치:', `${block.origin?.beginOffset}-${block.origin?.beginOffset + block.origin?.length}`);
-            Logger.log('  교정:', block.revised);
-            Logger.log('  제안 수:', block.revisions?.length || 0);
+            Logger.log(`
+  블록 ${blockIndex + 1}:`);
+            Logger.debug(`  전체 블록 정보:`, JSON.stringify(block, null, 2));
+            Logger.debug('  원본 내용:', block.origin?.content);
+            Logger.debug('  원본 위치:', `${block.origin?.beginOffset}-${block.origin?.beginOffset + block.origin?.length}`);
+            Logger.debug('  교정:', block.revised);
+            Logger.debug('  제안 수:', block.revisions?.length || 0);
             
             if (block.origin && block.revised && block.revisions) {
               const blockOriginalText = block.origin.content;
               
               // 빈 텍스트나 깨진 문자는 제외
               if (!blockOriginalText || blockOriginalText.trim().length === 0) {
-                Logger.log('  -> 빈 텍스트로 건너뜀');
+                Logger.debug('  -> 빈 텍스트로 건너뜀');
                 return;
               }
               
               // 실제 원문에서 찾을 수 있는지 확인
               if (originalText.indexOf(blockOriginalText) === -1) {
-                Logger.log('  -> 원본 텍스트에서 찾을 수 없어 건너뜀');
+                Logger.debug('  -> 원본 텍스트에서 찾을 수 없어 건너뜀');
                 return;
               }
               
               // 여러 수정 제안이 있을 경우 모두 포함
               const suggestions = block.revisions.map(rev => rev.revised);
-              Logger.log(`  🔍 API에서 받은 제안 수: ${suggestions.length}개`);
-              Logger.log('  제안들:', suggestions);
+              Logger.debug(`  🔍 API에서 받은 제안 수: ${suggestions.length}개`);
+              Logger.debug('  제안들:', suggestions);
               
               // 중복 제거 및 원문과 다른 제안만 포함
               const uniqueSuggestions = [...new Set(suggestions)]
@@ -322,12 +323,12 @@ export class SpellCheckApiService {
                                  s.trim() !== blockOriginalText.trim() &&
                                  s.length > 0 &&
                                  !s.includes('�'); // 깨진 문자 제거
-                  Logger.log(`    "${s}" 유효성:`, isValid);
+                  Logger.debug(`    "${s}" 유효성:`, isValid);
                   return isValid;
                 });
               
-              Logger.log(`  ✅ 중복제거 후 유효한 제안 수: ${uniqueSuggestions.length}개`);
-              Logger.log('  유효한 제안들:', uniqueSuggestions);
+              Logger.debug(`  ✅ 중복제거 후 유효한 제안 수: ${uniqueSuggestions.length}개`);
+              Logger.debug('  유효한 제안들:', uniqueSuggestions);
               
               // 한 글자 오류 필터링 적용
               const filteredSuggestions = this.applySingleCharFilter(
@@ -336,14 +337,14 @@ export class SpellCheckApiService {
                 settings.filterSingleCharErrors
               );
               
-              Logger.log(`  🚀 최종 필터링된 제안 수: ${filteredSuggestions.length}개`);
-              Logger.log('  필터링된 제안들:', filteredSuggestions);
+              Logger.debug(`  🚀 최종 필터링된 제안 수: ${filteredSuggestions.length}개`);
+              Logger.debug('  필터링된 제안들:', filteredSuggestions);
               
               // 유효한 제안이 있는 경우만 처리
               if (filteredSuggestions.length > 0) {
                 // 이미 있는 교정이면 제안을 추가, 없으면 새로 생성
                 if (correctionMap.has(blockOriginalText)) {
-                  Logger.log('  -> 기존 교정에 제안 추가');
+                  Logger.debug('  -> 기존 교정에 제안 추가');
                   const existing = correctionMap.get(blockOriginalText)!;
                   // 새로운 제안들을 기존 제안들과 합치고 중복 제거
                   const combinedSuggestions = [...new Set([...existing.corrected, ...filteredSuggestions])];
@@ -351,18 +352,18 @@ export class SpellCheckApiService {
                     ...existing,
                     corrected: combinedSuggestions
                   });
-                  Logger.log('  -> 통합된 제안들:', combinedSuggestions);
+                  Logger.debug('  -> 통합된 제안들:', combinedSuggestions);
                 } else {
-                  Logger.log('  -> 새 교정 생성');
+                  Logger.debug('  -> 새 교정 생성');
                   correctionMap.set(blockOriginalText, {
                     original: blockOriginalText,
                     corrected: filteredSuggestions,
                     help: block.revisions[0]?.comment || "맞춤법 교정"
                   });
-                  Logger.log('  -> 새 교정 제안들:', filteredSuggestions);
+                  Logger.debug('  -> 새 교정 제안들:', filteredSuggestions);
                 }
               } else {
-                Logger.log('  -> 유효한 제안이 없어 건너뜀');
+                Logger.debug('  -> 유효한 제안이 없어 건너뜀');
               }
             }
           });
@@ -376,13 +377,13 @@ export class SpellCheckApiService {
     // 형태소 분석을 통한 겹침 해결은 improveCorrectionsWithMorphemes에서 처리
     corrections.push(...rawCorrections);
     
-    Logger.log('\n=== 최종 교정 결과 ===');
-    Logger.log('교정 맵 크기:', correctionMap.size);
+    Logger.debug('\n=== 최종 교정 결과 ===');
+    Logger.debug('교정 맵 크기:', correctionMap.size);
     Logger.log('최종 교정 배열:', corrections);
 
     // 만약 교정된 텍스트는 있지만 세부 오류 정보가 없는 경우
     if (corrections.length === 0 && resultOutput !== originalText) {
-      Logger.log('\n세부 정보가 없어 diff 로직 사용');
+      Logger.log('세부 정보가 없어 diff 로직 사용');
       // 간단한 diff 로직으로 변경된 부분 찾기
       const words = originalText.split(/(\s+)/);
       const revisedWords = resultOutput.split(/(\s+)/);
@@ -418,16 +419,16 @@ export class SpellCheckApiService {
       
       // 형태소 분석 수행
       const morphemeData = await this.analyzeMorphemes(text, settings);
-      Logger.log('형태소 분석 완료:', morphemeData);
+      Logger.debug('형태소 분석 완료:', morphemeData);
 
       // 겹치는 오류들을 형태소 단위로 그룹화
       const improvedCorrections = this.groupCorrectionsByMorphemes(corrections, morphemeData, text);
       
-      Logger.log(`교정 개선 결과: ${corrections.length}개 → ${improvedCorrections.length}개`);
+      Logger.debug(`교정 개선 결과: ${corrections.length}개 → ${improvedCorrections.length}개`);
       return improvedCorrections;
       
     } catch (error) {
-      Logger.log('형태소 분석 실패, 원본 교정 사용:', error);
+      Logger.debug('형태소 분석 실패, 원본 교정 사용:', error);
       return corrections; // 실패 시 원본 교정 반환
     }
   }
@@ -447,17 +448,17 @@ export class SpellCheckApiService {
     morphemeData: MorphemeResponse
   ): Promise<Correction[]> {
     try {
-      Logger.log('\n=== 형태소 데이터 기반 교정 개선 (재사용) ===');
-      Logger.log('기존 형태소 데이터 재사용:', morphemeData);
+      Logger.debug('=== 형태소 데이터 기반 교정 개선 (재사용) ===');
+      Logger.debug('기존 형태소 데이터 재사용:', morphemeData);
 
       // 겹치는 오류들을 형태소 단위로 그룹화
       const improvedCorrections = this.groupCorrectionsByMorphemes(corrections, morphemeData, text);
       
-      Logger.log(`교정 개선 결과 (재사용): ${corrections.length}개 → ${improvedCorrections.length}개`);
+      Logger.debug(`교정 개선 결과 (재사용): ${corrections.length}개 → ${improvedCorrections.length}개`);
       return improvedCorrections;
       
     } catch (error) {
-      Logger.log('형태소 데이터 기반 교정 개선 실패, 원본 교정 사용:', error);
+      Logger.debug('형태소 데이터 기반 교정 개선 실패, 원본 교정 사용:', error);
       return corrections; // 실패 시 원본 교정 반환
     }
   }
@@ -483,7 +484,7 @@ export class SpellCheckApiService {
       });
     });
 
-    Logger.log('토큰 맵:', Array.from(tokenMap.keys()));
+    Logger.debug('토큰 맵:', Array.from(tokenMap.keys()));
 
     // 겹치는 교정들을 식별하고 통합
     const groupedCorrections: Correction[] = [];
@@ -502,7 +503,7 @@ export class SpellCheckApiService {
           );
           
           if (overlappingCorrections.length > 1) {
-            Logger.log(`위치 ${position}에서 겹치는 교정들:`, overlappingCorrections.map(c => c.original));
+            Logger.debug(`위치 ${position}에서 겹치는 교정들:`, overlappingCorrections.map(c => c.original));
             
             // 형태소 정보를 기반으로 최적의 교정 선택
             const bestCorrection = this.selectBestCorrectionWithTokens(
@@ -511,7 +512,7 @@ export class SpellCheckApiService {
             
             if (bestCorrection) {
               groupedCorrections.push(bestCorrection);
-              Logger.log(`선택된 교정: "${bestCorrection.original}"`);
+              Logger.debug(`선택된 교정: "${bestCorrection.original}"`);
               
               // 겹치는 모든 범위를 처리됨으로 표시
               overlappingCorrections.forEach(corr => {
@@ -577,7 +578,7 @@ export class SpellCheckApiService {
     for (const correction of corrections) {
       const token = tokenMap.get(correction.original);
       if (token) {
-        Logger.log(`토큰 경계 일치 교정 선택: "${correction.original}" (토큰 단위)`);
+        Logger.debug(`토큰 경계 일치 교정 선택: "${correction.original}" (토큰 단위)`);
         return correction;
       }
     }
@@ -588,12 +589,12 @@ export class SpellCheckApiService {
     );
 
     if (longestCorrections.length === 1) {
-      Logger.log(`가장 긴 교정 선택: "${longestCorrections[0].original}"`);
+      Logger.debug(`가장 긴 교정 선택: "${longestCorrections[0].original}"`);
       return longestCorrections[0];
     }
 
     // 3. 첫 번째 교정 선택 (기본값)
-    Logger.log(`기본 선택: "${longestCorrections[0].original}"`);
+    Logger.debug(`기본 선택: "${longestCorrections[0].original}"`);
     return longestCorrections[0];
   }
 
@@ -621,33 +622,33 @@ export class SpellCheckApiService {
    */
   private applySingleCharFilter(original: string, suggestions: string[], filterEnabled: boolean): string[] {
     if (!filterEnabled) {
-      Logger.log('    한 글자 필터링 비활성화됨');
+      Logger.debug('    한 글자 필터링 비활성화됨');
       return suggestions;
     }
 
     // 원본이 한 글자가 아니면 모든 제안 유지
     if (original.length !== 1) {
-      Logger.log(`    원본이 한 글자가 아님 (${original.length}글자): "${original}"`);
+      Logger.debug(`    원본이 한 글자가 아님 (${original.length}글자): "${original}"`);
       return suggestions;
     }
 
-    Logger.log(`    한 글자 원본 감지: "${original}"`);
+    Logger.debug(`    한 글자 원본 감지: "${original}"`);
 
     // 의미있는 한 글자 교정인지 판단
     const meaningfulSuggestions = suggestions.filter(suggestion => {
       // 예외 케이스들
       const exceptions = this.checkSingleCharExceptions(original, suggestion);
       if (exceptions.isException) {
-        Logger.log(`      "${suggestion}": 예외 처리됨 (${exceptions.reason})`);
+        Logger.debug(`      "${suggestion}": 예외 처리됨 (${exceptions.reason})`);
         return true;
       }
 
       // 일반적으로 한 글자 교정은 필터링
-      Logger.log(`      "${suggestion}": 한 글자 교정으로 필터링됨`);
+      Logger.debug(`      "${suggestion}": 한 글자 교정으로 필터링됨`);
       return false;
     });
 
-    Logger.log(`    필터링 결과: ${suggestions.length} → ${meaningfulSuggestions.length}`);
+    Logger.debug(`    필터링 결과: ${suggestions.length} → ${meaningfulSuggestions.length}`);
     return meaningfulSuggestions;
   }
 

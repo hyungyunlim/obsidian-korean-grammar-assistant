@@ -220,14 +220,14 @@ export class ErrorHandlerService {
     while (attempt <= retryConfig.maxRetries) {
       try {
         if (attempt > 0) {
-          Logger.log(`재시도 ${attempt}/${retryConfig.maxRetries}:`, { context });
+          Logger.debug(`재시도 ${attempt}/${retryConfig.maxRetries}:`, { context });
         }
 
         const result = await fn();
         
         // 성공 시 재시도 카운트 초기화
         if (attempt > 0) {
-          Logger.log('재시도 성공:', { context, attempt });
+          Logger.debug('재시도 성공:', { context, attempt });
         }
         this.retryCount.delete(retryKey);
         
@@ -355,6 +355,6 @@ export class ErrorHandlerService {
    */
   static clearRetryState(): void {
     this.retryCount.clear();
-    Logger.log('재시도 상태 초기화됨');
+    Logger.debug('재시도 상태 초기화됨');
   }
 }

@@ -169,7 +169,7 @@ export class MemoryOptimizer<T> {
       evictions: 0
     };
     
-    Logger.log('메모리 전체 정리:', { deletedChunks: count });
+    Logger.debug('메모리 전체 정리:', { deletedChunks: count });
   }
 
   /**
@@ -242,7 +242,7 @@ export class MemoryOptimizer<T> {
     const afterSize = this.chunks.size;
     const afterMemory = this.getMemoryUsage().totalSize;
     
-    Logger.log('메모리 압축 완료:', {
+    Logger.debug('메모리 압축 완료:', {
       removedChunks: beforeSize - afterSize,
       savedMemory: beforeMemory - afterMemory,
       compressionRatio: Math.round(((beforeSize - afterSize) / beforeSize) * 100)

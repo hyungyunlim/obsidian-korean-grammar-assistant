@@ -29,7 +29,7 @@ export class OpenAIClient implements AIClient {
           )
           .sort();
         
-        Logger.log(`${models.length}개 모델을 가져왔습니다.`);
+        Logger.debug(`${models.length}개 모델을 가져왔습니다.`);
         return models;
       }
     } catch (error) {
@@ -52,7 +52,7 @@ export class OpenAIClient implements AIClient {
       throw new Error('OpenAI API 키 형식이 올바르지 않습니다. "sk-"로 시작해야 합니다.');
     }
 
-    Logger.log('chat 요청 시작:', {
+    Logger.debug('chat 요청 시작:', {
       model: model,
       maxTokens: maxTokens,
       messagesCount: messages.length,
@@ -66,7 +66,7 @@ export class OpenAIClient implements AIClient {
       temperature: 0.1
     };
 
-    Logger.log('요청 데이터:', {
+    Logger.debug('요청 데이터:', {
       url: API_ENDPOINTS.openai.chat,
       model: model,
       messagesCount: messages.length,

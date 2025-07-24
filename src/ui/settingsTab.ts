@@ -1853,7 +1853,7 @@ export class ModernSettingsTab extends PluginSettingTab {
       new Notice('로그가 다운로드되었습니다.');
       
     } catch (error) {
-      console.error('로그 다운로드 오류:', error);
+      Logger.error('로그 다운로드 오류:', error);
       new Notice('로그 다운로드 중 오류가 발생했습니다.');
     }
   }
@@ -1917,7 +1917,7 @@ export class ModernSettingsTab extends PluginSettingTab {
             additionalStatsBox.createEl('div', { text: `• ${metric}` });
           });
         } catch (error) {
-          console.error('메트릭 업데이트 오류:', error);
+          Logger.error('메트릭 업데이트 오류:', error);
         }
       }
     };

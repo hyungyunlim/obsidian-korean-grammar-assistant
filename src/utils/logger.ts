@@ -104,7 +104,7 @@ export class Logger {
     return () => {
       const endTime = performance.now();
       const duration = Math.round(endTime - startTime);
-      this.log(`⏱️ ${label}: ${duration}ms`);
+      this.debug(`⏱️ ${label}: ${duration}ms`);
       return duration;
     };
   }

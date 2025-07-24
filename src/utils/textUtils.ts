@@ -142,7 +142,7 @@ export function calculateDynamicCharsPerPage(
   isErrorExpanded: boolean = false
 ): number {
   if (!previewElement) {
-    Logger.log("No previewElement, returning default 800.");
+    Logger.debug("No previewElement, returning default 800.");
     return 800; // 기본값
   }
 
@@ -160,7 +160,7 @@ export function calculateDynamicCharsPerPage(
     // 오류 영역이 접혀 있으면 더 큰 페이지
     calculatedChars = Math.max(800, Math.min(1800, linesPerPage * avgCharsPerLine));
   }
-  Logger.log(`Available height: ${availableHeight}, Lines per page: ${linesPerPage}, Calculated chars: ${calculatedChars}, Error expanded: ${isErrorExpanded}`);
+  Logger.debug(`Available height: ${availableHeight}, Lines per page: ${linesPerPage}, Calculated chars: ${calculatedChars}, Error expanded: ${isErrorExpanded}`);
   
   return calculatedChars;
 }
@@ -176,12 +176,12 @@ export function getCurrentParagraph(editor: any): { text: string; from: any; to:
   const currentLine = cursor.line;
   const totalLines = editor.lineCount();
   
-  Logger.log(`문단 감지 시작: 현재 라인 ${currentLine}, 총 라인 ${totalLines}`);
+  Logger.debug(`문단 감지 시작: 현재 라인 ${currentLine}, 총 라인 ${totalLines}`);
   
   // 현재 단어 위치 확인 (wordAt API 활용)
   const currentWord = editor.wordAt(cursor);
   if (currentWord) {
-    Logger.log(`현재 단어 범위: ${currentWord.from.line}:${currentWord.from.ch} - ${currentWord.to.line}:${currentWord.to.ch}`);
+    Logger.debug(`현재 단어 범위: ${currentWord.from.line}:${currentWord.from.ch} - ${currentWord.to.line}:${currentWord.to.ch}`);
   }
   
   // 문단 경계 감지를 위한 변수
@@ -247,8 +247,8 @@ export function getCurrentParagraph(editor: any): { text: string; from: any; to:
   
   const text = editor.getRange(from, to);
   
-  Logger.log(`문단 감지 완료: ${startLine}행-${endLine}행 (${text.length}자)`);
-  Logger.log(`문단 내용 미리보기: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
+  Logger.debug(`문단 감지 완료: ${startLine}행-${endLine}행 (${text.length}자)`);
+  Logger.debug(`문단 내용 미리보기: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
   
   return { text, from, to };
 }
@@ -268,7 +268,7 @@ export function getCurrentWord(editor: any): { text: string; from: any; to: any 
   
   const text = editor.getRange(wordRange.from, wordRange.to);
   
-  Logger.log(`현재 단어 감지: "${text}" (${wordRange.from.line}:${wordRange.from.ch} - ${wordRange.to.line}:${wordRange.to.ch})`);
+  Logger.debug(`현재 단어 감지: "${text}" (${wordRange.from.line}:${wordRange.from.ch} - ${wordRange.to.line}:${wordRange.to.ch})`);
   
   return {
     text,
@@ -290,7 +290,7 @@ export function getCurrentSentence(editor: any): { text: string; from: any; to: 
   // 현재 라인의 텍스트 가져오기
   const currentLineText = editor.getLine(currentLine);
   
-  Logger.log(`문장 감지 시작: ${currentLine}행 ${currentChar}열`);
+  Logger.debug(`문장 감지 시작: ${currentLine}행 ${currentChar}열`);
   
   // 한국어 문장 끝 패턴
   const sentenceEndPattern = /[.!?。！？]/;
@@ -401,8 +401,8 @@ export function getCurrentSentence(editor: any): { text: string; from: any; to: 
   // 텍스트 추출
   const text = editor.getRange(from, to).trim();
   
-  Logger.log(`문장 감지 완료: ${sentenceStartLine}:${sentenceStartChar} - ${sentenceEndLine}:${sentenceEndChar}`);
-  Logger.log(`문장 내용: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
+  Logger.debug(`문장 감지 완료: ${sentenceStartLine}:${sentenceStartChar} - ${sentenceEndLine}:${sentenceEndChar}`);
+  Logger.debug(`문장 내용: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
   
   return { text, from, to };
 }
@@ -480,7 +480,7 @@ export function getAllParagraphs(editor: any): Array<{ text: string; from: any; 
     }
   }
   
-  Logger.log(`전체 문서 분석 완료: ${paragraphs.length}개 문단 발견`);
+  Logger.debug(`전체 문서 분석 완료: ${paragraphs.length}개 문단 발견`);
   
   return paragraphs;
 }
@@ -504,7 +504,7 @@ export function getVisibleParagraphs(editor: any): Array<{ text: string; from: a
     return paragraph.lineEnd >= visibleStartLine && paragraph.lineStart <= visibleEndLine;
   });
   
-  Logger.log(`현재 뷰포트 분석: ${visibleParagraphs.length}개 문단 표시 중 (${visibleStartLine}-${visibleEndLine}행)`);
+  Logger.debug(`현재 뷰포트 분석: ${visibleParagraphs.length}개 문단 표시 중 (${visibleStartLine}-${visibleEndLine}행)`);
   
   return visibleParagraphs;
 }

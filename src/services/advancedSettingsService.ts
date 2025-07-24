@@ -137,7 +137,7 @@ export class AdvancedSettingsService {
       result.suggestions.push('AI 토큰 수를 줄이면 응답 속도가 향상됩니다');
     }
 
-    Logger.log('설정 검증 완료:', {
+    Logger.debug('설정 검증 완료:', {
       isValid: result.isValid,
       errorsCount: result.errors.length,
       warningsCount: result.warnings.length
@@ -164,7 +164,7 @@ export class AdvancedSettingsService {
       this.backups = this.backups.slice(0, this.MAX_BACKUPS);
     }
 
-    Logger.log('설정 백업 생성:', { reason, backupCount: this.backups.length });
+    Logger.debug('설정 백업 생성:', { reason, backupCount: this.backups.length });
   }
 
   /**
@@ -179,7 +179,7 @@ export class AdvancedSettingsService {
     const backup = this.backups[backupIndex];
     const restoredSettings = JSON.parse(JSON.stringify(backup.settings));
 
-    Logger.log('설정 복원:', { 
+    Logger.debug('설정 복원:', { 
       backupTimestamp: new Date(backup.timestamp).toISOString(),
       reason: backup.reason 
     });
@@ -226,7 +226,7 @@ export class AdvancedSettingsService {
 
     this.profiles.push(profile);
 
-    Logger.log('설정 프로파일 생성:', { name, id: profile.id });
+    Logger.debug('설정 프로파일 생성:', { name, id: profile.id });
     return profile.id;
   }
 
@@ -246,7 +246,7 @@ export class AdvancedSettingsService {
     // 사용 시간 업데이트
     profile.lastUsed = Date.now();
 
-    Logger.log('설정 프로파일 적용:', { name: profile.name, id: profileId });
+    Logger.debug('설정 프로파일 적용:', { name: profile.name, id: profileId });
     return mergedSettings;
   }
 
@@ -287,7 +287,7 @@ export class AdvancedSettingsService {
     }
 
     this.profiles.splice(index, 1);
-    Logger.log('설정 프로파일 삭제:', { name: profile.name, id: profileId });
+    Logger.debug('설정 프로파일 삭제:', { name: profile.name, id: profileId });
     return true;
   }
 
@@ -363,7 +363,7 @@ export class AdvancedSettingsService {
       filterSingleCharErrors: true
     };
 
-    Logger.log('설정을 기본값으로 재설정');
+    Logger.debug('설정을 기본값으로 재설정');
     return defaultSettings;
   }
 
@@ -407,7 +407,7 @@ export class AdvancedSettingsService {
         };
       }
 
-      Logger.log('설정 가져오기 성공:', { version: importData.version });
+      Logger.debug('설정 가져오기 성공:', { version: importData.version });
       return { success: true, settings };
 
     } catch (error) {

@@ -342,7 +342,7 @@ var init_logger = __esm({
         return () => {
           const endTime = performance.now();
           const duration = Math.round(endTime - startTime);
-          this.log(`\u23F1\uFE0F ${label}: ${duration}ms`);
+          this.debug(`\u23F1\uFE0F ${label}: ${duration}ms`);
           return duration;
         };
       }
@@ -639,11 +639,11 @@ var init_errorHandler = __esm({
         while (attempt <= retryConfig.maxRetries) {
           try {
             if (attempt > 0) {
-              Logger.log(`\uC7AC\uC2DC\uB3C4 ${attempt}/${retryConfig.maxRetries}:`, { context });
+              Logger.debug(`\uC7AC\uC2DC\uB3C4 ${attempt}/${retryConfig.maxRetries}:`, { context });
             }
             const result = await fn();
             if (attempt > 0) {
-              Logger.log("\uC7AC\uC2DC\uB3C4 \uC131\uACF5:", { context, attempt });
+              Logger.debug("\uC7AC\uC2DC\uB3C4 \uC131\uACF5:", { context, attempt });
             }
             this.retryCount.delete(retryKey);
             return result;
@@ -742,7 +742,7 @@ var init_errorHandler = __esm({
        */
       static clearRetryState() {
         this.retryCount.clear();
-        Logger.log("\uC7AC\uC2DC\uB3C4 \uC0C1\uD0DC \uCD08\uAE30\uD654\uB428");
+        Logger.debug("\uC7AC\uC2DC\uB3C4 \uC0C1\uD0DC \uCD08\uAE30\uD654\uB428");
       }
     };
     ErrorHandlerService.DEFAULT_RETRY_CONFIG = {
@@ -783,7 +783,7 @@ var init_openai_client = __esm({
             const models = response.json.data.map((model) => model.id).filter(
               (id) => MODEL_PREFIXES.openai.some((prefix) => id.startsWith(prefix))
             ).sort();
-            Logger.log(`${models.length}\uAC1C \uBAA8\uB378\uC744 \uAC00\uC838\uC654\uC2B5\uB2C8\uB2E4.`);
+            Logger.debug(`${models.length}\uAC1C \uBAA8\uB378\uC744 \uAC00\uC838\uC654\uC2B5\uB2C8\uB2E4.`);
             return models;
           }
         } catch (error) {
@@ -798,7 +798,7 @@ var init_openai_client = __esm({
         if (!this.apiKey.startsWith("sk-")) {
           throw new Error('OpenAI API \uD0A4 \uD615\uC2DD\uC774 \uC62C\uBC14\uB974\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. "sk-"\uB85C \uC2DC\uC791\uD574\uC57C \uD569\uB2C8\uB2E4.');
         }
-        Logger.log("chat \uC694\uCCAD \uC2DC\uC791:", {
+        Logger.debug("chat \uC694\uCCAD \uC2DC\uC791:", {
           model,
           maxTokens,
           messagesCount: messages.length,
@@ -810,7 +810,7 @@ var init_openai_client = __esm({
           max_tokens: maxTokens,
           temperature: 0.1
         };
-        Logger.log("\uC694\uCCAD \uB370\uC774\uD130:", {
+        Logger.debug("\uC694\uCCAD \uB370\uC774\uD130:", {
           url: API_ENDPOINTS.openai.chat,
           model,
           messagesCount: messages.length,
@@ -1035,7 +1035,7 @@ var init_clientFactory = __esm({
       static createClient(settings) {
         const provider = settings.provider;
         const apiKey = this.getApiKey(settings);
-        Logger.log("\uD074\uB77C\uC774\uC5B8\uD2B8 \uC0DD\uC131:", {
+        Logger.debug("\uD074\uB77C\uC774\uC5B8\uD2B8 \uC0DD\uC131:", {
           provider,
           hasApiKey: !!apiKey,
           apiKeyLength: apiKey ? apiKey.length : 0,
@@ -1161,7 +1161,7 @@ var init_advancedSettingsService = __esm({
         if (settings.ai && settings.ai.enabled && settings.ai.maxTokens > 4e3) {
           result.suggestions.push("AI \uD1A0\uD070 \uC218\uB97C \uC904\uC774\uBA74 \uC751\uB2F5 \uC18D\uB3C4\uAC00 \uD5A5\uC0C1\uB429\uB2C8\uB2E4");
         }
-        Logger.log("\uC124\uC815 \uAC80\uC99D \uC644\uB8CC:", {
+        Logger.debug("\uC124\uC815 \uAC80\uC99D \uC644\uB8CC:", {
           isValid: result.isValid,
           errorsCount: result.errors.length,
           warningsCount: result.warnings.length
@@ -1184,7 +1184,7 @@ var init_advancedSettingsService = __esm({
         if (this.backups.length > this.MAX_BACKUPS) {
           this.backups = this.backups.slice(0, this.MAX_BACKUPS);
         }
-        Logger.log("\uC124\uC815 \uBC31\uC5C5 \uC0DD\uC131:", { reason, backupCount: this.backups.length });
+        Logger.debug("\uC124\uC815 \uBC31\uC5C5 \uC0DD\uC131:", { reason, backupCount: this.backups.length });
       }
       /**
        * 백업에서 설정을 복원합니다
@@ -1196,7 +1196,7 @@ var init_advancedSettingsService = __esm({
         }
         const backup = this.backups[backupIndex];
         const restoredSettings = JSON.parse(JSON.stringify(backup.settings));
-        Logger.log("\uC124\uC815 \uBCF5\uC6D0:", {
+        Logger.debug("\uC124\uC815 \uBCF5\uC6D0:", {
           backupTimestamp: new Date(backup.timestamp).toISOString(),
           reason: backup.reason
         });
@@ -1228,7 +1228,7 @@ var init_advancedSettingsService = __esm({
           lastUsed: Date.now()
         };
         this.profiles.push(profile);
-        Logger.log("\uC124\uC815 \uD504\uB85C\uD30C\uC77C \uC0DD\uC131:", { name, id: profile.id });
+        Logger.debug("\uC124\uC815 \uD504\uB85C\uD30C\uC77C \uC0DD\uC131:", { name, id: profile.id });
         return profile.id;
       }
       /**
@@ -1242,7 +1242,7 @@ var init_advancedSettingsService = __esm({
         }
         const mergedSettings = this.mergeSettings(currentSettings, profile.settings);
         profile.lastUsed = Date.now();
-        Logger.log("\uC124\uC815 \uD504\uB85C\uD30C\uC77C \uC801\uC6A9:", { name: profile.name, id: profileId });
+        Logger.debug("\uC124\uC815 \uD504\uB85C\uD30C\uC77C \uC801\uC6A9:", { name: profile.name, id: profileId });
         return mergedSettings;
       }
       /**
@@ -1272,7 +1272,7 @@ var init_advancedSettingsService = __esm({
           return false;
         }
         this.profiles.splice(index, 1);
-        Logger.log("\uC124\uC815 \uD504\uB85C\uD30C\uC77C \uC0AD\uC81C:", { name: profile.name, id: profileId });
+        Logger.debug("\uC124\uC815 \uD504\uB85C\uD30C\uC77C \uC0AD\uC81C:", { name: profile.name, id: profileId });
         return true;
       }
       /**
@@ -1330,7 +1330,7 @@ var init_advancedSettingsService = __esm({
           },
           filterSingleCharErrors: true
         };
-        Logger.log("\uC124\uC815\uC744 \uAE30\uBCF8\uAC12\uC73C\uB85C \uC7AC\uC124\uC815");
+        Logger.debug("\uC124\uC815\uC744 \uAE30\uBCF8\uAC12\uC73C\uB85C \uC7AC\uC124\uC815");
         return defaultSettings;
       }
       /**
@@ -1366,7 +1366,7 @@ var init_advancedSettingsService = __esm({
               error: `\uC124\uC815 \uC720\uD6A8\uC131 \uAC80\uC0AC \uC2E4\uD328: ${validation.errors.join(", ")}`
             };
           }
-          Logger.log("\uC124\uC815 \uAC00\uC838\uC624\uAE30 \uC131\uACF5:", { version: importData.version });
+          Logger.debug("\uC124\uC815 \uAC00\uC838\uC624\uAE30 \uC131\uACF5:", { version: importData.version });
           return { success: true, settings };
         } catch (error) {
           Logger.error("\uC124\uC815 \uAC00\uC838\uC624\uAE30 \uC2E4\uD328:", error);
@@ -1492,12 +1492,12 @@ function loadApiConfig() {
       const configPath = path.join(__dirname, "../../api-config.json");
       if (fs.existsSync(configPath)) {
         const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-        Logger.log("\uB85C\uCEEC API \uC124\uC815 \uD30C\uC77C\uC744 \uB85C\uB4DC\uD588\uC2B5\uB2C8\uB2E4.");
+        Logger.debug("\uB85C\uCEEC API \uC124\uC815 \uD30C\uC77C\uC744 \uB85C\uB4DC\uD588\uC2B5\uB2C8\uB2E4.");
         return config;
       }
     }
   } catch (error) {
-    Logger.log("\uB85C\uCEEC API \uC124\uC815 \uD30C\uC77C\uC744 \uB85C\uB4DC\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uAE30\uBCF8\uAC12\uC744 \uC0AC\uC6A9\uD569\uB2C8\uB2E4.");
+    Logger.debug("\uB85C\uCEEC API \uC124\uC815 \uD30C\uC77C\uC744 \uB85C\uB4DC\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uAE30\uBCF8\uAC12\uC744 \uC0AC\uC6A9\uD569\uB2C8\uB2E4.");
   }
   return {
     apiKey: "",
@@ -1584,7 +1584,7 @@ var SpellCheckApiService = class {
     const cacheKey = `morpheme_${this.hashText(text)}`;
     const cachedResult = this.morphemeCache.get(cacheKey);
     if (cachedResult) {
-      Logger.log("\uD615\uD0DC\uC18C \uBD84\uC11D \uCE90\uC2DC\uC5D0\uC11C \uACB0\uACFC \uBC18\uD658:", { textLength: text.length });
+      Logger.debug("\uD615\uD0DC\uC18C \uBD84\uC11D \uCE90\uC2DC\uC5D0\uC11C \uACB0\uACFC \uBC18\uD658:", { textLength: text.length });
       return cachedResult;
     }
     try {
@@ -1611,7 +1611,7 @@ var SpellCheckApiService = class {
       },
       encoding_type: "UTF8"
     };
-    Logger.log("\uD615\uD0DC\uC18C \uBD84\uC11D API \uC694\uCCAD:", {
+    Logger.debug("\uD615\uD0DC\uC18C \uBD84\uC11D API \uC694\uCCAD:", {
       url: apiUrl,
       textLength: text.length,
       cached: false
@@ -1642,7 +1642,7 @@ var SpellCheckApiService = class {
             throw new Error(`\uD615\uD0DC\uC18C \uBD84\uC11D API \uC694\uCCAD \uC2E4\uD328: ${response.status} ${response.statusText}`);
           }
           const data = await response.json();
-          Logger.log("\uD615\uD0DC\uC18C \uBD84\uC11D API \uC751\uB2F5 \uC131\uACF5:", {
+          Logger.debug("\uD615\uD0DC\uC18C \uBD84\uC11D API \uC751\uB2F5 \uC131\uACF5:", {
             textLength: text.length,
             tokensCount: ((_a = data.sentences) == null ? void 0 : _a.reduce((count, sentence) => count + sentence.tokens.length, 0)) || 0,
             sentencesCount: ((_b = data.sentences) == null ? void 0 : _b.length) || 0
@@ -1684,7 +1684,7 @@ var SpellCheckApiService = class {
     if (this.morphemeCache.size > this.maxCacheSize) {
       const firstKey = this.morphemeCache.keys().next().value;
       this.morphemeCache.delete(firstKey);
-      Logger.log("\uD615\uD0DC\uC18C \uCE90\uC2DC \uD06C\uAE30 \uAD00\uB9AC: \uC624\uB798\uB41C \uD56D\uBAA9 \uC0AD\uC81C");
+      Logger.debug("\uD615\uD0DC\uC18C \uCE90\uC2DC \uD06C\uAE30 \uAD00\uB9AC: \uC624\uB798\uB41C \uD56D\uBAA9 \uC0AD\uC81C");
     }
   }
   /**
@@ -1692,7 +1692,7 @@ var SpellCheckApiService = class {
    */
   clearMorphemeCache() {
     this.morphemeCache.clear();
-    Logger.log("\uD615\uD0DC\uC18C \uCE90\uC2DC \uC815\uB9AC \uC644\uB8CC");
+    Logger.debug("\uD615\uD0DC\uC18C \uCE90\uC2DC \uC815\uB9AC \uC644\uB8CC");
   }
   /**
    * 캐시 통계를 반환합니다.
@@ -1750,76 +1750,76 @@ var SpellCheckApiService = class {
     const corrections = [];
     let resultOutput = data.revised || originalText;
     const correctionMap = /* @__PURE__ */ new Map();
-    Logger.log("=== Bareun API \uC751\uB2F5 \uBD84\uC11D ===");
-    Logger.log("\uC6D0\uBCF8 \uD14D\uC2A4\uD2B8:", originalText);
-    Logger.log("\uAD50\uC815\uB41C \uD14D\uC2A4\uD2B8:", data.revised);
-    Logger.log("revisedSentences \uC218:", ((_a = data.revisedSentences) == null ? void 0 : _a.length) || 0);
+    Logger.debug("=== Bareun API \uC751\uB2F5 \uBD84\uC11D ===");
+    Logger.debug("\uC6D0\uBCF8 \uD14D\uC2A4\uD2B8:", originalText);
+    Logger.debug("\uAD50\uC815\uB41C \uD14D\uC2A4\uD2B8:", data.revised);
+    Logger.debug("revisedSentences \uC218:", ((_a = data.revisedSentences) == null ? void 0 : _a.length) || 0);
     if (data.revisedSentences && Array.isArray(data.revisedSentences)) {
       data.revisedSentences.forEach((sentence, sentenceIndex) => {
         var _a2;
-        Logger.log(`
+        Logger.debug(`
 --- \uBB38\uC7A5 ${sentenceIndex + 1} ---`);
-        Logger.log("\uC6D0\uBCF8 \uBB38\uC7A5:", sentence.origin);
-        Logger.log("\uAD50\uC815\uB41C \uBB38\uC7A5:", sentence.revised);
-        Logger.log("revisedBlocks \uC218:", ((_a2 = sentence.revisedBlocks) == null ? void 0 : _a2.length) || 0);
+        Logger.debug("\uC6D0\uBCF8 \uBB38\uC7A5:", sentence.origin);
+        Logger.debug("\uAD50\uC815\uB41C \uBB38\uC7A5:", sentence.revised);
+        Logger.debug("revisedBlocks \uC218:", ((_a2 = sentence.revisedBlocks) == null ? void 0 : _a2.length) || 0);
         if (sentence.revisedBlocks && Array.isArray(sentence.revisedBlocks)) {
           sentence.revisedBlocks.forEach((block, blockIndex) => {
             var _a3, _b, _c, _d, _e, _f;
             Logger.log(`
   \uBE14\uB85D ${blockIndex + 1}:`);
-            Logger.log(`  \uC804\uCCB4 \uBE14\uB85D \uC815\uBCF4:`, JSON.stringify(block, null, 2));
-            Logger.log("  \uC6D0\uBCF8 \uB0B4\uC6A9:", (_a3 = block.origin) == null ? void 0 : _a3.content);
-            Logger.log("  \uC6D0\uBCF8 \uC704\uCE58:", `${(_b = block.origin) == null ? void 0 : _b.beginOffset}-${((_c = block.origin) == null ? void 0 : _c.beginOffset) + ((_d = block.origin) == null ? void 0 : _d.length)}`);
-            Logger.log("  \uAD50\uC815:", block.revised);
-            Logger.log("  \uC81C\uC548 \uC218:", ((_e = block.revisions) == null ? void 0 : _e.length) || 0);
+            Logger.debug(`  \uC804\uCCB4 \uBE14\uB85D \uC815\uBCF4:`, JSON.stringify(block, null, 2));
+            Logger.debug("  \uC6D0\uBCF8 \uB0B4\uC6A9:", (_a3 = block.origin) == null ? void 0 : _a3.content);
+            Logger.debug("  \uC6D0\uBCF8 \uC704\uCE58:", `${(_b = block.origin) == null ? void 0 : _b.beginOffset}-${((_c = block.origin) == null ? void 0 : _c.beginOffset) + ((_d = block.origin) == null ? void 0 : _d.length)}`);
+            Logger.debug("  \uAD50\uC815:", block.revised);
+            Logger.debug("  \uC81C\uC548 \uC218:", ((_e = block.revisions) == null ? void 0 : _e.length) || 0);
             if (block.origin && block.revised && block.revisions) {
               const blockOriginalText = block.origin.content;
               if (!blockOriginalText || blockOriginalText.trim().length === 0) {
-                Logger.log("  -> \uBE48 \uD14D\uC2A4\uD2B8\uB85C \uAC74\uB108\uB700");
+                Logger.debug("  -> \uBE48 \uD14D\uC2A4\uD2B8\uB85C \uAC74\uB108\uB700");
                 return;
               }
               if (originalText.indexOf(blockOriginalText) === -1) {
-                Logger.log("  -> \uC6D0\uBCF8 \uD14D\uC2A4\uD2B8\uC5D0\uC11C \uCC3E\uC744 \uC218 \uC5C6\uC5B4 \uAC74\uB108\uB700");
+                Logger.debug("  -> \uC6D0\uBCF8 \uD14D\uC2A4\uD2B8\uC5D0\uC11C \uCC3E\uC744 \uC218 \uC5C6\uC5B4 \uAC74\uB108\uB700");
                 return;
               }
               const suggestions = block.revisions.map((rev) => rev.revised);
-              Logger.log(`  \u{1F50D} API\uC5D0\uC11C \uBC1B\uC740 \uC81C\uC548 \uC218: ${suggestions.length}\uAC1C`);
-              Logger.log("  \uC81C\uC548\uB4E4:", suggestions);
+              Logger.debug(`  \u{1F50D} API\uC5D0\uC11C \uBC1B\uC740 \uC81C\uC548 \uC218: ${suggestions.length}\uAC1C`);
+              Logger.debug("  \uC81C\uC548\uB4E4:", suggestions);
               const uniqueSuggestions = [...new Set(suggestions)].filter((s) => {
                 const isValid = s !== blockOriginalText && s.trim() !== blockOriginalText.trim() && s.length > 0 && !s.includes("\uFFFD");
-                Logger.log(`    "${s}" \uC720\uD6A8\uC131:`, isValid);
+                Logger.debug(`    "${s}" \uC720\uD6A8\uC131:`, isValid);
                 return isValid;
               });
-              Logger.log(`  \u2705 \uC911\uBCF5\uC81C\uAC70 \uD6C4 \uC720\uD6A8\uD55C \uC81C\uC548 \uC218: ${uniqueSuggestions.length}\uAC1C`);
-              Logger.log("  \uC720\uD6A8\uD55C \uC81C\uC548\uB4E4:", uniqueSuggestions);
+              Logger.debug(`  \u2705 \uC911\uBCF5\uC81C\uAC70 \uD6C4 \uC720\uD6A8\uD55C \uC81C\uC548 \uC218: ${uniqueSuggestions.length}\uAC1C`);
+              Logger.debug("  \uC720\uD6A8\uD55C \uC81C\uC548\uB4E4:", uniqueSuggestions);
               const filteredSuggestions = this.applySingleCharFilter(
                 blockOriginalText,
                 uniqueSuggestions,
                 settings.filterSingleCharErrors
               );
-              Logger.log(`  \u{1F680} \uCD5C\uC885 \uD544\uD130\uB9C1\uB41C \uC81C\uC548 \uC218: ${filteredSuggestions.length}\uAC1C`);
-              Logger.log("  \uD544\uD130\uB9C1\uB41C \uC81C\uC548\uB4E4:", filteredSuggestions);
+              Logger.debug(`  \u{1F680} \uCD5C\uC885 \uD544\uD130\uB9C1\uB41C \uC81C\uC548 \uC218: ${filteredSuggestions.length}\uAC1C`);
+              Logger.debug("  \uD544\uD130\uB9C1\uB41C \uC81C\uC548\uB4E4:", filteredSuggestions);
               if (filteredSuggestions.length > 0) {
                 if (correctionMap.has(blockOriginalText)) {
-                  Logger.log("  -> \uAE30\uC874 \uAD50\uC815\uC5D0 \uC81C\uC548 \uCD94\uAC00");
+                  Logger.debug("  -> \uAE30\uC874 \uAD50\uC815\uC5D0 \uC81C\uC548 \uCD94\uAC00");
                   const existing = correctionMap.get(blockOriginalText);
                   const combinedSuggestions = [.../* @__PURE__ */ new Set([...existing.corrected, ...filteredSuggestions])];
                   correctionMap.set(blockOriginalText, {
                     ...existing,
                     corrected: combinedSuggestions
                   });
-                  Logger.log("  -> \uD1B5\uD569\uB41C \uC81C\uC548\uB4E4:", combinedSuggestions);
+                  Logger.debug("  -> \uD1B5\uD569\uB41C \uC81C\uC548\uB4E4:", combinedSuggestions);
                 } else {
-                  Logger.log("  -> \uC0C8 \uAD50\uC815 \uC0DD\uC131");
+                  Logger.debug("  -> \uC0C8 \uAD50\uC815 \uC0DD\uC131");
                   correctionMap.set(blockOriginalText, {
                     original: blockOriginalText,
                     corrected: filteredSuggestions,
                     help: ((_f = block.revisions[0]) == null ? void 0 : _f.comment) || "\uB9DE\uCDA4\uBC95 \uAD50\uC815"
                   });
-                  Logger.log("  -> \uC0C8 \uAD50\uC815 \uC81C\uC548\uB4E4:", filteredSuggestions);
+                  Logger.debug("  -> \uC0C8 \uAD50\uC815 \uC81C\uC548\uB4E4:", filteredSuggestions);
                 }
               } else {
-                Logger.log("  -> \uC720\uD6A8\uD55C \uC81C\uC548\uC774 \uC5C6\uC5B4 \uAC74\uB108\uB700");
+                Logger.debug("  -> \uC720\uD6A8\uD55C \uC81C\uC548\uC774 \uC5C6\uC5B4 \uAC74\uB108\uB700");
               }
             }
           });
@@ -1828,11 +1828,11 @@ var SpellCheckApiService = class {
     }
     const rawCorrections = Array.from(correctionMap.values());
     corrections.push(...rawCorrections);
-    Logger.log("\n=== \uCD5C\uC885 \uAD50\uC815 \uACB0\uACFC ===");
-    Logger.log("\uAD50\uC815 \uB9F5 \uD06C\uAE30:", correctionMap.size);
+    Logger.debug("\n=== \uCD5C\uC885 \uAD50\uC815 \uACB0\uACFC ===");
+    Logger.debug("\uAD50\uC815 \uB9F5 \uD06C\uAE30:", correctionMap.size);
     Logger.log("\uCD5C\uC885 \uAD50\uC815 \uBC30\uC5F4:", corrections);
     if (corrections.length === 0 && resultOutput !== originalText) {
-      Logger.log("\n\uC138\uBD80 \uC815\uBCF4\uAC00 \uC5C6\uC5B4 diff \uB85C\uC9C1 \uC0AC\uC6A9");
+      Logger.log("\uC138\uBD80 \uC815\uBCF4\uAC00 \uC5C6\uC5B4 diff \uB85C\uC9C1 \uC0AC\uC6A9");
       const words = originalText.split(/(\s+)/);
       const revisedWords = resultOutput.split(/(\s+)/);
       for (let i = 0; i < Math.min(words.length, revisedWords.length); i++) {
@@ -1858,12 +1858,12 @@ var SpellCheckApiService = class {
     try {
       Logger.log("\n=== \uD615\uD0DC\uC18C \uBD84\uC11D \uAE30\uBC18 \uAD50\uC815 \uAC1C\uC120 ===");
       const morphemeData = await this.analyzeMorphemes(text, settings);
-      Logger.log("\uD615\uD0DC\uC18C \uBD84\uC11D \uC644\uB8CC:", morphemeData);
+      Logger.debug("\uD615\uD0DC\uC18C \uBD84\uC11D \uC644\uB8CC:", morphemeData);
       const improvedCorrections = this.groupCorrectionsByMorphemes(corrections, morphemeData, text);
-      Logger.log(`\uAD50\uC815 \uAC1C\uC120 \uACB0\uACFC: ${corrections.length}\uAC1C \u2192 ${improvedCorrections.length}\uAC1C`);
+      Logger.debug(`\uAD50\uC815 \uAC1C\uC120 \uACB0\uACFC: ${corrections.length}\uAC1C \u2192 ${improvedCorrections.length}\uAC1C`);
       return improvedCorrections;
     } catch (error) {
-      Logger.log("\uD615\uD0DC\uC18C \uBD84\uC11D \uC2E4\uD328, \uC6D0\uBCF8 \uAD50\uC815 \uC0AC\uC6A9:", error);
+      Logger.debug("\uD615\uD0DC\uC18C \uBD84\uC11D \uC2E4\uD328, \uC6D0\uBCF8 \uAD50\uC815 \uC0AC\uC6A9:", error);
       return corrections;
     }
   }
@@ -1877,13 +1877,13 @@ var SpellCheckApiService = class {
    */
   async improveCorrectionsWithMorphemeData(text, corrections, settings, morphemeData) {
     try {
-      Logger.log("\n=== \uD615\uD0DC\uC18C \uB370\uC774\uD130 \uAE30\uBC18 \uAD50\uC815 \uAC1C\uC120 (\uC7AC\uC0AC\uC6A9) ===");
-      Logger.log("\uAE30\uC874 \uD615\uD0DC\uC18C \uB370\uC774\uD130 \uC7AC\uC0AC\uC6A9:", morphemeData);
+      Logger.debug("=== \uD615\uD0DC\uC18C \uB370\uC774\uD130 \uAE30\uBC18 \uAD50\uC815 \uAC1C\uC120 (\uC7AC\uC0AC\uC6A9) ===");
+      Logger.debug("\uAE30\uC874 \uD615\uD0DC\uC18C \uB370\uC774\uD130 \uC7AC\uC0AC\uC6A9:", morphemeData);
       const improvedCorrections = this.groupCorrectionsByMorphemes(corrections, morphemeData, text);
-      Logger.log(`\uAD50\uC815 \uAC1C\uC120 \uACB0\uACFC (\uC7AC\uC0AC\uC6A9): ${corrections.length}\uAC1C \u2192 ${improvedCorrections.length}\uAC1C`);
+      Logger.debug(`\uAD50\uC815 \uAC1C\uC120 \uACB0\uACFC (\uC7AC\uC0AC\uC6A9): ${corrections.length}\uAC1C \u2192 ${improvedCorrections.length}\uAC1C`);
       return improvedCorrections;
     } catch (error) {
-      Logger.log("\uD615\uD0DC\uC18C \uB370\uC774\uD130 \uAE30\uBC18 \uAD50\uC815 \uAC1C\uC120 \uC2E4\uD328, \uC6D0\uBCF8 \uAD50\uC815 \uC0AC\uC6A9:", error);
+      Logger.debug("\uD615\uD0DC\uC18C \uB370\uC774\uD130 \uAE30\uBC18 \uAD50\uC815 \uAC1C\uC120 \uC2E4\uD328, \uC6D0\uBCF8 \uAD50\uC815 \uC0AC\uC6A9:", error);
       return corrections;
     }
   }
@@ -1901,7 +1901,7 @@ var SpellCheckApiService = class {
         tokenMap.set(token.text.content, token);
       });
     });
-    Logger.log("\uD1A0\uD070 \uB9F5:", Array.from(tokenMap.keys()));
+    Logger.debug("\uD1A0\uD070 \uB9F5:", Array.from(tokenMap.keys()));
     const groupedCorrections = [];
     const processedRanges = /* @__PURE__ */ new Set();
     corrections.forEach((correction) => {
@@ -1916,7 +1916,7 @@ var SpellCheckApiService = class {
             correction.original.length
           );
           if (overlappingCorrections.length > 1) {
-            Logger.log(`\uC704\uCE58 ${position}\uC5D0\uC11C \uACB9\uCE58\uB294 \uAD50\uC815\uB4E4:`, overlappingCorrections.map((c) => c.original));
+            Logger.debug(`\uC704\uCE58 ${position}\uC5D0\uC11C \uACB9\uCE58\uB294 \uAD50\uC815\uB4E4:`, overlappingCorrections.map((c) => c.original));
             const bestCorrection = this.selectBestCorrectionWithTokens(
               overlappingCorrections,
               tokenMap,
@@ -1925,7 +1925,7 @@ var SpellCheckApiService = class {
             );
             if (bestCorrection) {
               groupedCorrections.push(bestCorrection);
-              Logger.log(`\uC120\uD0DD\uB41C \uAD50\uC815: "${bestCorrection.original}"`);
+              Logger.debug(`\uC120\uD0DD\uB41C \uAD50\uC815: "${bestCorrection.original}"`);
               overlappingCorrections.forEach((corr) => {
                 const corrPositions = this.findAllPositions(originalText, corr.original);
                 corrPositions.forEach((pos) => {
@@ -1969,7 +1969,7 @@ var SpellCheckApiService = class {
     for (const correction of corrections) {
       const token = tokenMap.get(correction.original);
       if (token) {
-        Logger.log(`\uD1A0\uD070 \uACBD\uACC4 \uC77C\uCE58 \uAD50\uC815 \uC120\uD0DD: "${correction.original}" (\uD1A0\uD070 \uB2E8\uC704)`);
+        Logger.debug(`\uD1A0\uD070 \uACBD\uACC4 \uC77C\uCE58 \uAD50\uC815 \uC120\uD0DD: "${correction.original}" (\uD1A0\uD070 \uB2E8\uC704)`);
         return correction;
       }
     }
@@ -1977,10 +1977,10 @@ var SpellCheckApiService = class {
       (c) => c.original.length === Math.max(...corrections.map((corr) => corr.original.length))
     );
     if (longestCorrections.length === 1) {
-      Logger.log(`\uAC00\uC7A5 \uAE34 \uAD50\uC815 \uC120\uD0DD: "${longestCorrections[0].original}"`);
+      Logger.debug(`\uAC00\uC7A5 \uAE34 \uAD50\uC815 \uC120\uD0DD: "${longestCorrections[0].original}"`);
       return longestCorrections[0];
     }
-    Logger.log(`\uAE30\uBCF8 \uC120\uD0DD: "${longestCorrections[0].original}"`);
+    Logger.debug(`\uAE30\uBCF8 \uC120\uD0DD: "${longestCorrections[0].original}"`);
     return longestCorrections[0];
   }
   /**
@@ -2004,24 +2004,24 @@ var SpellCheckApiService = class {
    */
   applySingleCharFilter(original, suggestions, filterEnabled) {
     if (!filterEnabled) {
-      Logger.log("    \uD55C \uAE00\uC790 \uD544\uD130\uB9C1 \uBE44\uD65C\uC131\uD654\uB428");
+      Logger.debug("    \uD55C \uAE00\uC790 \uD544\uD130\uB9C1 \uBE44\uD65C\uC131\uD654\uB428");
       return suggestions;
     }
     if (original.length !== 1) {
-      Logger.log(`    \uC6D0\uBCF8\uC774 \uD55C \uAE00\uC790\uAC00 \uC544\uB2D8 (${original.length}\uAE00\uC790): "${original}"`);
+      Logger.debug(`    \uC6D0\uBCF8\uC774 \uD55C \uAE00\uC790\uAC00 \uC544\uB2D8 (${original.length}\uAE00\uC790): "${original}"`);
       return suggestions;
     }
-    Logger.log(`    \uD55C \uAE00\uC790 \uC6D0\uBCF8 \uAC10\uC9C0: "${original}"`);
+    Logger.debug(`    \uD55C \uAE00\uC790 \uC6D0\uBCF8 \uAC10\uC9C0: "${original}"`);
     const meaningfulSuggestions = suggestions.filter((suggestion) => {
       const exceptions = this.checkSingleCharExceptions(original, suggestion);
       if (exceptions.isException) {
-        Logger.log(`      "${suggestion}": \uC608\uC678 \uCC98\uB9AC\uB428 (${exceptions.reason})`);
+        Logger.debug(`      "${suggestion}": \uC608\uC678 \uCC98\uB9AC\uB428 (${exceptions.reason})`);
         return true;
       }
-      Logger.log(`      "${suggestion}": \uD55C \uAE00\uC790 \uAD50\uC815\uC73C\uB85C \uD544\uD130\uB9C1\uB428`);
+      Logger.debug(`      "${suggestion}": \uD55C \uAE00\uC790 \uAD50\uC815\uC73C\uB85C \uD544\uD130\uB9C1\uB428`);
       return false;
     });
-    Logger.log(`    \uD544\uD130\uB9C1 \uACB0\uACFC: ${suggestions.length} \u2192 ${meaningfulSuggestions.length}`);
+    Logger.debug(`    \uD544\uD130\uB9C1 \uACB0\uACFC: ${suggestions.length} \u2192 ${meaningfulSuggestions.length}`);
     return meaningfulSuggestions;
   }
   /**
@@ -2080,7 +2080,7 @@ var SpellCheckCacheService = class {
     this.maxSize = maxSize;
     this.ttl = ttlMinutes * 60 * 1e3;
     this.cleanupInterval = cleanupIntervalMinutes * 60 * 1e3;
-    Logger.log("SpellCheckCacheService \uCD08\uAE30\uD654:", {
+    Logger.debug("SpellCheckCacheService \uCD08\uAE30\uD654:", {
       maxSize,
       ttlMinutes,
       cleanupIntervalMinutes
@@ -2098,14 +2098,14 @@ var SpellCheckCacheService = class {
     const item = this.cache.get(key);
     if (!item) {
       this.stats.cacheMisses++;
-      Logger.log("\uCE90\uC2DC \uBBF8\uC2A4:", { key: key.substring(0, 50) + "..." });
+      Logger.debug("\uCE90\uC2DC \uBBF8\uC2A4:", { key: key.substring(0, 50) + "..." });
       return null;
     }
     const now = Date.now();
     if (now - item.timestamp > this.ttl) {
       this.cache.delete(key);
       this.stats.cacheMisses++;
-      Logger.log("\uCE90\uC2DC \uB9CC\uB8CC:", { key: key.substring(0, 50) + "..." });
+      Logger.debug("\uCE90\uC2DC \uB9CC\uB8CC:", { key: key.substring(0, 50) + "..." });
       return null;
     }
     item.accessCount++;
@@ -2113,7 +2113,7 @@ var SpellCheckCacheService = class {
     this.cache.delete(key);
     this.cache.set(key, item);
     this.stats.cacheHits++;
-    Logger.log("\uCE90\uC2DC \uD788\uD2B8:", {
+    Logger.debug("\uCE90\uC2DC \uD788\uD2B8:", {
       key: key.substring(0, 50) + "...",
       accessCount: item.accessCount
     });
@@ -2137,7 +2137,7 @@ var SpellCheckCacheService = class {
       lastAccessed: now
     };
     this.cache.set(key, item);
-    Logger.log("\uCE90\uC2DC \uC800\uC7A5:", {
+    Logger.debug("\uCE90\uC2DC \uC800\uC7A5:", {
       key: key.substring(0, 50) + "...",
       cacheSize: this.cache.size,
       corrections: result.corrections.length
@@ -2167,7 +2167,7 @@ var SpellCheckCacheService = class {
       cacheHits: 0,
       cacheMisses: 0
     };
-    Logger.log("\uCE90\uC2DC \uC804\uCCB4 \uC0AD\uC81C \uC644\uB8CC");
+    Logger.debug("\uCE90\uC2DC \uC804\uCCB4 \uC0AD\uC81C \uC644\uB8CC");
   }
   /**
    * 만료된 항목들을 정리합니다
@@ -2182,7 +2182,7 @@ var SpellCheckCacheService = class {
       }
     }
     if (removedCount > 0) {
-      Logger.log("\uCE90\uC2DC \uC815\uB9AC \uC644\uB8CC:", {
+      Logger.debug("\uCE90\uC2DC \uC815\uB9AC \uC644\uB8CC:", {
         removedCount,
         remainingSize: this.cache.size
       });
@@ -2197,7 +2197,7 @@ var SpellCheckCacheService = class {
       this.cleanupTimer = void 0;
     }
     this.clear();
-    Logger.log("SpellCheckCacheService \uC885\uB8CC");
+    Logger.debug("SpellCheckCacheService \uC885\uB8CC");
   }
   /**
    * 텍스트에서 캐시 키를 생성합니다
@@ -2228,7 +2228,7 @@ var SpellCheckCacheService = class {
     }
     if (oldestKey) {
       this.cache.delete(oldestKey);
-      Logger.log("LRU \uC81C\uAC70:", {
+      Logger.debug("LRU \uC81C\uAC70:", {
         key: oldestKey.substring(0, 50) + "...",
         age: Date.now() - oldestTime
       });
@@ -2281,7 +2281,7 @@ var OptimizedSpellCheckService = class {
     this.batchTimeout = batchTimeoutMs;
     this.requestTimeout = requestTimeoutMs;
     this.maxConcurrentBatches = maxConcurrentBatches;
-    Logger.log("OptimizedSpellCheckService \uCD08\uAE30\uD654:", {
+    Logger.debug("OptimizedSpellCheckService \uCD08\uAE30\uD654:", {
       maxBatchSize,
       batchTimeoutMs,
       requestTimeoutMs,
@@ -2299,11 +2299,11 @@ var OptimizedSpellCheckService = class {
     this.metrics.totalRequests++;
     const cachedResult = this.cacheService.get(text);
     if (cachedResult) {
-      Logger.log("\uCE90\uC2DC\uC5D0\uC11C \uACB0\uACFC \uBC18\uD658:", { textLength: text.length });
+      Logger.debug("\uCE90\uC2DC\uC5D0\uC11C \uACB0\uACFC \uBC18\uD658:", { textLength: text.length });
       return cachedResult;
     }
     if (text.length < 50 || priority === "high") {
-      Logger.log("\uC989\uC2DC \uCC98\uB9AC:", { textLength: text.length, priority });
+      Logger.debug("\uC989\uC2DC \uCC98\uB9AC:", { textLength: text.length, priority });
       return this.processSingleRequest(text, settings);
     }
     return new Promise((resolve, reject) => {
@@ -2315,7 +2315,7 @@ var OptimizedSpellCheckService = class {
         priority
       };
       this.insertByPriority(item);
-      Logger.log("\uBC30\uCE58 \uD050\uC5D0 \uCD94\uAC00:", {
+      Logger.debug("\uBC30\uCE58 \uD050\uC5D0 \uCD94\uAC00:", {
         queueLength: this.requestQueue.length,
         priority,
         textLength: text.length
@@ -2360,7 +2360,7 @@ var OptimizedSpellCheckService = class {
       clearTimeout(this.batchTimer);
       this.batchTimer = void 0;
     }
-    Logger.log("\uB300\uAE30 \uC911\uC778 \uBAA8\uB4E0 \uC694\uCCAD \uCDE8\uC18C\uB428");
+    Logger.debug("\uB300\uAE30 \uC911\uC778 \uBAA8\uB4E0 \uC694\uCCAD \uCDE8\uC18C\uB428");
   }
   /**
    * 서비스를 종료하고 리소스를 정리합니다
@@ -2368,7 +2368,7 @@ var OptimizedSpellCheckService = class {
   destroy() {
     this.cancelPendingRequests();
     this.cacheService.destroy();
-    Logger.log("OptimizedSpellCheckService \uC885\uB8CC");
+    Logger.debug("OptimizedSpellCheckService \uC885\uB8CC");
   }
   /**
    * 단일 요청을 즉시 처리합니다 (에러 핸들링 및 재시도 포함)
@@ -2409,7 +2409,7 @@ var OptimizedSpellCheckService = class {
       return;
     }
     if (this.activeBatches >= this.maxConcurrentBatches) {
-      Logger.log("\uCD5C\uB300 \uB3D9\uC2DC \uBC30\uCE58 \uC218 \uB3C4\uB2EC, \uB300\uAE30 \uC911");
+      Logger.debug("\uCD5C\uB300 \uB3D9\uC2DC \uBC30\uCE58 \uC218 \uB3C4\uB2EC, \uB300\uAE30 \uC911");
       return;
     }
     if (this.requestQueue.length >= this.maxBatchSize) {
@@ -2434,7 +2434,7 @@ var OptimizedSpellCheckService = class {
       this.batchTimer = void 0;
     }
     const batch = this.requestQueue.splice(0, this.maxBatchSize);
-    Logger.log("\uBC30\uCE58 \uCC98\uB9AC \uC2DC\uC791:", {
+    Logger.debug("\uBC30\uCE58 \uCC98\uB9AC \uC2DC\uC791:", {
       batchSize: batch.length,
       remainingQueue: this.requestQueue.length,
       activeBatches: this.activeBatches
@@ -2457,7 +2457,7 @@ var OptimizedSpellCheckService = class {
     } finally {
       this.processing = false;
       this.activeBatches--;
-      Logger.log("\uBC30\uCE58 \uCC98\uB9AC \uC644\uB8CC:", {
+      Logger.debug("\uBC30\uCE58 \uCC98\uB9AC \uC644\uB8CC:", {
         remainingQueue: this.requestQueue.length,
         activeBatches: this.activeBatches
       });
@@ -2866,7 +2866,7 @@ var CorrectionStateManager = class {
     this.corrections.forEach((correction, index) => {
       const isOriginalKept = ignoredWords.includes(correction.original);
       this.setState(index, correction.original, false, isOriginalKept);
-      Logger.log(`Initializing: ${correction.original} at index ${index} as ${isOriginalKept ? "ORIGINAL_KEPT" : "ERROR"}.`);
+      Logger.debug(`Initializing: ${correction.original} at index ${index} as ${isOriginalKept ? "ORIGINAL_KEPT" : "ERROR"}.`);
     });
   }
   /**
@@ -2881,7 +2881,7 @@ var CorrectionStateManager = class {
     var _a;
     const stack = new Error().stack;
     const caller = ((_a = stack == null ? void 0 : stack.split("\n")[2]) == null ? void 0 : _a.trim()) || "unknown";
-    Logger.log(`\u{1F527} setState \uD638\uCD9C\uB428: index=${correctionIndex}, value="${value}", isUserEdited=${isUserEdited}, caller=${caller}`);
+    Logger.debug(`\u{1F527} setState \uD638\uCD9C\uB428: index=${correctionIndex}, value="${value}", isUserEdited=${isUserEdited}, caller=${caller}`);
     this.states.set(correctionIndex, value);
     const exceptionKey = `${correctionIndex}_exception`;
     const originalKeptKey = `${correctionIndex}_originalKept`;
@@ -2899,13 +2899,13 @@ var CorrectionStateManager = class {
     if (isUserEdited) {
       this.states.set(userEditedKey, true);
       this.userEditedValues.set(correctionIndex, value);
-      Logger.log(`\u{1F527} setState: \uC0AC\uC6A9\uC790 \uD3B8\uC9D1 \uC0C1\uD0DC \uC124\uC815 - userEditedKey="${userEditedKey}", value="${value}"`);
+      Logger.debug(`\u{1F527} setState: \uC0AC\uC6A9\uC790 \uD3B8\uC9D1 \uC0C1\uD0DC \uC124\uC815 - userEditedKey="${userEditedKey}", value="${value}"`);
     } else {
       const wasUserEdited = this.states.has(userEditedKey);
       const existingUserValue = this.userEditedValues.get(correctionIndex);
       this.states.delete(userEditedKey);
       if (wasUserEdited) {
-        Logger.log(`\u{1F527} setState: \uC0AC\uC6A9\uC790 \uD3B8\uC9D1 \uC0C1\uD0DC \uD574\uC81C (\uD3B8\uC9D1\uAC12 \uBCF4\uC874) - userEditedKey="${userEditedKey}", \uBCF4\uC874\uAC12="${existingUserValue}", caller=${caller}`);
+        Logger.debug(`\u{1F527} setState: \uC0AC\uC6A9\uC790 \uD3B8\uC9D1 \uC0C1\uD0DC \uD574\uC81C (\uD3B8\uC9D1\uAC12 \uBCF4\uC874) - userEditedKey="${userEditedKey}", \uBCF4\uC874\uAC12="${existingUserValue}", caller=${caller}`);
       }
     }
   }
@@ -2922,7 +2922,7 @@ var CorrectionStateManager = class {
     if (isUserEdited && !userEditedValue) {
       Logger.warn(`\u26A0\uFE0F \uC0AC\uC6A9\uC790 \uD3B8\uC9D1 \uC0C1\uD0DC\uC778\uB370 \uD3B8\uC9D1\uAC12\uC774 \uC5C6\uC74C: index=${correctionIndex}`);
     }
-    Logger.log(`getValue(${correctionIndex}): states="${statesValue}", userEdited=${isUserEdited}, userEditedValue="${userEditedValue}", finalValue="${finalValue}"`);
+    Logger.debug(`getValue(${correctionIndex}): states="${statesValue}", userEdited=${isUserEdited}, userEditedValue="${userEditedValue}", finalValue="${finalValue}"`);
     return finalValue;
   }
   /**
@@ -2958,17 +2958,17 @@ var CorrectionStateManager = class {
    * @param userValue 사용자가 입력한 값
    */
   setUserEdited(correctionIndex, userValue) {
-    Logger.log(`\u{1F527} setUserEdited \uD638\uCD9C: index=${correctionIndex}, value="${userValue}"`);
+    Logger.debug(`\u{1F527} setUserEdited \uD638\uCD9C: index=${correctionIndex}, value="${userValue}"`);
     const beforeStates = this.states.get(correctionIndex);
     const beforeUserEdited = this.isUserEditedState(correctionIndex);
     const beforeUserValue = this.userEditedValues.get(correctionIndex);
-    Logger.log(`\u{1F527} Before setState: states="${beforeStates}", userEdited=${beforeUserEdited}, userValue="${beforeUserValue}"`);
+    Logger.debug(`\u{1F527} Before setState: states="${beforeStates}", userEdited=${beforeUserEdited}, userValue="${beforeUserValue}"`);
     this.setState(correctionIndex, userValue, false, false, true);
-    Logger.log(`\u{1F527} \uC0AC\uC6A9\uC790 \uD3B8\uC9D1\uC740 \uB3D9\uAE30\uD654\uD558\uC9C0 \uC54A\uC74C - \uAC1C\uBCC4 \uD56D\uBAA9\uB9CC \uC801\uC6A9`);
+    Logger.debug(`\u{1F527} \uC0AC\uC6A9\uC790 \uD3B8\uC9D1\uC740 \uB3D9\uAE30\uD654\uD558\uC9C0 \uC54A\uC74C - \uAC1C\uBCC4 \uD56D\uBAA9\uB9CC \uC801\uC6A9`);
     const afterStates = this.states.get(correctionIndex);
     const afterUserEdited = this.isUserEditedState(correctionIndex);
     const afterUserValue = this.userEditedValues.get(correctionIndex);
-    Logger.log(`\u{1F527} After setState: states="${afterStates}", userEdited=${afterUserEdited}, userValue="${afterUserValue}"`);
+    Logger.debug(`\u{1F527} After setState: states="${afterStates}", userEdited=${afterUserEdited}, userValue="${afterUserValue}"`);
   }
   /**
    * 특정 단어가 초기에 무시된 단어인지 확인합니다.
@@ -2985,7 +2985,7 @@ var CorrectionStateManager = class {
    * @returns 새로운 상태 정보
    */
   toggleState(correctionIndex) {
-    Logger.log(`\u{1F504} toggleState \uD638\uCD9C\uB428! correctionIndex: ${correctionIndex}`);
+    Logger.debug(`\u{1F504} toggleState \uD638\uCD9C\uB428! correctionIndex: ${correctionIndex}`);
     if (correctionIndex < 0 || correctionIndex >= this.corrections.length) {
       throw new Error(`Invalid correction index: ${correctionIndex}`);
     }
@@ -2995,7 +2995,7 @@ var CorrectionStateManager = class {
     const isCurrentlyException = this.isExceptionState(correctionIndex);
     const isCurrentlyOriginalKept = this.isOriginalKeptState(correctionIndex);
     const isCurrentlyUserEdited = this.isUserEditedState(correctionIndex);
-    Logger.log("toggleState Initial state:", {
+    Logger.debug("toggleState Initial state:", {
       correctionIndex,
       currentValue,
       isCurrentlyException,
@@ -3008,57 +3008,57 @@ var CorrectionStateManager = class {
     let newIsException;
     let newIsOriginalKept;
     let newIsUserEdited;
-    Logger.log(`\u{1F50D} toggleState \uBD84\uAE30 \uC9C4\uB2E8: isCurrentlyUserEdited=${isCurrentlyUserEdited}, isCurrentlyOriginalKept=${isCurrentlyOriginalKept}, isCurrentlyException=${isCurrentlyException}`);
+    Logger.debug(`\u{1F50D} toggleState \uBD84\uAE30 \uC9C4\uB2E8: isCurrentlyUserEdited=${isCurrentlyUserEdited}, isCurrentlyOriginalKept=${isCurrentlyOriginalKept}, isCurrentlyException=${isCurrentlyException}`);
     if (isCurrentlyUserEdited) {
-      Logger.log("\u{1F504} toggleState \uBD84\uAE30 1 \uC9C4\uC785: UserEdited -> Error");
+      Logger.debug("\u{1F504} toggleState \uBD84\uAE30 1 \uC9C4\uC785: UserEdited -> Error");
       newValue = correction.original;
       newIsException = false;
       newIsOriginalKept = false;
       newIsUserEdited = false;
-      Logger.log("toggleState UserEdited -> Error");
+      Logger.debug("toggleState UserEdited -> Error");
     } else if (isCurrentlyOriginalKept) {
-      Logger.log("\u{1F504} toggleState \uBD84\uAE30 2 \uC9C4\uC785: OriginalKept -> ?");
+      Logger.debug("\u{1F504} toggleState \uBD84\uAE30 2 \uC9C4\uC785: OriginalKept -> ?");
       const userEditedValue = this.userEditedValues.get(correctionIndex);
       if (userEditedValue) {
         newValue = userEditedValue;
         newIsException = false;
         newIsOriginalKept = false;
         newIsUserEdited = true;
-        Logger.log(`toggleState OriginalKept -> UserEdited: userEditedValue="${userEditedValue}"`);
+        Logger.debug(`toggleState OriginalKept -> UserEdited: userEditedValue="${userEditedValue}"`);
       } else {
         newValue = correction.original;
         newIsException = false;
         newIsOriginalKept = false;
         newIsUserEdited = false;
-        Logger.log("toggleState OriginalKept -> Error (\uD3B8\uC9D1\uAC12 \uC5C6\uC74C, \uC0AC\uC6A9\uC790\uD3B8\uC9D1 \uAC74\uB108\uB700)");
+        Logger.debug("toggleState OriginalKept -> Error (\uD3B8\uC9D1\uAC12 \uC5C6\uC74C, \uC0AC\uC6A9\uC790\uD3B8\uC9D1 \uAC74\uB108\uB700)");
       }
     } else if (isCurrentlyException) {
-      Logger.log("\u{1F504} toggleState \uBD84\uAE30 3 \uC9C4\uC785: Exception -> OriginalKept");
+      Logger.debug("\u{1F504} toggleState \uBD84\uAE30 3 \uC9C4\uC785: Exception -> OriginalKept");
       newValue = correction.original;
       newIsException = false;
       newIsOriginalKept = true;
       newIsUserEdited = false;
-      Logger.log("toggleState Exception -> OriginalKept");
+      Logger.debug("toggleState Exception -> OriginalKept");
     } else {
-      Logger.log("\u{1F504} toggleState \uBD84\uAE30 4 \uC9C4\uC785: \uC81C\uC548 \uC21C\uD658 \uB85C\uC9C1");
+      Logger.debug("\u{1F504} toggleState \uBD84\uAE30 4 \uC9C4\uC785: \uC81C\uC548 \uC21C\uD658 \uB85C\uC9C1");
       let nextIndex = suggestions.indexOf(currentValue) + 1;
       if (nextIndex >= suggestions.length) {
         newValue = correction.original;
         newIsException = true;
         newIsOriginalKept = false;
         newIsUserEdited = false;
-        Logger.log("toggleState Last Suggestion -> Exception");
+        Logger.debug("toggleState Last Suggestion -> Exception");
       } else {
         newValue = suggestions[nextIndex];
         newIsException = false;
         newIsOriginalKept = false;
         newIsUserEdited = false;
-        Logger.log("toggleState Next Suggestion:", newValue);
+        Logger.debug("toggleState Next Suggestion:", newValue);
       }
     }
     if (isCurrentlyUserEdited || newIsUserEdited) {
       this.setState(correctionIndex, newValue, newIsException, newIsOriginalKept, newIsUserEdited);
-      Logger.log(`\uC0AC\uC6A9\uC790 \uD3B8\uC9D1 \uAD00\uB828 \uC0C1\uD0DC \uBCC0\uD654\uB294 \uAC1C\uBCC4 \uC801\uC6A9\uB9CC \uC218\uD589: index ${correctionIndex}, from=${isCurrentlyUserEdited} to=${newIsUserEdited}`);
+      Logger.debug(`\uC0AC\uC6A9\uC790 \uD3B8\uC9D1 \uAD00\uB828 \uC0C1\uD0DC \uBCC0\uD654\uB294 \uAC1C\uBCC4 \uC801\uC6A9\uB9CC \uC218\uD589: index ${correctionIndex}, from=${isCurrentlyUserEdited} to=${newIsUserEdited}`);
     } else {
       this.syncSameWordStates(correction.original, newValue, newIsException, newIsOriginalKept, newIsUserEdited, correctionIndex);
     }
@@ -3071,7 +3071,7 @@ var CorrectionStateManager = class {
    * @returns 새로운 상태 정보
    */
   toggleStatePrev(correctionIndex) {
-    Logger.log(`\u{1F504} toggleStatePrev \uD638\uCD9C\uB428! correctionIndex: ${correctionIndex}`);
+    Logger.debug(`\u{1F504} toggleStatePrev \uD638\uCD9C\uB428! correctionIndex: ${correctionIndex}`);
     if (correctionIndex < 0 || correctionIndex >= this.corrections.length) {
       throw new Error(`Invalid correction index: ${correctionIndex}`);
     }
@@ -3081,7 +3081,7 @@ var CorrectionStateManager = class {
     const isCurrentlyException = this.isExceptionState(correctionIndex);
     const isCurrentlyOriginalKept = this.isOriginalKeptState(correctionIndex);
     const isCurrentlyUserEdited = this.isUserEditedState(correctionIndex);
-    Logger.log("toggleStatePrev Initial state:", {
+    Logger.debug("toggleStatePrev Initial state:", {
       correctionIndex,
       currentValue,
       isCurrentlyException,
@@ -3101,33 +3101,33 @@ var CorrectionStateManager = class {
         newIsException = false;
         newIsOriginalKept = false;
         newIsUserEdited = true;
-        Logger.log(`toggleStatePrev Error -> UserEdited: userEditedValue="${userEditedValue}"`);
+        Logger.debug(`toggleStatePrev Error -> UserEdited: userEditedValue="${userEditedValue}"`);
       } else {
         newValue = correction.original;
         newIsException = false;
         newIsOriginalKept = true;
         newIsUserEdited = false;
-        Logger.log("toggleStatePrev Error -> OriginalKept (\uD3B8\uC9D1\uAC12 \uC5C6\uC74C, \uC0AC\uC6A9\uC790\uD3B8\uC9D1 \uAC74\uB108\uB700)");
+        Logger.debug("toggleStatePrev Error -> OriginalKept (\uD3B8\uC9D1\uAC12 \uC5C6\uC74C, \uC0AC\uC6A9\uC790\uD3B8\uC9D1 \uAC74\uB108\uB700)");
       }
     } else if (isCurrentlyUserEdited) {
       newValue = correction.original;
       newIsException = false;
       newIsOriginalKept = true;
       newIsUserEdited = false;
-      Logger.log("toggleStatePrev UserEdited -> OriginalKept");
+      Logger.debug("toggleStatePrev UserEdited -> OriginalKept");
     } else if (isCurrentlyOriginalKept) {
       newValue = correction.original;
       newIsException = true;
       newIsOriginalKept = false;
       newIsUserEdited = false;
-      Logger.log("toggleStatePrev OriginalKept -> Exception");
+      Logger.debug("toggleStatePrev OriginalKept -> Exception");
     } else if (isCurrentlyException) {
       if (correction.corrected.length > 0) {
         newValue = correction.corrected[correction.corrected.length - 1];
         newIsException = false;
         newIsOriginalKept = false;
         newIsUserEdited = false;
-        Logger.log("toggleStatePrev Exception -> Last Suggestion");
+        Logger.debug("toggleStatePrev Exception -> Last Suggestion");
       } else {
         const userEditedValue = this.userEditedValues.get(correctionIndex);
         if (userEditedValue) {
@@ -3135,13 +3135,13 @@ var CorrectionStateManager = class {
           newIsException = false;
           newIsOriginalKept = false;
           newIsUserEdited = true;
-          Logger.log(`toggleStatePrev Exception -> UserEdited (no suggestions): userEditedValue="${userEditedValue}"`);
+          Logger.debug(`toggleStatePrev Exception -> UserEdited (no suggestions): userEditedValue="${userEditedValue}"`);
         } else {
           newValue = correction.original;
           newIsException = false;
           newIsOriginalKept = true;
           newIsUserEdited = false;
-          Logger.log("toggleStatePrev Exception -> OriginalKept (no suggestions, \uD3B8\uC9D1\uAC12 \uC5C6\uC74C)");
+          Logger.debug("toggleStatePrev Exception -> OriginalKept (no suggestions, \uD3B8\uC9D1\uAC12 \uC5C6\uC74C)");
         }
       }
     } else {
@@ -3152,18 +3152,18 @@ var CorrectionStateManager = class {
         newIsException = false;
         newIsOriginalKept = false;
         newIsUserEdited = false;
-        Logger.log("toggleStatePrev First Suggestion -> Error");
+        Logger.debug("toggleStatePrev First Suggestion -> Error");
       } else {
         newValue = suggestions[prevIndex];
         newIsException = false;
         newIsOriginalKept = false;
         newIsUserEdited = false;
-        Logger.log("toggleStatePrev Previous Suggestion:", newValue);
+        Logger.debug("toggleStatePrev Previous Suggestion:", newValue);
       }
     }
     if (isCurrentlyUserEdited || newIsUserEdited) {
       this.setState(correctionIndex, newValue, newIsException, newIsOriginalKept, newIsUserEdited);
-      Logger.log(`\uC0AC\uC6A9\uC790 \uD3B8\uC9D1 \uAD00\uB828 \uC0C1\uD0DC \uBCC0\uD654\uB294 \uAC1C\uBCC4 \uC801\uC6A9\uB9CC \uC218\uD589: index ${correctionIndex}, from=${isCurrentlyUserEdited} to=${newIsUserEdited}`);
+      Logger.debug(`\uC0AC\uC6A9\uC790 \uD3B8\uC9D1 \uAD00\uB828 \uC0C1\uD0DC \uBCC0\uD654\uB294 \uAC1C\uBCC4 \uC801\uC6A9\uB9CC \uC218\uD589: index ${correctionIndex}, from=${isCurrentlyUserEdited} to=${newIsUserEdited}`);
     } else {
       this.syncSameWordStates(correction.original, newValue, newIsException, newIsOriginalKept, newIsUserEdited, correctionIndex);
     }
@@ -3180,32 +3180,32 @@ var CorrectionStateManager = class {
   syncSameWordStates(originalText, newValue, isException, isOriginalKept, isUserEdited = false, currentCorrectionIndex) {
     let syncedCount = 0;
     const coreWord = this.extractCoreWord(originalText);
-    Logger.log(`=== \uB3D9\uAE30\uD654 \uC2DC\uC791 ===`);
-    Logger.log(`\uC6D0\uBCF8: "${originalText}", \uD575\uC2EC: "${coreWord}"`);
-    Logger.log(`\uC804\uCCB4 \uAD50\uC815 \uAC1C\uC218: ${this.corrections.length}`);
+    Logger.debug(`=== \uB3D9\uAE30\uD654 \uC2DC\uC791 ===`);
+    Logger.debug(`\uC6D0\uBCF8: "${originalText}", \uD575\uC2EC: "${coreWord}"`);
+    Logger.debug(`\uC804\uCCB4 \uAD50\uC815 \uAC1C\uC218: ${this.corrections.length}`);
     for (let i = 0; i < this.corrections.length; i++) {
       const targetOriginal = this.corrections[i].original;
       const targetCoreWord = this.extractCoreWord(targetOriginal);
-      Logger.log(`\uAD50\uC815 ${i}: "${targetOriginal}" \u2192 \uD575\uC2EC: "${targetCoreWord}"`);
+      Logger.debug(`\uAD50\uC815 ${i}: "${targetOriginal}" \u2192 \uD575\uC2EC: "${targetCoreWord}"`);
       if (targetCoreWord === coreWord) {
         const existingUserEdited = this.isUserEditedState(i);
         if (existingUserEdited && i !== currentCorrectionIndex) {
-          Logger.log(`  \u2192 \uB9E4\uCE58\uD558\uC9C0\uB9CC \uAE30\uC874 \uC0AC\uC6A9\uC790 \uD3B8\uC9D1 \uC0C1\uD0DC \uC720\uC9C0 (index ${i})`);
+          Logger.debug(`  \u2192 \uB9E4\uCE58\uD558\uC9C0\uB9CC \uAE30\uC874 \uC0AC\uC6A9\uC790 \uD3B8\uC9D1 \uC0C1\uD0DC \uC720\uC9C0 (index ${i})`);
         } else if (isUserEdited && i !== currentCorrectionIndex) {
-          Logger.log(`  \u2192 \uB9E4\uCE58\uD558\uC9C0\uB9CC \uC0AC\uC6A9\uC790 \uD3B8\uC9D1\uC740 \uAC1C\uBCC4 \uD56D\uBAA9\uB9CC \uC801\uC6A9 (index ${i})`);
+          Logger.debug(`  \u2192 \uB9E4\uCE58\uD558\uC9C0\uB9CC \uC0AC\uC6A9\uC790 \uD3B8\uC9D1\uC740 \uAC1C\uBCC4 \uD56D\uBAA9\uB9CC \uC801\uC6A9 (index ${i})`);
         } else {
           const shouldPreserveUserEdited = existingUserEdited && !isUserEdited;
           const finalIsUserEdited = shouldPreserveUserEdited ? true : isUserEdited;
           const finalValue = shouldPreserveUserEdited ? this.userEditedValues.get(i) || newValue : newValue;
-          Logger.log(`  \u2192 \uB9E4\uCE58! \uB3D9\uAE30\uD654 \uC2E4\uD589 (index ${i}), preserveUserEdited=${shouldPreserveUserEdited}, finalIsUserEdited=${finalIsUserEdited}, finalValue="${finalValue}"`);
+          Logger.debug(`  \u2192 \uB9E4\uCE58! \uB3D9\uAE30\uD654 \uC2E4\uD589 (index ${i}), preserveUserEdited=${shouldPreserveUserEdited}, finalIsUserEdited=${finalIsUserEdited}, finalValue="${finalValue}"`);
           this.setState(i, finalValue, isException, isOriginalKept, finalIsUserEdited);
           syncedCount++;
         }
       } else {
-        Logger.log(`  \u2192 \uB9E4\uCE58 \uC548\uB428 ("${targetCoreWord}" \u2260 "${coreWord}")`);
+        Logger.debug(`  \u2192 \uB9E4\uCE58 \uC548\uB428 ("${targetCoreWord}" \u2260 "${coreWord}")`);
       }
     }
-    Logger.log(`\uAC19\uC740 \uB2E8\uC5B4 \uC77C\uAD04 \uC2DC\uAC01\uC801 \uC5C5\uB370\uC774\uD2B8: "${originalText}" (\uD575\uC2EC: "${coreWord}") \u2192 "${newValue}" (${syncedCount}\uAC1C \uD56D\uBAA9)`);
+    Logger.debug(`\uAC19\uC740 \uB2E8\uC5B4 \uC77C\uAD04 \uC2DC\uAC01\uC801 \uC5C5\uB370\uC774\uD2B8: "${originalText}" (\uD575\uC2EC: "${coreWord}") \u2192 "${newValue}" (${syncedCount}\uAC1C \uD56D\uBAA9)`);
   }
   /**
    * 텍스트에서 핵심 단어를 추출합니다.
@@ -3222,7 +3222,7 @@ var CorrectionStateManager = class {
       }
     }
     coreWord = coreWord.trim();
-    Logger.log(`\uD575\uC2EC \uB2E8\uC5B4 \uCD94\uCD9C: "${text}" \u2192 "${coreWord}"`);
+    Logger.debug(`\uD575\uC2EC \uB2E8\uC5B4 \uCD94\uCD9C: "${text}" \u2192 "${coreWord}"`);
     return coreWord;
   }
   /**
@@ -3235,21 +3235,21 @@ var CorrectionStateManager = class {
     if (!correction)
       return "";
     if (this.isUserEditedState(correctionIndex)) {
-      Logger.log(`DisplayClass for ${correction.original} (index ${correctionIndex}): spell-user-edited`);
+      Logger.debug(`DisplayClass for ${correction.original} (index ${correctionIndex}): spell-user-edited`);
       return "spell-user-edited";
     }
     if (this.isOriginalKeptState(correctionIndex)) {
-      Logger.log(`DisplayClass for ${correction.original} (index ${correctionIndex}): spell-original-kept`);
+      Logger.debug(`DisplayClass for ${correction.original} (index ${correctionIndex}): spell-original-kept`);
       return "spell-original-kept";
     }
     const currentValue = this.getValue(correctionIndex);
     const isException = this.isExceptionState(correctionIndex);
     if (currentValue === correction.original) {
       const className = isException ? "spell-exception-processed" : "spell-error";
-      Logger.log(`DisplayClass for ${correction.original} (index ${correctionIndex}): ${className}`);
+      Logger.debug(`DisplayClass for ${correction.original} (index ${correctionIndex}): ${className}`);
       return className;
     } else {
-      Logger.log(`DisplayClass for ${correction.original} (index ${correctionIndex}): spell-corrected`);
+      Logger.debug(`DisplayClass for ${correction.original} (index ${correctionIndex}): spell-corrected`);
       return "spell-corrected";
     }
   }
@@ -3331,7 +3331,7 @@ var CorrectionStateManager = class {
     const result = text.replace(regex, replacement);
     const occurrences = (text.match(regex) || []).length;
     if (occurrences > 0) {
-      Logger.log(`\uC77C\uAD04 \uC218\uC815: "${original}" \u2192 "${replacement}" (${occurrences}\uAC1C \uC704\uCE58)`);
+      Logger.debug(`\uC77C\uAD04 \uC218\uC815: "${original}" \u2192 "${replacement}" (${occurrences}\uAC1C \uC704\uCE58)`);
     }
     return result;
   }
@@ -3416,7 +3416,7 @@ function splitTextIntoPages(text, charsPerPage) {
 }
 function calculateDynamicCharsPerPage(previewElement, isErrorExpanded = false) {
   if (!previewElement) {
-    Logger.log("No previewElement, returning default 800.");
+    Logger.debug("No previewElement, returning default 800.");
     return 800;
   }
   const previewRect = previewElement.getBoundingClientRect();
@@ -3430,17 +3430,17 @@ function calculateDynamicCharsPerPage(previewElement, isErrorExpanded = false) {
   } else {
     calculatedChars = Math.max(800, Math.min(1800, linesPerPage * avgCharsPerLine));
   }
-  Logger.log(`Available height: ${availableHeight}, Lines per page: ${linesPerPage}, Calculated chars: ${calculatedChars}, Error expanded: ${isErrorExpanded}`);
+  Logger.debug(`Available height: ${availableHeight}, Lines per page: ${linesPerPage}, Calculated chars: ${calculatedChars}, Error expanded: ${isErrorExpanded}`);
   return calculatedChars;
 }
 function getCurrentParagraph(editor) {
   const cursor = editor.getCursor();
   const currentLine = cursor.line;
   const totalLines = editor.lineCount();
-  Logger.log(`\uBB38\uB2E8 \uAC10\uC9C0 \uC2DC\uC791: \uD604\uC7AC \uB77C\uC778 ${currentLine}, \uCD1D \uB77C\uC778 ${totalLines}`);
+  Logger.debug(`\uBB38\uB2E8 \uAC10\uC9C0 \uC2DC\uC791: \uD604\uC7AC \uB77C\uC778 ${currentLine}, \uCD1D \uB77C\uC778 ${totalLines}`);
   const currentWord = editor.wordAt(cursor);
   if (currentWord) {
-    Logger.log(`\uD604\uC7AC \uB2E8\uC5B4 \uBC94\uC704: ${currentWord.from.line}:${currentWord.from.ch} - ${currentWord.to.line}:${currentWord.to.ch}`);
+    Logger.debug(`\uD604\uC7AC \uB2E8\uC5B4 \uBC94\uC704: ${currentWord.from.line}:${currentWord.from.ch} - ${currentWord.to.line}:${currentWord.to.ch}`);
   }
   let startLine = currentLine;
   let endLine = currentLine;
@@ -3479,8 +3479,8 @@ function getCurrentParagraph(editor) {
   const from = { line: startLine, ch: 0 };
   const to = { line: endLine, ch: editor.getLine(endLine).length };
   const text = editor.getRange(from, to);
-  Logger.log(`\uBB38\uB2E8 \uAC10\uC9C0 \uC644\uB8CC: ${startLine}\uD589-${endLine}\uD589 (${text.length}\uC790)`);
-  Logger.log(`\uBB38\uB2E8 \uB0B4\uC6A9 \uBBF8\uB9AC\uBCF4\uAE30: "${text.substring(0, 50)}${text.length > 50 ? "..." : ""}"`);
+  Logger.debug(`\uBB38\uB2E8 \uAC10\uC9C0 \uC644\uB8CC: ${startLine}\uD589-${endLine}\uD589 (${text.length}\uC790)`);
+  Logger.debug(`\uBB38\uB2E8 \uB0B4\uC6A9 \uBBF8\uB9AC\uBCF4\uAE30: "${text.substring(0, 50)}${text.length > 50 ? "..." : ""}"`);
   return { text, from, to };
 }
 function getCurrentWord(editor) {
@@ -3490,7 +3490,7 @@ function getCurrentWord(editor) {
     return null;
   }
   const text = editor.getRange(wordRange.from, wordRange.to);
-  Logger.log(`\uD604\uC7AC \uB2E8\uC5B4 \uAC10\uC9C0: "${text}" (${wordRange.from.line}:${wordRange.from.ch} - ${wordRange.to.line}:${wordRange.to.ch})`);
+  Logger.debug(`\uD604\uC7AC \uB2E8\uC5B4 \uAC10\uC9C0: "${text}" (${wordRange.from.line}:${wordRange.from.ch} - ${wordRange.to.line}:${wordRange.to.ch})`);
   return {
     text,
     from: wordRange.from,
@@ -3502,7 +3502,7 @@ function getCurrentSentence(editor) {
   const currentLine = cursor.line;
   const currentChar = cursor.ch;
   const currentLineText = editor.getLine(currentLine);
-  Logger.log(`\uBB38\uC7A5 \uAC10\uC9C0 \uC2DC\uC791: ${currentLine}\uD589 ${currentChar}\uC5F4`);
+  Logger.debug(`\uBB38\uC7A5 \uAC10\uC9C0 \uC2DC\uC791: ${currentLine}\uD589 ${currentChar}\uC5F4`);
   const sentenceEndPattern = /[.!?。！？]/;
   const sentenceEndPatternGlobal = /[.!?。！？]/g;
   let sentenceStart = 0;
@@ -3575,8 +3575,8 @@ function getCurrentSentence(editor) {
   const from = { line: sentenceStartLine, ch: sentenceStartChar };
   const to = { line: sentenceEndLine, ch: sentenceEndChar };
   const text = editor.getRange(from, to).trim();
-  Logger.log(`\uBB38\uC7A5 \uAC10\uC9C0 \uC644\uB8CC: ${sentenceStartLine}:${sentenceStartChar} - ${sentenceEndLine}:${sentenceEndChar}`);
-  Logger.log(`\uBB38\uC7A5 \uB0B4\uC6A9: "${text.substring(0, 50)}${text.length > 50 ? "..." : ""}"`);
+  Logger.debug(`\uBB38\uC7A5 \uAC10\uC9C0 \uC644\uB8CC: ${sentenceStartLine}:${sentenceStartChar} - ${sentenceEndLine}:${sentenceEndChar}`);
+  Logger.debug(`\uBB38\uC7A5 \uB0B4\uC6A9: "${text.substring(0, 50)}${text.length > 50 ? "..." : ""}"`);
   return { text, from, to };
 }
 
@@ -3626,7 +3626,7 @@ var CorrectionPopup = class extends BaseComponent {
       var _a;
       const target = evt.target;
       if (target && (((_a = target.dataset) == null ? void 0 : _a.editMode) === "true" || target.classList.contains("error-original-input"))) {
-        Logger.log("Enter key in edit mode - allowing default behavior");
+        Logger.debug("Enter key in edit mode - allowing default behavior");
         return true;
       }
       evt.preventDefault();
@@ -3637,7 +3637,7 @@ var CorrectionPopup = class extends BaseComponent {
       var _a;
       const target = evt.target;
       if (target && (((_a = target.dataset) == null ? void 0 : _a.editMode) === "true" || target.classList.contains("error-original-input"))) {
-        Logger.log("Escape key in edit mode - allowing default behavior");
+        Logger.debug("Escape key in edit mode - allowing default behavior");
         return true;
       }
       evt.preventDefault();
@@ -3646,7 +3646,7 @@ var CorrectionPopup = class extends BaseComponent {
     });
     this.keyboardScope.register([], "ArrowRight", (evt) => {
       if (this.isInEditMode()) {
-        Logger.log("\u{1F6AB} \uD3B8\uC9D1 \uBAA8\uB4DC \uC911 - ArrowRight \uBE44\uD65C\uC131\uD654");
+        Logger.debug("\u{1F6AB} \uD3B8\uC9D1 \uBAA8\uB4DC \uC911 - ArrowRight \uBE44\uD65C\uC131\uD654");
         return;
       }
       evt.preventDefault();
@@ -3655,7 +3655,7 @@ var CorrectionPopup = class extends BaseComponent {
     });
     this.keyboardScope.register([], "ArrowLeft", (evt) => {
       if (this.isInEditMode()) {
-        Logger.log("\u{1F6AB} \uD3B8\uC9D1 \uBAA8\uB4DC \uC911 - ArrowLeft \uBE44\uD65C\uC131\uD654");
+        Logger.debug("\u{1F6AB} \uD3B8\uC9D1 \uBAA8\uB4DC \uC911 - ArrowLeft \uBE44\uD65C\uC131\uD654");
         return;
       }
       evt.preventDefault();
@@ -3667,12 +3667,6 @@ var CorrectionPopup = class extends BaseComponent {
       evt.stopPropagation();
       evt.stopImmediatePropagation();
       this.triggerAIAnalysis();
-      return false;
-    });
-    this.keyboardScope.register(["Mod"], "KeyE", (evt) => {
-      evt.preventDefault();
-      evt.stopPropagation();
-      this.toggleErrorSummary();
       return false;
     });
     this.keyboardScope.register([], "ArrowUp", (evt) => {
@@ -3696,7 +3690,7 @@ var CorrectionPopup = class extends BaseComponent {
     });
     this.keyboardScope.register(["Mod", "Shift"], "ArrowRight", (evt) => {
       if (this.isInEditMode()) {
-        Logger.log("\u{1F6AB} \uD3B8\uC9D1 \uBAA8\uB4DC \uC911 - \uC77C\uAD04 \uBCC0\uACBD \uBE44\uD65C\uC131\uD654");
+        Logger.debug("\u{1F6AB} \uD3B8\uC9D1 \uBAA8\uB4DC \uC911 - \uC77C\uAD04 \uBCC0\uACBD \uBE44\uD65C\uC131\uD654");
         return;
       }
       evt.preventDefault();
@@ -3705,7 +3699,7 @@ var CorrectionPopup = class extends BaseComponent {
     });
     this.keyboardScope.register(["Mod", "Shift"], "ArrowLeft", (evt) => {
       if (this.isInEditMode()) {
-        Logger.log("\u{1F6AB} \uD3B8\uC9D1 \uBAA8\uB4DC \uC911 - \uC77C\uAD04 \uBCC0\uACBD \uBE44\uD65C\uC131\uD654");
+        Logger.debug("\u{1F6AB} \uD3B8\uC9D1 \uBAA8\uB4DC \uC911 - \uC77C\uAD04 \uBCC0\uACBD \uBE44\uD65C\uC131\uD654");
         return;
       }
       evt.preventDefault();
@@ -3792,7 +3786,7 @@ var CorrectionPopup = class extends BaseComponent {
       return;
     const actualIndex = pageCorrection.originalIndex;
     const currentState = this.stateManager.getValue(actualIndex);
-    Logger.log(`\uD0A4\uBCF4\uB4DC\uB85C \uC218\uC815\uC0AC\uD56D \uC801\uC6A9: ${currentState}`);
+    Logger.debug(`\uD0A4\uBCF4\uB4DC\uB85C \uC218\uC815\uC0AC\uD56D \uC801\uC6A9: ${currentState}`);
   }
   /**
    * 현재 포커스된 오류의 다음 수정 제안으로 순환합니다.
@@ -3826,7 +3820,7 @@ var CorrectionPopup = class extends BaseComponent {
     if (!correction)
       return;
     const result = direction === "next" ? this.stateManager.toggleState(correctionIndex) : this.stateManager.toggleStatePrev(correctionIndex);
-    Logger.debug(`\uC218\uC815 \uC81C\uC548 \uC21C\uD658: ${direction}, index: ${correctionIndex}, \uC0C8\uB85C\uC6B4 \uAC12: ${result.value}`);
+    Logger.log(`\uC218\uC815 \uC81C\uC548 \uC21C\uD658: ${direction}, index: ${correctionIndex}, \uC0C8\uB85C\uC6B4 \uAC12: ${result.value}`);
     this.updateDisplay();
   }
   /**
@@ -3883,16 +3877,16 @@ var CorrectionPopup = class extends BaseComponent {
       }, 100);
       const firstPageCorrection = this.currentCorrections[0];
       const actualIndex = firstPageCorrection.originalIndex;
-      Logger.log(`\uCD08\uAE30 \uD3EC\uCEE4\uC2A4 \uC124\uC815: ${this.currentFocusIndex}/${this.currentCorrections.length}`);
-      Logger.log(`\uCCAB \uBC88\uC9F8 \uC624\uB958: "${firstPageCorrection.correction.original}" (\uC804\uCCB4 \uBC30\uC5F4 \uC778\uB371\uC2A4: ${actualIndex}, \uACE0\uC720ID: ${firstPageCorrection.uniqueId})`);
-      Logger.log("\uD604\uC7AC \uD398\uC774\uC9C0 \uC624\uB958 \uBAA9\uB85D:", this.currentCorrections.map((pc) => ({
+      Logger.debug(`\uCD08\uAE30 \uD3EC\uCEE4\uC2A4 \uC124\uC815: ${this.currentFocusIndex}/${this.currentCorrections.length}`);
+      Logger.debug(`\uCCAB \uBC88\uC9F8 \uC624\uB958: "${firstPageCorrection.correction.original}" (\uC804\uCCB4 \uBC30\uC5F4 \uC778\uB371\uC2A4: ${actualIndex}, \uACE0\uC720ID: ${firstPageCorrection.uniqueId})`);
+      Logger.debug("\uD604\uC7AC \uD398\uC774\uC9C0 \uC624\uB958 \uBAA9\uB85D:", this.currentCorrections.map((pc) => ({
         original: pc.correction.original,
         originalIndex: pc.originalIndex,
         uniqueId: pc.uniqueId
       })));
     } else {
       this.currentFocusIndex = -1;
-      Logger.log("\uC624\uB958\uAC00 \uC5C6\uC5B4 \uD3EC\uCEE4\uC2A4 \uC124\uC815\uD558\uC9C0 \uC54A\uC74C");
+      Logger.debug("\uC624\uB958\uAC00 \uC5C6\uC5B4 \uD3EC\uCEE4\uC2A4 \uC124\uC815\uD558\uC9C0 \uC54A\uC74C");
     }
     Logger.debug("========= resetFocusToFirstError \uC885\uB8CC =========");
   }
@@ -3976,7 +3970,6 @@ var CorrectionPopup = class extends BaseComponent {
     this.app.keymap.pushScope(this.keyboardScope);
     setTimeout(() => {
       this.element.focus();
-      Logger.log("\uD31D\uC5C5 \uD3EC\uCEE4\uC2A4 \uC124\uC815 \uC644\uB8CC");
     }, 50);
     this.resetFocusToFirstError();
     this.showKeyboardHint();
@@ -4310,7 +4303,7 @@ var CorrectionPopup = class extends BaseComponent {
     const currentCorrections = this.removeDuplicateCorrections(rawCorrections);
     const originalText = this.config.selectedText;
     const trimmedStartOffset = originalText.length - originalText.trimStart().length;
-    Logger.log("generatePreviewHTML \uB514\uBC84\uAE45:", {
+    Logger.debug("generatePreviewHTML \uB514\uBC84\uAE45:", {
       isLongText: this.isLongText,
       originalLength: originalText.length,
       trimmedLength: previewText.length,
@@ -4333,7 +4326,7 @@ var CorrectionPopup = class extends BaseComponent {
       const escapedValue = escapeHtml(currentValue);
       const isUserEdited = this.stateManager.isUserEditedState(actualIndex);
       if (isUserEdited) {
-        Logger.log(`\u{1F3A8} \uBBF8\uB9AC\uBCF4\uAE30 \uC0AC\uC6A9\uC790\uD3B8\uC9D1: index=${actualIndex}, original="${correction.original}", currentValue="${currentValue}", displayClass="${displayClass}"`);
+        Logger.debug(`\u{1F3A8} \uBBF8\uB9AC\uBCF4\uAE30 \uC0AC\uC6A9\uC790\uD3B8\uC9D1: index=${actualIndex}, original="${correction.original}", currentValue="${currentValue}", displayClass="${displayClass}"`);
       }
       const replacementHtml = `<span class="${displayClass} clickable-error" data-correction-index="${actualIndex}" data-unique-id="${uniqueId}">${escapedValue}</span>`;
       const expectedText = correction.original;
@@ -4390,7 +4383,7 @@ var CorrectionPopup = class extends BaseComponent {
     const previewEndIndex = this.pageBreaks[this.currentPreviewPage];
     const pageText = this.config.selectedText.slice(previewStartIndex, previewEndIndex);
     const cleanedPageText = pageText.trim();
-    Logger.log("getCurrentPreviewText \uB514\uBC84\uAE45:", {
+    Logger.debug("getCurrentPreviewText \uB514\uBC84\uAE45:", {
       currentPage: this.currentPreviewPage,
       startIndex: previewStartIndex,
       endIndex: previewEndIndex,
@@ -4407,12 +4400,12 @@ var CorrectionPopup = class extends BaseComponent {
    * 오류 요약 HTML을 생성합니다.
    */
   generateErrorSummaryHTML() {
-    Logger.log(`\u{1F3D7}\uFE0F generateErrorSummaryHTML \uC2DC\uC791`);
+    Logger.debug(`\u{1F3D7}\uFE0F generateErrorSummaryHTML \uC2DC\uC791`);
     const rawCorrections = this.getCurrentCorrections();
     const currentCorrections = this.removeDuplicateCorrections(rawCorrections);
-    Logger.log(`\u{1F3D7}\uFE0F rawCorrections: ${rawCorrections.length}, currentCorrections: ${currentCorrections.length}`);
+    Logger.debug(`\u{1F3D7}\uFE0F rawCorrections: ${rawCorrections.length}, currentCorrections: ${currentCorrections.length}`);
     if (currentCorrections.length === 0) {
-      Logger.log(`\u{1F3D7}\uFE0F \uC624\uB958 \uC5C6\uC74C - \uD50C\uB808\uC774\uC2A4\uD640\uB354 \uBC18\uD658`);
+      Logger.debug(`\u{1F3D7}\uFE0F \uC624\uB958 \uC5C6\uC74C - \uD50C\uB808\uC774\uC2A4\uD640\uB354 \uBC18\uD658`);
       return `
         <div class="error-placeholder">
           <div class="placeholder-icon">\u2713</div>
@@ -4422,14 +4415,14 @@ var CorrectionPopup = class extends BaseComponent {
       `;
     }
     const uniqueCorrections = this.removeDuplicateCorrections(currentCorrections);
-    Logger.log(`\u{1F3D7}\uFE0F uniqueCorrections: ${uniqueCorrections.length}`);
+    Logger.debug(`\u{1F3D7}\uFE0F uniqueCorrections: ${uniqueCorrections.length}`);
     return uniqueCorrections.map((pageCorrection, index) => {
       const actualIndex = pageCorrection.originalIndex;
       const correction = pageCorrection.correction;
       const isOriginalKept = this.stateManager.isOriginalKeptState(actualIndex);
       const isUserEdited = this.stateManager.isUserEditedState(actualIndex);
       const suggestions = correction.corrected.slice(0, 3);
-      Logger.log(`\u{1F3D7}\uFE0F HTML \uC0DD\uC131: "${correction.original}" \u2192 actualIndex=${actualIndex}, pageIndex=${index}`);
+      Logger.debug(`\u{1F3D7}\uFE0F HTML \uC0DD\uC131: "${correction.original}" \u2192 actualIndex=${actualIndex}, pageIndex=${index}`);
       const aiResult = this.aiAnalysisResults.find((result) => result.correctionIndex === actualIndex);
       const reasoningHTML = aiResult ? `<div class="ai-analysis-result">
              <div class="ai-confidence">\u{1F916} \uC2E0\uB8B0\uB3C4: <span class="confidence-score">${aiResult.confidence}%</span></div>
@@ -4464,7 +4457,7 @@ var CorrectionPopup = class extends BaseComponent {
           ${reasoningHTML}
         </div>
       `;
-      Logger.log(`\u{1F3D7}\uFE0F HTML \uCCAB \uBD80\uBD84 - actualIndex=${actualIndex}: ${htmlString.substring(0, 200)}...`);
+      Logger.debug(`\u{1F3D7}\uFE0F HTML \uCCAB \uBD80\uBD84 - actualIndex=${actualIndex}: ${htmlString.substring(0, 200)}...`);
       return htmlString;
     }).join("");
   }
@@ -4472,6 +4465,42 @@ var CorrectionPopup = class extends BaseComponent {
    * 이벤트를 바인딩합니다.
    */
   bindEvents() {
+    const cmdEHandler = this.app.scope.register(["Mod"], "KeyE", (evt) => {
+      if (this.isInEditMode()) {
+        return true;
+      }
+      evt.preventDefault();
+      evt.stopPropagation();
+      this.enterEditModeForFocusedError();
+      return false;
+    });
+    const cmdShiftEHandler = this.app.scope.register(["Mod", "Shift"], "KeyE", (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      this.toggleErrorSummary();
+      return false;
+    });
+    this.cleanupFunctions.push(() => this.app.scope.unregister(cmdEHandler));
+    this.cleanupFunctions.push(() => this.app.scope.unregister(cmdShiftEHandler));
+    const documentKeyListener = (evt) => {
+      if (evt.code === "KeyE" && (evt.metaKey && !evt.ctrlKey || !evt.metaKey && evt.ctrlKey) && !evt.shiftKey) {
+        if (this.isInEditMode()) {
+          return;
+        }
+        evt.preventDefault();
+        evt.stopPropagation();
+        this.enterEditModeForFocusedError();
+        return;
+      }
+      if (evt.code === "KeyE" && (evt.metaKey && !evt.ctrlKey || !evt.metaKey && evt.ctrlKey) && evt.shiftKey) {
+        evt.preventDefault();
+        evt.stopPropagation();
+        this.toggleErrorSummary();
+        return;
+      }
+    };
+    document.addEventListener("keydown", documentKeyListener);
+    this.cleanupFunctions.push(() => document.removeEventListener("keydown", documentKeyListener));
     this.addEventListener(this.element, "keydown", (evt) => {
       if (evt.code === "KeyA" && evt.shiftKey && evt.metaKey && !evt.ctrlKey) {
         evt.preventDefault();
@@ -4480,6 +4509,15 @@ var CorrectionPopup = class extends BaseComponent {
         return;
       }
       if (evt.code === "KeyE" && (evt.metaKey && !evt.ctrlKey || !evt.metaKey && evt.ctrlKey) && !evt.shiftKey) {
+        if (this.isInEditMode()) {
+          return;
+        }
+        evt.preventDefault();
+        evt.stopPropagation();
+        this.enterEditModeForFocusedError();
+        return;
+      }
+      if (evt.code === "KeyE" && (evt.metaKey && !evt.ctrlKey || !evt.metaKey && evt.ctrlKey) && evt.shiftKey) {
         evt.preventDefault();
         evt.stopPropagation();
         this.toggleErrorSummary();
@@ -4564,17 +4602,25 @@ var CorrectionPopup = class extends BaseComponent {
   bindCorrectionEvents() {
     this.addEventListener(this.element, "click", (e) => {
       const target = e.target;
-      Logger.log(`\u{1F5B1}\uFE0F \uD074\uB9AD \uC774\uBCA4\uD2B8 \uBC1C\uC0DD: target="${target.tagName}.${target.className}", textContent="${target.textContent}"`);
+      Logger.debug(`\u{1F5B1}\uFE0F \uD074\uB9AD \uC774\uBCA4\uD2B8 \uBC1C\uC0DD: target="${target.tagName}.${target.className}", textContent="${target.textContent}"`);
       if (target.classList.contains("clickable-error")) {
-        Logger.log(`\u{1F5B1}\uFE0F \uBBF8\uB9AC\uBCF4\uAE30 \uD074\uB9AD \uCC98\uB9AC: ${target.textContent}`);
+        Logger.debug(`\u{1F5B1}\uFE0F \uBBF8\uB9AC\uBCF4\uAE30 \uD074\uB9AD \uCC98\uB9AC: ${target.textContent}`);
         this.handlePreviewClick(target);
       }
       if (target.classList.contains("error-original-compact")) {
-        Logger.log(`\u{1F5B1}\uFE0F \uC624\uB958 \uCE74\uB4DC \uD14D\uC2A4\uD2B8 \uD074\uB9AD \uAC10\uC9C0: ${target.textContent}`);
+        Logger.debug(`\u{1F5B1}\uFE0F \uC624\uB958 \uCE74\uB4DC \uD14D\uC2A4\uD2B8 \uD074\uB9AD \uAC10\uC9C0: ${target.textContent}`);
         this.handleCardTextClick(target);
       }
       if (target.classList.contains("suggestion-compact")) {
         this.handleSuggestionClick(target);
+      }
+    });
+    this.addEventListener(this.element, "contextmenu", (e) => {
+      const target = e.target;
+      if (target.classList.contains("clickable-error")) {
+        e.preventDefault();
+        Logger.debug(`\u{1F5B1}\uFE0F \uBBF8\uB9AC\uBCF4\uAE30 \uC6B0\uD074\uB9AD \uD3B8\uC9D1 \uBAA8\uB4DC: ${target.textContent}`);
+        this.handlePreviewRightClick(target);
       }
     });
   }
@@ -4666,18 +4712,53 @@ var CorrectionPopup = class extends BaseComponent {
     return editingInput !== null && document.activeElement === editingInput;
   }
   /**
+   * 미리보기 영역에서 우클릭 시 편집 모드로 전환합니다.
+   * 일괄 동작: 펼치기 + 오토스크롤 + 편집 모드 진입
+   */
+  handlePreviewRightClick(target) {
+    const correctionIndex = parseInt(target.dataset.correctionIndex || "0");
+    Logger.debug(`\u{1F527} handlePreviewRightClick \uD638\uCD9C: index=${correctionIndex}, text="${target.textContent}"`);
+    if (isNaN(correctionIndex) || correctionIndex < 0 || correctionIndex >= this.config.corrections.length) {
+      Logger.debug("Invalid correction index for preview right click:", correctionIndex);
+      return;
+    }
+    const errorSummary = this.element.querySelector("#errorSummary");
+    const wasCollapsed = errorSummary && errorSummary.classList.contains("collapsed");
+    if (wasCollapsed) {
+      errorSummary.classList.remove("collapsed");
+      Logger.debug("\u{1F527} \uC624\uB958 \uC0C1\uC138 \uC601\uC5ED \uD3BC\uCE68");
+      this.updateDisplay();
+    }
+    setTimeout(() => {
+      const errorCard = this.element.querySelector(`[data-correction-index="${correctionIndex}"] .error-original-compact`);
+      if (errorCard) {
+        Logger.debug(`\u{1F527} \uD3B8\uC9D1 \uBAA8\uB4DC \uC9C4\uC785 - \uC624\uB958 \uC0C1\uC138 \uCE74\uB4DC \uCC3E\uC74C: index=${correctionIndex}`);
+        errorCard.scrollIntoView({
+          behavior: "smooth",
+          block: "center"
+        });
+        Logger.debug("\u{1F527} \uC624\uD1A0\uC2A4\uD06C\uB864 \uC218\uD589");
+        setTimeout(() => {
+          this.enterCardEditMode(errorCard, correctionIndex);
+        }, 300);
+      } else {
+        Logger.debug(`\u{1F527} \uC624\uB958 \uC0C1\uC138 \uCE74\uB4DC\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC74C: index=${correctionIndex}`);
+      }
+    }, wasCollapsed ? 100 : 0);
+  }
+  /**
    * 오류 상세 카드의 원본 텍스트 클릭 시 편집 모드로 전환합니다.
    */
   handleCardTextClick(target) {
     const correctionIndex = parseInt(target.dataset.correctionIndex || "0");
-    Logger.log(`\u{1F527} handleCardTextClick \uD638\uCD9C: index=${correctionIndex}, text="${target.textContent}"`);
-    Logger.log(`\u{1F527} target.dataset: ${JSON.stringify(target.dataset)}`);
-    Logger.log(`\u{1F527} target HTML: ${target.outerHTML}`);
+    Logger.debug(`\u{1F527} handleCardTextClick \uD638\uCD9C: index=${correctionIndex}, text="${target.textContent}"`);
+    Logger.debug(`\u{1F527} target.dataset: ${JSON.stringify(target.dataset)}`);
+    Logger.debug(`\u{1F527} target HTML: ${target.outerHTML}`);
     if (isNaN(correctionIndex) || correctionIndex < 0 || correctionIndex >= this.config.corrections.length) {
-      Logger.log("Invalid correction index for card text click:", correctionIndex);
+      Logger.debug("Invalid correction index for card text click:", correctionIndex);
       return;
     }
-    Logger.log(`\u{1F527} enterCardEditMode \uD638\uCD9C \uC608\uC815: index=${correctionIndex}`);
+    Logger.debug(`\u{1F527} enterCardEditMode \uD638\uCD9C \uC608\uC815: index=${correctionIndex}`);
     this.enterCardEditMode(target, correctionIndex);
   }
   /**
@@ -4686,7 +4767,7 @@ var CorrectionPopup = class extends BaseComponent {
   enterCardEditMode(originalElement, correctionIndex) {
     var _a;
     const currentText = originalElement.textContent || "";
-    Logger.log(`\u{1F527} enterCardEditMode \uC2DC\uC791: index=${correctionIndex}, currentText="${currentText}"`);
+    Logger.debug(`\u{1F527} enterCardEditMode \uC2DC\uC791: index=${correctionIndex}, currentText="${currentText}"`);
     const input = document.createElement("input");
     input.type = "text";
     input.value = currentText;
@@ -4730,27 +4811,66 @@ var CorrectionPopup = class extends BaseComponent {
   finishCardEdit(input, correctionIndex) {
     const newValue = input.value.trim();
     const currentValue = this.stateManager.getValue(correctionIndex);
-    Logger.log(`\u{1F527} finishCardEdit \uD638\uCD9C: index=${correctionIndex}, newValue="${newValue}", currentValue="${currentValue}"`);
+    Logger.debug(`\u{1F527} finishCardEdit \uD638\uCD9C: index=${correctionIndex}, newValue="${newValue}", currentValue="${currentValue}"`);
     if (newValue === "") {
-      Logger.log(`\u{1F527} \uBE48 \uAC12\uC73C\uB85C \uD3B8\uC9D1 \uCDE8\uC18C: index=${correctionIndex}`);
+      Logger.debug(`\u{1F527} \uBE48 \uAC12\uC73C\uB85C \uD3B8\uC9D1 \uCDE8\uC18C: index=${correctionIndex}`);
       this.cancelCardEdit(input, correctionIndex);
       return;
     }
     if (newValue === currentValue) {
-      Logger.log(`\u{1F527} \uAC12\uC774 \uBCC0\uACBD\uB418\uC9C0 \uC54A\uC544\uC11C \uD3B8\uC9D1 \uCDE8\uC18C: index=${correctionIndex}, value="${newValue}"`);
+      Logger.debug(`\u{1F527} \uAC12\uC774 \uBCC0\uACBD\uB418\uC9C0 \uC54A\uC544\uC11C \uD3B8\uC9D1 \uCDE8\uC18C: index=${correctionIndex}, value="${newValue}"`);
       this.cancelCardEdit(input, correctionIndex);
       return;
     }
-    Logger.log(`\u{1F527} setUserEdited \uD638\uCD9C \uC608\uC815: index=${correctionIndex}, value="${newValue}"`);
+    Logger.debug(`\u{1F527} setUserEdited \uD638\uCD9C \uC608\uC815: index=${correctionIndex}, value="${newValue}"`);
     this.stateManager.setUserEdited(correctionIndex, newValue);
-    Logger.log(`\u{1F527} updateDisplay \uD638\uCD9C \uC608\uC815`);
+    Logger.debug(`\u{1F527} updateDisplay \uD638\uCD9C \uC608\uC815`);
     this.updateDisplay();
+    this.focusPreviewWordAfterEdit(correctionIndex);
   }
   /**
    * 카드 편집을 취소합니다.
    */
   cancelCardEdit(input, correctionIndex) {
     this.updateDisplay();
+  }
+  /**
+   * 편집 완료 후 미리보기의 해당 단어로 포커스를 이동합니다.
+   */
+  focusPreviewWordAfterEdit(correctionIndex) {
+    Logger.debug(`\u{1F3AF} \uD3B8\uC9D1 \uC644\uB8CC \uD6C4 \uBBF8\uB9AC\uBCF4\uAE30 \uD3EC\uCEE4\uC2A4 \uC774\uB3D9: index=${correctionIndex}`);
+    setTimeout(() => {
+      const rawCorrections = this.getCurrentCorrections();
+      const uniqueCorrections = this.removeDuplicateCorrections(rawCorrections);
+      const targetCorrectionIndex = uniqueCorrections.findIndex(
+        (pc) => pc.originalIndex === correctionIndex
+      );
+      if (targetCorrectionIndex >= 0) {
+        this.currentFocusIndex = targetCorrectionIndex;
+        Logger.debug(`\u{1F3AF} \uD3EC\uCEE4\uC2A4 \uC778\uB371\uC2A4 \uC124\uC815: ${targetCorrectionIndex} (correctionIndex: ${correctionIndex})`);
+        this.updateFocusHighlight();
+        const previewElement = this.element.querySelector(".preview-text");
+        if (previewElement) {
+          const targetSpan = previewElement.querySelector(`[data-correction-index="${correctionIndex}"]`);
+          if (targetSpan) {
+            targetSpan.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+              inline: "nearest"
+            });
+            Logger.debug(`\u{1F3AF} \uBBF8\uB9AC\uBCF4\uAE30 \uC2A4\uD06C\uB864 \uC644\uB8CC: \uB2E8\uC5B4 "${targetSpan.textContent}"`);
+            targetSpan.classList.add("edit-completion-highlight");
+            setTimeout(() => {
+              targetSpan.classList.remove("edit-completion-highlight");
+            }, 2e3);
+          } else {
+            Logger.debug(`\u{1F3AF} \uBBF8\uB9AC\uBCF4\uAE30\uC5D0\uC11C \uD574\uB2F9 \uB2E8\uC5B4\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC74C: index=${correctionIndex}`);
+          }
+        }
+      } else {
+        Logger.debug(`\u{1F3AF} \uD604\uC7AC \uD398\uC774\uC9C0\uC5D0\uC11C \uD574\uB2F9 \uAD50\uC815\uC0AC\uD56D\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC74C: index=${correctionIndex}`);
+      }
+    }, 100);
   }
   /**
    * 페이지네이션을 재계산합니다.
@@ -4766,7 +4886,7 @@ var CorrectionPopup = class extends BaseComponent {
     if (this.currentPreviewPage >= this.totalPreviewPages) {
       this.currentPreviewPage = Math.max(0, this.totalPreviewPages - 1);
     }
-    Logger.log(`Recalculated pagination: Chars per page: ${this.charsPerPage}, Total pages: ${this.totalPreviewPages}, Current page: ${this.currentPreviewPage}`);
+    Logger.debug(`Recalculated pagination: Chars per page: ${this.charsPerPage}, Total pages: ${this.totalPreviewPages}, Current page: ${this.currentPreviewPage}`);
   }
   /**
    * 디스플레이를 업데이트합니다.
@@ -4890,7 +5010,7 @@ var CorrectionPopup = class extends BaseComponent {
       aiServiceSettings: (_b = this.aiService) == null ? void 0 : _b.getSettings()
     });
     if (!this.aiService || this.isAiAnalyzing) {
-      Logger.log("AI \uBD84\uC11D \uC911\uB2E8: aiService \uC5C6\uC74C \uB610\uB294 \uC774\uBBF8 \uBD84\uC11D \uC911");
+      Logger.warn("AI \uBD84\uC11D \uC911\uB2E8: aiService \uC5C6\uC74C \uB610\uB294 \uC774\uBBF8 \uBD84\uC11D \uC911");
       return;
     }
     if (!this.aiService.isAvailable()) {
@@ -4899,7 +5019,7 @@ var CorrectionPopup = class extends BaseComponent {
       return;
     }
     try {
-      Logger.log("\u{1F50D} performAIAnalysis \uBA54\uC778 try \uBE14\uB85D \uC9C4\uC785");
+      Logger.debug("\u{1F50D} performAIAnalysis \uBA54\uC778 try \uBE14\uB85D \uC9C4\uC785");
       this.isAiAnalyzing = true;
       const aiBtn = this.element.querySelector("#aiAnalyzeBtn");
       if (aiBtn) {
@@ -4907,10 +5027,10 @@ var CorrectionPopup = class extends BaseComponent {
         aiBtn.textContent = "\u{1F916} \uBD84\uC11D \uC911...";
       }
       Logger.log("AI \uBD84\uC11D \uC2DC\uC791 \uC911...");
-      Logger.log("\u{1F50D} \uD615\uD0DC\uC18C \uBD84\uC11D \uC815\uBCF4 \uD655\uC778 \uC911...");
+      Logger.debug("\u{1F50D} \uD615\uD0DC\uC18C \uBD84\uC11D \uC815\uBCF4 \uD655\uC778 \uC911...");
       let morphemeInfo = this.config.morphemeInfo || null;
       if (morphemeInfo) {
-        Logger.log("\u2705 orchestrator\uC5D0\uC11C \uD615\uD0DC\uC18C \uBD84\uC11D \uC815\uBCF4 \uC804\uB2EC\uBC1B\uC74C:", {
+        Logger.debug("\u2705 orchestrator\uC5D0\uC11C \uD615\uD0DC\uC18C \uBD84\uC11D \uC815\uBCF4 \uC804\uB2EC\uBC1B\uC74C:", {
           hasMorphemeInfo: !!morphemeInfo,
           sentencesCount: ((_c = morphemeInfo == null ? void 0 : morphemeInfo.sentences) == null ? void 0 : _c.length) || 0,
           tokensCount: ((_d = morphemeInfo == null ? void 0 : morphemeInfo.sentences) == null ? void 0 : _d.reduce((sum, s) => {
@@ -5276,7 +5396,7 @@ var CorrectionPopup = class extends BaseComponent {
     }
     const tokenUsage = await this.estimateTokenUsageWithMorphemes(request);
     const isOverMaxTokens = tokenUsage.totalEstimated > maxTokens;
-    Logger.log("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC \uD1A0\uD070 \uC0AC\uC6A9\uB7C9:", {
+    Logger.debug("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC \uD1A0\uD070 \uC0AC\uC6A9\uB7C9:", {
       total: tokenUsage.totalEstimated,
       input: tokenUsage.inputTokens,
       output: tokenUsage.estimatedOutputTokens,
@@ -5299,7 +5419,7 @@ var CorrectionPopup = class extends BaseComponent {
       modal.style.outline = "none";
       setTimeout(() => {
         modal.focus();
-        Logger.log("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uD3EC\uCEE4\uC2A4 \uC124\uC815 \uC644\uB8CC");
+        Logger.debug("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uD3EC\uCEE4\uC2A4 \uC124\uC815 \uC644\uB8CC");
       }, 10);
       let handleResponse = (action) => {
         modal.remove();
@@ -5314,15 +5434,15 @@ var CorrectionPopup = class extends BaseComponent {
         }
       };
       const handleKeyboard = (e) => {
-        Logger.log(`\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uD0A4 \uC774\uBCA4\uD2B8 \uAC10\uC9C0 - ${e.key} (\uCF54\uB4DC: ${e.code})`);
+        Logger.debug(`\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uD0A4 \uC774\uBCA4\uD2B8 \uAC10\uC9C0 - ${e.key} (\uCF54\uB4DC: ${e.code})`);
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
         if (e.key === "Enter") {
-          Logger.log("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: Enter\uD0A4 \uAC10\uC9C0 - \uC9C4\uD589");
+          Logger.debug("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: Enter\uD0A4 \uAC10\uC9C0 - \uC9C4\uD589");
           handleResponse("proceed");
         } else if (e.key === "Escape") {
-          Logger.log("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: Escape\uD0A4 \uAC10\uC9C0 - \uCDE8\uC18C");
+          Logger.debug("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: Escape\uD0A4 \uAC10\uC9C0 - \uCDE8\uC18C");
           handleResponse("cancel");
         }
       };
@@ -5330,15 +5450,15 @@ var CorrectionPopup = class extends BaseComponent {
       modal.addEventListener("keyup", handleKeyboard, { capture: true });
       const globalKeyHandler = (e) => {
         if (document.body.contains(modal)) {
-          Logger.log(`\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uAE00\uB85C\uBC8C \uD0A4 \uC774\uBCA4\uD2B8 \uCC28\uB2E8 - ${e.key}`);
+          Logger.debug(`\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uAE00\uB85C\uBC8C \uD0A4 \uC774\uBCA4\uD2B8 \uCC28\uB2E8 - ${e.key}`);
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();
           if (e.key === "Enter") {
-            Logger.log("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uAE00\uB85C\uBC8C Enter\uD0A4 \uAC10\uC9C0 - \uC9C4\uD589");
+            Logger.debug("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uAE00\uB85C\uBC8C Enter\uD0A4 \uAC10\uC9C0 - \uC9C4\uD589");
             handleResponse("proceed");
           } else if (e.key === "Escape") {
-            Logger.log("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uAE00\uB85C\uBC8C Escape\uD0A4 \uAC10\uC9C0 - \uCDE8\uC18C");
+            Logger.debug("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uAE00\uB85C\uBC8C Escape\uD0A4 \uAC10\uC9C0 - \uCDE8\uC18C");
             handleResponse("cancel");
           }
         }
@@ -5351,7 +5471,7 @@ var CorrectionPopup = class extends BaseComponent {
         document.removeEventListener("keydown", globalKeyHandler, { capture: true });
         document.removeEventListener("keyup", globalKeyHandler, { capture: true });
         window.removeEventListener("keydown", globalKeyHandler, { capture: true });
-        Logger.log("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uBAA8\uB4E0 \uC774\uBCA4\uD2B8 \uB9AC\uC2A4\uB108 \uC81C\uAC70 \uC644\uB8CC");
+        Logger.debug("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uBAA8\uB4E0 \uC774\uBCA4\uD2B8 \uB9AC\uC2A4\uB108 \uC81C\uAC70 \uC644\uB8CC");
         originalHandleResponse(action);
       };
       (_a2 = modal.querySelector("#token-warning-cancel")) == null ? void 0 : _a2.addEventListener("click", () => handleResponse("cancel"));
@@ -5383,7 +5503,7 @@ var CorrectionPopup = class extends BaseComponent {
   updateMaxTokenSetting(newMaxTokens) {
     if (this.onSettingsUpdate) {
       this.onSettingsUpdate(newMaxTokens);
-      Logger.log(`\uCD5C\uB300 \uD1A0\uD070\uC744 ${newMaxTokens}\uC73C\uB85C \uC5C5\uB370\uC774\uD2B8\uD588\uC2B5\uB2C8\uB2E4.`);
+      Logger.debug(`\uCD5C\uB300 \uD1A0\uD070\uC744 ${newMaxTokens}\uC73C\uB85C \uC5C5\uB370\uC774\uD2B8\uD588\uC2B5\uB2C8\uB2E4.`);
       new import_obsidian2.Notice(`\u2699\uFE0F \uCD5C\uB300 \uD1A0\uD070\uC774 ${newMaxTokens.toLocaleString()}\uC73C\uB85C \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, 3e3);
     } else {
       Logger.warn("\uC124\uC815 \uC5C5\uB370\uC774\uD2B8 \uCF5C\uBC31\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
@@ -5413,7 +5533,7 @@ var CorrectionPopup = class extends BaseComponent {
    */
   showKeyboardHint() {
     if (import_obsidian2.Platform.isMobile) {
-      Logger.log("\uBAA8\uBC14\uC77C \uD658\uACBD\uC5D0\uC11C\uB294 \uD0A4\uBCF4\uB4DC \uD78C\uD2B8\uB97C \uD45C\uC2DC\uD558\uC9C0 \uC54A\uC74C");
+      Logger.debug("\uBAA8\uBC14\uC77C \uD658\uACBD\uC5D0\uC11C\uB294 \uD0A4\uBCF4\uB4DC \uD78C\uD2B8\uB97C \uD45C\uC2DC\uD558\uC9C0 \uC54A\uC74C");
       return;
     }
     const hint = document.createElement("div");
@@ -5439,8 +5559,9 @@ var CorrectionPopup = class extends BaseComponent {
       { key: "Tab", desc: "\uB2E4\uC74C \uC624\uB958" },
       { key: "\u2190/\u2192", desc: "\uC218\uC815 \uC81C\uC548 \uC21C\uD658" },
       { key: "Enter", desc: "\uC801\uC6A9" },
+      { key: "\u2318E", desc: "\uD3B8\uC9D1 \uBAA8\uB4DC" },
       { key: "\u21E7\u2318A", desc: "AI \uBD84\uC11D" },
-      { key: "\u2318E", desc: "\uC624\uB958 \uC0C1\uC138 \uD1A0\uAE00" },
+      { key: "\u2318\u21E7E", desc: "\uC624\uB958 \uC0C1\uC138 \uD1A0\uAE00" },
       { key: "\u2318\u21E7\u2190/\u2192", desc: "\uC77C\uAD04 \uBCC0\uACBD" },
       { key: "\u2191/\u2193", desc: "\uD398\uC774\uC9C0 \uC774\uB3D9" },
       { key: "Esc", desc: "\uB2EB\uAE30" }
@@ -5465,7 +5586,7 @@ var CorrectionPopup = class extends BaseComponent {
    * 오류 상세부분 펼침/접힘을 토글합니다.
    */
   toggleErrorSummary() {
-    Logger.log("\uC624\uB958 \uC0C1\uC138\uBD80\uBD84 \uD1A0\uAE00 \uD2B8\uB9AC\uAC70\uB428 (\uD0A4\uBCF4\uB4DC \uB2E8\uCD95\uD0A4: \u2318E)");
+    Logger.log("\uC624\uB958 \uC0C1\uC138\uBD80\uBD84 \uD1A0\uAE00 \uD2B8\uB9AC\uAC70\uB428 (\uD0A4\uBCF4\uB4DC \uB2E8\uCD95\uD0A4: \u2318\u21E7E)");
     const errorSummary = document.getElementById("errorSummary");
     if (!errorSummary) {
       Logger.warn("errorSummary \uC694\uC18C\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
@@ -5474,7 +5595,7 @@ var CorrectionPopup = class extends BaseComponent {
     const isCurrentlyCollapsed = errorSummary.classList.contains("collapsed");
     if (isCurrentlyCollapsed) {
       errorSummary.classList.remove("collapsed");
-      Logger.log("\uC624\uB958 \uC0C1\uC138\uBD80\uBD84 \uD3BC\uCE68");
+      Logger.log("\uC624\uB958 \uC0C1\uC138\uBD80\uBD84 \uD3FC\uCE68");
     } else {
       errorSummary.classList.add("collapsed");
       Logger.log("\uC624\uB958 \uC0C1\uC138\uBD80\uBD84 \uC811\uD798");
@@ -5528,7 +5649,7 @@ var CorrectionPopup = class extends BaseComponent {
         });
         this.highlightFocusedError(targetItem);
       }
-      Logger.log(`\uC624\uB958 \uC0C1\uC138\uBD80\uBD84 \uC790\uB3D9\uC2A4\uD06C\uB864: ${pageCorrection.correction.original} (forceOpen: ${forceOpen}, collapsed: ${isCollapsed})`);
+      Logger.debug(`\uC624\uB958 \uC0C1\uC138\uBD80\uBD84 \uC790\uB3D9\uC2A4\uD06C\uB864: ${pageCorrection.correction.original} (forceOpen: ${forceOpen}, collapsed: ${isCollapsed})`);
     }
   }
   /**
@@ -5544,6 +5665,60 @@ var CorrectionPopup = class extends BaseComponent {
       targetItem.classList.remove("error-item-highlighted");
     }, 2e3);
     Logger.log("\uC624\uB958 \uCE74\uB4DC \uD558\uC774\uB77C\uC774\uD2B8 \uC560\uB2C8\uBA54\uC774\uC158 \uC801\uC6A9");
+  }
+  /**
+   * 현재 포커스된 오류에 대해 편집 모드로 진입합니다.
+   */
+  enterEditModeForFocusedError() {
+    Logger.log(`\u2328\uFE0F enterEditModeForFocusedError \uD638\uCD9C\uB428: currentFocusIndex=${this.currentFocusIndex}`);
+    const rawCorrections = this.getCurrentCorrections();
+    const uniqueCorrections = this.removeDuplicateCorrections(rawCorrections);
+    this.currentCorrections = uniqueCorrections;
+    Logger.debug(`\u2328\uFE0F \uAD50\uC815\uC0AC\uD56D \uAC1C\uC218: raw=${rawCorrections.length}, unique=${uniqueCorrections.length}`);
+    Logger.debug(`\u2328\uFE0F \uD3EC\uCEE4\uC2A4 \uC778\uB371\uC2A4 \uC720\uD6A8\uC131: currentFocusIndex=${this.currentFocusIndex}, \uBC94\uC704=[0, ${uniqueCorrections.length - 1}]`);
+    if (this.currentFocusIndex < 0 || this.currentFocusIndex >= uniqueCorrections.length) {
+      if (uniqueCorrections.length > 0) {
+        this.currentFocusIndex = 0;
+        Logger.debug(`\u2328\uFE0F \uD3EC\uCEE4\uC2A4 \uC778\uB371\uC2A4 \uCD08\uAE30\uD654: ${this.currentFocusIndex}`);
+      } else {
+        Logger.warn("\u{1F6AB} \uD3B8\uC9D1 \uAC00\uB2A5\uD55C \uC624\uB958\uAC00 \uC5C6\uC74C");
+        return;
+      }
+    }
+    const pageCorrection = uniqueCorrections[this.currentFocusIndex];
+    const actualIndex = pageCorrection.originalIndex;
+    Logger.debug(`\u2328\uFE0F Cmd+E\uD0A4\uB85C \uD3B8\uC9D1 \uBAA8\uB4DC \uC9C4\uC785: index=${actualIndex}, text="${pageCorrection.correction.original}"`);
+    const errorSummary = this.element.querySelector("#errorSummary");
+    const wasCollapsed = errorSummary && errorSummary.classList.contains("collapsed");
+    if (wasCollapsed) {
+      errorSummary.classList.remove("collapsed");
+      Logger.debug("\u2328\uFE0F \uC624\uB958 \uC0C1\uC138 \uC601\uC5ED \uC790\uB3D9 \uD3BC\uCE68");
+      this.updateDisplay();
+    }
+    setTimeout(() => {
+      const errorCard = this.element.querySelector(`[data-correction-index="${actualIndex}"] .error-original-compact`);
+      if (errorCard) {
+        Logger.debug(`\u2328\uFE0F \uD3B8\uC9D1 \uBAA8\uB4DC \uC9C4\uC785 - \uC624\uB958 \uC0C1\uC138 \uCE74\uB4DC \uCC3E\uC74C: index=${actualIndex}`);
+        errorCard.scrollIntoView({
+          behavior: "smooth",
+          block: "center"
+        });
+        Logger.debug("\u2328\uFE0F \uC624\uD1A0\uC2A4\uD06C\uB864 \uC218\uD589");
+        setTimeout(() => {
+          this.enterCardEditMode(errorCard, actualIndex);
+        }, 300);
+      } else {
+        Logger.debug(`\u2328\uFE0F \uC624\uB958 \uC0C1\uC138 \uCE74\uB4DC\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC74C: index=${actualIndex}`);
+        Logger.debug(`\u2328\uFE0F \uC7AC\uC2DC\uB3C4: \uBAA8\uB4E0 .error-original-compact \uC694\uC18C \uD655\uC778`);
+        const allCards = this.element.querySelectorAll(".error-original-compact");
+        Logger.debug(`\u2328\uFE0F \uBC1C\uACAC\uB41C \uCE74\uB4DC \uAC1C\uC218: ${allCards.length}`);
+        allCards.forEach((card, index) => {
+          var _a, _b;
+          const cardIndex = (_b = (_a = card.parentElement) == null ? void 0 : _a.dataset) == null ? void 0 : _b.correctionIndex;
+          Logger.debug(`\u2328\uFE0F \uCE74\uB4DC ${index}: correctionIndex=${cardIndex}`);
+        });
+      }
+    }, wasCollapsed ? 100 : 0);
   }
   /**
    * 팝업을 닫습니다.
@@ -5700,7 +5875,7 @@ var AIAnalysisService = class {
             context.sentenceContext = enhancedInfo.sentenceContext;
             context.isLikelyProperNoun = true;
             context.documentType = enhancedInfo.documentType;
-            Logger.log(`\u{1F50D} \uACE0\uC720\uBA85\uC0AC \uAC10\uC9C0: "${correction.original}" - \uAC10\uC9C0 \uBC29\uBC95: ${enhancedInfo.detectionMethod} - \uBB38\uC7A5 \uCEE8\uD14D\uC2A4\uD2B8 \uCD94\uAC00`);
+            Logger.debug(`\u{1F50D} \uACE0\uC720\uBA85\uC0AC \uAC10\uC9C0: "${correction.original}" - \uAC10\uC9C0 \uBC29\uBC95: ${enhancedInfo.detectionMethod} - \uBB38\uC7A5 \uCEE8\uD14D\uC2A4\uD2B8 \uCD94\uAC00`);
           }
         } catch (error) {
           Logger.warn("\uD5A5\uC0C1\uB41C \uCEE8\uD14D\uC2A4\uD2B8 \uCD94\uCD9C \uC2E4\uD328:", error);
@@ -5714,14 +5889,14 @@ var AIAnalysisService = class {
    * 형태소 분석 결과 전체를 로깅합니다.
    */
   logMorphemeAnalysis(morphemeInfo, corrections) {
-    Logger.log("\u{1F4CB} \uD615\uD0DC\uC18C \uBD84\uC11D \uACB0\uACFC \uC694\uC57D:");
+    Logger.debug("\u{1F4CB} \uD615\uD0DC\uC18C \uBD84\uC11D \uACB0\uACFC \uC694\uC57D:");
     if (!morphemeInfo || !morphemeInfo.sentences) {
       Logger.warn("\uD615\uD0DC\uC18C \uBD84\uC11D \uB370\uC774\uD130\uAC00 \uC720\uD6A8\uD558\uC9C0 \uC54A\uC74C");
       return;
     }
     const totalSentences = morphemeInfo.sentences.length;
     const totalTokens = morphemeInfo.sentences.reduce((sum, sentence) => sum + (sentence.tokens ? sentence.tokens.length : 0), 0);
-    Logger.log(`  \uCD1D ${totalSentences}\uAC1C \uBB38\uC7A5, ${totalTokens}\uAC1C \uD1A0\uD070 \uBD84\uC11D\uB428`);
+    Logger.debug(`  \uCD1D ${totalSentences}\uAC1C \uBB38\uC7A5, ${totalTokens}\uAC1C \uD1A0\uD070 \uBD84\uC11D\uB428`);
     const properNouns = [];
     const foreignWords = [];
     const allTokens = [];
@@ -5746,19 +5921,19 @@ var AIAnalysisService = class {
       });
     });
     if (properNouns.length > 0) {
-      Logger.log(`  \u{1F3F7}\uFE0F  \uACE0\uC720\uBA85\uC0AC (NNP): [${properNouns.map((noun) => `"${noun}"`).join(", ")}]`);
+      Logger.debug(`  \u{1F3F7}\uFE0F  \uACE0\uC720\uBA85\uC0AC (NNP): [${properNouns.map((noun) => `"${noun}"`).join(", ")}]`);
     }
     if (foreignWords.length > 0) {
-      Logger.log(`  \u{1F310} \uC678\uAD6D\uC5B4/\uD2B9\uC218\uC5B4 (SL/SH/SN): [${foreignWords.map((word) => `"${word}"`).join(", ")}]`);
+      Logger.debug(`  \u{1F310} \uC678\uAD6D\uC5B4/\uD2B9\uC218\uC5B4 (SL/SH/SN): [${foreignWords.map((word) => `"${word}"`).join(", ")}]`);
     }
     const errorWords = corrections.map((c) => c.original);
     const matchedErrors = errorWords.filter(
       (word) => properNouns.includes(word) || foreignWords.includes(word)
     );
     if (matchedErrors.length > 0) {
-      Logger.log(`  \u2728 \uB9DE\uCDA4\uBC95 \uC624\uB958 \uC911 \uD615\uD0DC\uC18C \uBD84\uC11D\uC73C\uB85C \uAC10\uC9C0\uB41C \uACE0\uC720\uBA85\uC0AC/\uC678\uAD6D\uC5B4: [${matchedErrors.map((word) => `"${word}"`).join(", ")}]`);
+      Logger.debug(`  \u2728 \uB9DE\uCDA4\uBC95 \uC624\uB958 \uC911 \uD615\uD0DC\uC18C \uBD84\uC11D\uC73C\uB85C \uAC10\uC9C0\uB41C \uACE0\uC720\uBA85\uC0AC/\uC678\uAD6D\uC5B4: [${matchedErrors.map((word) => `"${word}"`).join(", ")}]`);
     } else {
-      Logger.log("  \u2753 \uB9DE\uCDA4\uBC95 \uC624\uB958 \uC911 \uD615\uD0DC\uC18C \uBD84\uC11D\uC73C\uB85C \uACE0\uC720\uBA85\uC0AC/\uC678\uAD6D\uC5B4\uB85C \uBD84\uB958\uB41C \uB2E8\uC5B4 \uC5C6\uC74C");
+      Logger.debug("  \u2753 \uB9DE\uCDA4\uBC95 \uC624\uB958 \uC911 \uD615\uD0DC\uC18C \uBD84\uC11D\uC73C\uB85C \uACE0\uC720\uBA85\uC0AC/\uC678\uAD6D\uC5B4\uB85C \uBD84\uB958\uB41C \uB2E8\uC5B4 \uC5C6\uC74C");
     }
     Logger.debug("\uC0C1\uC138 \uD1A0\uD070 \uC815\uBCF4 (\uCC98\uC74C 10\uAC1C):");
     allTokens.slice(0, 10).forEach((token, idx) => {
@@ -5787,7 +5962,7 @@ var AIAnalysisService = class {
                 "SN": "\uC22B\uC790"
               };
               const tagDescription = tagDescriptions[tag] || tag;
-              Logger.log(`\u{1F3F7}\uFE0F \uD615\uD0DC\uC18C \uACE0\uC720\uBA85\uC0AC \uAC10\uC9C0: "${text}" - \uD488\uC0AC: ${tag}(${tagDescription})`);
+              Logger.debug(`\u{1F3F7}\uFE0F \uD615\uD0DC\uC18C \uACE0\uC720\uBA85\uC0AC \uAC10\uC9C0: "${text}" - \uD488\uC0AC: ${tag}(${tagDescription})`);
               return true;
             }
           }
@@ -5871,7 +6046,7 @@ var AIAnalysisService = class {
     ];
     for (const { pattern, name } of patterns) {
       if (pattern.test(text)) {
-        Logger.log(`\u{1F50D} \uD328\uD134 \uACE0\uC720\uBA85\uC0AC \uAC10\uC9C0: "${text}" - \uD328\uD134: ${name}`);
+        Logger.debug(`\u{1F50D} \uD328\uD134 \uACE0\uC720\uBA85\uC0AC \uAC10\uC9C0: "${text}" - \uD328\uD134: ${name}`);
         return true;
       }
     }
@@ -6036,7 +6211,7 @@ var AIAnalysisService = class {
             Logger.error(`\uBC30\uCE58 ${i + 1} \uCC98\uB9AC \uC2E4\uD328:`, error);
           }
         }
-        Logger.debug(`AI \uBD84\uC11D \uC644\uB8CC: ${aiResults.length}\uAC1C \uACB0\uACFC \uC218\uC9D1\uB428`);
+        Logger.log(`AI \uBD84\uC11D \uC644\uB8CC: ${aiResults.length}\uAC1C \uACB0\uACFC \uC218\uC9D1\uB428`);
       }
       const resolvedResults = alreadyResolvedContexts.map((ctx) => ({
         correctionIndex: ctx.correctionIndex,
@@ -6444,7 +6619,7 @@ var _LoadingManager = class {
     this.currentState = "analyzing";
     this.currentStep = 0;
     this.startTime = Date.now();
-    Logger.log("\uB85C\uB529 \uC2DC\uC791:", { includeAI, totalSteps: this.steps.length });
+    Logger.debug("\uB85C\uB529 \uC2DC\uC791:", { includeAI, totalSteps: this.steps.length });
     this.showProgressNotice();
     this.updateProgress();
   }
@@ -6478,7 +6653,7 @@ var _LoadingManager = class {
     this.currentState = "idle";
     this.hideNotice();
     const totalTime = Date.now() - this.startTime;
-    Logger.log("\uB85C\uB529 \uC644\uB8CC:", { totalTime: `${totalTime}ms` });
+    Logger.debug("\uB85C\uB529 \uC644\uB8CC:", { totalTime: `${totalTime}ms` });
     if (this.onStateChangeCallback) {
       this.onStateChangeCallback("idle");
     }
@@ -6536,7 +6711,7 @@ var _LoadingManager = class {
   cancel() {
     this.currentState = "idle";
     this.hideNotice();
-    Logger.log("\uB85C\uB529 \uCDE8\uC18C\uB428");
+    Logger.debug("\uB85C\uB529 \uCDE8\uC18C\uB428");
     if (this.onStateChangeCallback) {
       this.onStateChangeCallback("idle");
     }
@@ -6758,7 +6933,7 @@ var SpellCheckOrchestrator = class {
               Logger.log(`\uAD50\uC815 \uAC1C\uC120 \uC644\uB8CC: ${result.corrections.length}\uAC1C \uC624\uB958`);
             }
           } catch (morphemeError) {
-            Logger.log("\uD615\uD0DC\uC18C \uBD84\uC11D \uC2E4\uD328, \uC6D0\uBCF8 \uAD50\uC815 \uBC0F \uD328\uD134 \uB9E4\uCE6D \uC0AC\uC6A9:", morphemeError);
+            Logger.warn("\uD615\uD0DC\uC18C \uBD84\uC11D \uC2E4\uD328, \uC6D0\uBCF8 \uAD50\uC815 \uBC0F \uD328\uD134 \uB9E4\uCE6D \uC0AC\uC6A9:", morphemeError);
             morphemeInfo = null;
           }
         }
@@ -6820,7 +6995,7 @@ var SpellCheckOrchestrator = class {
       return;
     }
     const cleanedText = selectedText.trim();
-    Logger.log("handleSpellCheckResult \uD14D\uC2A4\uD2B8 \uC815\uB9AC:", {
+    Logger.debug("handleSpellCheckResult \uD14D\uC2A4\uD2B8 \uC815\uB9AC:", {
       originalLength: selectedText.length,
       cleanedLength: cleanedText.length,
       correctionsCount: result.corrections.length
@@ -6934,7 +7109,7 @@ var SpellCheckOrchestrator = class {
         new import_obsidian8.Notice("\uD604\uC7AC \uBB38\uB2E8\uC5D0 \uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
         return;
       }
-      Logger.log(`\uD604\uC7AC \uBB38\uB2E8 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791: ${selectedText.length}\uC790`);
+      Logger.debug(`\uD604\uC7AC \uBB38\uB2E8 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791: ${selectedText.length}\uC790`);
       await this.performSpellCheck(selectedText, editor, paragraphData.from, paragraphData.to);
     } catch (error) {
       Logger.error("\uD604\uC7AC \uBB38\uB2E8 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958 \uBC1C\uC0DD:", error);
@@ -6966,7 +7141,7 @@ var SpellCheckOrchestrator = class {
         new import_obsidian8.Notice("\uD604\uC7AC \uB2E8\uC5B4\uC5D0 \uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
         return;
       }
-      Logger.log(`\uD604\uC7AC \uB2E8\uC5B4 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791: "${selectedText}"`);
+      Logger.debug(`\uD604\uC7AC \uB2E8\uC5B4 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791: "${selectedText}"`);
       await this.performSpellCheck(selectedText, editor, wordData.from, wordData.to);
     } catch (error) {
       Logger.error("\uD604\uC7AC \uB2E8\uC5B4 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958 \uBC1C\uC0DD:", error);
@@ -7018,7 +7193,7 @@ var SpellCheckOrchestrator = class {
       const result = await this.apiService.checkSpelling(cleanedText, this.settings);
       if (result.corrections && result.corrections.length > 0) {
         Logger.log(`\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC644\uB8CC: ${result.corrections.length}\uAC1C \uC624\uB958 \uBC1C\uACAC`);
-        Logger.log("API \uD638\uCD9C \uD14D\uC2A4\uD2B8:", {
+        Logger.debug("API \uD638\uCD9C \uD14D\uC2A4\uD2B8:", {
           originalLength: selectedText.length,
           cleanedLength: cleanedText.length,
           originalFirst20: selectedText.substring(0, 20),
@@ -8533,7 +8708,7 @@ var ModernSettingsTab = class extends import_obsidian9.PluginSettingTab {
       URL.revokeObjectURL(url);
       new import_obsidian9.Notice("\uB85C\uADF8\uAC00 \uB2E4\uC6B4\uB85C\uB4DC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
     } catch (error) {
-      console.error("\uB85C\uADF8 \uB2E4\uC6B4\uB85C\uB4DC \uC624\uB958:", error);
+      Logger2.error("\uB85C\uADF8 \uB2E4\uC6B4\uB85C\uB4DC \uC624\uB958:", error);
       new import_obsidian9.Notice("\uB85C\uADF8 \uB2E4\uC6B4\uB85C\uB4DC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
     }
   }
@@ -8586,7 +8761,7 @@ var ModernSettingsTab = class extends import_obsidian9.PluginSettingTab {
             additionalStatsBox.createEl("div", { text: `\u2022 ${metric}` });
           });
         } catch (error) {
-          console.error("\uBA54\uD2B8\uB9AD \uC5C5\uB370\uC774\uD2B8 \uC624\uB958:", error);
+          Logger.error("\uBA54\uD2B8\uB9AD \uC5C5\uB370\uC774\uD2B8 \uC624\uB958:", error);
         }
       }
     };

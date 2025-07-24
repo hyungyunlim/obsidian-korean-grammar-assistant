@@ -74,7 +74,7 @@ export class OptimizedSpellCheckService {
     this.requestTimeout = requestTimeoutMs;
     this.maxConcurrentBatches = maxConcurrentBatches;
     
-    Logger.log('OptimizedSpellCheckService 초기화:', {
+    Logger.debug('OptimizedSpellCheckService 초기화:', {
       maxBatchSize,
       batchTimeoutMs,
       requestTimeoutMs,
@@ -99,13 +99,13 @@ export class OptimizedSpellCheckService {
     // 1. 캐시 확인
     const cachedResult = this.cacheService.get(text);
     if (cachedResult) {
-      Logger.log('캐시에서 결과 반환:', { textLength: text.length });
+      Logger.debug('캐시에서 결과 반환:', { textLength: text.length });
       return cachedResult;
     }
     
     // 2. 짧은 텍스트나 긴급한 요청은 즉시 처리
     if (text.length < 50 || priority === 'high') {
-      Logger.log('즉시 처리:', { textLength: text.length, priority });
+      Logger.debug('즉시 처리:', { textLength: text.length, priority });
       return this.processSingleRequest(text, settings);
     }
     
@@ -122,7 +122,7 @@ export class OptimizedSpellCheckService {
       // 우선순위에 따라 큐에 삽입
       this.insertByPriority(item);
       
-      Logger.log('배치 큐에 추가:', { 
+      Logger.debug('배치 큐에 추가:', { 
         queueLength: this.requestQueue.length,
         priority,
         textLength: text.length
@@ -178,7 +178,7 @@ export class OptimizedSpellCheckService {
       this.batchTimer = undefined;
     }
     
-    Logger.log('대기 중인 모든 요청 취소됨');
+    Logger.debug('대기 중인 모든 요청 취소됨');
   }
 
   /**
@@ -187,7 +187,7 @@ export class OptimizedSpellCheckService {
   destroy(): void {
     this.cancelPendingRequests();
     this.cacheService.destroy();
-    Logger.log('OptimizedSpellCheckService 종료');
+    Logger.debug('OptimizedSpellCheckService 종료');
   }
 
   /**
@@ -244,7 +244,7 @@ export class OptimizedSpellCheckService {
     
     // 동시 배치 제한 확인
     if (this.activeBatches >= this.maxConcurrentBatches) {
-      Logger.log('최대 동시 배치 수 도달, 대기 중');
+      Logger.debug('최대 동시 배치 수 도달, 대기 중');
       return;
     }
     
@@ -278,7 +278,7 @@ export class OptimizedSpellCheckService {
     // 배치 추출 (우선순위 고려)
     const batch = this.requestQueue.splice(0, this.maxBatchSize);
     
-    Logger.log('배치 처리 시작:', { 
+    Logger.debug('배치 처리 시작:', { 
       batchSize: batch.length,
       remainingQueue: this.requestQueue.length,
       activeBatches: this.activeBatches
@@ -308,7 +308,7 @@ export class OptimizedSpellCheckService {
       this.processing = false;
       this.activeBatches--;
       
-      Logger.log('배치 처리 완료:', { 
+      Logger.debug('배치 처리 완료:', { 
         remainingQueue: this.requestQueue.length,
         activeBatches: this.activeBatches
       });

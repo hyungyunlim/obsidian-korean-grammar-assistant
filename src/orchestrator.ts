@@ -94,7 +94,7 @@ export class SpellCheckOrchestrator {
               Logger.log(`교정 개선 완료: ${result.corrections.length}개 오류`);
             }
           } catch (morphemeError) {
-            Logger.log('형태소 분석 실패, 원본 교정 및 패턴 매칭 사용:', morphemeError);
+            Logger.warn('형태소 분석 실패, 원본 교정 및 패턴 매칭 사용:', morphemeError);
             morphemeInfo = null;
           }
         }
@@ -190,7 +190,7 @@ export class SpellCheckOrchestrator {
 
     // 텍스트 정리 - API 호출과 일치시키기
     const cleanedText = selectedText.trim();
-    Logger.log('handleSpellCheckResult 텍스트 정리:', {
+    Logger.debug('handleSpellCheckResult 텍스트 정리:', {
       originalLength: selectedText.length,
       cleanedLength: cleanedText.length,
       correctionsCount: result.corrections.length
@@ -324,7 +324,7 @@ export class SpellCheckOrchestrator {
         return;
       }
 
-      Logger.log(`현재 문단 맞춤법 검사 시작: ${selectedText.length}자`);
+      Logger.debug(`현재 문단 맞춤법 검사 시작: ${selectedText.length}자`);
       
       // 기존 execute 메서드의 로직 재사용
       await this.performSpellCheck(selectedText, editor, paragraphData.from, paragraphData.to);
@@ -367,7 +367,7 @@ export class SpellCheckOrchestrator {
         return;
       }
 
-      Logger.log(`현재 단어 맞춤법 검사 시작: "${selectedText}"`);
+      Logger.debug(`현재 단어 맞춤법 검사 시작: "${selectedText}"`);
       
       // 기존 execute 메서드의 로직 재사용
       await this.performSpellCheck(selectedText, editor, wordData.from, wordData.to);
@@ -446,7 +446,7 @@ export class SpellCheckOrchestrator {
       
       if (result.corrections && result.corrections.length > 0) {
         Logger.log(`맞춤법 검사 완료: ${result.corrections.length}개 오류 발견`);
-        Logger.log('API 호출 텍스트:', {
+        Logger.debug('API 호출 텍스트:', {
           originalLength: selectedText.length,
           cleanedLength: cleanedText.length,
           originalFirst20: selectedText.substring(0, 20),

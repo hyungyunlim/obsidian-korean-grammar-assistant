@@ -206,7 +206,7 @@ export class DOMOptimizer {
     
     if (savings > 0) {
       optimized = true;
-      Logger.log('DOM 구조 최적화:', { beforeDepth, afterDepth, savings });
+      Logger.debug('DOM 구조 최적화:', { beforeDepth, afterDepth, savings });
     }
     
     return { optimized, beforeDepth, afterDepth, savings };
@@ -222,7 +222,7 @@ export class DOMOptimizer {
     // 이벤트 리스너 정리 (가능한 경우)
     this.cleanupEventListeners();
     
-    Logger.log('DOM 메모리 최적화 완료');
+    Logger.debug('DOM 메모리 최적화 완료');
   }
 
   /**

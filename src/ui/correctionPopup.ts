@@ -81,7 +81,7 @@ export class CorrectionPopup extends BaseComponent {
       const target = evt.target as HTMLElement;
       if (target && (target.dataset?.editMode === 'true' || target.classList.contains('error-original-input'))) {
         // 편집 중인 input 요소에서는 기본 동작 허용
-        Logger.log('Enter key in edit mode - allowing default behavior');
+        Logger.debug('Enter key in edit mode - allowing default behavior');
         return true;
       }
       evt.preventDefault();
@@ -94,7 +94,7 @@ export class CorrectionPopup extends BaseComponent {
       const target = evt.target as HTMLElement;
       if (target && (target.dataset?.editMode === 'true' || target.classList.contains('error-original-input'))) {
         // 편집 중인 input 요소에서는 기본 동작 허용
-        Logger.log('Escape key in edit mode - allowing default behavior');
+        Logger.debug('Escape key in edit mode - allowing default behavior');
         return true;
       }
       evt.preventDefault();
@@ -105,7 +105,7 @@ export class CorrectionPopup extends BaseComponent {
     // ArrowRight: 다음 수정 제안으로 순환
     this.keyboardScope.register([], 'ArrowRight', (evt: KeyboardEvent) => {
       if (this.isInEditMode()) {
-        Logger.log('🚫 편집 모드 중 - ArrowRight 비활성화');
+        Logger.debug('🚫 편집 모드 중 - ArrowRight 비활성화');
         return;
       }
       evt.preventDefault();
@@ -116,7 +116,7 @@ export class CorrectionPopup extends BaseComponent {
     // ArrowLeft: 이전 수정 제안으로 순환
     this.keyboardScope.register([], 'ArrowLeft', (evt: KeyboardEvent) => {
       if (this.isInEditMode()) {
-        Logger.log('🚫 편집 모드 중 - ArrowLeft 비활성화');
+        Logger.debug('🚫 편집 모드 중 - ArrowLeft 비활성화');
         return;
       }
       evt.preventDefault();
@@ -133,13 +133,7 @@ export class CorrectionPopup extends BaseComponent {
       return false;
     });
 
-    // Cmd+E: 오류 상세부분 펼침/접힘
-    this.keyboardScope.register(['Mod'], 'KeyE', (evt: KeyboardEvent) => {
-      evt.preventDefault();
-      evt.stopPropagation();
-      this.toggleErrorSummary();
-      return false;
-    });
+    // Note: Cmd+E와 Cmd+Shift+E는 bindEvents()에서 글로벌 스코프로 등록됨
 
     // ArrowUp: 이전 페이지
     this.keyboardScope.register([], 'ArrowUp', (evt: KeyboardEvent) => {
@@ -167,7 +161,7 @@ export class CorrectionPopup extends BaseComponent {
     // Cmd/Ctrl+Shift+ArrowRight: 모든 오류를 다음 제안으로 일괄 변경
     this.keyboardScope.register(['Mod', 'Shift'], 'ArrowRight', (evt: KeyboardEvent) => {
       if (this.isInEditMode()) {
-        Logger.log('🚫 편집 모드 중 - 일괄 변경 비활성화');
+        Logger.debug('🚫 편집 모드 중 - 일괄 변경 비활성화');
         return;
       }
       evt.preventDefault();
@@ -178,7 +172,7 @@ export class CorrectionPopup extends BaseComponent {
     // Cmd/Ctrl+Shift+ArrowLeft: 모든 오류를 이전 제안으로 일괄 변경
     this.keyboardScope.register(['Mod', 'Shift'], 'ArrowLeft', (evt: KeyboardEvent) => {
       if (this.isInEditMode()) {
-        Logger.log('🚫 편집 모드 중 - 일괄 변경 비활성화');
+        Logger.debug('🚫 편집 모드 중 - 일괄 변경 비활성화');
         return;
       }
       evt.preventDefault();
@@ -289,7 +283,7 @@ export class CorrectionPopup extends BaseComponent {
     const actualIndex = pageCorrection.originalIndex;
     const currentState = this.stateManager.getValue(actualIndex);
     // 현재 선택된 수정사항을 적용 처리
-    Logger.log(`키보드로 수정사항 적용: ${currentState}`);
+    Logger.debug(`키보드로 수정사항 적용: ${currentState}`);
   }
 
   /**
@@ -330,7 +324,7 @@ export class CorrectionPopup extends BaseComponent {
       ? this.stateManager.toggleState(correctionIndex)
       : this.stateManager.toggleStatePrev(correctionIndex);
     
-    Logger.debug(`수정 제안 순환: ${direction}, index: ${correctionIndex}, 새로운 값: ${result.value}`);
+    Logger.log(`수정 제안 순환: ${direction}, index: ${correctionIndex}, 새로운 값: ${result.value}`);
     
     // UI 업데이트
     this.updateDisplay();
@@ -402,16 +396,16 @@ export class CorrectionPopup extends BaseComponent {
       const firstPageCorrection = this.currentCorrections[0];
       const actualIndex = firstPageCorrection.originalIndex;
       
-      Logger.log(`초기 포커스 설정: ${this.currentFocusIndex}/${this.currentCorrections.length}`);
-      Logger.log(`첫 번째 오류: "${firstPageCorrection.correction.original}" (전체 배열 인덱스: ${actualIndex}, 고유ID: ${firstPageCorrection.uniqueId})`);
-      Logger.log('현재 페이지 오류 목록:', this.currentCorrections.map(pc => ({ 
+      Logger.debug(`초기 포커스 설정: ${this.currentFocusIndex}/${this.currentCorrections.length}`);
+      Logger.debug(`첫 번째 오류: "${firstPageCorrection.correction.original}" (전체 배열 인덱스: ${actualIndex}, 고유ID: ${firstPageCorrection.uniqueId})`);
+      Logger.debug('현재 페이지 오류 목록:', this.currentCorrections.map(pc => ({ 
         original: pc.correction.original, 
         originalIndex: pc.originalIndex,
         uniqueId: pc.uniqueId
       })));
     } else {
       this.currentFocusIndex = -1;
-      Logger.log('오류가 없어 포커스 설정하지 않음');
+      Logger.debug('오류가 없어 포커스 설정하지 않음');
     }
     
     Logger.debug('========= resetFocusToFirstError 종료 =========');
@@ -523,7 +517,6 @@ export class CorrectionPopup extends BaseComponent {
     setTimeout(() => {
       // 팝업에 포커스 설정하여 키보드 이벤트가 올바르게 전달되도록 함
       this.element.focus();
-      Logger.log('팝업 포커스 설정 완료');
     }, 50);
     
     // 초기 포커스 설정
@@ -974,7 +967,7 @@ export class CorrectionPopup extends BaseComponent {
     const trimmedStartOffset = originalText.length - originalText.trimStart().length;
     
     // 디버깅을 위한 로그
-    Logger.log('generatePreviewHTML 디버깅:', {
+    Logger.debug('generatePreviewHTML 디버깅:', {
       isLongText: this.isLongText,
       originalLength: originalText.length,
       trimmedLength: previewText.length,
@@ -1004,7 +997,7 @@ export class CorrectionPopup extends BaseComponent {
       // 사용자 편집 상태일 때 디버깅
       const isUserEdited = this.stateManager.isUserEditedState(actualIndex);
       if (isUserEdited) {
-        Logger.log(`🎨 미리보기 사용자편집: index=${actualIndex}, original="${correction.original}", currentValue="${currentValue}", displayClass="${displayClass}"`);
+        Logger.debug(`🎨 미리보기 사용자편집: index=${actualIndex}, original="${correction.original}", currentValue="${currentValue}", displayClass="${displayClass}"`);
       }
       
       const replacementHtml = `<span class="${displayClass} clickable-error" data-correction-index="${actualIndex}" data-unique-id="${uniqueId}">${escapedValue}</span>`;
@@ -1092,7 +1085,7 @@ export class CorrectionPopup extends BaseComponent {
     const cleanedPageText = pageText.trim();
     
     // 디버깅 로그 추가
-    Logger.log('getCurrentPreviewText 디버깅:', {
+    Logger.debug('getCurrentPreviewText 디버깅:', {
       currentPage: this.currentPreviewPage,
       startIndex: previewStartIndex,
       endIndex: previewEndIndex,
@@ -1111,13 +1104,13 @@ export class CorrectionPopup extends BaseComponent {
    * 오류 요약 HTML을 생성합니다.
    */
   private generateErrorSummaryHTML(): string {
-    Logger.log(`🏗️ generateErrorSummaryHTML 시작`);
+    Logger.debug(`🏗️ generateErrorSummaryHTML 시작`);
     const rawCorrections = this.getCurrentCorrections();
     const currentCorrections = this.removeDuplicateCorrections(rawCorrections);
-    Logger.log(`🏗️ rawCorrections: ${rawCorrections.length}, currentCorrections: ${currentCorrections.length}`);
+    Logger.debug(`🏗️ rawCorrections: ${rawCorrections.length}, currentCorrections: ${currentCorrections.length}`);
     
     if (currentCorrections.length === 0) {
-      Logger.log(`🏗️ 오류 없음 - 플레이스홀더 반환`);
+      Logger.debug(`🏗️ 오류 없음 - 플레이스홀더 반환`);
       return `
         <div class="error-placeholder">
           <div class="placeholder-icon">✓</div>
@@ -1129,7 +1122,7 @@ export class CorrectionPopup extends BaseComponent {
 
     // 중복 제거: originalIndex를 기준으로 그룹화하여 첫 번째 항목만 표시
     const uniqueCorrections = this.removeDuplicateCorrections(currentCorrections);
-    Logger.log(`🏗️ uniqueCorrections: ${uniqueCorrections.length}`);
+    Logger.debug(`🏗️ uniqueCorrections: ${uniqueCorrections.length}`);
     
     return uniqueCorrections.map((pageCorrection, index) => {
       const actualIndex = pageCorrection.originalIndex;
@@ -1138,7 +1131,7 @@ export class CorrectionPopup extends BaseComponent {
       const isUserEdited = this.stateManager.isUserEditedState(actualIndex);
       const suggestions = correction.corrected.slice(0, 3);
       
-      Logger.log(`🏗️ HTML 생성: "${correction.original}" → actualIndex=${actualIndex}, pageIndex=${index}`);
+      Logger.debug(`🏗️ HTML 생성: "${correction.original}" → actualIndex=${actualIndex}, pageIndex=${index}`);
       
       const aiResult = this.aiAnalysisResults.find(result => result.correctionIndex === actualIndex);
       const reasoningHTML = aiResult
@@ -1185,7 +1178,7 @@ export class CorrectionPopup extends BaseComponent {
         </div>
       `;
       
-      Logger.log(`🏗️ HTML 첫 부분 - actualIndex=${actualIndex}: ${htmlString.substring(0, 200)}...`);
+      Logger.debug(`🏗️ HTML 첫 부분 - actualIndex=${actualIndex}: ${htmlString.substring(0, 200)}...`);
       
       return htmlString;
     }).join('');
@@ -1195,6 +1188,57 @@ export class CorrectionPopup extends BaseComponent {
    * 이벤트를 바인딩합니다.
    */
   private bindEvents(): void {
+    // Obsidian 글로벌 스코프에 키보드 단축키 등록 (포커스 독립적)
+    
+    // Cmd+E: 편집 모드 진입
+    const cmdEHandler = this.app.scope.register(['Mod'], 'KeyE', (evt: KeyboardEvent) => {
+      if (this.isInEditMode()) {
+        return true; // 편집 중일 때는 기본 동작 허용
+      }
+      
+      evt.preventDefault();
+      evt.stopPropagation();
+      this.enterEditModeForFocusedError();
+      return false;
+    });
+    
+    // Cmd+Shift+E: 오류 상세부분 토글
+    const cmdShiftEHandler = this.app.scope.register(['Mod', 'Shift'], 'KeyE', (evt: KeyboardEvent) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      this.toggleErrorSummary();
+      return false;
+    });
+    
+    // Component 정리 시스템에 등록 (자동 정리)
+    this.cleanupFunctions.push(() => this.app.scope.unregister(cmdEHandler));
+    this.cleanupFunctions.push(() => this.app.scope.unregister(cmdShiftEHandler));
+
+    // Document 레벨 백업 시스템 (포커스 독립적 보장)
+    const documentKeyListener = (evt: KeyboardEvent) => {
+      // Cmd+E: 편집 모드 진입 (글로벌 스코프가 실패했을 때 백업)
+      if (evt.code === 'KeyE' && ((evt.metaKey && !evt.ctrlKey) || (!evt.metaKey && evt.ctrlKey)) && !evt.shiftKey) {
+        if (this.isInEditMode()) {
+          return;
+        }
+        
+        evt.preventDefault();
+        evt.stopPropagation();
+        this.enterEditModeForFocusedError();
+        return;
+      }
+      
+      // Cmd+Shift+E: 오류 상세부분 토글 (글로벌 스코프가 실패했을 때 백업)
+      if (evt.code === 'KeyE' && ((evt.metaKey && !evt.ctrlKey) || (!evt.metaKey && evt.ctrlKey)) && evt.shiftKey) {
+        evt.preventDefault();
+        evt.stopPropagation();
+        this.toggleErrorSummary();
+        return;
+      }
+    };
+    document.addEventListener('keydown', documentKeyListener);
+    this.cleanupFunctions.push(() => document.removeEventListener('keydown', documentKeyListener));
+
     // DOM 레벨에서 키보드 이벤트 처리 (백업)
     this.addEventListener(this.element, 'keydown', (evt: KeyboardEvent) => {
       // Shift+Cmd+A: AI 분석
@@ -1205,8 +1249,20 @@ export class CorrectionPopup extends BaseComponent {
         return;
       }
       
-      // Cmd+E: 오류 상세부분 토글
+      // Cmd+E: 편집 모드 진입 (편집 중이 아닐 때만)
       if (evt.code === 'KeyE' && ((evt.metaKey && !evt.ctrlKey) || (!evt.metaKey && evt.ctrlKey)) && !evt.shiftKey) {
+        if (this.isInEditMode()) {
+          return; // 편집 중일 때는 기본 동작 허용
+        }
+        
+        evt.preventDefault();
+        evt.stopPropagation();
+        this.enterEditModeForFocusedError();
+        return;
+      }
+      
+      // Cmd+Shift+E: 오류 상세부분 토글
+      if (evt.code === 'KeyE' && ((evt.metaKey && !evt.ctrlKey) || (!evt.metaKey && evt.ctrlKey)) && evt.shiftKey) {
         evt.preventDefault();
         evt.stopPropagation();
         this.toggleErrorSummary();
@@ -1314,25 +1370,38 @@ export class CorrectionPopup extends BaseComponent {
    * 교정 클릭 이벤트를 바인딩합니다.
    */
   private bindCorrectionEvents(): void {
+    // 좌클릭 이벤트
     this.addEventListener(this.element, 'click', (e: Event) => {
       const target = e.target as HTMLElement;
-      Logger.log(`🖱️ 클릭 이벤트 발생: target="${target.tagName}.${target.className}", textContent="${target.textContent}"`);
+      Logger.debug(`🖱️ 클릭 이벤트 발생: target="${target.tagName}.${target.className}", textContent="${target.textContent}"`);
       
       // 미리보기 영역 클릭 처리
       if (target.classList.contains('clickable-error')) {
-        Logger.log(`🖱️ 미리보기 클릭 처리: ${target.textContent}`);
+        Logger.debug(`🖱️ 미리보기 클릭 처리: ${target.textContent}`);
         this.handlePreviewClick(target);
       }
       
       // 오류 상세 카드 원본 텍스트 클릭 처리 (편집 모드)
       if (target.classList.contains('error-original-compact')) {
-        Logger.log(`🖱️ 오류 카드 텍스트 클릭 감지: ${target.textContent}`);
+        Logger.debug(`🖱️ 오류 카드 텍스트 클릭 감지: ${target.textContent}`);
         this.handleCardTextClick(target);
       }
       
       // 제안 버튼 클릭 처리
       if (target.classList.contains('suggestion-compact')) {
         this.handleSuggestionClick(target);
+      }
+    });
+
+    // 우클릭 컨텍스트 메뉴 이벤트
+    this.addEventListener(this.element, 'contextmenu', (e: Event) => {
+      const target = e.target as HTMLElement;
+      
+      // 미리보기 영역의 오류 단어에서 우클릭 시 편집 모드로 전환
+      if (target.classList.contains('clickable-error')) {
+        e.preventDefault(); // 기본 컨텍스트 메뉴 차단
+        Logger.debug(`🖱️ 미리보기 우클릭 편집 모드: ${target.textContent}`);
+        this.handlePreviewRightClick(target);
       }
     });
   }
@@ -1435,20 +1504,67 @@ export class CorrectionPopup extends BaseComponent {
   }
 
   /**
+   * 미리보기 영역에서 우클릭 시 편집 모드로 전환합니다.
+   * 일괄 동작: 펼치기 + 오토스크롤 + 편집 모드 진입
+   */
+  private handlePreviewRightClick(target: HTMLElement): void {
+    const correctionIndex = parseInt(target.dataset.correctionIndex || '0');
+    Logger.debug(`🔧 handlePreviewRightClick 호출: index=${correctionIndex}, text="${target.textContent}"`);
+    
+    if (isNaN(correctionIndex) || correctionIndex < 0 || correctionIndex >= this.config.corrections.length) {
+      Logger.debug('Invalid correction index for preview right click:', correctionIndex);
+      return;
+    }
+
+    // 오류 상세 영역 상태 확인 및 펼치기
+    const errorSummary = this.element.querySelector('#errorSummary');
+    const wasCollapsed = errorSummary && errorSummary.classList.contains('collapsed');
+    
+    if (wasCollapsed) {
+      errorSummary!.classList.remove('collapsed');
+      Logger.debug('🔧 오류 상세 영역 펼침');
+      this.updateDisplay(); // 페이지네이션 재계산
+    }
+
+    // DOM 업데이트 후 편집 모드 진입 (비동기 처리)
+    setTimeout(() => {
+      const errorCard = this.element.querySelector(`[data-correction-index="${correctionIndex}"] .error-original-compact`);
+      if (errorCard) {
+        Logger.debug(`🔧 편집 모드 진입 - 오류 상세 카드 찾음: index=${correctionIndex}`);
+        
+        // 해당 카드로 스크롤
+        errorCard.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+        Logger.debug('🔧 오토스크롤 수행');
+        
+        // 스크롤 완료 후 편집 모드 진입
+        setTimeout(() => {
+          this.enterCardEditMode(errorCard as HTMLElement, correctionIndex);
+        }, 300); // 스크롤 애니메이션 완료 대기
+        
+      } else {
+        Logger.debug(`🔧 오류 상세 카드를 찾을 수 없음: index=${correctionIndex}`);
+      }
+    }, wasCollapsed ? 100 : 0); // 펼쳐졌다면 DOM 업데이트 대기
+  }
+
+  /**
    * 오류 상세 카드의 원본 텍스트 클릭 시 편집 모드로 전환합니다.
    */
   private handleCardTextClick(target: HTMLElement): void {
     const correctionIndex = parseInt(target.dataset.correctionIndex || '0');
-    Logger.log(`🔧 handleCardTextClick 호출: index=${correctionIndex}, text="${target.textContent}"`);
-    Logger.log(`🔧 target.dataset: ${JSON.stringify(target.dataset)}`);
-    Logger.log(`🔧 target HTML: ${target.outerHTML}`);
+    Logger.debug(`🔧 handleCardTextClick 호출: index=${correctionIndex}, text="${target.textContent}"`);
+    Logger.debug(`🔧 target.dataset: ${JSON.stringify(target.dataset)}`);
+    Logger.debug(`🔧 target HTML: ${target.outerHTML}`);
     
     if (isNaN(correctionIndex) || correctionIndex < 0 || correctionIndex >= this.config.corrections.length) {
-      Logger.log('Invalid correction index for card text click:', correctionIndex);
+      Logger.debug('Invalid correction index for card text click:', correctionIndex);
       return;
     }
 
-    Logger.log(`🔧 enterCardEditMode 호출 예정: index=${correctionIndex}`);
+    Logger.debug(`🔧 enterCardEditMode 호출 예정: index=${correctionIndex}`);
     this.enterCardEditMode(target, correctionIndex);
   }
 
@@ -1457,7 +1573,7 @@ export class CorrectionPopup extends BaseComponent {
    */
   private enterCardEditMode(originalElement: HTMLElement, correctionIndex: number): void {
     const currentText = originalElement.textContent || '';
-    Logger.log(`🔧 enterCardEditMode 시작: index=${correctionIndex}, currentText="${currentText}"`);
+    Logger.debug(`🔧 enterCardEditMode 시작: index=${correctionIndex}, currentText="${currentText}"`);
     
     // input 요소 생성
     const input = document.createElement('input');
@@ -1516,29 +1632,32 @@ export class CorrectionPopup extends BaseComponent {
   private finishCardEdit(input: HTMLInputElement, correctionIndex: number): void {
     const newValue = input.value.trim();
     const currentValue = this.stateManager.getValue(correctionIndex);
-    Logger.log(`🔧 finishCardEdit 호출: index=${correctionIndex}, newValue="${newValue}", currentValue="${currentValue}"`);
+    Logger.debug(`🔧 finishCardEdit 호출: index=${correctionIndex}, newValue="${newValue}", currentValue="${currentValue}"`);
     
     if (newValue === '') {
       // 빈 값이면 편집 취소
-      Logger.log(`🔧 빈 값으로 편집 취소: index=${correctionIndex}`);
+      Logger.debug(`🔧 빈 값으로 편집 취소: index=${correctionIndex}`);
       this.cancelCardEdit(input, correctionIndex);
       return;
     }
     
     // 값이 변경되지 않았으면 편집 취소 (현재 상태 유지)
     if (newValue === currentValue) {
-      Logger.log(`🔧 값이 변경되지 않아서 편집 취소: index=${correctionIndex}, value="${newValue}"`);
+      Logger.debug(`🔧 값이 변경되지 않아서 편집 취소: index=${correctionIndex}, value="${newValue}"`);
       this.cancelCardEdit(input, correctionIndex);
       return;
     }
     
     // 사용자 편집 상태로 설정
-    Logger.log(`🔧 setUserEdited 호출 예정: index=${correctionIndex}, value="${newValue}"`);
+    Logger.debug(`🔧 setUserEdited 호출 예정: index=${correctionIndex}, value="${newValue}"`);
     this.stateManager.setUserEdited(correctionIndex, newValue);
     
     // 디스플레이 업데이트
-    Logger.log(`🔧 updateDisplay 호출 예정`);
+    Logger.debug(`🔧 updateDisplay 호출 예정`);
     this.updateDisplay();
+    
+    // 편집 완료 후 미리보기의 해당 단어로 포커스 이동
+    this.focusPreviewWordAfterEdit(correctionIndex);
   }
 
   /**
@@ -1547,6 +1666,58 @@ export class CorrectionPopup extends BaseComponent {
   private cancelCardEdit(input: HTMLInputElement, correctionIndex: number): void {
     // 단순히 디스플레이 업데이트 (원래 상태로 복원)
     this.updateDisplay();
+  }
+
+  /**
+   * 편집 완료 후 미리보기의 해당 단어로 포커스를 이동합니다.
+   */
+  private focusPreviewWordAfterEdit(correctionIndex: number): void {
+    Logger.debug(`🎯 편집 완료 후 미리보기 포커스 이동: index=${correctionIndex}`);
+    
+    // DOM 업데이트 완료를 위해 짧은 지연
+    setTimeout(() => {
+      // 현재 페이지의 교정사항들을 가져옴
+      const rawCorrections = this.getCurrentCorrections();
+      const uniqueCorrections = this.removeDuplicateCorrections(rawCorrections);
+      
+      // 해당 correctionIndex를 가진 항목을 찾음
+      const targetCorrectionIndex = uniqueCorrections.findIndex(
+        pc => pc.originalIndex === correctionIndex
+      );
+      
+      if (targetCorrectionIndex >= 0) {
+        // 현재 포커스 인덱스를 해당 항목으로 설정
+        this.currentFocusIndex = targetCorrectionIndex;
+        Logger.debug(`🎯 포커스 인덱스 설정: ${targetCorrectionIndex} (correctionIndex: ${correctionIndex})`);
+        
+        // 포커스 하이라이트 업데이트
+        this.updateFocusHighlight();
+        
+        // 미리보기에서 해당 단어를 화면 중앙으로 스크롤
+        const previewElement = this.element.querySelector('.preview-text');
+        if (previewElement) {
+          const targetSpan = previewElement.querySelector(`[data-correction-index="${correctionIndex}"]`);
+          if (targetSpan) {
+            targetSpan.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center',
+              inline: 'nearest'
+            });
+            Logger.debug(`🎯 미리보기 스크롤 완료: 단어 "${targetSpan.textContent}"`);
+            
+            // 포커스된 요소에 일시적 하이라이트 효과
+            targetSpan.classList.add('edit-completion-highlight');
+            setTimeout(() => {
+              targetSpan.classList.remove('edit-completion-highlight');
+            }, 2000);
+          } else {
+            Logger.debug(`🎯 미리보기에서 해당 단어를 찾을 수 없음: index=${correctionIndex}`);
+          }
+        }
+      } else {
+        Logger.debug(`🎯 현재 페이지에서 해당 교정사항을 찾을 수 없음: index=${correctionIndex}`);
+      }
+    }, 100); // DOM 업데이트 대기
   }
 
   /**
@@ -1566,7 +1737,7 @@ export class CorrectionPopup extends BaseComponent {
     if (this.currentPreviewPage >= this.totalPreviewPages) {
       this.currentPreviewPage = Math.max(0, this.totalPreviewPages - 1);
     }
-    Logger.log(`Recalculated pagination: Chars per page: ${this.charsPerPage}, Total pages: ${this.totalPreviewPages}, Current page: ${this.currentPreviewPage}`);
+    Logger.debug(`Recalculated pagination: Chars per page: ${this.charsPerPage}, Total pages: ${this.totalPreviewPages}, Current page: ${this.currentPreviewPage}`);
   }
 
   /**
@@ -1731,7 +1902,7 @@ export class CorrectionPopup extends BaseComponent {
     });
 
     if (!this.aiService || this.isAiAnalyzing) {
-      Logger.log('AI 분석 중단: aiService 없음 또는 이미 분석 중');
+      Logger.warn('AI 분석 중단: aiService 없음 또는 이미 분석 중');
       return;
     }
 
@@ -1743,7 +1914,7 @@ export class CorrectionPopup extends BaseComponent {
     }
 
     try {
-      Logger.log('🔍 performAIAnalysis 메인 try 블록 진입');
+      Logger.debug('🔍 performAIAnalysis 메인 try 블록 진입');
       this.isAiAnalyzing = true;
       
       // UI 업데이트 (버튼 비활성화)
@@ -1756,11 +1927,11 @@ export class CorrectionPopup extends BaseComponent {
       Logger.log('AI 분석 시작 중...');
 
       // ⭐ NEW: 형태소 분석 정보 사용 (orchestrator에서 전달받은 정보)
-      Logger.log('🔍 형태소 분석 정보 확인 중...');
+      Logger.debug('🔍 형태소 분석 정보 확인 중...');
       let morphemeInfo = this.config.morphemeInfo || null;
       
       if (morphemeInfo) {
-        Logger.log('✅ orchestrator에서 형태소 분석 정보 전달받음:', {
+        Logger.debug('✅ orchestrator에서 형태소 분석 정보 전달받음:', {
           hasMorphemeInfo: !!morphemeInfo,
           sentencesCount: morphemeInfo?.sentences?.length || 0,
           tokensCount: morphemeInfo?.sentences?.reduce((sum: number, s: any) => sum + (s.tokens?.length || 0), 0) || 0,
@@ -2254,7 +2425,7 @@ export class CorrectionPopup extends BaseComponent {
     const isOverMaxTokens = tokenUsage.totalEstimated > maxTokens;
     
     // 디버깅: 토큰 사용량 확인
-    Logger.log('토큰 경고 모달 토큰 사용량:', {
+    Logger.debug('토큰 경고 모달 토큰 사용량:', {
       total: tokenUsage.totalEstimated,
       input: tokenUsage.inputTokens,
       output: tokenUsage.estimatedOutputTokens,
@@ -2286,7 +2457,7 @@ export class CorrectionPopup extends BaseComponent {
       // 강제로 포커스 설정 (지연 처리)
       setTimeout(() => {
         modal.focus();
-        Logger.log('토큰 경고 모달: 포커스 설정 완료');
+        Logger.debug('토큰 경고 모달: 포커스 설정 완료');
       }, 10);
 
       // 이벤트 처리
@@ -2306,16 +2477,16 @@ export class CorrectionPopup extends BaseComponent {
 
       // 키보드 이벤트 처리 (모든 키 이벤트 차단)
       const handleKeyboard = (e: KeyboardEvent) => {
-        Logger.log(`토큰 경고 모달: 키 이벤트 감지 - ${e.key} (코드: ${e.code})`);
+        Logger.debug(`토큰 경고 모달: 키 이벤트 감지 - ${e.key} (코드: ${e.code})`);
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
         
         if (e.key === 'Enter') {
-          Logger.log('토큰 경고 모달: Enter키 감지 - 진행');
+          Logger.debug('토큰 경고 모달: Enter키 감지 - 진행');
           handleResponse('proceed');
         } else if (e.key === 'Escape') {
-          Logger.log('토큰 경고 모달: Escape키 감지 - 취소');
+          Logger.debug('토큰 경고 모달: Escape키 감지 - 취소');
           handleResponse('cancel');
         }
         // 다른 모든 키 이벤트는 무시하고 전파 차단
@@ -2328,17 +2499,17 @@ export class CorrectionPopup extends BaseComponent {
       // 글로벌 키보드 이벤트도 차단 (백그라운드 이벤트 방지)
       const globalKeyHandler = (e: KeyboardEvent) => {
         if (document.body.contains(modal)) {
-          Logger.log(`토큰 경고 모달: 글로벌 키 이벤트 차단 - ${e.key}`);
+          Logger.debug(`토큰 경고 모달: 글로벌 키 이벤트 차단 - ${e.key}`);
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();
           
           // 글로벌 레벨에서도 키 처리
           if (e.key === 'Enter') {
-            Logger.log('토큰 경고 모달: 글로벌 Enter키 감지 - 진행');
+            Logger.debug('토큰 경고 모달: 글로벌 Enter키 감지 - 진행');
             handleResponse('proceed');
           } else if (e.key === 'Escape') {
-            Logger.log('토큰 경고 모달: 글로벌 Escape키 감지 - 취소');
+            Logger.debug('토큰 경고 모달: 글로벌 Escape키 감지 - 취소');
             handleResponse('cancel');
           }
         }
@@ -2356,7 +2527,7 @@ export class CorrectionPopup extends BaseComponent {
         document.removeEventListener('keyup', globalKeyHandler, { capture: true });
         window.removeEventListener('keydown', globalKeyHandler, { capture: true });
         
-        Logger.log('토큰 경고 모달: 모든 이벤트 리스너 제거 완료');
+        Logger.debug('토큰 경고 모달: 모든 이벤트 리스너 제거 완료');
         originalHandleResponse(action);
       };
 
@@ -2393,7 +2564,7 @@ export class CorrectionPopup extends BaseComponent {
   private updateMaxTokenSetting(newMaxTokens: number): void {
     if (this.onSettingsUpdate) {
       this.onSettingsUpdate(newMaxTokens);
-      Logger.log(`최대 토큰을 ${newMaxTokens}으로 업데이트했습니다.`);
+      Logger.debug(`최대 토큰을 ${newMaxTokens}으로 업데이트했습니다.`);
       
       // 성공 알림 표시
       new Notice(`⚙️ 최대 토큰이 ${newMaxTokens.toLocaleString()}으로 업데이트되었습니다.`, 3000);
@@ -2433,7 +2604,7 @@ export class CorrectionPopup extends BaseComponent {
   private showKeyboardHint(): void {
     // 모바일에서는 표시하지 않음
     if (Platform.isMobile) {
-      Logger.log('모바일 환경에서는 키보드 힌트를 표시하지 않음');
+      Logger.debug('모바일 환경에서는 키보드 힌트를 표시하지 않음');
       return;
     }
 
@@ -2466,8 +2637,9 @@ export class CorrectionPopup extends BaseComponent {
       { key: 'Tab', desc: '다음 오류' },
       { key: '←/→', desc: '수정 제안 순환' },
       { key: 'Enter', desc: '적용' },
+      { key: '⌘E', desc: '편집 모드' },
       { key: '⇧⌘A', desc: 'AI 분석' },
-      { key: '⌘E', desc: '오류 상세 토글' },
+      { key: '⌘⇧E', desc: '오류 상세 토글' },
       { key: '⌘⇧←/→', desc: '일괄 변경' },
       { key: '↑/↓', desc: '페이지 이동' },
       { key: 'Esc', desc: '닫기' }
@@ -2499,7 +2671,7 @@ export class CorrectionPopup extends BaseComponent {
    * 오류 상세부분 펼침/접힘을 토글합니다.
    */
   private toggleErrorSummary(): void {
-    Logger.log('오류 상세부분 토글 트리거됨 (키보드 단축키: ⌘E)');
+    Logger.log('오류 상세부분 토글 트리거됨 (키보드 단축키: ⌘⇧E)');
     const errorSummary = document.getElementById('errorSummary');
     if (!errorSummary) {
       Logger.warn('errorSummary 요소를 찾을 수 없습니다.');
@@ -2510,7 +2682,7 @@ export class CorrectionPopup extends BaseComponent {
     
     if (isCurrentlyCollapsed) {
       errorSummary.classList.remove('collapsed');
-      Logger.log('오류 상세부분 펼침');
+      Logger.log('오류 상세부분 폼침');
     } else {
       errorSummary.classList.add('collapsed');
       Logger.log('오류 상세부분 접힘');
@@ -2578,7 +2750,7 @@ export class CorrectionPopup extends BaseComponent {
         this.highlightFocusedError(targetItem as HTMLElement);
       }
 
-      Logger.log(`오류 상세부분 자동스크롤: ${pageCorrection.correction.original} (forceOpen: ${forceOpen}, collapsed: ${isCollapsed})`);
+      Logger.debug(`오류 상세부분 자동스크롤: ${pageCorrection.correction.original} (forceOpen: ${forceOpen}, collapsed: ${isCollapsed})`);
     }
   }
 
@@ -2601,6 +2773,81 @@ export class CorrectionPopup extends BaseComponent {
     }, 2000);
     
     Logger.log('오류 카드 하이라이트 애니메이션 적용');
+  }
+
+  /**
+   * 현재 포커스된 오류에 대해 편집 모드로 진입합니다.
+   */
+  private enterEditModeForFocusedError(): void {
+    Logger.log(`⌨️ enterEditModeForFocusedError 호출됨: currentFocusIndex=${this.currentFocusIndex}`);
+    
+    // 현재 교정사항들을 새로 가져와서 최신 상태 보장
+    const rawCorrections = this.getCurrentCorrections();
+    const uniqueCorrections = this.removeDuplicateCorrections(rawCorrections);
+    
+    // currentCorrections도 업데이트 (포커스 시스템과 동기화)
+    this.currentCorrections = uniqueCorrections;
+    
+    Logger.debug(`⌨️ 교정사항 개수: raw=${rawCorrections.length}, unique=${uniqueCorrections.length}`);
+    Logger.debug(`⌨️ 포커스 인덱스 유효성: currentFocusIndex=${this.currentFocusIndex}, 범위=[0, ${uniqueCorrections.length - 1}]`);
+    
+    // 포커스 인덱스가 유효하지 않으면 초기화
+    if (this.currentFocusIndex < 0 || this.currentFocusIndex >= uniqueCorrections.length) {
+      if (uniqueCorrections.length > 0) {
+        this.currentFocusIndex = 0;
+        Logger.debug(`⌨️ 포커스 인덱스 초기화: ${this.currentFocusIndex}`);
+      } else {
+        Logger.warn('🚫 편집 가능한 오류가 없음');
+        return;
+      }
+    }
+
+    const pageCorrection = uniqueCorrections[this.currentFocusIndex];
+    const actualIndex = pageCorrection.originalIndex;
+    
+    Logger.debug(`⌨️ Cmd+E키로 편집 모드 진입: index=${actualIndex}, text="${pageCorrection.correction.original}"`);
+
+    // 오류 상세 영역이 접혀있다면 펼치기
+    const errorSummary = this.element.querySelector('#errorSummary');
+    const wasCollapsed = errorSummary && errorSummary.classList.contains('collapsed');
+    
+    if (wasCollapsed) {
+      errorSummary!.classList.remove('collapsed');
+      Logger.debug('⌨️ 오류 상세 영역 자동 펼침');
+      this.updateDisplay(); // 페이지네이션 재계산
+    }
+
+    // DOM 업데이트 후 편집 모드 진입
+    setTimeout(() => {
+      const errorCard = this.element.querySelector(`[data-correction-index="${actualIndex}"] .error-original-compact`);
+      if (errorCard) {
+        Logger.debug(`⌨️ 편집 모드 진입 - 오류 상세 카드 찾음: index=${actualIndex}`);
+        
+        // 해당 카드로 스크롤
+        errorCard.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+        Logger.debug('⌨️ 오토스크롤 수행');
+        
+        // 스크롤 완료 후 편집 모드 진입
+        setTimeout(() => {
+          this.enterCardEditMode(errorCard as HTMLElement, actualIndex);
+        }, 300); // 스크롤 애니메이션 완료 대기
+        
+      } else {
+        Logger.debug(`⌨️ 오류 상세 카드를 찾을 수 없음: index=${actualIndex}`);
+        Logger.debug(`⌨️ 재시도: 모든 .error-original-compact 요소 확인`);
+        
+        // 디버깅을 위해 모든 카드 확인
+        const allCards = this.element.querySelectorAll('.error-original-compact');
+        Logger.debug(`⌨️ 발견된 카드 개수: ${allCards.length}`);
+        allCards.forEach((card, index) => {
+          const cardIndex = card.parentElement?.dataset?.correctionIndex;
+          Logger.debug(`⌨️ 카드 ${index}: correctionIndex=${cardIndex}`);
+        });
+      }
+    }, wasCollapsed ? 100 : 0); // 펼쳐졌다면 DOM 업데이트 대기
   }
 
   /**
