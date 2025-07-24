@@ -215,6 +215,135 @@ function getCurrentCorrections() {
 - **!important 선언**: 기본 스타일 오버라이드 확실히 보장
 - **애니메이션**: 부드러운 전환 효과 (0.3초 ease)
 
+### 5. AI 분석 시스템 ⭐ NEW
+
+#### 다중 AI 제공자 지원
+```typescript
+// AI 클라이언트 팩토리 패턴
+export class AIClientFactory {
+  static createClient(settings: AISettings): AIClient {
+    switch (settings.provider) {
+      case 'openai': return new OpenAIClient(settings.openaiApiKey);
+      case 'anthropic': return new AnthropicClient(settings.anthropicApiKey);
+      case 'google': return new GoogleClient(settings.googleApiKey);
+      case 'ollama': return new OllamaClient(settings.ollamaEndpoint);
+    }
+  }
+}
+```
+
+#### 프롬프트 엔지니어링
+- **5단계 색상 가이드**: AI가 🔴🟢🔵🟠🟣 UI 상태를 정확히 인식
+- **사용자 편집 인식**: CMD+E/우클릭/카드클릭 편집 내용을 AI가 우선 고려
+- **형태소 정보 통합**: 품사 정보를 프롬프트에 포함하여 문법적 정확성 향상
+- **컨텍스트 윈도우 최적화**: 형태소 분석 시 100→30토큰으로 축소
+
+### 6. 로깅 시스템 ⭐ NEW
+
+#### 4단계 로그 레벨 체계
+```typescript
+export class Logger {
+  static debug(message: string, ...args: any[]): void    // 상세 디버깅 정보
+  static log(message: string, ...args: any[]): void     // 사용자 액션, 시스템 상태
+  static warn(message: string, ...args: any[]): void    // 잠재적 문제, 폴백 동작
+  static error(message: string, ...args: any[]): void   // 실제 오류
+}
+```
+
+#### 로그 파일 관리
+- **자동 파일 생성**: 타임스탬프 기반 로그 파일 생성
+- **JSON 구조화**: 구조화된 로그 데이터로 분석 용이
+- **개발/프로덕션 분리**: .gitignore로 개발용 로그 제외
+- **다운로드 기능**: 설정 탭에서 로그 파일 다운로드 지원
+
+### 7. 캐싱 시스템 ⭐ NEW
+
+#### LRU 캐싱 구현
+```typescript
+export class CacheService {
+  private cache = new Map<string, CacheEntry>();
+  private readonly maxSize = 100;  // 최대 100개 항목
+  
+  set(key: string, value: any, ttl: number = 30 * 60 * 1000): void {
+    // LRU 방식으로 오래된 항목 자동 제거
+    if (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
+  }
+}
+```
+
+#### 캐싱 전략
+- **형태소 분석 결과**: API 호출 결과 30분간 캐싱
+- **중복 호출 방지**: 동일 텍스트에 대한 반복 분석 제거
+- **메모리 효율성**: 자동 TTL 만료 및 LRU 정리
+
+### 8. 키보드 네비게이션 시스템 ⭐ NEW
+
+#### Obsidian Scope API 활용
+```typescript
+// 키보드 스코프 생성 및 단축키 등록
+const keyboardScope = new Scope(this.app.scope);
+keyboardScope.register(['Tab'], 'next-error', () => this.focusNextError());
+keyboardScope.register(['Shift', 'Tab'], 'prev-error', () => this.focusPrevError());
+keyboardScope.register(['Cmd', 'E'], 'edit-error', () => this.editCurrentError());
+```
+
+#### 17개 키보드 단축키
+- **네비게이션**: Tab, Shift+Tab, ←/→, Enter, Escape
+- **편집**: CMD+E, Shift+CMD+A, CMD+Shift+E
+- **일괄 작업**: CMD+Shift+←/→
+- **페이지**: ↑/↓ (긴 텍스트)
+
+#### 접근성 기능
+- **포커스 하이라이트**: 현재 선택된 오류 시각적 강조
+- **키보드 힌트**: 데스크톱에서 단축키 가이드 자동 표시
+- **스크린 리더 지원**: ARIA 속성 및 시맨틱 HTML 사용
+
+### 9. 메모리 최적화 시스템 ⭐ NEW
+
+#### 가상 스크롤링
+```typescript
+export class VirtualScroller {
+  private visibleItems: HTMLElement[] = [];
+  private readonly bufferSize = 10;  // 버퍼 크기
+  
+  updateVisibleItems(startIndex: number, endIndex: number): void {
+    // 보이는 영역의 아이템만 DOM에 유지
+    // 나머지는 메모리에서 해제
+  }
+}
+```
+
+#### DOM 최적화
+- **이벤트 위임**: 단일 이벤트 리스너로 모든 클릭 처리
+- **DocumentFragment 사용**: 대량 DOM 조작 시 성능 최적화
+- **조건부 렌더링**: 필요한 요소만 DOM에 추가
+
+### 10. 토큰 추정 시스템 ⭐ NEW
+
+#### 정확한 토큰 계산
+```typescript
+export class TokenEstimator {
+  static estimateTokens(text: string, model: string): number {
+    // 모델별 토큰 계산 방식 적용
+    const avgCharsPerToken = this.getAvgCharsPerToken(model);
+    return Math.ceil(text.length / avgCharsPerToken);
+  }
+  
+  static calculateAIAnalysisTokens(corrections: any[], morphemeData?: any): number {
+    // 실제 AI 프롬프트 기반 정확한 토큰 추정
+    // 형태소 최적화 효과 반영 (100→30토큰 축소)
+  }
+}
+```
+
+#### 비용 투명성
+- **실시간 토큰 계산**: API 호출 전 정확한 토큰 수 표시
+- **최적화 효과 표시**: 형태소 분석으로 절약된 토큰 수 표시
+- **사용자 확인**: 설정 가능한 임계값으로 비용 제어
+
 ## API 통합
 
 ### Bareun.ai API 설정
