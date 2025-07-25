@@ -235,7 +235,7 @@ export class InlineTooltip {
     }
     
     // 🔧 화면 구석 감지 (에디터 영역 및 터치 위치 기준)
-    const cornerThreshold = 60;
+    const cornerThreshold = mousePosition ? 40 : 60; // 터치 위치 있으면 더 정밀하게
     const effectiveLeft = Math.max(referenceCenterX - 8, editorLeft);
     const effectiveRight = Math.min(referenceCenterX + 8, editorLeft + editorWidth);
     const effectiveTop = Math.max(referenceCenterY - 10, editorTop);
@@ -246,13 +246,13 @@ export class InlineTooltip {
     const isTopEdge = effectiveTop - editorTop < cornerThreshold;
     const isBottomEdge = editorTop + editorHeight - effectiveBottom < cornerThreshold;
     
-    const fingerOffset = isPhone ? 60 : 50;
+    const fingerOffset = mousePosition ? (isPhone ? 35 : 30) : (isPhone ? 60 : 50); // 터치 위치 있으면 줄임
     const safeMargin = 16;
     
     let finalLeft = 0;
     let finalTop = 0;
 
-    // 🔧 가로 위치 계산 (터치 위치 고려)
+    // 🔧 가로 위치 계산 (터치 위치 정밀 고려)
     if (isLeftEdge) {
       finalLeft = Math.max(safeMargin, editorLeft + safeMargin);
       Logger.debug('📱 왼쪽 구석 감지: 에디터 영역 내 오른쪽으로 이동');
@@ -276,31 +276,33 @@ export class InlineTooltip {
       }
     }
 
-    // 🔧 세로 위치 계산 (키보드 및 터치 위치 고려)
+    // 🔧 세로 위치 계산 (터치 위치 최적화)
     const effectiveViewportHeight = Math.min(viewportHeight - keyboardHeight, editorTop + editorHeight);
     const spaceAbove = referenceCenterY - editorTop;
     const spaceBelow = effectiveViewportHeight - referenceCenterY;
     
     if (isTopEdge && spaceBelow > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
       finalTop = referenceCenterY + fingerOffset;
-      Logger.debug('📱 상단 구석: 아래쪽 배치');
+      Logger.debug(`📱 상단 구석: 아래쪽 배치 (오프셋: ${fingerOffset}px)`);
     } else if (isBottomEdge && spaceAbove > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
       finalTop = referenceCenterY - adaptiveSize.maxHeight - fingerOffset;
-      Logger.debug('📱 하단 구석: 위쪽 배치');
+      Logger.debug(`📱 하단 구석: 위쪽 배치 (오프셋: ${fingerOffset}px)`);
     } else if (spaceAbove > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
-      finalTop = referenceCenterY - adaptiveSize.maxHeight - 30;
+      finalTop = referenceCenterY - adaptiveSize.maxHeight - (mousePosition ? 20 : 30);
+      Logger.debug(`📱 위쪽 배치 (터치 최적화)`);
     } else if (spaceBelow > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
-      finalTop = referenceCenterY + 30;
+      finalTop = referenceCenterY + (mousePosition ? 20 : 30);
+      Logger.debug(`📱 아래쪽 배치 (터치 최적화)`);
     } else {
-      // 공간 매우 부족: 화면 중앙 (터치 지점 피하면서)
+      // 공간 매우 부족: 터치 지점에 최대한 가깝게
       const centerY = effectiveViewportHeight / 2;
       
       if (Math.abs(centerY - referenceCenterY) < adaptiveSize.maxHeight / 2) {
-        finalTop = Math.max(editorTop + safeMargin, referenceCenterY - adaptiveSize.maxHeight - 20);
+        finalTop = Math.max(editorTop + safeMargin, referenceCenterY - adaptiveSize.maxHeight - 10);
       } else {
         finalTop = Math.max(editorTop + safeMargin, centerY - adaptiveSize.maxHeight / 2);
       }
-      Logger.debug('📱 공간 부족: 중앙 배치 (터치 지점 고려)');
+      Logger.debug('📱 공간 부족: 터치 지점 인접 배치');
     }
 
     // 🔧 최종 경계 보정 (에디터 및 키보드 고려)
@@ -391,7 +393,7 @@ export class InlineTooltip {
     }
 
     // 🔧 화면 구석 감지 (에디터 및 마우스 위치 기준)
-    const cornerThreshold = 100;
+    const cornerThreshold = mousePosition ? 60 : 100; // 마우스 위치 있으면 더 정밀하게
     const isLeftEdge = referenceCenterX - editorLeft < cornerThreshold;
     const isRightEdge = editorLeft + editorWidth - referenceCenterX < cornerThreshold;
     const isTopEdge = referenceCenterY - editorTop < cornerThreshold;
@@ -400,23 +402,40 @@ export class InlineTooltip {
     let finalLeft = 0;
     let finalTop = 0;
 
-    // 🔧 세로 위치 (구석 고려, 마우스 위치 기준)
+    // 🔧 세로 위치 (마우스 위치 최적화)
+    const smallOffset = mousePosition ? 5 : gap; // 마우스 위치 있으면 최소 오프셋
+    const availableSpaceBelow = Math.min(viewportHeight, editorTop + editorHeight) - referenceCenterY;
+    const availableSpaceAbove = referenceCenterY - editorTop;
+
     if (isBottomEdge) {
-      finalTop = referenceCenterY - adaptiveSize.maxHeight - gap - 15;
-      Logger.debug('🖥️ 하단 구석: 위쪽 강제 배치');
-    } else if (referenceCenterY + gap + adaptiveSize.maxHeight <= Math.min(viewportHeight, editorTop + editorHeight) - minSpacing) {
-      finalTop = referenceCenterY + gap + 15;
+      // 하단 구석: 위쪽 배치
+      finalTop = referenceCenterY - adaptiveSize.maxHeight - smallOffset;
+      Logger.debug(`🖥️ 하단 구석: 위쪽 배치 (오프셋: ${smallOffset}px)`);
+    } else if (availableSpaceBelow >= adaptiveSize.maxHeight + smallOffset + minSpacing) {
+      // 아래쪽에 충분한 공간: 아래쪽 배치
+      finalTop = referenceCenterY + smallOffset;
+      Logger.debug(`🖥️ 아래쪽 배치 (오프셋: ${smallOffset}px)`);
+    } else if (availableSpaceAbove >= adaptiveSize.maxHeight + smallOffset + minSpacing) {
+      // 위쪽에 충분한 공간: 위쪽 배치
+      finalTop = referenceCenterY - adaptiveSize.maxHeight - smallOffset;
+      Logger.debug(`🖥️ 위쪽 배치 (오프셋: ${smallOffset}px)`);
     } else {
-      finalTop = referenceCenterY - adaptiveSize.maxHeight - gap - 15;
+      // 공간 부족: 가능한 한 마우스에 가깝게
+      if (availableSpaceBelow > availableSpaceAbove) {
+        finalTop = referenceCenterY + 2; // 마우스 바로 아래
+      } else {
+        finalTop = referenceCenterY - adaptiveSize.maxHeight - 2; // 마우스 바로 위
+      }
+      Logger.debug(`🖥️ 공간 부족: 마우스 인접 배치`);
     }
 
-    // 🔧 가로 위치 (구석 고려, 마우스 위치 기준)
+    // 🔧 가로 위치 (마우스 위치 기준 정밀 배치)
     if (isLeftEdge) {
-      finalLeft = Math.max(referenceCenterX, editorLeft);
-      Logger.debug('🖥️ 왼쪽 구석: 마우스 오른쪽 정렬');
+      finalLeft = Math.max(referenceCenterX + 5, editorLeft); // 마우스 오른쪽 약간
+      Logger.debug('🖥️ 왼쪽 구석: 마우스 오른쪽 인접');
     } else if (isRightEdge) {
-      finalLeft = Math.min(referenceCenterX - adaptiveSize.width, editorLeft + editorWidth - adaptiveSize.width);
-      Logger.debug('🖥️ 오른쪽 구석: 마우스 왼쪽 정렬');
+      finalLeft = Math.min(referenceCenterX - adaptiveSize.width - 5, editorLeft + editorWidth - adaptiveSize.width); // 마우스 왼쪽 약간
+      Logger.debug('🖥️ 오른쪽 구석: 마우스 왼쪽 인접');
     } else {
       // 일반적인 경우: 마우스 중심 정렬
       finalLeft = referenceCenterX - (adaptiveSize.width / 2);

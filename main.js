@@ -9670,7 +9670,7 @@ var InlineTooltip = class {
       referenceCenterY = targetRect.top + targetRect.height / 2;
       Logger.debug(`\u{1F4CD} \uD0C0\uAC9F \uC694\uC18C \uAE30\uBC18 \uD234\uD301 \uBC30\uCE58: (${referenceCenterX}, ${referenceCenterY})`);
     }
-    const cornerThreshold = 60;
+    const cornerThreshold = mousePosition ? 40 : 60;
     const effectiveLeft = Math.max(referenceCenterX - 8, editorLeft);
     const effectiveRight = Math.min(referenceCenterX + 8, editorLeft + editorWidth);
     const effectiveTop = Math.max(referenceCenterY - 10, editorTop);
@@ -9679,7 +9679,7 @@ var InlineTooltip = class {
     const isRightEdge = editorLeft + editorWidth - effectiveRight < cornerThreshold;
     const isTopEdge = effectiveTop - editorTop < cornerThreshold;
     const isBottomEdge = editorTop + editorHeight - effectiveBottom < cornerThreshold;
-    const fingerOffset = isPhone ? 60 : 50;
+    const fingerOffset = mousePosition ? isPhone ? 35 : 30 : isPhone ? 60 : 50;
     const safeMargin = 16;
     let finalLeft = 0;
     let finalTop = 0;
@@ -9708,22 +9708,24 @@ var InlineTooltip = class {
     const spaceBelow = effectiveViewportHeight - referenceCenterY;
     if (isTopEdge && spaceBelow > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
       finalTop = referenceCenterY + fingerOffset;
-      Logger.debug("\u{1F4F1} \uC0C1\uB2E8 \uAD6C\uC11D: \uC544\uB798\uCABD \uBC30\uCE58");
+      Logger.debug(`\u{1F4F1} \uC0C1\uB2E8 \uAD6C\uC11D: \uC544\uB798\uCABD \uBC30\uCE58 (\uC624\uD504\uC14B: ${fingerOffset}px)`);
     } else if (isBottomEdge && spaceAbove > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
       finalTop = referenceCenterY - adaptiveSize.maxHeight - fingerOffset;
-      Logger.debug("\u{1F4F1} \uD558\uB2E8 \uAD6C\uC11D: \uC704\uCABD \uBC30\uCE58");
+      Logger.debug(`\u{1F4F1} \uD558\uB2E8 \uAD6C\uC11D: \uC704\uCABD \uBC30\uCE58 (\uC624\uD504\uC14B: ${fingerOffset}px)`);
     } else if (spaceAbove > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
-      finalTop = referenceCenterY - adaptiveSize.maxHeight - 30;
+      finalTop = referenceCenterY - adaptiveSize.maxHeight - (mousePosition ? 20 : 30);
+      Logger.debug(`\u{1F4F1} \uC704\uCABD \uBC30\uCE58 (\uD130\uCE58 \uCD5C\uC801\uD654)`);
     } else if (spaceBelow > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
-      finalTop = referenceCenterY + 30;
+      finalTop = referenceCenterY + (mousePosition ? 20 : 30);
+      Logger.debug(`\u{1F4F1} \uC544\uB798\uCABD \uBC30\uCE58 (\uD130\uCE58 \uCD5C\uC801\uD654)`);
     } else {
       const centerY = effectiveViewportHeight / 2;
       if (Math.abs(centerY - referenceCenterY) < adaptiveSize.maxHeight / 2) {
-        finalTop = Math.max(editorTop + safeMargin, referenceCenterY - adaptiveSize.maxHeight - 20);
+        finalTop = Math.max(editorTop + safeMargin, referenceCenterY - adaptiveSize.maxHeight - 10);
       } else {
         finalTop = Math.max(editorTop + safeMargin, centerY - adaptiveSize.maxHeight / 2);
       }
-      Logger.debug("\u{1F4F1} \uACF5\uAC04 \uBD80\uC871: \uC911\uC559 \uBC30\uCE58 (\uD130\uCE58 \uC9C0\uC810 \uACE0\uB824)");
+      Logger.debug("\u{1F4F1} \uACF5\uAC04 \uBD80\uC871: \uD130\uCE58 \uC9C0\uC810 \uC778\uC811 \uBC30\uCE58");
     }
     finalTop = Math.max(
       Math.max(safeMargin, editorTop),
@@ -9790,27 +9792,39 @@ var InlineTooltip = class {
       referenceCenterY = targetRect.top + targetRect.height / 2;
       Logger.debug(`\u{1F4CD} \uD0C0\uAC9F \uC694\uC18C \uAE30\uBC18 \uD234\uD301 \uBC30\uCE58: (${referenceCenterX}, ${referenceCenterY})`);
     }
-    const cornerThreshold = 100;
+    const cornerThreshold = mousePosition ? 60 : 100;
     const isLeftEdge = referenceCenterX - editorLeft < cornerThreshold;
     const isRightEdge = editorLeft + editorWidth - referenceCenterX < cornerThreshold;
     const isTopEdge = referenceCenterY - editorTop < cornerThreshold;
     const isBottomEdge = editorTop + editorHeight - referenceCenterY < cornerThreshold;
     let finalLeft = 0;
     let finalTop = 0;
+    const smallOffset = mousePosition ? 5 : gap;
+    const availableSpaceBelow = Math.min(viewportHeight, editorTop + editorHeight) - referenceCenterY;
+    const availableSpaceAbove = referenceCenterY - editorTop;
     if (isBottomEdge) {
-      finalTop = referenceCenterY - adaptiveSize.maxHeight - gap - 15;
-      Logger.debug("\u{1F5A5}\uFE0F \uD558\uB2E8 \uAD6C\uC11D: \uC704\uCABD \uAC15\uC81C \uBC30\uCE58");
-    } else if (referenceCenterY + gap + adaptiveSize.maxHeight <= Math.min(viewportHeight, editorTop + editorHeight) - minSpacing) {
-      finalTop = referenceCenterY + gap + 15;
+      finalTop = referenceCenterY - adaptiveSize.maxHeight - smallOffset;
+      Logger.debug(`\u{1F5A5}\uFE0F \uD558\uB2E8 \uAD6C\uC11D: \uC704\uCABD \uBC30\uCE58 (\uC624\uD504\uC14B: ${smallOffset}px)`);
+    } else if (availableSpaceBelow >= adaptiveSize.maxHeight + smallOffset + minSpacing) {
+      finalTop = referenceCenterY + smallOffset;
+      Logger.debug(`\u{1F5A5}\uFE0F \uC544\uB798\uCABD \uBC30\uCE58 (\uC624\uD504\uC14B: ${smallOffset}px)`);
+    } else if (availableSpaceAbove >= adaptiveSize.maxHeight + smallOffset + minSpacing) {
+      finalTop = referenceCenterY - adaptiveSize.maxHeight - smallOffset;
+      Logger.debug(`\u{1F5A5}\uFE0F \uC704\uCABD \uBC30\uCE58 (\uC624\uD504\uC14B: ${smallOffset}px)`);
     } else {
-      finalTop = referenceCenterY - adaptiveSize.maxHeight - gap - 15;
+      if (availableSpaceBelow > availableSpaceAbove) {
+        finalTop = referenceCenterY + 2;
+      } else {
+        finalTop = referenceCenterY - adaptiveSize.maxHeight - 2;
+      }
+      Logger.debug(`\u{1F5A5}\uFE0F \uACF5\uAC04 \uBD80\uC871: \uB9C8\uC6B0\uC2A4 \uC778\uC811 \uBC30\uCE58`);
     }
     if (isLeftEdge) {
-      finalLeft = Math.max(referenceCenterX, editorLeft);
-      Logger.debug("\u{1F5A5}\uFE0F \uC67C\uCABD \uAD6C\uC11D: \uB9C8\uC6B0\uC2A4 \uC624\uB978\uCABD \uC815\uB82C");
+      finalLeft = Math.max(referenceCenterX + 5, editorLeft);
+      Logger.debug("\u{1F5A5}\uFE0F \uC67C\uCABD \uAD6C\uC11D: \uB9C8\uC6B0\uC2A4 \uC624\uB978\uCABD \uC778\uC811");
     } else if (isRightEdge) {
-      finalLeft = Math.min(referenceCenterX - adaptiveSize.width, editorLeft + editorWidth - adaptiveSize.width);
-      Logger.debug("\u{1F5A5}\uFE0F \uC624\uB978\uCABD \uAD6C\uC11D: \uB9C8\uC6B0\uC2A4 \uC67C\uCABD \uC815\uB82C");
+      finalLeft = Math.min(referenceCenterX - adaptiveSize.width - 5, editorLeft + editorWidth - adaptiveSize.width);
+      Logger.debug("\u{1F5A5}\uFE0F \uC624\uB978\uCABD \uAD6C\uC11D: \uB9C8\uC6B0\uC2A4 \uC67C\uCABD \uC778\uC811");
     } else {
       finalLeft = referenceCenterX - adaptiveSize.width / 2;
     }
