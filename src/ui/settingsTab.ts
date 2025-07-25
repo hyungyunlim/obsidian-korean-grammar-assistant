@@ -2279,24 +2279,56 @@ export class ModernSettingsTab extends PluginSettingTab {
           }));
 
       new Setting(section)
-        .setName('호버 시 툴팁 표시')
-        .setDesc('오류에 마우스를 올렸을 때 수정 제안을 표시합니다.')
-        .addToggle(toggle => toggle
-          .setValue(this.plugin.settings.inlineMode.showTooltipOnHover)
-          .onChange(async (value) => {
-            this.plugin.settings.inlineMode.showTooltipOnHover = value;
+        .setName('툴팁 표시 방식')
+        .setDesc('문법 오류 수정 제안을 표시할 방법을 선택하세요. "자동"은 플랫폼에 최적화된 방식을 사용합니다.')
+        .addDropdown(dropdown => dropdown
+          .addOption('auto', '🤖 자동 (권장) - 플랫폼별 최적화')
+          .addOption('hover', '🖱️ 마우스 호버 - 데스크톱 전용')
+          .addOption('click', '👆 클릭/탭 - 모바일 친화적')
+          .addOption('disabled', '🚫 툴팁 비활성화')
+          .setValue(this.plugin.settings.inlineMode.tooltipTrigger || 'auto')
+          .onChange(async (value: 'auto' | 'hover' | 'click' | 'disabled') => {
+            this.plugin.settings.inlineMode.tooltipTrigger = value;
+            
+            // 🔧 레거시 설정도 자동 업데이트 (하위 호환성)
+            switch (value) {
+              case 'auto':
+                this.plugin.settings.inlineMode.showTooltipOnHover = true;
+                this.plugin.settings.inlineMode.showTooltipOnClick = true;
+                break;
+              case 'hover':
+                this.plugin.settings.inlineMode.showTooltipOnHover = true;
+                this.plugin.settings.inlineMode.showTooltipOnClick = false;
+                break;
+              case 'click':
+                this.plugin.settings.inlineMode.showTooltipOnHover = false;
+                this.plugin.settings.inlineMode.showTooltipOnClick = true;
+                break;
+              case 'disabled':
+                this.plugin.settings.inlineMode.showTooltipOnHover = false;
+                this.plugin.settings.inlineMode.showTooltipOnClick = false;
+                break;
+            }
+            
             await this.plugin.saveSettings();
+            
+            // 사용자에게 설정 변경 안내
+            const modeNames = {
+              'auto': '자동 모드 (플랫폼별 최적화)',
+              'hover': '호버 모드 (데스크톱 전용)',
+              'click': '클릭 모드 (모바일 친화적)',
+              'disabled': '툴팁 비활성화'
+            };
+            new Notice(`툴팁 표시 방식: ${modeNames[value]}`);
           }));
 
-      new Setting(section)
-        .setName('클릭 시 툴팁 표시')
-        .setDesc('오류를 클릭했을 때 수정 제안을 표시합니다.')
-        .addToggle(toggle => toggle
-          .setValue(this.plugin.settings.inlineMode.showTooltipOnClick)
-          .onChange(async (value) => {
-            this.plugin.settings.inlineMode.showTooltipOnClick = value;
-            await this.plugin.saveSettings();
-          }));
+      // 📱 플랫폼별 설명 추가
+      section.createEl('div', {
+        text: '💡 자동 모드: 데스크톱에서는 호버, 모바일에서는 탭으로 자동 동작',
+        attr: { 
+          style: 'font-size: 0.9em; color: var(--text-muted); margin-top: 8px; padding: 8px; background: var(--background-secondary); border-radius: 4px;' 
+        }
+      });
     }
   }
 }

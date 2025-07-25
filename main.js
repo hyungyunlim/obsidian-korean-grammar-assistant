@@ -559,15 +559,14 @@ var init_settings = __esm({
     init_logger();
     DEFAULT_INLINE_MODE_SETTINGS = {
       enabled: false,
-      // 베타 기능이므로 기본적으로 비활성화
-      showUnderline: true,
       underlineStyle: "wavy",
       underlineColor: "#ff0000",
+      // 🎯 새로운 통합 툴팁 설정 (플랫폼별 자동 최적화)
+      tooltipTrigger: "auto",
+      // 기본값: 플랫폼에 따라 자동 선택
+      // 🔧 레거시 설정 (하위 호환성, 추후 제거 예정)
       showTooltipOnHover: true,
-      showTooltipOnClick: true,
-      autoCheck: false,
-      // 향후 구현 예정
-      autoCheckDelay: 2e3
+      showTooltipOnClick: true
     };
     DEFAULT_SETTINGS = loadApiConfig();
     SettingsService = class {
@@ -9469,14 +9468,41 @@ var ModernSettingsTab = class extends import_obsidian9.PluginSettingTab {
           await this.plugin.saveSettings();
         }
       }));
-      new import_obsidian9.Setting(section).setName("\uD638\uBC84 \uC2DC \uD234\uD301 \uD45C\uC2DC").setDesc("\uC624\uB958\uC5D0 \uB9C8\uC6B0\uC2A4\uB97C \uC62C\uB838\uC744 \uB54C \uC218\uC815 \uC81C\uC548\uC744 \uD45C\uC2DC\uD569\uB2C8\uB2E4.").addToggle((toggle) => toggle.setValue(this.plugin.settings.inlineMode.showTooltipOnHover).onChange(async (value) => {
-        this.plugin.settings.inlineMode.showTooltipOnHover = value;
+      new import_obsidian9.Setting(section).setName("\uD234\uD301 \uD45C\uC2DC \uBC29\uC2DD").setDesc('\uBB38\uBC95 \uC624\uB958 \uC218\uC815 \uC81C\uC548\uC744 \uD45C\uC2DC\uD560 \uBC29\uBC95\uC744 \uC120\uD0DD\uD558\uC138\uC694. "\uC790\uB3D9"\uC740 \uD50C\uB7AB\uD3FC\uC5D0 \uCD5C\uC801\uD654\uB41C \uBC29\uC2DD\uC744 \uC0AC\uC6A9\uD569\uB2C8\uB2E4.').addDropdown((dropdown) => dropdown.addOption("auto", "\u{1F916} \uC790\uB3D9 (\uAD8C\uC7A5) - \uD50C\uB7AB\uD3FC\uBCC4 \uCD5C\uC801\uD654").addOption("hover", "\u{1F5B1}\uFE0F \uB9C8\uC6B0\uC2A4 \uD638\uBC84 - \uB370\uC2A4\uD06C\uD1B1 \uC804\uC6A9").addOption("click", "\u{1F446} \uD074\uB9AD/\uD0ED - \uBAA8\uBC14\uC77C \uCE5C\uD654\uC801").addOption("disabled", "\u{1F6AB} \uD234\uD301 \uBE44\uD65C\uC131\uD654").setValue(this.plugin.settings.inlineMode.tooltipTrigger || "auto").onChange(async (value) => {
+        this.plugin.settings.inlineMode.tooltipTrigger = value;
+        switch (value) {
+          case "auto":
+            this.plugin.settings.inlineMode.showTooltipOnHover = true;
+            this.plugin.settings.inlineMode.showTooltipOnClick = true;
+            break;
+          case "hover":
+            this.plugin.settings.inlineMode.showTooltipOnHover = true;
+            this.plugin.settings.inlineMode.showTooltipOnClick = false;
+            break;
+          case "click":
+            this.plugin.settings.inlineMode.showTooltipOnHover = false;
+            this.plugin.settings.inlineMode.showTooltipOnClick = true;
+            break;
+          case "disabled":
+            this.plugin.settings.inlineMode.showTooltipOnHover = false;
+            this.plugin.settings.inlineMode.showTooltipOnClick = false;
+            break;
+        }
         await this.plugin.saveSettings();
+        const modeNames = {
+          "auto": "\uC790\uB3D9 \uBAA8\uB4DC (\uD50C\uB7AB\uD3FC\uBCC4 \uCD5C\uC801\uD654)",
+          "hover": "\uD638\uBC84 \uBAA8\uB4DC (\uB370\uC2A4\uD06C\uD1B1 \uC804\uC6A9)",
+          "click": "\uD074\uB9AD \uBAA8\uB4DC (\uBAA8\uBC14\uC77C \uCE5C\uD654\uC801)",
+          "disabled": "\uD234\uD301 \uBE44\uD65C\uC131\uD654"
+        };
+        new import_obsidian9.Notice(`\uD234\uD301 \uD45C\uC2DC \uBC29\uC2DD: ${modeNames[value]}`);
       }));
-      new import_obsidian9.Setting(section).setName("\uD074\uB9AD \uC2DC \uD234\uD301 \uD45C\uC2DC").setDesc("\uC624\uB958\uB97C \uD074\uB9AD\uD588\uC744 \uB54C \uC218\uC815 \uC81C\uC548\uC744 \uD45C\uC2DC\uD569\uB2C8\uB2E4.").addToggle((toggle) => toggle.setValue(this.plugin.settings.inlineMode.showTooltipOnClick).onChange(async (value) => {
-        this.plugin.settings.inlineMode.showTooltipOnClick = value;
-        await this.plugin.saveSettings();
-      }));
+      section.createEl("div", {
+        text: "\u{1F4A1} \uC790\uB3D9 \uBAA8\uB4DC: \uB370\uC2A4\uD06C\uD1B1\uC5D0\uC11C\uB294 \uD638\uBC84, \uBAA8\uBC14\uC77C\uC5D0\uC11C\uB294 \uD0ED\uC73C\uB85C \uC790\uB3D9 \uB3D9\uC791",
+        attr: {
+          style: "font-size: 0.9em; color: var(--text-muted); margin-top: 8px; padding: 8px; background: var(--background-secondary); border-radius: 4px;"
+        }
+      });
     }
   }
 };
@@ -10988,9 +11014,9 @@ var InlineModeService = class {
    * 오류 호버 핸들러
    */
   static handleErrorHover(error, hoveredElement, mousePosition) {
-    var _a, _b;
     Logger.debug(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC624\uB958 \uD638\uBC84 - ${error.correction.original}`);
-    if ((_b = (_a = this.settings) == null ? void 0 : _a.inlineMode) == null ? void 0 : _b.showTooltipOnHover) {
+    const shouldShowTooltip = this.shouldShowTooltipOnInteraction("hover");
+    if (shouldShowTooltip) {
       const targetElement = hoveredElement || this.findErrorElement(error);
       if (targetElement) {
         globalInlineTooltip.show(error, targetElement, "hover", mousePosition);
@@ -11503,6 +11529,33 @@ var InlineModeService = class {
     Logger.log("  \u2022 Korean Grammar Assistant: \uBB38\uBC95 \uC624\uB958 \uD3EC\uCEE4\uC2A4 \uD574\uC81C");
     Logger.log("  \u2022 Korean Grammar Assistant: \uD55C\uAD6D\uC5B4 \uBB38\uBC95 \uC778\uB77C\uC778 \uBAA8\uB4DC \uD1A0\uAE00");
     Logger.log("\u{1F4A1} Command Palette (Cmd+P)\uC5D0\uC11C \uAC80\uC0C9\uD558\uAC70\uB098 Hotkeys\uC5D0\uC11C \uB2E8\uCD95\uD0A4\uB97C \uC124\uC815\uD558\uC138\uC694!");
+  }
+  /**
+   * 🎯 통합 툴팁 표시 판단: 플랫폼과 설정에 따른 스마트 결정
+   */
+  static shouldShowTooltipOnInteraction(interactionType) {
+    var _a;
+    if (!((_a = this.settings) == null ? void 0 : _a.inlineMode))
+      return false;
+    const { tooltipTrigger } = this.settings.inlineMode;
+    if (!tooltipTrigger) {
+      return interactionType === "hover" ? this.settings.inlineMode.showTooltipOnHover : this.settings.inlineMode.showTooltipOnClick;
+    }
+    switch (tooltipTrigger) {
+      case "disabled":
+        return false;
+      case "hover":
+        return interactionType === "hover" && !import_obsidian11.Platform.isMobile;
+      case "click":
+        return interactionType === "click";
+      case "auto":
+      default:
+        if (import_obsidian11.Platform.isMobile) {
+          return interactionType === "click";
+        } else {
+          return true;
+        }
+    }
   }
 };
 InlineModeService.activeErrors = /* @__PURE__ */ new Map();

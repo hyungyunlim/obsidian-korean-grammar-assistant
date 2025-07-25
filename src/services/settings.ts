@@ -6,14 +6,16 @@ import { Logger } from '../utils/logger';
  * 기본 인라인 모드 설정
  */
 export const DEFAULT_INLINE_MODE_SETTINGS: InlineModeSettings = {
-  enabled: false, // 베타 기능이므로 기본적으로 비활성화
-  showUnderline: true,
+  enabled: false,
   underlineStyle: 'wavy',
   underlineColor: '#ff0000',
+  
+  // 🎯 새로운 통합 툴팁 설정 (플랫폼별 자동 최적화)
+  tooltipTrigger: 'auto', // 기본값: 플랫폼에 따라 자동 선택
+  
+  // 🔧 레거시 설정 (하위 호환성, 추후 제거 예정)
   showTooltipOnHover: true,
   showTooltipOnClick: true,
-  autoCheck: false, // 향후 구현 예정
-  autoCheckDelay: 2000
 };
 
 /**

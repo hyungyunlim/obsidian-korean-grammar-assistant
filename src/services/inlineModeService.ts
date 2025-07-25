@@ -836,8 +836,10 @@ export class InlineModeService {
   static handleErrorHover(error: InlineError, hoveredElement?: HTMLElement, mousePosition?: { x: number; y: number }): void {
     Logger.debug(`인라인 모드: 오류 호버 - ${error.correction.original}`);
     
-    // 호버 시 툴팁 표시 (설정에서 활성화된 경우)
-    if (this.settings?.inlineMode?.showTooltipOnHover) {
+    // 🎯 새로운 통합 툴팁 방식: 플랫폼과 설정에 따른 스마트 판단
+    const shouldShowTooltip = this.shouldShowTooltipOnInteraction('hover');
+    
+    if (shouldShowTooltip) {
       // 실제 호버된 요소가 전달되면 그것을 사용, 없으면 기존 방식으로 찾기
       const targetElement = hoveredElement || this.findErrorElement(error);
       if (targetElement) {
@@ -1742,5 +1744,44 @@ export class InlineModeService {
     Logger.log('  • Korean Grammar Assistant: 문법 오류 포커스 해제');
     Logger.log('  • Korean Grammar Assistant: 한국어 문법 인라인 모드 토글');
     Logger.log('💡 Command Palette (Cmd+P)에서 검색하거나 Hotkeys에서 단축키를 설정하세요!');
+  }
+
+  /**
+   * 🎯 통합 툴팁 표시 판단: 플랫폼과 설정에 따른 스마트 결정
+   */
+  static shouldShowTooltipOnInteraction(interactionType: 'hover' | 'click'): boolean {
+    if (!this.settings?.inlineMode) return false;
+    
+    const { tooltipTrigger } = this.settings.inlineMode;
+    
+    // 새로운 통합 설정이 없으면 레거시 설정 사용 (하위 호환성)
+    if (!tooltipTrigger) {
+      return interactionType === 'hover' 
+        ? this.settings.inlineMode.showTooltipOnHover 
+        : this.settings.inlineMode.showTooltipOnClick;
+    }
+    
+    // 통합 설정에 따른 판단
+    switch (tooltipTrigger) {
+      case 'disabled':
+        return false;
+        
+      case 'hover':
+        return interactionType === 'hover' && !Platform.isMobile;
+        
+      case 'click':
+        return interactionType === 'click';
+        
+      case 'auto':
+      default:
+        // 플랫폼별 자동 최적화
+        if (Platform.isMobile) {
+          // 모바일: 클릭만 지원
+          return interactionType === 'click';
+        } else {
+          // 데스크톱: 호버 우선, 클릭도 지원
+          return true; // 호버와 클릭 모두 허용
+        }
+    }
   }
 }

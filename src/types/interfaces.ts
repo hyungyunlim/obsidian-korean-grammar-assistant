@@ -186,14 +186,19 @@ export interface AIClient {
  * 인라인 모드 설정 인터페이스
  */
 export interface InlineModeSettings {
-  enabled: boolean; // 베타 기능 활성화 여부
-  showUnderline: boolean; // 밑줄 표시 여부
+  enabled: boolean; // 인라인 모드 활성화 여부
   underlineStyle: 'wavy' | 'solid' | 'dotted' | 'dashed'; // 밑줄 스타일
   underlineColor: string; // 밑줄 색상
+  // 🔧 개선: 상충되는 옵션들을 통합된 방식으로 변경
+  tooltipTrigger: 'auto' | 'hover' | 'click' | 'disabled'; // 툴팁 표시 방식
+  // auto: 플랫폼에 따라 자동 (데스크톱=hover, 모바일=click)
+  // hover: 마우스 호버 시 (데스크톱 전용)
+  // click: 클릭 시 (모바일 친화적)
+  // disabled: 툴팁 비활성화
+  
+  // 🔧 레거시 설정 (하위 호환성을 위해 유지, 추후 제거 예정)
   showTooltipOnHover: boolean; // 호버 시 툴팁 표시 여부
   showTooltipOnClick: boolean; // 클릭 시 툴팁 표시 여부
-  autoCheck: boolean; // 타이핑 중단 시 자동 검사 여부 (향후 구현)
-  autoCheckDelay: number; // 자동 검사 지연 시간 (ms)
 }
 
 /**
