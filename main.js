@@ -9587,66 +9587,197 @@ var InlineTooltip = class {
     }
   }
   /**
-   * 툴팁 위치 조정
+   * 툴팁 위치 조정 (Obsidian API 기반 고급 처리)
    */
   positionTooltip(targetElement) {
     if (!this.tooltip)
       return;
     const targetRect = targetElement.getBoundingClientRect();
-    const tooltipRect = this.tooltip.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const isMobile = import_obsidian10.Platform.isMobile;
-    const gap = isMobile ? 20 : 8;
-    const minSpacing = isMobile ? 16 : 12;
+    const isPhone = import_obsidian10.Platform.isPhone || viewportWidth <= 480;
+    const isTablet = import_obsidian10.Platform.isTablet || viewportWidth <= 768 && viewportWidth > 480;
+    const app = window.app;
+    let editorScrollInfo = null;
+    let editorContainerRect = null;
+    if (app && app.workspace) {
+      try {
+        const activeView = app.workspace.getActiveViewOfType(import_obsidian10.MarkdownView);
+        if (activeView && activeView.editor) {
+          editorScrollInfo = activeView.editor.getScrollInfo();
+          if (activeView.containerEl) {
+            editorContainerRect = activeView.containerEl.getBoundingClientRect();
+          }
+        }
+      } catch (error) {
+        Logger.debug("Obsidian API \uC811\uADFC \uC911 \uC624\uB958 (\uBB34\uC2DC\uB428):", error);
+      }
+    }
+    const scrollTop = (editorScrollInfo == null ? void 0 : editorScrollInfo.top) || window.pageYOffset || document.documentElement.scrollTop;
+    const scrollLeft = (editorScrollInfo == null ? void 0 : editorScrollInfo.left) || window.pageXOffset || document.documentElement.scrollLeft;
+    const baseViewportHeight = window.screen.height || viewportHeight;
+    const keyboardVisible = isMobile && viewportHeight < baseViewportHeight * 0.75;
+    const keyboardHeight = keyboardVisible ? baseViewportHeight - viewportHeight : 0;
+    Logger.debug(`\u{1F527} \uC704\uCE58 \uACC4\uC0B0 \uC815\uBCF4:`, {
+      isMobile,
+      isPhone,
+      isTablet,
+      viewportSize: `${viewportWidth}x${viewportHeight}`,
+      keyboardVisible,
+      keyboardHeight,
+      targetRect: `${targetRect.left},${targetRect.top} ${targetRect.width}x${targetRect.height}`,
+      scroll: `${scrollLeft},${scrollTop}`,
+      editorContainer: editorContainerRect ? `${editorContainerRect.width}x${editorContainerRect.height}` : "none",
+      obsidianAPI: !!app
+    });
+    if (isMobile) {
+      this.positionTooltipMobile(targetElement, targetRect, viewportWidth, viewportHeight, keyboardHeight, isPhone, editorContainerRect);
+    } else {
+      this.positionTooltipDesktop(targetElement, targetRect, viewportWidth, viewportHeight, editorContainerRect);
+    }
+  }
+  /**
+   * 모바일 툴팁 위치 계산 (화면 구석 완전 대응)
+   */
+  positionTooltipMobile(targetElement, targetRect, viewportWidth, viewportHeight, keyboardHeight, isPhone, editorContainerRect = null) {
+    if (!this.tooltip)
+      return;
+    const editorLeft = (editorContainerRect == null ? void 0 : editorContainerRect.left) || 0;
+    const editorTop = (editorContainerRect == null ? void 0 : editorContainerRect.top) || 0;
+    const editorWidth = (editorContainerRect == null ? void 0 : editorContainerRect.width) || viewportWidth;
+    const editorHeight = (editorContainerRect == null ? void 0 : editorContainerRect.height) || viewportHeight;
+    const baseWidth = isPhone ? 300 : 350;
+    const fixedWidth = Math.min(baseWidth, Math.min(viewportWidth, editorWidth) - 32);
+    const baseHeight = isPhone ? 180 : 220;
+    const availableHeight = Math.min(viewportHeight, editorHeight) - keyboardHeight - 60;
+    const maxHeight = Math.min(baseHeight, availableHeight * 0.6);
+    this.tooltip.style.width = `${fixedWidth}px`;
+    this.tooltip.style.maxHeight = `${maxHeight}px`;
+    this.tooltip.style.minWidth = `${fixedWidth}px`;
+    this.tooltip.style.fontSize = isPhone ? "13px" : "14px";
+    const cornerThreshold = 60;
+    const effectiveLeft = Math.max(targetRect.left, editorLeft);
+    const effectiveRight = Math.min(targetRect.right, editorLeft + editorWidth);
+    const effectiveTop = Math.max(targetRect.top, editorTop);
+    const effectiveBottom = Math.min(targetRect.bottom, editorTop + editorHeight);
+    const isLeftEdge = effectiveLeft - editorLeft < cornerThreshold;
+    const isRightEdge = editorLeft + editorWidth - effectiveRight < cornerThreshold;
+    const isTopEdge = effectiveTop - editorTop < cornerThreshold;
+    const isBottomEdge = editorTop + editorHeight - effectiveBottom < cornerThreshold;
+    const fingerOffset = isPhone ? 60 : 50;
+    const safeMargin = 16;
     let finalLeft = 0;
     let finalTop = 0;
-    if (isMobile) {
-      const fixedWidth = Math.min(320, viewportWidth - 32);
-      const maxHeight = Math.min(viewportHeight * 0.4, 200);
-      this.tooltip.style.width = `${fixedWidth}px`;
-      this.tooltip.style.maxHeight = `${maxHeight}px`;
-      this.tooltip.style.minWidth = `${fixedWidth}px`;
-      this.tooltip.style.fontSize = "14px";
-      finalLeft = (viewportWidth - fixedWidth) / 2;
-      const fingerHeight = 80;
-      const spaceAbove = targetRect.top;
-      const spaceBelow = viewportHeight - targetRect.bottom;
-      if (spaceAbove > maxHeight + fingerHeight + gap) {
-        finalTop = targetRect.top - maxHeight - gap - 20;
-      } else if (spaceBelow > maxHeight + fingerHeight + gap) {
-        finalTop = targetRect.bottom + gap + 20;
-      } else {
-        finalTop = Math.max(minSpacing, (viewportHeight - maxHeight) / 2);
-      }
-      Logger.log(`\u{1F4F1} \uBAA8\uBC14\uC77C \uD234\uD301 \uACE0\uC815 \uC704\uCE58: ${fixedWidth}x${maxHeight} at (${finalLeft}, ${finalTop})`);
+    if (isLeftEdge) {
+      finalLeft = Math.max(safeMargin, editorLeft + safeMargin);
+      Logger.debug("\u{1F4F1} \uC67C\uCABD \uAD6C\uC11D \uAC10\uC9C0: \uC5D0\uB514\uD130 \uC601\uC5ED \uB0B4 \uC624\uB978\uCABD\uC73C\uB85C \uC774\uB3D9");
+    } else if (isRightEdge) {
+      finalLeft = Math.min(viewportWidth - fixedWidth - safeMargin, editorLeft + editorWidth - fixedWidth - safeMargin);
+      Logger.debug("\u{1F4F1} \uC624\uB978\uCABD \uAD6C\uC11D \uAC10\uC9C0: \uC5D0\uB514\uD130 \uC601\uC5ED \uB0B4 \uC67C\uCABD\uC73C\uB85C \uC774\uB3D9");
     } else {
-      if (targetRect.bottom + gap + tooltipRect.height <= viewportHeight - minSpacing) {
-        finalTop = targetRect.bottom + gap;
+      const editorCenterX = editorLeft + editorWidth / 2;
+      finalLeft = Math.max(safeMargin, Math.min(
+        editorCenterX - fixedWidth / 2,
+        viewportWidth - fixedWidth - safeMargin
+      ));
+    }
+    const effectiveViewportHeight = Math.min(viewportHeight - keyboardHeight, editorTop + editorHeight);
+    const spaceAbove = effectiveTop - editorTop;
+    const spaceBelow = effectiveViewportHeight - effectiveBottom;
+    if (isTopEdge && spaceBelow > maxHeight + fingerOffset + safeMargin) {
+      finalTop = effectiveBottom + fingerOffset;
+      Logger.debug("\u{1F4F1} \uC0C1\uB2E8 \uAD6C\uC11D: \uC544\uB798\uCABD \uBC30\uCE58");
+    } else if (isBottomEdge && spaceAbove > maxHeight + fingerOffset + safeMargin) {
+      finalTop = effectiveTop - maxHeight - fingerOffset;
+      Logger.debug("\u{1F4F1} \uD558\uB2E8 \uAD6C\uC11D: \uC704\uCABD \uBC30\uCE58");
+    } else if (spaceAbove > maxHeight + fingerOffset + safeMargin) {
+      finalTop = effectiveTop - maxHeight - 30;
+    } else if (spaceBelow > maxHeight + fingerOffset + safeMargin) {
+      finalTop = effectiveBottom + 30;
+    } else {
+      const editorCenterY = editorTop + editorHeight / 2;
+      const targetCenterY = (effectiveTop + effectiveBottom) / 2;
+      if (Math.abs(editorCenterY - targetCenterY) < maxHeight / 2) {
+        finalTop = Math.max(editorTop + safeMargin, effectiveTop - maxHeight - 20);
       } else {
-        finalTop = targetRect.top - tooltipRect.height - gap;
+        finalTop = Math.max(editorTop + safeMargin, editorCenterY - maxHeight / 2);
       }
-      finalLeft = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
-      if (finalLeft < minSpacing) {
-        finalLeft = minSpacing;
-      } else if (finalLeft + tooltipRect.width > viewportWidth - minSpacing) {
-        finalLeft = viewportWidth - tooltipRect.width - minSpacing;
-      }
+      Logger.debug("\u{1F4F1} \uACF5\uAC04 \uBD80\uC871: \uC5D0\uB514\uD130 \uC911\uC559 \uBC30\uCE58");
     }
-    if (finalTop < minSpacing) {
-      finalTop = minSpacing;
-    } else if (finalTop + (isMobile ? parseInt(this.tooltip.style.maxHeight) : tooltipRect.height) > viewportHeight - minSpacing) {
-      finalTop = viewportHeight - (isMobile ? parseInt(this.tooltip.style.maxHeight) : tooltipRect.height) - minSpacing;
-    }
+    finalTop = Math.max(
+      Math.max(safeMargin, editorTop),
+      Math.min(finalTop, effectiveViewportHeight - maxHeight - safeMargin)
+    );
+    finalLeft = Math.max(safeMargin, Math.min(finalLeft, viewportWidth - fixedWidth - safeMargin));
     this.tooltip.style.position = "fixed";
     this.tooltip.style.left = `${finalLeft}px`;
     this.tooltip.style.top = `${finalTop}px`;
     this.tooltip.style.zIndex = "1000";
     this.tooltip.style.visibility = "visible";
-    if (isMobile) {
-      this.tooltip.style.boxShadow = "0 8px 32px rgba(0, 0, 0, 0.3)";
-      this.tooltip.style.borderRadius = "12px";
+    this.tooltip.style.boxShadow = "0 8px 32px rgba(0, 0, 0, 0.3)";
+    this.tooltip.style.borderRadius = "12px";
+    Logger.log(`\u{1F4F1} \uCD5C\uC885 \uBAA8\uBC14\uC77C \uD234\uD301 \uC704\uCE58: ${fixedWidth}x${maxHeight} at (${finalLeft}, ${finalTop})`, {
+      corners: { isLeftEdge, isRightEdge, isTopEdge, isBottomEdge },
+      keyboard: { visible: keyboardHeight > 0, height: keyboardHeight },
+      spaces: { above: spaceAbove, below: spaceBelow },
+      editor: editorContainerRect ? `${editorWidth}x${editorHeight} at (${editorLeft}, ${editorTop})` : "none"
+    });
+  }
+  /**
+   * 데스크톱 툴팁 위치 계산 (개선된 구석 처리)
+   */
+  positionTooltipDesktop(targetElement, targetRect, viewportWidth, viewportHeight, editorContainerRect = null) {
+    if (!this.tooltip)
+      return;
+    const tooltipRect = this.tooltip.getBoundingClientRect();
+    const gap = 8;
+    const minSpacing = 12;
+    const editorLeft = (editorContainerRect == null ? void 0 : editorContainerRect.left) || 0;
+    const editorTop = (editorContainerRect == null ? void 0 : editorContainerRect.top) || 0;
+    const editorWidth = (editorContainerRect == null ? void 0 : editorContainerRect.width) || viewportWidth;
+    const editorHeight = (editorContainerRect == null ? void 0 : editorContainerRect.height) || viewportHeight;
+    const cornerThreshold = 100;
+    const isLeftEdge = targetRect.left - editorLeft < cornerThreshold;
+    const isRightEdge = editorLeft + editorWidth - targetRect.right < cornerThreshold;
+    const isTopEdge = targetRect.top - editorTop < cornerThreshold;
+    const isBottomEdge = editorTop + editorHeight - targetRect.bottom < cornerThreshold;
+    let finalLeft = 0;
+    let finalTop = 0;
+    if (isBottomEdge) {
+      finalTop = targetRect.top - tooltipRect.height - gap;
+      Logger.debug("\u{1F5A5}\uFE0F \uD558\uB2E8 \uAD6C\uC11D: \uC704\uCABD \uAC15\uC81C \uBC30\uCE58");
+    } else if (targetRect.bottom + gap + tooltipRect.height <= Math.min(viewportHeight, editorTop + editorHeight) - minSpacing) {
+      finalTop = targetRect.bottom + gap;
+    } else {
+      finalTop = targetRect.top - tooltipRect.height - gap;
     }
+    if (isLeftEdge) {
+      finalLeft = Math.max(targetRect.left, editorLeft);
+      Logger.debug("\u{1F5A5}\uFE0F \uC67C\uCABD \uAD6C\uC11D: \uC67C\uCABD \uC815\uB82C");
+    } else if (isRightEdge) {
+      finalLeft = Math.min(targetRect.right - tooltipRect.width, editorLeft + editorWidth - tooltipRect.width);
+      Logger.debug("\u{1F5A5}\uFE0F \uC624\uB978\uCABD \uAD6C\uC11D: \uC624\uB978\uCABD \uC815\uB82C");
+    } else {
+      finalLeft = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
+    }
+    finalLeft = Math.max(
+      Math.max(minSpacing, editorLeft),
+      Math.min(finalLeft, Math.min(viewportWidth, editorLeft + editorWidth) - tooltipRect.width - minSpacing)
+    );
+    finalTop = Math.max(
+      Math.max(minSpacing, editorTop),
+      Math.min(finalTop, Math.min(viewportHeight, editorTop + editorHeight) - tooltipRect.height - minSpacing)
+    );
+    this.tooltip.style.position = "fixed";
+    this.tooltip.style.left = `${finalLeft}px`;
+    this.tooltip.style.top = `${finalTop}px`;
+    this.tooltip.style.zIndex = "1000";
+    this.tooltip.style.visibility = "visible";
+    Logger.log(`\u{1F5A5}\uFE0F \uB370\uC2A4\uD06C\uD1B1 \uD234\uD301 \uC704\uCE58: ${tooltipRect.width}x${tooltipRect.height} at (${finalLeft}, ${finalTop})`, {
+      corners: { isLeftEdge, isRightEdge, isTopEdge, isBottomEdge },
+      editor: editorContainerRect ? `${editorWidth}x${editorHeight} at (${editorLeft}, ${editorTop})` : "none"
+    });
   }
   /**
    * 병합된 오류용 툴팁 생성

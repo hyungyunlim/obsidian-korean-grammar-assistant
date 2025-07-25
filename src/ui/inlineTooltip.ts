@@ -1,6 +1,6 @@
 import { InlineError } from '../types/interfaces';
 import { Logger } from '../utils/logger';
-import { Platform } from 'obsidian';
+import { Platform, MarkdownView } from 'obsidian';
 import { InlineModeService } from '../services/inlineModeService';
 
 /**
@@ -124,95 +124,259 @@ export class InlineTooltip {
   }
 
   /**
-   * 툴팁 위치 조정
+   * 툴팁 위치 조정 (Obsidian API 기반 고급 처리)
    */
   private positionTooltip(targetElement: HTMLElement): void {
     if (!this.tooltip) return;
 
     const targetRect = targetElement.getBoundingClientRect();
-    const tooltipRect = this.tooltip.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     
     const isMobile = Platform.isMobile;
-    const gap = isMobile ? 20 : 8; // 모바일에서는 더 큰 간격
-    const minSpacing = isMobile ? 16 : 12;
+    const isPhone = (Platform as any).isPhone || (viewportWidth <= 480);
+    const isTablet = (Platform as any).isTablet || (viewportWidth <= 768 && viewportWidth > 480);
+    
+    // 🔧 Obsidian App 정보 활용
+    const app = (window as any).app;
+    let editorScrollInfo = null;
+    let editorContainerRect = null;
+    
+    if (app && app.workspace) {
+      try {
+        // 현재 활성 뷰 가져오기
+        const activeView = app.workspace.getActiveViewOfType(MarkdownView);
+        if (activeView && activeView.editor) {
+          // 에디터 스크롤 정보
+          editorScrollInfo = activeView.editor.getScrollInfo();
+          // 에디터 컨테이너 정보
+          if (activeView.containerEl) {
+            editorContainerRect = activeView.containerEl.getBoundingClientRect();
+          }
+        }
+      } catch (error) {
+        Logger.debug('Obsidian API 접근 중 오류 (무시됨):', error);
+      }
+    }
+    
+    // 🔧 스크롤 정보 고려 (Obsidian API 우선, 폴백은 기본 API)
+    const scrollTop = editorScrollInfo?.top || window.pageYOffset || document.documentElement.scrollTop;
+    const scrollLeft = editorScrollInfo?.left || window.pageXOffset || document.documentElement.scrollLeft;
+    
+    // 🔧 모바일 키보드 감지 (뷰포트 높이 변화로 추정)
+    const baseViewportHeight = window.screen.height || viewportHeight;
+    const keyboardVisible = isMobile && (viewportHeight < baseViewportHeight * 0.75);
+    const keyboardHeight = keyboardVisible ? baseViewportHeight - viewportHeight : 0;
+    
+    Logger.debug(`🔧 위치 계산 정보:`, {
+      isMobile, isPhone, isTablet,
+      viewportSize: `${viewportWidth}x${viewportHeight}`,
+      keyboardVisible, keyboardHeight,
+      targetRect: `${targetRect.left},${targetRect.top} ${targetRect.width}x${targetRect.height}`,
+      scroll: `${scrollLeft},${scrollTop}`,
+      editorContainer: editorContainerRect ? `${editorContainerRect.width}x${editorContainerRect.height}` : 'none',
+      obsidianAPI: !!app
+    });
+
+    if (isMobile) {
+      this.positionTooltipMobile(targetElement, targetRect, viewportWidth, viewportHeight, keyboardHeight, isPhone, editorContainerRect);
+    } else {
+      this.positionTooltipDesktop(targetElement, targetRect, viewportWidth, viewportHeight, editorContainerRect);
+    }
+  }
+
+  /**
+   * 모바일 툴팁 위치 계산 (화면 구석 완전 대응)
+   */
+  private positionTooltipMobile(
+    targetElement: HTMLElement, 
+    targetRect: DOMRect, 
+    viewportWidth: number, 
+    viewportHeight: number,
+    keyboardHeight: number,
+    isPhone: boolean,
+    editorContainerRect: DOMRect | null = null
+  ): void {
+    if (!this.tooltip) return;
+
+    // 🔧 에디터 컨테이너 고려한 위치 조정
+    const editorLeft = editorContainerRect?.left || 0;
+    const editorTop = editorContainerRect?.top || 0;
+    const editorWidth = editorContainerRect?.width || viewportWidth;
+    const editorHeight = editorContainerRect?.height || viewportHeight;
+
+    // 🔧 화면 크기에 따른 적응형 크기
+    const baseWidth = isPhone ? 300 : 350;
+    const fixedWidth = Math.min(baseWidth, Math.min(viewportWidth, editorWidth) - 32);
+    const baseHeight = isPhone ? 180 : 220;
+    const availableHeight = Math.min(viewportHeight, editorHeight) - keyboardHeight - 60;
+    const maxHeight = Math.min(baseHeight, availableHeight * 0.6);
+    
+    this.tooltip.style.width = `${fixedWidth}px`;
+    this.tooltip.style.maxHeight = `${maxHeight}px`;
+    this.tooltip.style.minWidth = `${fixedWidth}px`;
+    this.tooltip.style.fontSize = isPhone ? '13px' : '14px';
+    
+    // 🔧 화면 구석 감지 (에디터 영역 기준)
+    const cornerThreshold = 60;
+    const effectiveLeft = Math.max(targetRect.left, editorLeft);
+    const effectiveRight = Math.min(targetRect.right, editorLeft + editorWidth);
+    const effectiveTop = Math.max(targetRect.top, editorTop);
+    const effectiveBottom = Math.min(targetRect.bottom, editorTop + editorHeight);
+    
+    const isLeftEdge = effectiveLeft - editorLeft < cornerThreshold;
+    const isRightEdge = editorLeft + editorWidth - effectiveRight < cornerThreshold;
+    const isTopEdge = effectiveTop - editorTop < cornerThreshold;
+    const isBottomEdge = editorTop + editorHeight - effectiveBottom < cornerThreshold;
+    
+    const fingerOffset = isPhone ? 60 : 50;
+    const safeMargin = 16;
     
     let finalLeft = 0;
     let finalTop = 0;
 
-    if (isMobile) {
-      // 🔧 모바일: 고정된 크기와 위치로 일관성 확보
-      const fixedWidth = Math.min(320, viewportWidth - 32);
-      const maxHeight = Math.min(viewportHeight * 0.4, 200); // 화면 높이의 40% 또는 200px
-      
-      this.tooltip.style.width = `${fixedWidth}px`;
-      this.tooltip.style.maxHeight = `${maxHeight}px`;
-      this.tooltip.style.minWidth = `${fixedWidth}px`;
-      this.tooltip.style.fontSize = '14px';
-      
-      // 중앙 정렬로 일관성 확보
-      finalLeft = (viewportWidth - fixedWidth) / 2;
-      
-      // 세로 위치: 타겟 위쪽 또는 아래쪽 중 더 적절한 곳
-      const fingerHeight = 80; // 손가락 영역 고려
-      const spaceAbove = targetRect.top;
-      const spaceBelow = viewportHeight - targetRect.bottom;
-      
-      if (spaceAbove > maxHeight + fingerHeight + gap) {
-        // 위쪽에 표시
-        finalTop = targetRect.top - maxHeight - gap - 20;
-      } else if (spaceBelow > maxHeight + fingerHeight + gap) {
-        // 아래쪽에 표시
-        finalTop = targetRect.bottom + gap + 20;
-      } else {
-        // 중앙에 표시 (타겟 요소 피하면서)
-        finalTop = Math.max(minSpacing, (viewportHeight - maxHeight) / 2);
-      }
-      
-      Logger.log(`📱 모바일 툴팁 고정 위치: ${fixedWidth}x${maxHeight} at (${finalLeft}, ${finalTop})`);
-      
+    // 🔧 가로 위치 계산 (에디터 영역 고려)
+    if (isLeftEdge) {
+      finalLeft = Math.max(safeMargin, editorLeft + safeMargin);
+      Logger.debug('📱 왼쪽 구석 감지: 에디터 영역 내 오른쪽으로 이동');
+    } else if (isRightEdge) {
+      finalLeft = Math.min(viewportWidth - fixedWidth - safeMargin, editorLeft + editorWidth - fixedWidth - safeMargin);
+      Logger.debug('📱 오른쪽 구석 감지: 에디터 영역 내 왼쪽으로 이동');
     } else {
-      // 🖥️ 데스크톱: 기존 로직
-      // 아래쪽에 표시하는 것을 기본으로 하되, 공간이 부족하면 위쪽으로
-      if (targetRect.bottom + gap + tooltipRect.height <= viewportHeight - minSpacing) {
-        // 아래쪽에 표시
-        finalTop = targetRect.bottom + gap;
+      // 중앙 영역: 에디터 중앙 정렬
+      const editorCenterX = editorLeft + editorWidth / 2;
+      finalLeft = Math.max(safeMargin, Math.min(
+        editorCenterX - fixedWidth / 2,
+        viewportWidth - fixedWidth - safeMargin
+      ));
+    }
+
+    // 🔧 세로 위치 계산 (키보드 및 에디터 영역 고려)
+    const effectiveViewportHeight = Math.min(viewportHeight - keyboardHeight, editorTop + editorHeight);
+    const spaceAbove = effectiveTop - editorTop;
+    const spaceBelow = effectiveViewportHeight - effectiveBottom;
+    
+    if (isTopEdge && spaceBelow > maxHeight + fingerOffset + safeMargin) {
+      finalTop = effectiveBottom + fingerOffset;
+      Logger.debug('📱 상단 구석: 아래쪽 배치');
+    } else if (isBottomEdge && spaceAbove > maxHeight + fingerOffset + safeMargin) {
+      finalTop = effectiveTop - maxHeight - fingerOffset;
+      Logger.debug('📱 하단 구석: 위쪽 배치');
+    } else if (spaceAbove > maxHeight + fingerOffset + safeMargin) {
+      finalTop = effectiveTop - maxHeight - 30;
+    } else if (spaceBelow > maxHeight + fingerOffset + safeMargin) {
+      finalTop = effectiveBottom + 30;
+    } else {
+      // 공간 매우 부족: 에디터 중앙 (타겟 피하면서)
+      const editorCenterY = editorTop + editorHeight / 2;
+      const targetCenterY = (effectiveTop + effectiveBottom) / 2;
+      
+      if (Math.abs(editorCenterY - targetCenterY) < maxHeight / 2) {
+        finalTop = Math.max(editorTop + safeMargin, effectiveTop - maxHeight - 20);
       } else {
-        // 위쪽에 표시
-        finalTop = targetRect.top - tooltipRect.height - gap;
+        finalTop = Math.max(editorTop + safeMargin, editorCenterY - maxHeight / 2);
       }
-
-      // 가로 위치는 타겟 중앙 정렬
-      finalLeft = targetRect.left + (targetRect.width / 2) - (tooltipRect.width / 2);
-
-      // 경계 보정
-      if (finalLeft < minSpacing) {
-        finalLeft = minSpacing;
-      } else if (finalLeft + tooltipRect.width > viewportWidth - minSpacing) {
-        finalLeft = viewportWidth - tooltipRect.width - minSpacing;
-      }
+      Logger.debug('📱 공간 부족: 에디터 중앙 배치');
     }
 
-    // 추가 경계 보정
-    if (finalTop < minSpacing) {
-      finalTop = minSpacing;
-    } else if (finalTop + (isMobile ? parseInt(this.tooltip.style.maxHeight) : tooltipRect.height) > viewportHeight - minSpacing) {
-      finalTop = viewportHeight - (isMobile ? parseInt(this.tooltip.style.maxHeight) : tooltipRect.height) - minSpacing;
-    }
+    // 🔧 최종 경계 보정 (에디터 및 키보드 고려)
+    finalTop = Math.max(
+      Math.max(safeMargin, editorTop), 
+      Math.min(finalTop, effectiveViewportHeight - maxHeight - safeMargin)
+    );
+    finalLeft = Math.max(safeMargin, Math.min(finalLeft, viewportWidth - fixedWidth - safeMargin));
 
-    // 최종 위치 적용
+    // 🔧 위치 적용
     this.tooltip.style.position = 'fixed';
     this.tooltip.style.left = `${finalLeft}px`;
     this.tooltip.style.top = `${finalTop}px`;
     this.tooltip.style.zIndex = '1000';
     this.tooltip.style.visibility = 'visible';
-    
-    // 모바일에서 추가 스타일링
-    if (isMobile) {
-      this.tooltip.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3)';
-      this.tooltip.style.borderRadius = '12px';
+    this.tooltip.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3)';
+    this.tooltip.style.borderRadius = '12px';
+
+    Logger.log(`📱 최종 모바일 툴팁 위치: ${fixedWidth}x${maxHeight} at (${finalLeft}, ${finalTop})`, {
+      corners: { isLeftEdge, isRightEdge, isTopEdge, isBottomEdge },
+      keyboard: { visible: keyboardHeight > 0, height: keyboardHeight },
+      spaces: { above: spaceAbove, below: spaceBelow },
+      editor: editorContainerRect ? `${editorWidth}x${editorHeight} at (${editorLeft}, ${editorTop})` : 'none'
+    });
+  }
+
+  /**
+   * 데스크톱 툴팁 위치 계산 (개선된 구석 처리)
+   */
+  private positionTooltipDesktop(
+    targetElement: HTMLElement,
+    targetRect: DOMRect,
+    viewportWidth: number,
+    viewportHeight: number,
+    editorContainerRect: DOMRect | null = null
+  ): void {
+    if (!this.tooltip) return;
+
+    const tooltipRect = this.tooltip.getBoundingClientRect();
+    const gap = 8;
+    const minSpacing = 12;
+
+    // 🔧 에디터 컨테이너 정보 고려
+    const editorLeft = editorContainerRect?.left || 0;
+    const editorTop = editorContainerRect?.top || 0;
+    const editorWidth = editorContainerRect?.width || viewportWidth;
+    const editorHeight = editorContainerRect?.height || viewportHeight;
+
+    // 🔧 화면 구석 감지 (에디터 기준)
+    const cornerThreshold = 100;
+    const isLeftEdge = targetRect.left - editorLeft < cornerThreshold;
+    const isRightEdge = editorLeft + editorWidth - targetRect.right < cornerThreshold;
+    const isTopEdge = targetRect.top - editorTop < cornerThreshold;
+    const isBottomEdge = editorTop + editorHeight - targetRect.bottom < cornerThreshold;
+
+    let finalLeft = 0;
+    let finalTop = 0;
+
+    // 🔧 세로 위치 (구석 고려)
+    if (isBottomEdge) {
+      finalTop = targetRect.top - tooltipRect.height - gap;
+      Logger.debug('🖥️ 하단 구석: 위쪽 강제 배치');
+    } else if (targetRect.bottom + gap + tooltipRect.height <= Math.min(viewportHeight, editorTop + editorHeight) - minSpacing) {
+      finalTop = targetRect.bottom + gap;
+    } else {
+      finalTop = targetRect.top - tooltipRect.height - gap;
     }
+
+    // 🔧 가로 위치 (구석 고려)
+    if (isLeftEdge) {
+      finalLeft = Math.max(targetRect.left, editorLeft);
+      Logger.debug('🖥️ 왼쪽 구석: 왼쪽 정렬');
+    } else if (isRightEdge) {
+      finalLeft = Math.min(targetRect.right - tooltipRect.width, editorLeft + editorWidth - tooltipRect.width);
+      Logger.debug('🖥️ 오른쪽 구석: 오른쪽 정렬');
+    } else {
+      finalLeft = targetRect.left + (targetRect.width / 2) - (tooltipRect.width / 2);
+    }
+
+    // 🔧 최종 경계 보정 (에디터 영역 고려)
+    finalLeft = Math.max(
+      Math.max(minSpacing, editorLeft), 
+      Math.min(finalLeft, Math.min(viewportWidth, editorLeft + editorWidth) - tooltipRect.width - minSpacing)
+    );
+    finalTop = Math.max(
+      Math.max(minSpacing, editorTop), 
+      Math.min(finalTop, Math.min(viewportHeight, editorTop + editorHeight) - tooltipRect.height - minSpacing)
+    );
+
+    // 🔧 위치 적용
+    this.tooltip.style.position = 'fixed';
+    this.tooltip.style.left = `${finalLeft}px`;
+    this.tooltip.style.top = `${finalTop}px`;
+    this.tooltip.style.zIndex = '1000';
+    this.tooltip.style.visibility = 'visible';
+
+    Logger.log(`🖥️ 데스크톱 툴팁 위치: ${tooltipRect.width}x${tooltipRect.height} at (${finalLeft}, ${finalTop})`, {
+      corners: { isLeftEdge, isRightEdge, isTopEdge, isBottomEdge },
+      editor: editorContainerRect ? `${editorWidth}x${editorHeight} at (${editorLeft}, ${editorTop})` : 'none'
+    });
   }
 
   /**
