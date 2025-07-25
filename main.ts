@@ -233,9 +233,22 @@ export default class KoreanGrammarPlugin extends Plugin {
 
       // 기존 Widget 기반 시스템도 병행 (향후 단계적 제거 예정)
       this.registerEditorExtension([errorDecorationField]);
+
+      // InlineModeService 초기화 (키보드 단축키 지원을 위해 필요)
+      const activeLeaf = this.app.workspace.activeLeaf;
+      if (activeLeaf && activeLeaf.view && (activeLeaf.view as any).editor) {
+        // @ts-ignore - Obsidian 내부 API 사용
+        const editorView = (activeLeaf.view as any).editor.cm;
+        if (editorView) {
+          InlineModeService.setEditorView(editorView, this.settings, this.app);
+          Logger.log('인라인 모드: InlineModeService 키보드 스코프 초기화됨');
+        }
+      }
+
+      // 전역 접근을 위한 참조 설정
       (window as any).InlineModeService = InlineModeService;
 
-      Logger.log('인라인 모드 활성화됨 (EditorSuggest)');
+      Logger.log('인라인 모드 활성화됨 (EditorSuggest + 키보드 단축키)');
 
     } catch (error) {
       Logger.error('인라인 모드 활성화 실패:', error);

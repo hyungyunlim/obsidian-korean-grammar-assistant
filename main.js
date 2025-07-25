@@ -10713,12 +10713,14 @@ var InlineModeService = class {
     if (this.keyboardScope) {
       this.app.keymap.popScope(this.keyboardScope);
       this.keyboardScope = null;
+      Logger.debug("\uAE30\uC874 \uD0A4\uBCF4\uB4DC \uC2A4\uCF54\uD504 \uC81C\uAC70\uB428");
     }
     this.keyboardScope = new import_obsidian10.Scope(this.app.scope);
-    this.keyboardScope.register(["Ctrl", "Shift"], "KeyJ", (evt) => {
-      Logger.log("Ctrl+Shift+J \uD0A4 \uAC10\uC9C0\uB428");
+    Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uD0A4\uBCF4\uB4DC \uC2A4\uCF54\uD504 \uC0DD\uC131 \uC2DC\uC791");
+    this.keyboardScope.register(["Mod", "Alt"], "KeyJ", (evt) => {
+      Logger.log("\u{1F3B9} Cmd+Option+J \uD0A4 \uAC10\uC9C0\uB428");
       if (this.activeErrors.size === 0 || !this.currentView) {
-        Logger.log(`\uC870\uAC74 \uC2E4\uD328: activeErrors.size=${this.activeErrors.size}, currentView=${!!this.currentView}`);
+        Logger.log(`\u274C \uC870\uAC74 \uC2E4\uD328: activeErrors.size=${this.activeErrors.size}, currentView=${!!this.currentView}`);
         return false;
       }
       const sortedErrors = this.getActiveErrors();
@@ -10730,14 +10732,19 @@ var InlineModeService = class {
           window.globalInlineTooltip.hide();
         }
         this.setFocusedError(nextError);
+        Logger.log(`\u2705 \uB2E4\uC74C \uC624\uB958\uB85C \uC774\uB3D9: ${nextError.correction.original}`);
+      } else {
+        Logger.warn("\u274C \uB2E4\uC74C \uC624\uB958\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC74C");
       }
-      Logger.log("\uB2E4\uC74C \uC624\uB958\uB85C \uC774\uB3D9 (Ctrl+Shift+J)");
       evt.preventDefault();
       return false;
     });
-    this.keyboardScope.register(["Ctrl", "Shift"], "KeyK", (evt) => {
-      if (this.activeErrors.size === 0 || !this.currentView)
+    this.keyboardScope.register(["Mod", "Alt"], "KeyK", (evt) => {
+      Logger.log("\u{1F3B9} Cmd+Option+K \uD0A4 \uAC10\uC9C0\uB428");
+      if (this.activeErrors.size === 0 || !this.currentView) {
+        Logger.log(`\u274C \uC870\uAC74 \uC2E4\uD328: activeErrors.size=${this.activeErrors.size}, currentView=${!!this.currentView}`);
         return false;
+      }
       const sortedErrors = this.getActiveErrors();
       const currentIndex = this.currentFocusedError ? sortedErrors.findIndex((error) => error.uniqueId === this.currentFocusedError.uniqueId) : -1;
       const prevIndex = currentIndex <= 0 ? sortedErrors.length - 1 : currentIndex - 1;
@@ -10747,36 +10754,79 @@ var InlineModeService = class {
           window.globalInlineTooltip.hide();
         }
         this.setFocusedError(prevError);
+        Logger.log(`\u2705 \uC774\uC804 \uC624\uB958\uB85C \uC774\uB3D9: ${prevError.correction.original}`);
+      } else {
+        Logger.warn("\u274C \uC774\uC804 \uC624\uB958\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC74C");
       }
-      Logger.log("\uC774\uC804 \uC624\uB958\uB85C \uC774\uB3D9 (Ctrl+Shift+K)");
       evt.preventDefault();
       return false;
     });
-    this.keyboardScope.register(["Ctrl", "Shift"], "KeyH", (evt) => {
-      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction)
+    this.keyboardScope.register(["Mod", "Alt"], "KeyH", (evt) => {
+      Logger.log("\u{1F3B9} Cmd+Option+H \uD0A4 \uAC10\uC9C0\uB428");
+      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
+        Logger.log("\u274C \uD3EC\uCEE4\uC2A4\uB41C \uC624\uB958\uAC00 \uC5C6\uAC70\uB098 \uC870\uAC74 \uC2E4\uD328");
         return false;
+      }
       const suggestions = this.currentFocusedError.correction.corrected;
-      if (!suggestions || suggestions.length === 0)
+      if (!suggestions || suggestions.length === 0) {
+        Logger.log("\u274C \uC81C\uC548\uC774 \uC5C6\uC74C");
         return false;
+      }
       this.currentSuggestionIndex = Math.max(0, this.currentSuggestionIndex - 1);
       this.updateTooltipHighlight();
-      Logger.log(`\uC774\uC804 \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length}) - Ctrl+Shift+H`);
+      Logger.log(`\u2705 \uC774\uC804 \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
       evt.preventDefault();
       return false;
     });
-    this.keyboardScope.register(["Ctrl", "Shift"], "KeyL", (evt) => {
-      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction)
+    this.keyboardScope.register(["Mod", "Alt"], "KeyL", (evt) => {
+      Logger.log("\u{1F3B9} Cmd+Option+L \uD0A4 \uAC10\uC9C0\uB428");
+      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
+        Logger.log("\u274C \uD3EC\uCEE4\uC2A4\uB41C \uC624\uB958\uAC00 \uC5C6\uAC70\uB098 \uC870\uAC74 \uC2E4\uD328");
         return false;
+      }
       const suggestions = this.currentFocusedError.correction.corrected;
-      if (!suggestions || suggestions.length === 0)
+      if (!suggestions || suggestions.length === 0) {
+        Logger.log("\u274C \uC81C\uC548\uC774 \uC5C6\uC74C");
         return false;
+      }
       this.currentSuggestionIndex = Math.min(suggestions.length - 1, this.currentSuggestionIndex + 1);
       this.updateTooltipHighlight();
-      Logger.log(`\uB2E4\uC74C \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length}) - Ctrl+Shift+L`);
+      Logger.log(`\u2705 \uB2E4\uC74C \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+      evt.preventDefault();
+      return false;
+    });
+    this.keyboardScope.register(["Mod", "Alt"], "Enter", (evt) => {
+      Logger.log("\u{1F3B9} Cmd+Option+Enter \uD0A4 \uAC10\uC9C0\uB428");
+      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
+        Logger.log("\u274C \uD3EC\uCEE4\uC2A4\uB41C \uC624\uB958\uAC00 \uC5C6\uAC70\uB098 \uC870\uAC74 \uC2E4\uD328");
+        return false;
+      }
+      const suggestions = this.currentFocusedError.correction.corrected;
+      if (!suggestions || suggestions.length === 0) {
+        Logger.log("\u274C \uC81C\uC548\uC774 \uC5C6\uC74C");
+        return false;
+      }
+      const selectedSuggestion = suggestions[this.currentSuggestionIndex];
+      const originalText = this.currentFocusedError.correction.original;
+      this.applySuggestion(this.currentFocusedError, selectedSuggestion);
+      this.clearFocusedError();
+      Logger.log(`\u2705 \uC81C\uC548 \uC801\uC6A9: "${originalText}" \u2192 "${selectedSuggestion}"`);
+      evt.preventDefault();
+      return false;
+    });
+    this.keyboardScope.register(["Mod", "Alt"], "Escape", (evt) => {
+      Logger.log("\u{1F3B9} Cmd+Option+Escape \uD0A4 \uAC10\uC9C0\uB428");
+      if (!this.currentFocusedError || !this.currentView) {
+        Logger.log("\u274C \uD3EC\uCEE4\uC2A4\uB41C \uC624\uB958\uAC00 \uC5C6\uC74C");
+        return false;
+      }
+      this.clearFocusedError();
+      Logger.log("\u2705 \uD0A4\uBCF4\uB4DC \uB124\uBE44\uAC8C\uC774\uC158 \uD574\uC81C");
       evt.preventDefault();
       return false;
     });
     this.keyboardScope.register(["Ctrl", "Shift"], "Enter", (evt) => {
+      Logger.log("\u{1F3B9} Ctrl+Shift+Enter \uD0A4 \uAC10\uC9C0\uB428 (\uD638\uD658\uC131)");
       if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction)
         return false;
       const suggestions = this.currentFocusedError.correction.corrected;
@@ -10786,21 +10836,16 @@ var InlineModeService = class {
       const originalText = this.currentFocusedError.correction.original;
       this.applySuggestion(this.currentFocusedError, selectedSuggestion);
       this.clearFocusedError();
-      Logger.log(`\uC81C\uC548 \uC801\uC6A9: "${originalText}" \u2192 "${selectedSuggestion}" (Ctrl+Shift+Enter)`);
+      Logger.log(`\u2705 \uC81C\uC548 \uC801\uC6A9 (\uD638\uD658\uC131): "${originalText}" \u2192 "${selectedSuggestion}"`);
       evt.preventDefault();
       return false;
     });
-    this.keyboardScope.register(["Ctrl", "Shift"], "Escape", (evt) => {
-      if (!this.currentFocusedError || !this.currentView)
+    this.keyboardScope.register(["Alt"], "BracketRight", (evt) => {
+      Logger.log("\u{1F3B9} Option+] \uD0A4 \uAC10\uC9C0\uB428");
+      if (this.activeErrors.size === 0 || !this.currentView) {
+        Logger.log(`\u274C \uC870\uAC74 \uC2E4\uD328: activeErrors.size=${this.activeErrors.size}, currentView=${!!this.currentView}`);
         return false;
-      this.clearFocusedError();
-      Logger.log("\uD0A4\uBCF4\uB4DC \uB124\uBE44\uAC8C\uC774\uC158 \uD574\uC81C (Ctrl+Shift+Escape)");
-      evt.preventDefault();
-      return false;
-    });
-    this.keyboardScope.register([], "F10", (evt) => {
-      if (this.activeErrors.size === 0 || !this.currentView)
-        return false;
+      }
       const sortedErrors = this.getActiveErrors();
       const currentIndex = this.currentFocusedError ? sortedErrors.findIndex((error) => error.uniqueId === this.currentFocusedError.uniqueId) : -1;
       const nextIndex = (currentIndex + 1) % sortedErrors.length;
@@ -10810,14 +10855,17 @@ var InlineModeService = class {
           window.globalInlineTooltip.hide();
         }
         this.setFocusedError(nextError);
+        Logger.log(`\u2705 \uB2E4\uC74C \uC624\uB958\uB85C \uC774\uB3D9 (Option+]): ${nextError.correction.original}`);
       }
-      Logger.log("\uB2E4\uC74C \uC624\uB958\uB85C \uC774\uB3D9 (F10)");
       evt.preventDefault();
       return false;
     });
-    this.keyboardScope.register([], "F9", (evt) => {
-      if (this.activeErrors.size === 0 || !this.currentView)
+    this.keyboardScope.register(["Alt"], "BracketLeft", (evt) => {
+      Logger.log("\u{1F3B9} Option+[ \uD0A4 \uAC10\uC9C0\uB428");
+      if (this.activeErrors.size === 0 || !this.currentView) {
+        Logger.log(`\u274C \uC870\uAC74 \uC2E4\uD328: activeErrors.size=${this.activeErrors.size}, currentView=${!!this.currentView}`);
         return false;
+      }
       const sortedErrors = this.getActiveErrors();
       const currentIndex = this.currentFocusedError ? sortedErrors.findIndex((error) => error.uniqueId === this.currentFocusedError.uniqueId) : -1;
       const prevIndex = currentIndex <= 0 ? sortedErrors.length - 1 : currentIndex - 1;
@@ -10827,13 +10875,20 @@ var InlineModeService = class {
           window.globalInlineTooltip.hide();
         }
         this.setFocusedError(prevError);
+        Logger.log(`\u2705 \uC774\uC804 \uC624\uB958\uB85C \uC774\uB3D9 (Option+[): ${prevError.correction.original}`);
       }
-      Logger.log("\uC774\uC804 \uC624\uB958\uB85C \uC774\uB3D9 (F9)");
       evt.preventDefault();
       return false;
     });
     this.app.keymap.pushScope(this.keyboardScope);
-    Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uD0A4\uBCF4\uB4DC \uC2A4\uCF54\uD504 \uCD08\uAE30\uD654\uB428 - Ctrl+Shift+J/K(\uC624\uB958\uC774\uB3D9), H/L(\uC81C\uC548), Enter(\uC801\uC6A9), Esc(\uD574\uC81C), F9/F10(\uD14C\uC2A4\uD2B8\uC6A9)");
+    Logger.log("\u{1F3B9} \uC778\uB77C\uC778 \uBAA8\uB4DC: \uD0A4\uBCF4\uB4DC \uC2A4\uCF54\uD504 \uCD08\uAE30\uD654 \uC644\uB8CC!");
+    Logger.log("\u{1F4CB} \uC0AC\uC6A9 \uAC00\uB2A5\uD55C \uD0A4 \uC870\uD569:");
+    Logger.log("  \u2022 Cmd+Option+J/K: \uB2E4\uC74C/\uC774\uC804 \uC624\uB958");
+    Logger.log("  \u2022 Cmd+Option+H/L: \uC774\uC804/\uB2E4\uC74C \uC81C\uC548");
+    Logger.log("  \u2022 Cmd+Option+Enter: \uC81C\uC548 \uC801\uC6A9");
+    Logger.log("  \u2022 Cmd+Option+Escape: \uD3EC\uCEE4\uC2A4 \uD574\uC81C");
+    Logger.log("  \u2022 Option+[/]: \uC774\uC804/\uB2E4\uC74C \uC624\uB958 (\uB300\uC548)");
+    Logger.log("  \u2022 Ctrl+Shift+Enter: \uC81C\uC548 \uC801\uC6A9 (\uD638\uD658\uC131)");
   }
   /**
    * 포커스된 오류 설정
@@ -11450,8 +11505,16 @@ var KoreanGrammarPlugin = class extends import_obsidian12.Plugin {
       this.grammarSuggest = new KoreanGrammarSuggest(this.app, this.settings);
       this.registerEditorSuggest(this.grammarSuggest);
       this.registerEditorExtension([errorDecorationField]);
+      const activeLeaf = this.app.workspace.activeLeaf;
+      if (activeLeaf && activeLeaf.view && activeLeaf.view.editor) {
+        const editorView = activeLeaf.view.editor.cm;
+        if (editorView) {
+          InlineModeService.setEditorView(editorView, this.settings, this.app);
+          Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC: InlineModeService \uD0A4\uBCF4\uB4DC \uC2A4\uCF54\uD504 \uCD08\uAE30\uD654\uB428");
+        }
+      }
       window.InlineModeService = InlineModeService;
-      Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654\uB428 (EditorSuggest)");
+      Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654\uB428 (EditorSuggest + \uD0A4\uBCF4\uB4DC \uB2E8\uCD95\uD0A4)");
     } catch (error) {
       Logger.error("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654 \uC2E4\uD328:", error);
       new import_obsidian12.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");

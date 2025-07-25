@@ -965,17 +965,20 @@ export class InlineModeService {
     if (this.keyboardScope) {
       this.app.keymap.popScope(this.keyboardScope);
       this.keyboardScope = null;
+      Logger.debug('기존 키보드 스코프 제거됨');
     }
 
     // 새로운 스코프 생성 (앱의 전역 스코프를 부모로 설정)
     this.keyboardScope = new Scope(this.app.scope);
 
-    // Ctrl+Shift+J: 다음 오류로 이동 (충돌 방지용 조합)
-    this.keyboardScope.register(['Ctrl', 'Shift'], 'KeyJ', (evt) => {
-      Logger.log('Ctrl+Shift+J 키 감지됨');
+    Logger.log('인라인 모드: 키보드 스코프 생성 시작');
+
+    // Cmd+Option+J: 다음 오류로 이동 (맥 친화적 조합)
+    this.keyboardScope.register(['Mod', 'Alt'], 'KeyJ', (evt) => {
+      Logger.log('🎹 Cmd+Option+J 키 감지됨');
       // 인라인 모드가 활성화되지 않았으면 이벤트 패스
       if (this.activeErrors.size === 0 || !this.currentView) {
-        Logger.log(`조건 실패: activeErrors.size=${this.activeErrors.size}, currentView=${!!this.currentView}`);
+        Logger.log(`❌ 조건 실패: activeErrors.size=${this.activeErrors.size}, currentView=${!!this.currentView}`);
         return false;
       }
       
@@ -994,21 +997,22 @@ export class InlineModeService {
         }
         
         this.setFocusedError(nextError);
-        
-        // 무한루프 방지를 위해 툴팁 표시 임시 비활성화
-        // setTimeout(() => {
-        //   this.showTooltipForFocusedError();
-        // }, 50);
+        Logger.log(`✅ 다음 오류로 이동: ${nextError.correction.original}`);
+      } else {
+        Logger.warn('❌ 다음 오류를 찾을 수 없음');
       }
       
-      Logger.log('다음 오류로 이동 (Ctrl+Shift+J)');
       evt.preventDefault();
       return false;
     });
     
-    // Ctrl+Shift+K: 이전 오류로 이동 (충돌 방지용 조합)
-    this.keyboardScope.register(['Ctrl', 'Shift'], 'KeyK', (evt) => {
-      if (this.activeErrors.size === 0 || !this.currentView) return false;
+    // Cmd+Option+K: 이전 오류로 이동 (맥 친화적 조합)
+    this.keyboardScope.register(['Mod', 'Alt'], 'KeyK', (evt) => {
+      Logger.log('🎹 Cmd+Option+K 키 감지됨');
+      if (this.activeErrors.size === 0 || !this.currentView) {
+        Logger.log(`❌ 조건 실패: activeErrors.size=${this.activeErrors.size}, currentView=${!!this.currentView}`);
+        return false;
+      }
       
       // 정렬된 오류 배열 사용 (위치 기준)
       const sortedErrors = this.getActiveErrors();
@@ -1025,48 +1029,98 @@ export class InlineModeService {
         }
         
         this.setFocusedError(prevError);
-        
-        // 무한루프 방지를 위해 툴팁 표시 임시 비활성화
-        // setTimeout(() => {
-        //   this.showTooltipForFocusedError();
-        // }, 50);
+        Logger.log(`✅ 이전 오류로 이동: ${prevError.correction.original}`);
+      } else {
+        Logger.warn('❌ 이전 오류를 찾을 수 없음');
       }
       
-      Logger.log('이전 오류로 이동 (Ctrl+Shift+K)');
       evt.preventDefault();
       return false;
     });
     
-    // Ctrl+Shift+H: 이전 제안 (충돌 방지용 조합)
-    this.keyboardScope.register(['Ctrl', 'Shift'], 'KeyH', (evt) => {
-      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) return false;
+    // Cmd+Option+H: 이전 제안 (맥 친화적 조합)
+    this.keyboardScope.register(['Mod', 'Alt'], 'KeyH', (evt) => {
+      Logger.log('🎹 Cmd+Option+H 키 감지됨');
+      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
+        Logger.log('❌ 포커스된 오류가 없거나 조건 실패');
+        return false;
+      }
       
       const suggestions = this.currentFocusedError.correction.corrected;
-      if (!suggestions || suggestions.length === 0) return false;
+      if (!suggestions || suggestions.length === 0) {
+        Logger.log('❌ 제안이 없음');
+        return false;
+      }
       
       this.currentSuggestionIndex = Math.max(0, this.currentSuggestionIndex - 1);
       this.updateTooltipHighlight();
-      Logger.log(`이전 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length}) - Ctrl+Shift+H`);
+      Logger.log(`✅ 이전 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
       evt.preventDefault();
       return false;
     });
     
-    // Ctrl+Shift+L: 다음 제안 (충돌 방지용 조합)
-    this.keyboardScope.register(['Ctrl', 'Shift'], 'KeyL', (evt) => {
-      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) return false;
+    // Cmd+Option+L: 다음 제안 (맥 친화적 조합)
+    this.keyboardScope.register(['Mod', 'Alt'], 'KeyL', (evt) => {
+      Logger.log('🎹 Cmd+Option+L 키 감지됨');
+      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
+        Logger.log('❌ 포커스된 오류가 없거나 조건 실패');
+        return false;
+      }
       
       const suggestions = this.currentFocusedError.correction.corrected;
-      if (!suggestions || suggestions.length === 0) return false;
+      if (!suggestions || suggestions.length === 0) {
+        Logger.log('❌ 제안이 없음');
+        return false;
+      }
       
       this.currentSuggestionIndex = Math.min(suggestions.length - 1, this.currentSuggestionIndex + 1);
       this.updateTooltipHighlight();
-      Logger.log(`다음 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length}) - Ctrl+Shift+L`);
+      Logger.log(`✅ 다음 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
       evt.preventDefault();
       return false;
     });
     
-    // Ctrl+Shift+Enter: 제안 적용 (충돌 방지용 조합)
+    // Cmd+Option+Enter: 제안 적용 (맥 친화적 조합)
+    this.keyboardScope.register(['Mod', 'Alt'], 'Enter', (evt) => {
+      Logger.log('🎹 Cmd+Option+Enter 키 감지됨');
+      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
+        Logger.log('❌ 포커스된 오류가 없거나 조건 실패');
+        return false;
+      }
+      
+      const suggestions = this.currentFocusedError.correction.corrected;
+      if (!suggestions || suggestions.length === 0) {
+        Logger.log('❌ 제안이 없음');
+        return false;
+      }
+      
+      const selectedSuggestion = suggestions[this.currentSuggestionIndex];
+      const originalText = this.currentFocusedError.correction.original;
+      this.applySuggestion(this.currentFocusedError, selectedSuggestion);
+      this.clearFocusedError();
+      Logger.log(`✅ 제안 적용: "${originalText}" → "${selectedSuggestion}"`);
+      evt.preventDefault();
+      return false;
+    });
+    
+    // Cmd+Option+Escape: 포커스 해제 (맥 친화적 조합)
+    this.keyboardScope.register(['Mod', 'Alt'], 'Escape', (evt) => {
+      Logger.log('🎹 Cmd+Option+Escape 키 감지됨');
+      if (!this.currentFocusedError || !this.currentView) {
+        Logger.log('❌ 포커스된 오류가 없음');
+        return false;
+      }
+      
+      this.clearFocusedError();
+      Logger.log('✅ 키보드 네비게이션 해제');
+      evt.preventDefault();
+      return false;
+    });
+
+    // 백업 키 조합들 (기존 사용자를 위해 유지)
+    // Ctrl+Shift+Enter: 제안 적용 (호환성 유지)
     this.keyboardScope.register(['Ctrl', 'Shift'], 'Enter', (evt) => {
+      Logger.log('🎹 Ctrl+Shift+Enter 키 감지됨 (호환성)');
       if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) return false;
       
       const suggestions = this.currentFocusedError.correction.corrected;
@@ -1076,27 +1130,20 @@ export class InlineModeService {
       const originalText = this.currentFocusedError.correction.original;
       this.applySuggestion(this.currentFocusedError, selectedSuggestion);
       this.clearFocusedError();
-      Logger.log(`제안 적용: "${originalText}" → "${selectedSuggestion}" (Ctrl+Shift+Enter)`);
-      evt.preventDefault();
-      return false;
-    });
-    
-    // Ctrl+Shift+Escape: 포커스 해제 (충돌 방지용 조합)
-    this.keyboardScope.register(['Ctrl', 'Shift'], 'Escape', (evt) => {
-      if (!this.currentFocusedError || !this.currentView) return false;
-      
-      this.clearFocusedError();
-      Logger.log('키보드 네비게이션 해제 (Ctrl+Shift+Escape)');
+      Logger.log(`✅ 제안 적용 (호환성): "${originalText}" → "${selectedSuggestion}"`);
       evt.preventDefault();
       return false;
     });
 
-    // 추가 테스트용 F키 조합 (거의 충돌하지 않음)
-    // F10: 다음 오류로 이동 (단순 테스트용)
-    this.keyboardScope.register([], 'F10', (evt) => {
-      if (this.activeErrors.size === 0 || !this.currentView) return false;
+    // 대안 키 조합들 (더 간단한 접근성)
+    // Option+]: 다음 오류로 이동
+    this.keyboardScope.register(['Alt'], 'BracketRight', (evt) => {
+      Logger.log('🎹 Option+] 키 감지됨');
+      if (this.activeErrors.size === 0 || !this.currentView) {
+        Logger.log(`❌ 조건 실패: activeErrors.size=${this.activeErrors.size}, currentView=${!!this.currentView}`);
+        return false;
+      }
       
-      // 정렬된 오류 배열 사용 (위치 기준)
       const sortedErrors = this.getActiveErrors();
       const currentIndex = this.currentFocusedError 
         ? sortedErrors.findIndex(error => error.uniqueId === this.currentFocusedError!.uniqueId)
@@ -1105,29 +1152,25 @@ export class InlineModeService {
       const nextIndex = (currentIndex + 1) % sortedErrors.length;
       const nextError = sortedErrors[nextIndex];
       if (nextError) {
-        // 기존 툴팁 먼저 숨기기
         if ((window as any).globalInlineTooltip) {
           (window as any).globalInlineTooltip.hide();
         }
-        
         this.setFocusedError(nextError);
-        
-        // 무한루프 방지를 위해 툴팁 표시 임시 비활성화
-        // setTimeout(() => {
-        //   this.showTooltipForFocusedError();
-        // }, 50);
+        Logger.log(`✅ 다음 오류로 이동 (Option+]): ${nextError.correction.original}`);
       }
       
-      Logger.log('다음 오류로 이동 (F10)');
       evt.preventDefault();
       return false;
     });
 
-    // F9: 이전 오류로 이동 (단순 테스트용)
-    this.keyboardScope.register([], 'F9', (evt) => {
-      if (this.activeErrors.size === 0 || !this.currentView) return false;
+    // Option+[: 이전 오류로 이동
+    this.keyboardScope.register(['Alt'], 'BracketLeft', (evt) => {
+      Logger.log('🎹 Option+[ 키 감지됨');
+      if (this.activeErrors.size === 0 || !this.currentView) {
+        Logger.log(`❌ 조건 실패: activeErrors.size=${this.activeErrors.size}, currentView=${!!this.currentView}`);
+        return false;
+      }
       
-      // 정렬된 오류 배열 사용 (위치 기준)
       const sortedErrors = this.getActiveErrors();
       const currentIndex = this.currentFocusedError 
         ? sortedErrors.findIndex(error => error.uniqueId === this.currentFocusedError!.uniqueId)
@@ -1136,20 +1179,13 @@ export class InlineModeService {
       const prevIndex = currentIndex <= 0 ? sortedErrors.length - 1 : currentIndex - 1;
       const prevError = sortedErrors[prevIndex];
       if (prevError) {
-        // 기존 툴팁 먼저 숨기기
         if ((window as any).globalInlineTooltip) {
           (window as any).globalInlineTooltip.hide();
         }
-        
         this.setFocusedError(prevError);
-        
-        // 무한루프 방지를 위해 툴팁 표시 임시 비활성화
-        // setTimeout(() => {
-        //   this.showTooltipForFocusedError();
-        // }, 50);
+        Logger.log(`✅ 이전 오류로 이동 (Option+[): ${prevError.correction.original}`);
       }
       
-      Logger.log('이전 오류로 이동 (F9)');
       evt.preventDefault();
       return false;
     });
@@ -1157,7 +1193,14 @@ export class InlineModeService {
     // 스코프를 앱의 키맵에 푸시
     this.app.keymap.pushScope(this.keyboardScope);
 
-    Logger.log('인라인 모드: 키보드 스코프 초기화됨 - Ctrl+Shift+J/K(오류이동), H/L(제안), Enter(적용), Esc(해제), F9/F10(테스트용)');
+    Logger.log('🎹 인라인 모드: 키보드 스코프 초기화 완료!');
+    Logger.log('📋 사용 가능한 키 조합:');
+    Logger.log('  • Cmd+Option+J/K: 다음/이전 오류');
+    Logger.log('  • Cmd+Option+H/L: 이전/다음 제안');
+    Logger.log('  • Cmd+Option+Enter: 제안 적용');
+    Logger.log('  • Cmd+Option+Escape: 포커스 해제');
+    Logger.log('  • Option+[/]: 이전/다음 오류 (대안)');
+    Logger.log('  • Ctrl+Shift+Enter: 제안 적용 (호환성)');
   }
 
   /**
