@@ -9993,28 +9993,34 @@ var InlineTooltip = class {
     }
   }
   /**
-   * 수정 제안 적용
-   */
-  applySuggestion(error, suggestion, targetElement) {
-    Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC218\uC815 \uC81C\uC548 \uC801\uC6A9 - "${error.correction.original}" \u2192 "${suggestion}"`);
-    if (window.InlineModeService) {
-      window.InlineModeService.applySuggestion(error, suggestion);
-    }
-    this.hide();
-  }
-  /**
    * 수정 제안 적용 (클릭 후 툴팁 유지)
    */
   applySuggestionKeepOpen(mergedError, suggestion, targetElement) {
     Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC218\uC815 \uC81C\uC548 \uC801\uC6A9 (\uD074\uB9AD \uD6C4 \uD234\uD301 \uC720\uC9C0) - "${mergedError.correction.original}" \u2192 "${suggestion}"`);
     window.tooltipKeepOpenMode = true;
-    if (window.InlineModeService) {
-      window.InlineModeService.applySuggestion(mergedError, suggestion);
+    try {
+      InlineModeService.applySuggestion(mergedError, suggestion);
+      Logger.log(`\u2705 \uBCD1\uD569\uB41C \uC624\uB958 \uC218\uC815 \uC801\uC6A9 \uC131\uACF5: "${mergedError.correction.original}" \u2192 "${suggestion}"`);
+    } catch (error) {
+      Logger.error("\u274C \uC218\uC815 \uC81C\uC548 \uC801\uC6A9 \uC911 \uC624\uB958:", error);
     }
     setTimeout(() => {
       window.tooltipKeepOpenMode = false;
     }, 200);
     Logger.debug("\uD234\uD301 \uC720\uC9C0 \uBAA8\uB4DC\uB85C \uAD50\uC815 \uC801\uC6A9 \uC644\uB8CC");
+  }
+  /**
+   * 수정 제안 적용 (일반 모드)
+   */
+  applySuggestion(error, suggestion, targetElement) {
+    Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC218\uC815 \uC81C\uC548 \uC801\uC6A9 - "${error.correction.original}" \u2192 "${suggestion}"`);
+    try {
+      InlineModeService.applySuggestion(error, suggestion);
+      Logger.log(`\u2705 \uC77C\uBC18 \uC624\uB958 \uC218\uC815 \uC801\uC6A9 \uC131\uACF5: "${error.correction.original}" \u2192 "${suggestion}"`);
+      this.hide();
+    } catch (error2) {
+      Logger.error("\u274C \uC218\uC815 \uC81C\uC548 \uC801\uC6A9 \uC911 \uC624\uB958:", error2);
+    }
   }
   /**
    * 오류 무시
@@ -10444,6 +10450,7 @@ var InlineModeService = class {
     editorDOM.addEventListener("touchstart", (e) => {
       const target = e.target;
       if (target.classList.contains("korean-grammar-error-inline")) {
+        e.preventDefault();
         const touch = e.touches[0];
         touchStartPos = { x: touch.clientX, y: touch.clientY };
         touchStartTime = Date.now();

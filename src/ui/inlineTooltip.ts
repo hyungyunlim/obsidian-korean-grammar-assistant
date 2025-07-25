@@ -1,6 +1,7 @@
 import { InlineError } from '../types/interfaces';
 import { Logger } from '../utils/logger';
 import { Platform } from 'obsidian';
+import { InlineModeService } from '../services/inlineModeService';
 
 /**
  * 인라인 오류 툴팁 클래스
@@ -647,21 +648,6 @@ export class InlineTooltip {
   }
 
   /**
-   * 수정 제안 적용
-   */
-  private applySuggestion(error: InlineError, suggestion: string, targetElement: HTMLElement): void {
-    Logger.log(`인라인 모드: 수정 제안 적용 - "${error.correction.original}" → "${suggestion}"`);
-    
-    // 여기서 실제 텍스트 교체 로직 구현
-    // EditorView를 통해 텍스트 교체
-    if ((window as any).InlineModeService) {
-      (window as any).InlineModeService.applySuggestion(error, suggestion);
-    }
-    
-    this.hide();
-  }
-
-  /**
    * 수정 제안 적용 (클릭 후 툴팁 유지)
    */
   private applySuggestionKeepOpen(mergedError: InlineError, suggestion: string, targetElement: HTMLElement): void {
@@ -670,10 +656,12 @@ export class InlineTooltip {
     // 툴팁 유지 모드 플래그 설정
     (window as any).tooltipKeepOpenMode = true;
     
-    // 여기서 실제 텍스트 교체 로직 구현
-    // EditorView를 통해 텍스트 교체
-    if ((window as any).InlineModeService) {
-      (window as any).InlineModeService.applySuggestion(mergedError, suggestion);
+    // 🔧 직접 import한 InlineModeService 사용
+    try {
+      InlineModeService.applySuggestion(mergedError, suggestion);
+      Logger.log(`✅ 병합된 오류 수정 적용 성공: "${mergedError.correction.original}" → "${suggestion}"`);
+    } catch (error) {
+      Logger.error('❌ 수정 제안 적용 중 오류:', error);
     }
     
     // 툴팁 유지 모드 해제 (약간의 지연 후)
@@ -683,6 +671,24 @@ export class InlineTooltip {
     
     // 툴팁 상태 유지 (현재 오류 정보 업데이트는 InlineModeService에서 처리)
     Logger.debug('툴팁 유지 모드로 교정 적용 완료');
+  }
+
+  /**
+   * 수정 제안 적용 (일반 모드)
+   */
+  private applySuggestion(error: InlineError, suggestion: string, targetElement: HTMLElement): void {
+    Logger.log(`인라인 모드: 수정 제안 적용 - "${error.correction.original}" → "${suggestion}"`);
+    
+    // 🔧 직접 import한 InlineModeService 사용
+    try {
+      InlineModeService.applySuggestion(error, suggestion);
+      Logger.log(`✅ 일반 오류 수정 적용 성공: "${error.correction.original}" → "${suggestion}"`);
+      
+      // 툴팁 숨기기
+      this.hide();
+    } catch (error) {
+      Logger.error('❌ 수정 제안 적용 중 오류:', error);
+    }
   }
 
   /**

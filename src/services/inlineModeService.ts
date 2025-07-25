@@ -35,6 +35,9 @@ class ErrorWidget extends WidgetType {
       text-decoration-color: #ff0000 !important;
       text-decoration-thickness: 2px !important;
       background-color: rgba(255, 0, 0, 0.05) !important;
+      user-select: none !important;
+      -webkit-user-select: none !important;
+      -webkit-touch-callout: none !important;
     `;
     
     // 설정에 따른 오버라이드
@@ -438,6 +441,9 @@ export class InlineModeService {
       const target = e.target as HTMLElement;
       
       if (target.classList.contains('korean-grammar-error-inline')) {
+        // 🔧 iOS 기본 텍스트 선택 방지
+        e.preventDefault();
+        
         const touch = e.touches[0];
         touchStartPos = { x: touch.clientX, y: touch.clientY };
         touchStartTime = Date.now();
