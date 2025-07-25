@@ -10601,11 +10601,7 @@ var InlineModeService = class {
       this.app = app;
     }
     this.setupEventListeners(view);
-    if (app) {
-      this.initializeKeyboardScope();
-    } else {
-      Logger.debug("setEditorView: App \uC778\uC2A4\uD134\uC2A4\uAC00 \uC5C6\uC5B4 \uD0A4\uBCF4\uB4DC \uC2A4\uCF54\uD504 \uCD08\uAE30\uD654 \uAC74\uB108\uB700");
-    }
+    Logger.debug("\uC778\uB77C\uC778 \uBAA8\uB4DC: Command Palette \uAE30\uBC18 \uD0A4\uBCF4\uB4DC \uB2E8\uCD95\uD0A4 \uC0AC\uC6A9");
     Logger.debug("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC5D0\uB514\uD130 \uBDF0 \uC124\uC815\uB428");
   }
   /**
@@ -11209,192 +11205,13 @@ var InlineModeService = class {
     Logger.debug(`\u{1F504} \uBCD1\uD569\uB41C \uC624\uB958 \uC5C5\uB370\uC774\uD2B8: ${remainingErrors.length}\uAC1C \uC624\uB958 \uB0A8\uC74C, \uC0C8 \uBC94\uC704[${newStart}-${newEnd}], \uD234\uD301 \uC7AC\uD45C\uC2DC \uC608\uC57D`);
   }
   /**
-   * 키보드 스코프 초기화
+   * 🔧 레거시 메서드: 키보드 스코프 초기화 (Command Palette 방식으로 대체됨)
    */
   static initializeKeyboardScope() {
-    if (!this.app) {
-      Logger.warn("App \uC778\uC2A4\uD134\uC2A4\uAC00 \uC5C6\uC5B4 \uD0A4\uBCF4\uB4DC \uC2A4\uCF54\uD504\uB97C \uCD08\uAE30\uD654\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4");
-      return;
-    }
-    if (this.keyboardScope) {
-      this.app.keymap.popScope(this.keyboardScope);
-      this.keyboardScope = null;
-      Logger.debug("\uAE30\uC874 \uD0A4\uBCF4\uB4DC \uC2A4\uCF54\uD504 \uC81C\uAC70\uB428");
-    }
-    this.keyboardScope = new import_obsidian11.Scope(this.app.scope);
-    Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uD0A4\uBCF4\uB4DC \uC2A4\uCF54\uD504 \uC0DD\uC131 \uC2DC\uC791");
-    this.keyboardScope.register(["Mod", "Alt"], "KeyJ", (evt) => {
-      Logger.log("\u{1F3B9} Cmd+Option+J \uD0A4 \uAC10\uC9C0\uB428");
-      if (this.activeErrors.size === 0 || !this.currentView) {
-        Logger.log(`\u274C \uC870\uAC74 \uC2E4\uD328: activeErrors.size=${this.activeErrors.size}, currentView=${!!this.currentView}`);
-        return false;
-      }
-      const sortedErrors = this.getActiveErrors();
-      const currentIndex = this.currentFocusedError ? sortedErrors.findIndex((error) => error.uniqueId === this.currentFocusedError.uniqueId) : -1;
-      const nextIndex = (currentIndex + 1) % sortedErrors.length;
-      const nextError = sortedErrors[nextIndex];
-      if (nextError) {
-        if (window.globalInlineTooltip) {
-          window.globalInlineTooltip.hide();
-        }
-        this.setFocusedError(nextError);
-        Logger.log(`\u2705 \uB2E4\uC74C \uC624\uB958\uB85C \uC774\uB3D9: ${nextError.correction.original}`);
-      } else {
-        Logger.warn("\u274C \uB2E4\uC74C \uC624\uB958\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC74C");
-      }
-      evt.preventDefault();
-      return false;
-    });
-    this.keyboardScope.register(["Mod", "Alt"], "KeyK", (evt) => {
-      Logger.log("\u{1F3B9} Cmd+Option+K \uD0A4 \uAC10\uC9C0\uB428");
-      if (this.activeErrors.size === 0 || !this.currentView) {
-        Logger.log(`\u274C \uC870\uAC74 \uC2E4\uD328: activeErrors.size=${this.activeErrors.size}, currentView=${!!this.currentView}`);
-        return false;
-      }
-      const sortedErrors = this.getActiveErrors();
-      const currentIndex = this.currentFocusedError ? sortedErrors.findIndex((error) => error.uniqueId === this.currentFocusedError.uniqueId) : -1;
-      const prevIndex = currentIndex <= 0 ? sortedErrors.length - 1 : currentIndex - 1;
-      const prevError = sortedErrors[prevIndex];
-      if (prevError) {
-        if (window.globalInlineTooltip) {
-          window.globalInlineTooltip.hide();
-        }
-        this.setFocusedError(prevError);
-        Logger.log(`\u2705 \uC774\uC804 \uC624\uB958\uB85C \uC774\uB3D9: ${prevError.correction.original}`);
-      } else {
-        Logger.warn("\u274C \uC774\uC804 \uC624\uB958\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC74C");
-      }
-      evt.preventDefault();
-      return false;
-    });
-    this.keyboardScope.register(["Mod", "Alt"], "KeyH", (evt) => {
-      Logger.log("\u{1F3B9} Cmd+Option+H \uD0A4 \uAC10\uC9C0\uB428");
-      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
-        Logger.log("\u274C \uD3EC\uCEE4\uC2A4\uB41C \uC624\uB958\uAC00 \uC5C6\uAC70\uB098 \uC870\uAC74 \uC2E4\uD328");
-        return false;
-      }
-      const suggestions = this.currentFocusedError.correction.corrected;
-      if (!suggestions || suggestions.length === 0) {
-        Logger.log("\u274C \uC81C\uC548\uC774 \uC5C6\uC74C");
-        return false;
-      }
-      this.currentSuggestionIndex = Math.max(0, this.currentSuggestionIndex - 1);
-      this.updateTooltipHighlight();
-      Logger.log(`\u2705 \uC774\uC804 \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
-      evt.preventDefault();
-      return false;
-    });
-    this.keyboardScope.register(["Mod", "Alt"], "KeyL", (evt) => {
-      Logger.log("\u{1F3B9} Cmd+Option+L \uD0A4 \uAC10\uC9C0\uB428");
-      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
-        Logger.log("\u274C \uD3EC\uCEE4\uC2A4\uB41C \uC624\uB958\uAC00 \uC5C6\uAC70\uB098 \uC870\uAC74 \uC2E4\uD328");
-        return false;
-      }
-      const suggestions = this.currentFocusedError.correction.corrected;
-      if (!suggestions || suggestions.length === 0) {
-        Logger.log("\u274C \uC81C\uC548\uC774 \uC5C6\uC74C");
-        return false;
-      }
-      this.currentSuggestionIndex = Math.min(suggestions.length - 1, this.currentSuggestionIndex + 1);
-      this.updateTooltipHighlight();
-      Logger.log(`\u2705 \uB2E4\uC74C \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
-      evt.preventDefault();
-      return false;
-    });
-    this.keyboardScope.register(["Mod", "Alt"], "Enter", (evt) => {
-      Logger.log("\u{1F3B9} Cmd+Option+Enter \uD0A4 \uAC10\uC9C0\uB428");
-      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
-        Logger.log("\u274C \uD3EC\uCEE4\uC2A4\uB41C \uC624\uB958\uAC00 \uC5C6\uAC70\uB098 \uC870\uAC74 \uC2E4\uD328");
-        return false;
-      }
-      const suggestions = this.currentFocusedError.correction.corrected;
-      if (!suggestions || suggestions.length === 0) {
-        Logger.log("\u274C \uC81C\uC548\uC774 \uC5C6\uC74C");
-        return false;
-      }
-      const selectedSuggestion = suggestions[this.currentSuggestionIndex];
-      const originalText = this.currentFocusedError.correction.original;
-      this.applySuggestion(this.currentFocusedError, selectedSuggestion);
-      this.clearFocusedError();
-      Logger.log(`\u2705 \uC81C\uC548 \uC801\uC6A9: "${originalText}" \u2192 "${selectedSuggestion}"`);
-      evt.preventDefault();
-      return false;
-    });
-    this.keyboardScope.register(["Mod", "Alt"], "Escape", (evt) => {
-      Logger.log("\u{1F3B9} Cmd+Option+Escape \uD0A4 \uAC10\uC9C0\uB428");
-      if (!this.currentFocusedError || !this.currentView) {
-        Logger.log("\u274C \uD3EC\uCEE4\uC2A4\uB41C \uC624\uB958\uAC00 \uC5C6\uC74C");
-        return false;
-      }
-      this.clearFocusedError();
-      Logger.log("\u2705 \uD0A4\uBCF4\uB4DC \uB124\uBE44\uAC8C\uC774\uC158 \uD574\uC81C");
-      evt.preventDefault();
-      return false;
-    });
-    this.keyboardScope.register(["Ctrl", "Shift"], "Enter", (evt) => {
-      Logger.log("\u{1F3B9} Ctrl+Shift+Enter \uD0A4 \uAC10\uC9C0\uB428 (\uD638\uD658\uC131)");
-      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction)
-        return false;
-      const suggestions = this.currentFocusedError.correction.corrected;
-      if (!suggestions || suggestions.length === 0)
-        return false;
-      const selectedSuggestion = suggestions[this.currentSuggestionIndex];
-      const originalText = this.currentFocusedError.correction.original;
-      this.applySuggestion(this.currentFocusedError, selectedSuggestion);
-      this.clearFocusedError();
-      Logger.log(`\u2705 \uC81C\uC548 \uC801\uC6A9 (\uD638\uD658\uC131): "${originalText}" \u2192 "${selectedSuggestion}"`);
-      evt.preventDefault();
-      return false;
-    });
-    this.keyboardScope.register(["Alt"], "BracketRight", (evt) => {
-      Logger.log("\u{1F3B9} Option+] \uD0A4 \uAC10\uC9C0\uB428");
-      if (this.activeErrors.size === 0 || !this.currentView) {
-        Logger.log(`\u274C \uC870\uAC74 \uC2E4\uD328: activeErrors.size=${this.activeErrors.size}, currentView=${!!this.currentView}`);
-        return false;
-      }
-      const sortedErrors = this.getActiveErrors();
-      const currentIndex = this.currentFocusedError ? sortedErrors.findIndex((error) => error.uniqueId === this.currentFocusedError.uniqueId) : -1;
-      const nextIndex = (currentIndex + 1) % sortedErrors.length;
-      const nextError = sortedErrors[nextIndex];
-      if (nextError) {
-        if (window.globalInlineTooltip) {
-          window.globalInlineTooltip.hide();
-        }
-        this.setFocusedError(nextError);
-        Logger.log(`\u2705 \uB2E4\uC74C \uC624\uB958\uB85C \uC774\uB3D9 (Option+]): ${nextError.correction.original}`);
-      }
-      evt.preventDefault();
-      return false;
-    });
-    this.keyboardScope.register(["Alt"], "BracketLeft", (evt) => {
-      Logger.log("\u{1F3B9} Option+[ \uD0A4 \uAC10\uC9C0\uB428");
-      if (this.activeErrors.size === 0 || !this.currentView) {
-        Logger.log(`\u274C \uC870\uAC74 \uC2E4\uD328: activeErrors.size=${this.activeErrors.size}, currentView=${!!this.currentView}`);
-        return false;
-      }
-      const sortedErrors = this.getActiveErrors();
-      const currentIndex = this.currentFocusedError ? sortedErrors.findIndex((error) => error.uniqueId === this.currentFocusedError.uniqueId) : -1;
-      const prevIndex = currentIndex <= 0 ? sortedErrors.length - 1 : currentIndex - 1;
-      const prevError = sortedErrors[prevIndex];
-      if (prevError) {
-        if (window.globalInlineTooltip) {
-          window.globalInlineTooltip.hide();
-        }
-        this.setFocusedError(prevError);
-        Logger.log(`\u2705 \uC774\uC804 \uC624\uB958\uB85C \uC774\uB3D9 (Option+[): ${prevError.correction.original}`);
-      }
-      evt.preventDefault();
-      return false;
-    });
-    this.app.keymap.pushScope(this.keyboardScope);
-    Logger.log("\u{1F3B9} \uC778\uB77C\uC778 \uBAA8\uB4DC: \uD0A4\uBCF4\uB4DC \uC2A4\uCF54\uD504 \uCD08\uAE30\uD654 \uC644\uB8CC!");
-    Logger.log("\u{1F4CB} \uC0AC\uC6A9 \uAC00\uB2A5\uD55C \uD0A4 \uC870\uD569:");
-    Logger.log("  \u2022 Cmd+Option+J/K: \uB2E4\uC74C/\uC774\uC804 \uC624\uB958");
-    Logger.log("  \u2022 Cmd+Option+H/L: \uC774\uC804/\uB2E4\uC74C \uC81C\uC548");
-    Logger.log("  \u2022 Cmd+Option+Enter: \uC81C\uC548 \uC801\uC6A9");
-    Logger.log("  \u2022 Cmd+Option+Escape: \uD3EC\uCEE4\uC2A4 \uD574\uC81C");
-    Logger.log("  \u2022 Option+[/]: \uC774\uC804/\uB2E4\uC74C \uC624\uB958 (\uB300\uC548)");
-    Logger.log("  \u2022 Ctrl+Shift+Enter: \uC81C\uC548 \uC801\uC6A9 (\uD638\uD658\uC131)");
+    Logger.log("\u{1F527} \uB808\uAC70\uC2DC: initializeKeyboardScope \uD638\uCD9C\uB428 - Command Palette \uBC29\uC2DD\uC73C\uB85C \uBCC0\uACBD\uB428");
+    Logger.log('\u{1F4A1} \uC0AC\uC6A9\uBC95: Command Palette (Cmd+P)\uC5D0\uC11C "Korean Grammar Assistant" \uAC80\uC0C9');
+    Logger.log("\u{1F4A1} \uB610\uB294 Settings > Hotkeys\uC5D0\uC11C \uC9C1\uC811 \uB2E8\uCD95\uD0A4 \uC124\uC815");
+    return;
   }
   /**
    * 포커스된 오류 설정
@@ -11528,13 +11345,164 @@ var InlineModeService = class {
     this.currentSuggestionIndex = 0;
     this.currentHoveredError = null;
     this.clearHoverTimeout();
-    if (this.keyboardScope) {
-      this.keyboardScope = null;
-    }
     if ((_a = window.globalInlineTooltip) == null ? void 0 : _a.visible) {
       window.globalInlineTooltip.hide();
     }
     Logger.debug("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC11C\uBE44\uC2A4 \uC815\uB9AC\uB428 (\uACB9\uCE58\uB294 \uC601\uC5ED \uCC98\uB9AC \uD3EC\uD568)");
+  }
+  /**
+   * 인라인 모드 명령어 등록 (Command Palette 방식)
+   */
+  static registerCommands(plugin) {
+    Logger.log("\u{1F3B9} \uC778\uB77C\uC778 \uBAA8\uB4DC: \uBA85\uB839\uC5B4 \uB4F1\uB85D \uC2DC\uC791");
+    plugin.addCommand({
+      id: "inline-next-error",
+      name: "Go to next grammar error",
+      editorCheckCallback: (checking) => {
+        if (this.activeErrors.size === 0 || !this.currentView) {
+          return false;
+        }
+        if (!checking) {
+          const sortedErrors = this.getActiveErrors();
+          const currentIndex = this.currentFocusedError ? sortedErrors.findIndex((error) => error.uniqueId === this.currentFocusedError.uniqueId) : -1;
+          const nextIndex = (currentIndex + 1) % sortedErrors.length;
+          const nextError = sortedErrors[nextIndex];
+          if (nextError) {
+            if (window.globalInlineTooltip) {
+              window.globalInlineTooltip.hide();
+            }
+            this.setFocusedError(nextError);
+            Logger.log(`\u2705 \uB2E4\uC74C \uC624\uB958\uB85C \uC774\uB3D9: ${nextError.correction.original}`);
+          }
+        }
+        return true;
+      }
+    });
+    plugin.addCommand({
+      id: "inline-previous-error",
+      name: "Go to previous grammar error",
+      editorCheckCallback: (checking) => {
+        if (this.activeErrors.size === 0 || !this.currentView) {
+          return false;
+        }
+        if (!checking) {
+          const sortedErrors = this.getActiveErrors();
+          const currentIndex = this.currentFocusedError ? sortedErrors.findIndex((error) => error.uniqueId === this.currentFocusedError.uniqueId) : -1;
+          const prevIndex = currentIndex <= 0 ? sortedErrors.length - 1 : currentIndex - 1;
+          const prevError = sortedErrors[prevIndex];
+          if (prevError) {
+            if (window.globalInlineTooltip) {
+              window.globalInlineTooltip.hide();
+            }
+            this.setFocusedError(prevError);
+            Logger.log(`\u2705 \uC774\uC804 \uC624\uB958\uB85C \uC774\uB3D9: ${prevError.correction.original}`);
+          }
+        }
+        return true;
+      }
+    });
+    plugin.addCommand({
+      id: "inline-next-suggestion",
+      name: "Select next suggestion",
+      editorCheckCallback: (checking) => {
+        if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
+          return false;
+        }
+        const suggestions = this.currentFocusedError.correction.corrected;
+        if (!suggestions || suggestions.length === 0) {
+          return false;
+        }
+        if (!checking) {
+          this.currentSuggestionIndex = Math.min(suggestions.length - 1, this.currentSuggestionIndex + 1);
+          this.updateTooltipHighlight();
+          Logger.log(`\u2705 \uB2E4\uC74C \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+        }
+        return true;
+      }
+    });
+    plugin.addCommand({
+      id: "inline-previous-suggestion",
+      name: "Select previous suggestion",
+      editorCheckCallback: (checking) => {
+        if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
+          return false;
+        }
+        const suggestions = this.currentFocusedError.correction.corrected;
+        if (!suggestions || suggestions.length === 0) {
+          return false;
+        }
+        if (!checking) {
+          this.currentSuggestionIndex = Math.max(0, this.currentSuggestionIndex - 1);
+          this.updateTooltipHighlight();
+          Logger.log(`\u2705 \uC774\uC804 \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+        }
+        return true;
+      }
+    });
+    plugin.addCommand({
+      id: "inline-apply-suggestion",
+      name: "Apply selected suggestion",
+      editorCheckCallback: (checking) => {
+        if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
+          return false;
+        }
+        const suggestions = this.currentFocusedError.correction.corrected;
+        if (!suggestions || suggestions.length === 0) {
+          return false;
+        }
+        if (!checking) {
+          const selectedSuggestion = suggestions[this.currentSuggestionIndex];
+          const originalText = this.currentFocusedError.correction.original;
+          this.applySuggestion(this.currentFocusedError, selectedSuggestion);
+          this.clearFocusedError();
+          Logger.log(`\u2705 \uC81C\uC548 \uC801\uC6A9: "${originalText}" \u2192 "${selectedSuggestion}"`);
+        }
+        return true;
+      }
+    });
+    plugin.addCommand({
+      id: "inline-unfocus",
+      name: "Clear grammar error focus",
+      editorCheckCallback: (checking) => {
+        if (!this.currentFocusedError || !this.currentView) {
+          return false;
+        }
+        if (!checking) {
+          this.clearFocusedError();
+          Logger.log("\u2705 \uD0A4\uBCF4\uB4DC \uB124\uBE44\uAC8C\uC774\uC158 \uD574\uC81C");
+        }
+        return true;
+      }
+    });
+    plugin.addCommand({
+      id: "toggle-inline-mode",
+      name: "Toggle Korean grammar inline mode",
+      callback: () => {
+        var _a, _b, _c;
+        const currentState = ((_b = (_a = plugin.settings) == null ? void 0 : _a.inlineMode) == null ? void 0 : _b.enabled) || false;
+        if ((_c = plugin.settings) == null ? void 0 : _c.inlineMode) {
+          plugin.settings.inlineMode.enabled = !currentState;
+          plugin.saveSettings();
+          if (plugin.settings.inlineMode.enabled) {
+            plugin.enableInlineMode();
+            Logger.log("\u2705 \uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654");
+          } else {
+            plugin.disableInlineMode();
+            Logger.log("\u2705 \uC778\uB77C\uC778 \uBAA8\uB4DC \uBE44\uD65C\uC131\uD654");
+          }
+        }
+      }
+    });
+    Logger.log("\u{1F3B9} \uC778\uB77C\uC778 \uBAA8\uB4DC: \uBA85\uB839\uC5B4 \uB4F1\uB85D \uC644\uB8CC!");
+    Logger.log("\u{1F4CB} \uB4F1\uB85D\uB41C \uBA85\uB839\uC5B4:");
+    Logger.log("  \u2022 Korean Grammar Assistant: Go to next grammar error");
+    Logger.log("  \u2022 Korean Grammar Assistant: Go to previous grammar error");
+    Logger.log("  \u2022 Korean Grammar Assistant: Select next suggestion");
+    Logger.log("  \u2022 Korean Grammar Assistant: Select previous suggestion");
+    Logger.log("  \u2022 Korean Grammar Assistant: Apply selected suggestion");
+    Logger.log("  \u2022 Korean Grammar Assistant: Clear grammar error focus");
+    Logger.log("  \u2022 Korean Grammar Assistant: Toggle Korean grammar inline mode");
+    Logger.log("\u{1F4A1} Command Palette (Cmd+P)\uC5D0\uC11C \uAC80\uC0C9\uD558\uAC70\uB098 Hotkeys\uC5D0\uC11C \uB2E8\uCD95\uD0A4\uB97C \uC124\uC815\uD558\uC138\uC694!");
   }
 };
 InlineModeService.activeErrors = /* @__PURE__ */ new Map();
@@ -11542,7 +11510,8 @@ InlineModeService.currentView = null;
 InlineModeService.settings = null;
 InlineModeService.currentFocusedError = null;
 InlineModeService.currentSuggestionIndex = 0;
-InlineModeService.keyboardScope = null;
+// 🔧 레거시: 기존 키보드 스코프 방식 (Command Palette 방식으로 대체됨)
+// private static keyboardScope: Scope | null = null;
 InlineModeService.app = null;
 InlineModeService.currentHoveredError = null;
 InlineModeService.hoverTimeout = null;
@@ -11880,6 +11849,7 @@ var KoreanGrammarPlugin = class extends import_obsidian13.Plugin {
         this.saveSettings();
       }
     );
+    InlineModeService.registerCommands(this);
     this.addRibbonIcon("han-spellchecker", "Check Spelling", async () => {
       await this.orchestrator.execute();
     });
@@ -11937,6 +11907,7 @@ var KoreanGrammarPlugin = class extends import_obsidian13.Plugin {
       this.enableInlineMode();
     }
     this.addSettingTab(new ModernSettingsTab(this.app, this));
+    Logger.log("Korean Grammar Assistant \uD50C\uB7EC\uADF8\uC778 \uB85C\uB529 \uC644\uB8CC");
   }
   onunload() {
     this.disableInlineMode();

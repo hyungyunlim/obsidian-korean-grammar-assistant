@@ -279,7 +279,8 @@ export class InlineModeService {
   private static settings: any = null;
   private static currentFocusedError: InlineError | null = null;
   private static currentSuggestionIndex: number = 0;
-  private static keyboardScope: Scope | null = null;
+  // 🔧 레거시: 기존 키보드 스코프 방식 (Command Palette 방식으로 대체됨)
+  // private static keyboardScope: Scope | null = null;
   private static app: App | null = null;
   private static currentHoveredError: InlineError | null = null;
   private static hoverTimeout: NodeJS.Timeout | null = null;
@@ -299,12 +300,8 @@ export class InlineModeService {
     // 이벤트 리스너 추가
     this.setupEventListeners(view);
     
-    // 키보드 스코프 초기화 (App 인스턴스가 있을 때만)
-    if (app) {
-      this.initializeKeyboardScope();
-    } else {
-      Logger.debug('setEditorView: App 인스턴스가 없어 키보드 스코프 초기화 건너뜀');
-    }
+    // 🎹 키보드 단축키는 Command Palette 방식으로 변경됨 (registerCommands 메서드 참조)
+    Logger.debug('인라인 모드: Command Palette 기반 키보드 단축키 사용');
     
     Logger.debug('인라인 모드: 에디터 뷰 설정됨');
   }
@@ -1132,26 +1129,16 @@ export class InlineModeService {
   }
 
   /**
-   * 키보드 스코프 초기화
+   * 🔧 레거시 메서드: 키보드 스코프 초기화 (Command Palette 방식으로 대체됨)
    */
   static initializeKeyboardScope(): void {
-    if (!this.app) {
-      Logger.warn('App 인스턴스가 없어 키보드 스코프를 초기화할 수 없습니다');
-      return;
-    }
+    Logger.log('🔧 레거시: initializeKeyboardScope 호출됨 - Command Palette 방식으로 변경됨');
+    Logger.log('💡 사용법: Command Palette (Cmd+P)에서 "Korean Grammar Assistant" 검색');
+    Logger.log('💡 또는 Settings > Hotkeys에서 직접 단축키 설정');
+    return;
 
-    // 기존 스코프가 있으면 제거
-    if (this.keyboardScope) {
-      this.app.keymap.popScope(this.keyboardScope);
-      this.keyboardScope = null;
-      Logger.debug('기존 키보드 스코프 제거됨');
-    }
-
-    // 새로운 스코프 생성 (앱의 전역 스코프를 부모로 설정)
-    this.keyboardScope = new Scope(this.app.scope);
-
-    Logger.log('인라인 모드: 키보드 스코프 생성 시작');
-
+    /* 🔧 레거시 코드 (Command Palette 방식으로 대체됨)
+    
     // Cmd+Option+J: 다음 오류로 이동 (맥 친화적 조합)
     this.keyboardScope.register(['Mod', 'Alt'], 'KeyJ', (evt) => {
       Logger.log('🎹 Cmd+Option+J 키 감지됨');
@@ -1380,6 +1367,7 @@ export class InlineModeService {
     Logger.log('  • Cmd+Option+Escape: 포커스 해제');
     Logger.log('  • Option+[/]: 이전/다음 오류 (대안)');
     Logger.log('  • Ctrl+Shift+Enter: 제안 적용 (호환성)');
+    */
   }
 
   /**
@@ -1554,10 +1542,10 @@ export class InlineModeService {
     // 타이머 정리
     this.clearHoverTimeout();
     
-    // 키보드 스코프 정리
-    if (this.keyboardScope) {
-      this.keyboardScope = null;
-    }
+    // 🔧 레거시: 키보드 스코프 정리 (Command Palette 방식에서는 불필요)
+    // if (this.keyboardScope) {
+    //   this.keyboardScope = null;
+    // }
     
     // 툴팁 정리
     if ((window as any).globalInlineTooltip?.visible) {
@@ -1565,5 +1553,194 @@ export class InlineModeService {
     }
     
     Logger.debug('인라인 모드: 서비스 정리됨 (겹치는 영역 처리 포함)');
+  }
+
+  /**
+   * 인라인 모드 명령어 등록 (Command Palette 방식)
+   */
+  static registerCommands(plugin: any): void {
+    Logger.log('🎹 인라인 모드: 명령어 등록 시작');
+
+    // 다음 오류로 이동
+    plugin.addCommand({
+      id: 'inline-next-error',
+      name: 'Go to next grammar error',
+      editorCheckCallback: (checking: boolean) => {
+        // 인라인 모드가 활성화되고 오류가 있는지 확인
+        if (this.activeErrors.size === 0 || !this.currentView) {
+          return false;
+        }
+
+        if (!checking) {
+          const sortedErrors = this.getActiveErrors();
+          const currentIndex = this.currentFocusedError 
+            ? sortedErrors.findIndex(error => error.uniqueId === this.currentFocusedError!.uniqueId)
+            : -1;
+          
+          const nextIndex = (currentIndex + 1) % sortedErrors.length;
+          const nextError = sortedErrors[nextIndex];
+          
+          if (nextError) {
+            if ((window as any).globalInlineTooltip) {
+              (window as any).globalInlineTooltip.hide();
+            }
+            this.setFocusedError(nextError);
+            Logger.log(`✅ 다음 오류로 이동: ${nextError.correction.original}`);
+          }
+        }
+        return true;
+      }
+    });
+
+    // 이전 오류로 이동
+    plugin.addCommand({
+      id: 'inline-previous-error',
+      name: 'Go to previous grammar error',
+      editorCheckCallback: (checking: boolean) => {
+        if (this.activeErrors.size === 0 || !this.currentView) {
+          return false;
+        }
+
+        if (!checking) {
+          const sortedErrors = this.getActiveErrors();
+          const currentIndex = this.currentFocusedError 
+            ? sortedErrors.findIndex(error => error.uniqueId === this.currentFocusedError!.uniqueId)
+            : -1;
+          
+          const prevIndex = currentIndex <= 0 ? sortedErrors.length - 1 : currentIndex - 1;
+          const prevError = sortedErrors[prevIndex];
+          
+          if (prevError) {
+            if ((window as any).globalInlineTooltip) {
+              (window as any).globalInlineTooltip.hide();
+            }
+            this.setFocusedError(prevError);
+            Logger.log(`✅ 이전 오류로 이동: ${prevError.correction.original}`);
+          }
+        }
+        return true;
+      }
+    });
+
+    // 다음 제안으로 이동
+    plugin.addCommand({
+      id: 'inline-next-suggestion',
+      name: 'Select next suggestion',
+      editorCheckCallback: (checking: boolean) => {
+        if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
+          return false;
+        }
+
+        const suggestions = this.currentFocusedError.correction.corrected;
+        if (!suggestions || suggestions.length === 0) {
+          return false;
+        }
+
+        if (!checking) {
+          this.currentSuggestionIndex = Math.min(suggestions.length - 1, this.currentSuggestionIndex + 1);
+          this.updateTooltipHighlight();
+          Logger.log(`✅ 다음 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+        }
+        return true;
+      }
+    });
+
+    // 이전 제안으로 이동
+    plugin.addCommand({
+      id: 'inline-previous-suggestion',
+      name: 'Select previous suggestion',
+      editorCheckCallback: (checking: boolean) => {
+        if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
+          return false;
+        }
+
+        const suggestions = this.currentFocusedError.correction.corrected;
+        if (!suggestions || suggestions.length === 0) {
+          return false;
+        }
+
+        if (!checking) {
+          this.currentSuggestionIndex = Math.max(0, this.currentSuggestionIndex - 1);
+          this.updateTooltipHighlight();
+          Logger.log(`✅ 이전 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+        }
+        return true;
+      }
+    });
+
+    // 선택된 제안 적용
+    plugin.addCommand({
+      id: 'inline-apply-suggestion',
+      name: 'Apply selected suggestion',
+      editorCheckCallback: (checking: boolean) => {
+        if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
+          return false;
+        }
+
+        const suggestions = this.currentFocusedError.correction.corrected;
+        if (!suggestions || suggestions.length === 0) {
+          return false;
+        }
+
+        if (!checking) {
+          const selectedSuggestion = suggestions[this.currentSuggestionIndex];
+          const originalText = this.currentFocusedError.correction.original;
+          this.applySuggestion(this.currentFocusedError, selectedSuggestion);
+          this.clearFocusedError();
+          Logger.log(`✅ 제안 적용: "${originalText}" → "${selectedSuggestion}"`);
+        }
+        return true;
+      }
+    });
+
+    // 키보드 네비게이션 해제
+    plugin.addCommand({
+      id: 'inline-unfocus',
+      name: 'Clear grammar error focus',
+      editorCheckCallback: (checking: boolean) => {
+        if (!this.currentFocusedError || !this.currentView) {
+          return false;
+        }
+
+        if (!checking) {
+          this.clearFocusedError();
+          Logger.log('✅ 키보드 네비게이션 해제');
+        }
+        return true;
+      }
+    });
+
+    // 인라인 모드 토글
+    plugin.addCommand({
+      id: 'toggle-inline-mode',
+      name: 'Toggle Korean grammar inline mode',
+      callback: () => {
+        // 설정에서 인라인 모드 토글
+        const currentState = plugin.settings?.inlineMode?.enabled || false;
+        if (plugin.settings?.inlineMode) {
+          plugin.settings.inlineMode.enabled = !currentState;
+          plugin.saveSettings();
+          
+          if (plugin.settings.inlineMode.enabled) {
+            plugin.enableInlineMode();
+            Logger.log('✅ 인라인 모드 활성화');
+          } else {
+            plugin.disableInlineMode();
+            Logger.log('✅ 인라인 모드 비활성화');
+          }
+        }
+      }
+    });
+
+    Logger.log('🎹 인라인 모드: 명령어 등록 완료!');
+    Logger.log('📋 등록된 명령어:');
+    Logger.log('  • Korean Grammar Assistant: Go to next grammar error');
+    Logger.log('  • Korean Grammar Assistant: Go to previous grammar error');
+    Logger.log('  • Korean Grammar Assistant: Select next suggestion');
+    Logger.log('  • Korean Grammar Assistant: Select previous suggestion');
+    Logger.log('  • Korean Grammar Assistant: Apply selected suggestion');
+    Logger.log('  • Korean Grammar Assistant: Clear grammar error focus');
+    Logger.log('  • Korean Grammar Assistant: Toggle Korean grammar inline mode');
+    Logger.log('💡 Command Palette (Cmd+P)에서 검색하거나 Hotkeys에서 단축키를 설정하세요!');
   }
 }

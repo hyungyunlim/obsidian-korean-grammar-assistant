@@ -35,7 +35,7 @@ export default class KoreanGrammarPlugin extends Plugin {
   grammarSuggest: KoreanGrammarSuggest | null = null;
 
   async onload() {
-    // 환경에 따른 로거 최적화 설정
+    // 디버그/프로덕션 모드 설정
     if (process.env.NODE_ENV === 'production') {
       Logger.configureForProduction();
     } else {
@@ -57,11 +57,14 @@ export default class KoreanGrammarPlugin extends Plugin {
       }
     );
 
+    // 🎹 인라인 모드 명령어 등록 (Command Palette 방식)
+    InlineModeService.registerCommands(this);
+
     // 리본 아이콘 추가
     this.addRibbonIcon("han-spellchecker", "Check Spelling", async () => {
       await this.orchestrator.execute();
     });
-
+    
     // 명령어 등록
     this.addCommand({
       id: "check-korean-spelling",
@@ -70,7 +73,7 @@ export default class KoreanGrammarPlugin extends Plugin {
         await this.orchestrator.execute();
       },
     });
-
+    
     // 현재 문단 맞춤법 검사 명령어 추가
     this.addCommand({
       id: "check-current-paragraph",
@@ -131,6 +134,8 @@ export default class KoreanGrammarPlugin extends Plugin {
 
     // 설정 탭 추가
     this.addSettingTab(new ModernSettingsTab(this.app, this));
+
+    Logger.log('Korean Grammar Assistant 플러그인 로딩 완료');
   }
 
   onunload() {
