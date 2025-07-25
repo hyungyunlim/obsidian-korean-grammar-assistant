@@ -9563,9 +9563,8 @@ var InlineTooltip = class {
       color: var(--text-normal);
       display: flex;
       flex-direction: column;
-      min-width: ${isMobile ? "280px" : "250px"};
-      max-width: ${isMobile ? "calc(100vw - 32px)" : "450px"};
-      max-height: ${isMobile ? "calc(100vh - 100px)" : "300px"};
+      ${isMobile ? "width: 320px;" : "min-width: 250px; max-width: 450px;"}
+      ${isMobile ? "max-height: 200px;" : "max-height: 300px;"}
       overflow-y: auto;
       ${isMobile ? "touch-action: manipulation;" : ""}
     `;
@@ -9600,35 +9599,27 @@ var InlineTooltip = class {
     const isMobile = import_obsidian10.Platform.isMobile;
     const gap = isMobile ? 20 : 8;
     const minSpacing = isMobile ? 16 : 12;
-    if (isMobile) {
-      const maxWidth = Math.min(viewportWidth - 32, 350);
-      const maxHeight = Math.min(viewportHeight - 100, 250);
-      this.tooltip.style.maxWidth = `${maxWidth}px`;
-      this.tooltip.style.maxHeight = `${maxHeight}px`;
-      this.tooltip.style.minWidth = `${Math.min(250, maxWidth)}px`;
-      this.tooltip.style.fontSize = "14px";
-      const updatedRect = this.tooltip.getBoundingClientRect();
-      tooltipRect.width = updatedRect.width;
-      tooltipRect.height = updatedRect.height;
-    }
     let finalLeft = 0;
     let finalTop = 0;
     if (isMobile) {
-      const fingerHeight = 60;
-      if (targetRect.top - tooltipRect.height - gap - fingerHeight > minSpacing) {
-        finalTop = targetRect.top - tooltipRect.height - gap - fingerHeight;
-      } else if (targetRect.bottom + gap + fingerHeight + tooltipRect.height <= viewportHeight - minSpacing) {
-        finalTop = targetRect.bottom + gap + fingerHeight;
+      const fixedWidth = Math.min(320, viewportWidth - 32);
+      const maxHeight = Math.min(viewportHeight * 0.4, 200);
+      this.tooltip.style.width = `${fixedWidth}px`;
+      this.tooltip.style.maxHeight = `${maxHeight}px`;
+      this.tooltip.style.minWidth = `${fixedWidth}px`;
+      this.tooltip.style.fontSize = "14px";
+      finalLeft = (viewportWidth - fixedWidth) / 2;
+      const fingerHeight = 80;
+      const spaceAbove = targetRect.top;
+      const spaceBelow = viewportHeight - targetRect.bottom;
+      if (spaceAbove > maxHeight + fingerHeight + gap) {
+        finalTop = targetRect.top - maxHeight - gap - 20;
+      } else if (spaceBelow > maxHeight + fingerHeight + gap) {
+        finalTop = targetRect.bottom + gap + 20;
       } else {
-        finalTop = (viewportHeight - tooltipRect.height) / 2;
+        finalTop = Math.max(minSpacing, (viewportHeight - maxHeight) / 2);
       }
-      finalLeft = (viewportWidth - tooltipRect.width) / 2;
-      if (finalLeft < minSpacing) {
-        finalLeft = minSpacing;
-      } else if (finalLeft + tooltipRect.width > viewportWidth - minSpacing) {
-        finalLeft = viewportWidth - tooltipRect.width - minSpacing;
-      }
-      Logger.log(`\u{1F4F1} \uBAA8\uBC14\uC77C \uD234\uD301 \uC704\uCE58: left=${finalLeft}, top=${finalTop}, \uC190\uAC00\uB77D \uD68C\uD53C=${fingerHeight}px`);
+      Logger.log(`\u{1F4F1} \uBAA8\uBC14\uC77C \uD234\uD301 \uACE0\uC815 \uC704\uCE58: ${fixedWidth}x${maxHeight} at (${finalLeft}, ${finalTop})`);
     } else {
       if (targetRect.bottom + gap + tooltipRect.height <= viewportHeight - minSpacing) {
         finalTop = targetRect.bottom + gap;
@@ -9644,8 +9635,8 @@ var InlineTooltip = class {
     }
     if (finalTop < minSpacing) {
       finalTop = minSpacing;
-    } else if (finalTop + tooltipRect.height > viewportHeight - minSpacing) {
-      finalTop = viewportHeight - tooltipRect.height - minSpacing;
+    } else if (finalTop + (isMobile ? parseInt(this.tooltip.style.maxHeight) : tooltipRect.height) > viewportHeight - minSpacing) {
+      finalTop = viewportHeight - (isMobile ? parseInt(this.tooltip.style.maxHeight) : tooltipRect.height) - minSpacing;
     }
     this.tooltip.style.position = "fixed";
     this.tooltip.style.left = `${finalLeft}px`;
@@ -9771,6 +9762,8 @@ var InlineTooltip = class {
           suggestionButton.addEventListener("touchend", (e) => {
             e.preventDefault();
             onDeactivate();
+            Logger.log(`\u{1F4F1} \uBAA8\uBC14\uC77C \uD130\uCE58\uB85C \uC81C\uC548 \uC801\uC6A9: "${suggestion}"`);
+            this.applySuggestionKeepOpen(mergedError, suggestion, targetElement);
           }, { passive: false });
         }
         suggestionButton.addEventListener("click", (e) => {
@@ -9968,6 +9961,8 @@ var InlineTooltip = class {
         suggestionButton.addEventListener("touchend", (e) => {
           e.preventDefault();
           onDeactivate();
+          Logger.log(`\u{1F4F1} \uBAA8\uBC14\uC77C \uD130\uCE58\uB85C \uC81C\uC548 \uC801\uC6A9: "${suggestion}"`);
+          this.applySuggestion(error, suggestion, targetElement);
         }, { passive: false });
       }
       suggestionButton.addEventListener("click", (e) => {

@@ -91,9 +91,8 @@ export class InlineTooltip {
       color: var(--text-normal);
       display: flex;
       flex-direction: column;
-      min-width: ${isMobile ? '280px' : '250px'};
-      max-width: ${isMobile ? 'calc(100vw - 32px)' : '450px'};
-      max-height: ${isMobile ? 'calc(100vh - 100px)' : '300px'};
+      ${isMobile ? 'width: 320px;' : 'min-width: 250px; max-width: 450px;'}
+      ${isMobile ? 'max-height: 200px;' : 'max-height: 300px;'}
       overflow-y: auto;
       ${isMobile ? 'touch-action: manipulation;' : ''}
     `;
@@ -139,58 +138,42 @@ export class InlineTooltip {
     const gap = isMobile ? 20 : 8; // 모바일에서는 더 큰 간격
     const minSpacing = isMobile ? 16 : 12;
     
-    // 모바일에서 툴팁 크기 조정
-    if (isMobile) {
-      const maxWidth = Math.min(viewportWidth - 32, 350); // 화면 너비의 대부분 사용
-      const maxHeight = Math.min(viewportHeight - 100, 250); // 화면 높이에 맞게 조정
-      
-      this.tooltip.style.maxWidth = `${maxWidth}px`;
-      this.tooltip.style.maxHeight = `${maxHeight}px`;
-      this.tooltip.style.minWidth = `${Math.min(250, maxWidth)}px`;
-      
-      // 모바일에서는 글자 크기도 약간 크게
-      this.tooltip.style.fontSize = '14px';
-      
-      // 재계산을 위해 업데이트된 크기 가져오기
-      const updatedRect = this.tooltip.getBoundingClientRect();
-      tooltipRect.width = updatedRect.width;
-      tooltipRect.height = updatedRect.height;
-    }
-    
     let finalLeft = 0;
     let finalTop = 0;
 
     if (isMobile) {
-      // 모바일: 손가락에 가려지지 않도록 항상 위쪽에 표시하거나 중앙에 표시
-      const fingerHeight = 60; // 손가락이 차지하는 대략적인 높이
+      // 🔧 모바일: 고정된 크기와 위치로 일관성 확보
+      const fixedWidth = Math.min(320, viewportWidth - 32);
+      const maxHeight = Math.min(viewportHeight * 0.4, 200); // 화면 높이의 40% 또는 200px
       
-      // 위쪽에 충분한 공간이 있으면 위쪽에 표시
-      if (targetRect.top - tooltipRect.height - gap - fingerHeight > minSpacing) {
-        finalTop = targetRect.top - tooltipRect.height - gap - fingerHeight;
-      } 
-      // 아래쪽에 충분한 공간이 있고 손가락 위치를 고려하면 아래쪽에 표시
-      else if (targetRect.bottom + gap + fingerHeight + tooltipRect.height <= viewportHeight - minSpacing) {
-        finalTop = targetRect.bottom + gap + fingerHeight;
+      this.tooltip.style.width = `${fixedWidth}px`;
+      this.tooltip.style.maxHeight = `${maxHeight}px`;
+      this.tooltip.style.minWidth = `${fixedWidth}px`;
+      this.tooltip.style.fontSize = '14px';
+      
+      // 중앙 정렬로 일관성 확보
+      finalLeft = (viewportWidth - fixedWidth) / 2;
+      
+      // 세로 위치: 타겟 위쪽 또는 아래쪽 중 더 적절한 곳
+      const fingerHeight = 80; // 손가락 영역 고려
+      const spaceAbove = targetRect.top;
+      const spaceBelow = viewportHeight - targetRect.bottom;
+      
+      if (spaceAbove > maxHeight + fingerHeight + gap) {
+        // 위쪽에 표시
+        finalTop = targetRect.top - maxHeight - gap - 20;
+      } else if (spaceBelow > maxHeight + fingerHeight + gap) {
+        // 아래쪽에 표시
+        finalTop = targetRect.bottom + gap + 20;
+      } else {
+        // 중앙에 표시 (타겟 요소 피하면서)
+        finalTop = Math.max(minSpacing, (viewportHeight - maxHeight) / 2);
       }
-      // 공간이 부족하면 화면 중앙에 표시
-      else {
-        finalTop = (viewportHeight - tooltipRect.height) / 2;
-      }
       
-      // 가로 위치는 화면 중앙에 더 가깝게
-      finalLeft = (viewportWidth - tooltipRect.width) / 2;
-      
-      // 경계 보정
-      if (finalLeft < minSpacing) {
-        finalLeft = minSpacing;
-      } else if (finalLeft + tooltipRect.width > viewportWidth - minSpacing) {
-        finalLeft = viewportWidth - tooltipRect.width - minSpacing;
-      }
-      
-      Logger.log(`📱 모바일 툴팁 위치: left=${finalLeft}, top=${finalTop}, 손가락 회피=${fingerHeight}px`);
+      Logger.log(`📱 모바일 툴팁 고정 위치: ${fixedWidth}x${maxHeight} at (${finalLeft}, ${finalTop})`);
       
     } else {
-      // 데스크톱: 기존 로직
+      // 🖥️ 데스크톱: 기존 로직
       // 아래쪽에 표시하는 것을 기본으로 하되, 공간이 부족하면 위쪽으로
       if (targetRect.bottom + gap + tooltipRect.height <= viewportHeight - minSpacing) {
         // 아래쪽에 표시
@@ -214,8 +197,8 @@ export class InlineTooltip {
     // 추가 경계 보정
     if (finalTop < minSpacing) {
       finalTop = minSpacing;
-    } else if (finalTop + tooltipRect.height > viewportHeight - minSpacing) {
-      finalTop = viewportHeight - tooltipRect.height - minSpacing;
+    } else if (finalTop + (isMobile ? parseInt(this.tooltip.style.maxHeight) : tooltipRect.height) > viewportHeight - minSpacing) {
+      finalTop = viewportHeight - (isMobile ? parseInt(this.tooltip.style.maxHeight) : tooltipRect.height) - minSpacing;
     }
 
     // 최종 위치 적용
@@ -370,6 +353,10 @@ export class InlineTooltip {
           suggestionButton.addEventListener('touchend', (e) => {
             e.preventDefault();
             onDeactivate();
+            
+            // 🔧 모바일에서 터치 종료 시 직접 수정 적용
+            Logger.log(`📱 모바일 터치로 제안 적용: "${suggestion}"`);
+            this.applySuggestionKeepOpen(mergedError, suggestion, targetElement);
           }, { passive: false });
         }
 
@@ -613,6 +600,10 @@ export class InlineTooltip {
         suggestionButton.addEventListener('touchend', (e) => {
           e.preventDefault();
           onDeactivate();
+          
+          // 🔧 모바일에서 터치 종료 시 직접 수정 적용
+          Logger.log(`📱 모바일 터치로 제안 적용: "${suggestion}"`);
+          this.applySuggestion(error, suggestion, targetElement);
         }, { passive: false });
       }
 
