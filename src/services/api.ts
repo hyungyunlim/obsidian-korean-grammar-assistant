@@ -279,6 +279,27 @@ export class SpellCheckApiService {
     Logger.debug('교정된 텍스트:', data.revised);
     Logger.debug('revisedSentences 수:', data.revisedSentences?.length || 0);
     
+    // 🔧 전체 텍스트 검증: 원본과 교정본이 실질적으로 같으면 오류 없음으로 처리
+    const cleanOriginal = originalText.trim().replace(/\s+/g, ' ');
+    const cleanRevised = (data.revised || '').trim().replace(/\s+/g, ' ');
+    
+    if (cleanOriginal === cleanRevised) {
+      Logger.log('✅ 전체 텍스트 검증: 원본과 교정본이 동일하여 오류 없음으로 처리');
+      return {
+        resultOutput: originalText,
+        corrections: []
+      };
+    }
+    
+    // 변경 비율 검사: 길이 기준 간단한 유사도 체크
+    const lengthDiff = Math.abs(cleanOriginal.length - cleanRevised.length);
+    const maxLength = Math.max(cleanOriginal.length, cleanRevised.length);
+    const similarity = maxLength > 0 ? 1 - (lengthDiff / maxLength) : 1;
+    
+    if (similarity > 0.98 && lengthDiff <= 2) {
+      Logger.log(`⚠️ 텍스트 유사도가 매우 높음 (길이 차이: ${lengthDiff}자) - 세심한 검증 적용`);
+    }
+    
     if (data.revisedSentences && Array.isArray(data.revisedSentences)) {
       data.revisedSentences.forEach((sentence, sentenceIndex) => {
         Logger.debug(`\n--- 문장 ${sentenceIndex + 1} ---`);
@@ -319,11 +340,19 @@ export class SpellCheckApiService {
               // 중복 제거 및 원문과 다른 제안만 포함
               const uniqueSuggestions = [...new Set(suggestions)]
                 .filter(s => {
-                  const isValid = s !== blockOriginalText && 
-                                 s.trim() !== blockOriginalText.trim() &&
-                                 s.length > 0 &&
-                                 !s.includes('�'); // 깨진 문자 제거
-                  Logger.debug(`    "${s}" 유효성:`, isValid);
+                  // 기본 검증
+                  const basicValid = s !== blockOriginalText && 
+                                   s.trim() !== blockOriginalText.trim() &&
+                                   s.length > 0 &&
+                                   !s.includes('\uFFFD'); // 깨진 문자 제거
+                  
+                  // 🔧 추가 검증: 대소문자, 공백, 특수문자 무시하고 실질적으로 같은지 확인
+                  const normalizedOriginal = blockOriginalText.toLowerCase().replace(/[\s\-_.,!?]/g, '');
+                  const normalizedSuggestion = s.toLowerCase().replace(/[\s\-_.,!?]/g, '');
+                  const substantiallyDifferent = normalizedOriginal !== normalizedSuggestion;
+                  
+                  const isValid = basicValid && substantiallyDifferent;
+                  Logger.debug(`    "${s}" 검증 - 기본: ${basicValid}, 실질차이: ${substantiallyDifferent}, 최종: ${isValid}`);
                   return isValid;
                 });
               
@@ -383,12 +412,12 @@ export class SpellCheckApiService {
 
     // 만약 교정된 텍스트는 있지만 세부 오류 정보가 없는 경우
     // 단, 공백이나 줄바꿈 차이는 무시하고 실제 내용이 다른 경우만 처리
-    const normalizedOriginal = originalText.replace(/\s+/g, ' ').trim();
+    const normalizedSource = originalText.replace(/\s+/g, ' ').trim();
     const normalizedResult = resultOutput.replace(/\s+/g, ' ').trim();
     
-    if (corrections.length === 0 && normalizedResult !== normalizedOriginal) {
+    if (corrections.length === 0 && normalizedResult !== normalizedSource) {
       Logger.log('세부 정보가 없어 diff 로직 사용');
-      Logger.debug('원본 (정규화):', normalizedOriginal);
+      Logger.debug('원본 (정규화):', normalizedSource);
       Logger.debug('결과 (정규화):', normalizedResult);
       
       // 간단한 diff 로직으로 변경된 부분 찾기

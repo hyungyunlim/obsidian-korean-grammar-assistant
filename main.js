@@ -1818,6 +1818,21 @@ var SpellCheckApiService = class {
     Logger.debug("\uC6D0\uBCF8 \uD14D\uC2A4\uD2B8:", originalText);
     Logger.debug("\uAD50\uC815\uB41C \uD14D\uC2A4\uD2B8:", data.revised);
     Logger.debug("revisedSentences \uC218:", ((_a = data.revisedSentences) == null ? void 0 : _a.length) || 0);
+    const cleanOriginal = originalText.trim().replace(/\s+/g, " ");
+    const cleanRevised = (data.revised || "").trim().replace(/\s+/g, " ");
+    if (cleanOriginal === cleanRevised) {
+      Logger.log("\u2705 \uC804\uCCB4 \uD14D\uC2A4\uD2B8 \uAC80\uC99D: \uC6D0\uBCF8\uACFC \uAD50\uC815\uBCF8\uC774 \uB3D9\uC77C\uD558\uC5EC \uC624\uB958 \uC5C6\uC74C\uC73C\uB85C \uCC98\uB9AC");
+      return {
+        resultOutput: originalText,
+        corrections: []
+      };
+    }
+    const lengthDiff = Math.abs(cleanOriginal.length - cleanRevised.length);
+    const maxLength = Math.max(cleanOriginal.length, cleanRevised.length);
+    const similarity = maxLength > 0 ? 1 - lengthDiff / maxLength : 1;
+    if (similarity > 0.98 && lengthDiff <= 2) {
+      Logger.log(`\u26A0\uFE0F \uD14D\uC2A4\uD2B8 \uC720\uC0AC\uB3C4\uAC00 \uB9E4\uC6B0 \uB192\uC74C (\uAE38\uC774 \uCC28\uC774: ${lengthDiff}\uC790) - \uC138\uC2EC\uD55C \uAC80\uC99D \uC801\uC6A9`);
+    }
     if (data.revisedSentences && Array.isArray(data.revisedSentences)) {
       data.revisedSentences.forEach((sentence, sentenceIndex) => {
         var _a2;
@@ -1850,8 +1865,12 @@ var SpellCheckApiService = class {
               Logger.debug(`  \u{1F50D} API\uC5D0\uC11C \uBC1B\uC740 \uC81C\uC548 \uC218: ${suggestions.length}\uAC1C`);
               Logger.debug("  \uC81C\uC548\uB4E4:", suggestions);
               const uniqueSuggestions = [...new Set(suggestions)].filter((s) => {
-                const isValid = s !== blockOriginalText && s.trim() !== blockOriginalText.trim() && s.length > 0 && !s.includes("\uFFFD");
-                Logger.debug(`    "${s}" \uC720\uD6A8\uC131:`, isValid);
+                const basicValid = s !== blockOriginalText && s.trim() !== blockOriginalText.trim() && s.length > 0 && !s.includes("\uFFFD");
+                const normalizedOriginal = blockOriginalText.toLowerCase().replace(/[\s\-_.,!?]/g, "");
+                const normalizedSuggestion = s.toLowerCase().replace(/[\s\-_.,!?]/g, "");
+                const substantiallyDifferent = normalizedOriginal !== normalizedSuggestion;
+                const isValid = basicValid && substantiallyDifferent;
+                Logger.debug(`    "${s}" \uAC80\uC99D - \uAE30\uBCF8: ${basicValid}, \uC2E4\uC9C8\uCC28\uC774: ${substantiallyDifferent}, \uCD5C\uC885: ${isValid}`);
                 return isValid;
               });
               Logger.debug(`  \u2705 \uC911\uBCF5\uC81C\uAC70 \uD6C4 \uC720\uD6A8\uD55C \uC81C\uC548 \uC218: ${uniqueSuggestions.length}\uAC1C`);
@@ -1895,11 +1914,11 @@ var SpellCheckApiService = class {
     Logger.debug("\n=== \uCD5C\uC885 \uAD50\uC815 \uACB0\uACFC ===");
     Logger.debug("\uAD50\uC815 \uB9F5 \uD06C\uAE30:", correctionMap.size);
     Logger.log("\uCD5C\uC885 \uAD50\uC815 \uBC30\uC5F4:", corrections);
-    const normalizedOriginal = originalText.replace(/\s+/g, " ").trim();
+    const normalizedSource = originalText.replace(/\s+/g, " ").trim();
     const normalizedResult = resultOutput.replace(/\s+/g, " ").trim();
-    if (corrections.length === 0 && normalizedResult !== normalizedOriginal) {
+    if (corrections.length === 0 && normalizedResult !== normalizedSource) {
       Logger.log("\uC138\uBD80 \uC815\uBCF4\uAC00 \uC5C6\uC5B4 diff \uB85C\uC9C1 \uC0AC\uC6A9");
-      Logger.debug("\uC6D0\uBCF8 (\uC815\uADDC\uD654):", normalizedOriginal);
+      Logger.debug("\uC6D0\uBCF8 (\uC815\uADDC\uD654):", normalizedSource);
       Logger.debug("\uACB0\uACFC (\uC815\uADDC\uD654):", normalizedResult);
       const words = originalText.split(/(\s+)/);
       const revisedWords = resultOutput.split(/(\s+)/);
@@ -10441,7 +10460,7 @@ var InlineModeService = class {
           const error = this.activeErrors.get(errorId);
           Logger.log(`\u{1F4F1} \uC9E7\uC740 \uD130\uCE58\uB85C \uD234\uD301 \uD45C\uC2DC (${touchDuration}ms): ${error.correction.original}`);
           setTimeout(() => {
-            this.handleErrorClick(error, target);
+            this.handleErrorTooltip(error, target);
           }, 50);
         }
       }
@@ -10710,6 +10729,22 @@ var InlineModeService = class {
       if (window.globalInlineTooltip) {
         window.globalInlineTooltip.hide();
       }
+    }
+  }
+  /**
+   * 오류 툴팁 표시 핸들러 (바로 적용하지 않고 툴팁만 표시)
+   */
+  static handleErrorTooltip(error, targetElement) {
+    Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC624\uB958 \uD234\uD301 \uD45C\uC2DC - ${error.correction.original}`);
+    try {
+      const element = targetElement || this.findErrorElement(error);
+      if (element) {
+        globalInlineTooltip.show(error, element, "click");
+      } else {
+        Logger.warn(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uD0C0\uAC9F \uC694\uC18C\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4 - ${error.correction.original}`);
+      }
+    } catch (err) {
+      Logger.error("\uC624\uB958 \uD234\uD301 \uD45C\uC2DC \uC911 \uBB38\uC81C \uBC1C\uC0DD:", err);
     }
   }
   /**

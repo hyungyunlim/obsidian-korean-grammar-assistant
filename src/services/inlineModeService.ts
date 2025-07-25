@@ -485,7 +485,7 @@ export class InlineModeService {
           
           // 짧은 딜레이 후 툴팁 표시
           setTimeout(() => {
-            this.handleErrorClick(error, target);
+            this.handleErrorTooltip(error, target);
           }, 50);
         }
       }
@@ -848,6 +848,25 @@ export class InlineModeService {
       if ((window as any).globalInlineTooltip) {
         (window as any).globalInlineTooltip.hide();
       }
+    }
+  }
+
+  /**
+   * 오류 툴팁 표시 핸들러 (바로 적용하지 않고 툴팁만 표시)
+   */
+  static handleErrorTooltip(error: InlineError, targetElement?: HTMLElement): void {
+    Logger.log(`인라인 모드: 오류 툴팁 표시 - ${error.correction.original}`);
+    
+    try {
+      // 실제 타겟 요소가 전달되면 그것을 사용, 없으면 기존 방식으로 찾기
+      const element = targetElement || this.findErrorElement(error);
+      if (element) {
+        globalInlineTooltip.show(error, element, 'click');
+      } else {
+        Logger.warn(`인라인 모드: 타겟 요소를 찾을 수 없습니다 - ${error.correction.original}`);
+      }
+    } catch (err) {
+      Logger.error('오류 툴팁 표시 중 문제 발생:', err);
     }
   }
 
