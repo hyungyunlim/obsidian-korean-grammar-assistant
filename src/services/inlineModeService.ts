@@ -63,6 +63,12 @@ class ErrorWidget extends WidgetType {
     // 클릭 이벤트
     if (this.onClick) {
       span.addEventListener('click', (e) => {
+        // 🔧 모바일에서는 터치 이벤트를 사용하므로 클릭 이벤트 무시
+        if (Platform.isMobile) {
+          Logger.debug('ErrorWidget: 모바일에서 클릭 이벤트 무시 (터치 이벤트 사용)');
+          return;
+        }
+        
         e.preventDefault();
         e.stopPropagation();
         this.onClick?.();
@@ -359,6 +365,12 @@ export class InlineModeService {
     // 클릭 이벤트 (안전한 처리)
     editorDOM.addEventListener('click', (e) => {
       try {
+        // 🔧 모바일에서는 터치 이벤트를 사용하므로 클릭 이벤트 무시
+        if (Platform.isMobile) {
+          Logger.debug('모바일에서 클릭 이벤트 무시 (터치 이벤트 사용)');
+          return;
+        }
+        
         const target = e.target as HTMLElement;
         if (target && target.classList && target.classList.contains('korean-grammar-error-inline')) {
           e.preventDefault();
@@ -483,6 +495,10 @@ export class InlineModeService {
           const error = this.activeErrors.get(errorId)!;
           Logger.log(`📱 짧은 터치로 툴팁 표시 (${touchDuration}ms): ${error.correction.original}`);
           
+          // 🔧 클릭 이벤트 방지
+          e.preventDefault();
+          e.stopPropagation();
+          
           // 짧은 딜레이 후 툴팁 표시
           setTimeout(() => {
             this.handleErrorTooltip(error, target);
@@ -492,7 +508,7 @@ export class InlineModeService {
       
       touchTarget = null;
       touchStartTime = 0;
-    }, { passive: true });
+    }, { passive: false });
 
     // 터치 취소
     editorDOM.addEventListener('touchcancel', () => {

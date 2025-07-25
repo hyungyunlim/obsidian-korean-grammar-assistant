@@ -10369,6 +10369,10 @@ var InlineModeService = class {
     }, true);
     editorDOM.addEventListener("click", (e) => {
       try {
+        if (import_obsidian11.Platform.isMobile) {
+          Logger.debug("\uBAA8\uBC14\uC77C\uC5D0\uC11C \uD074\uB9AD \uC774\uBCA4\uD2B8 \uBB34\uC2DC (\uD130\uCE58 \uC774\uBCA4\uD2B8 \uC0AC\uC6A9)");
+          return;
+        }
         const target = e.target;
         if (target && target.classList && target.classList.contains("korean-grammar-error-inline")) {
           e.preventDefault();
@@ -10459,6 +10463,8 @@ var InlineModeService = class {
         if (errorId && this.activeErrors.has(errorId)) {
           const error = this.activeErrors.get(errorId);
           Logger.log(`\u{1F4F1} \uC9E7\uC740 \uD130\uCE58\uB85C \uD234\uD301 \uD45C\uC2DC (${touchDuration}ms): ${error.correction.original}`);
+          e.preventDefault();
+          e.stopPropagation();
           setTimeout(() => {
             this.handleErrorTooltip(error, target);
           }, 50);
@@ -10466,7 +10472,7 @@ var InlineModeService = class {
       }
       touchTarget = null;
       touchStartTime = 0;
-    }, { passive: true });
+    }, { passive: false });
     editorDOM.addEventListener("touchcancel", () => {
       if (touchTimer) {
         clearTimeout(touchTimer);
