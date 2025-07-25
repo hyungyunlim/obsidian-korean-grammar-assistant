@@ -342,6 +342,9 @@ export class InlineModeService {
   private static setupEventListeners(view: EditorView): void {
     const editorDOM = view.dom;
     
+    // 🎯 커서 위치 변경 모니터링 설정
+    this.setupCursorMonitoring(view);
+    
     // 호버 이벤트 (정확한 호버된 요소만 처리)
     editorDOM.addEventListener('mouseenter', (e) => {
       const target = e.target as HTMLElement;
@@ -593,6 +596,73 @@ export class InlineModeService {
       clearTimeout(this.hoverTimeout);
       this.hoverTimeout = null;
     }
+  }
+
+  /**
+   * 🎯 커서 위치 변경 모니터링 설정
+   */
+  private static setupCursorMonitoring(view: EditorView): void {
+    if (!this.app) return;
+
+    // 간단한 포커스 체크를 위한 인터벌 설정 (성능상 문제없음)
+    setInterval(() => {
+      this.checkCursorPosition();
+    }, 500); // 0.5초마다 체크
+
+    Logger.debug('🎯 커서 위치 모니터링 설정 완료');
+  }
+
+  /**
+   * 🎯 커서 위치 체크 (주기적 호출)
+   */
+  private static checkCursorPosition(): void {
+    // 현재 포커스된 오류가 있을 때만 처리
+    if (!this.currentFocusedError || !this.app) return;
+
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view) return;
+
+    const editor = view.editor;
+    const cursor = editor.getCursor();
+    const cursorOffset = editor.posToOffset(cursor);
+
+    // 커서가 포커스된 오류 범위를 벗어났는지 확인
+    if (cursorOffset < this.currentFocusedError.start || cursorOffset > this.currentFocusedError.end) {
+      Logger.debug(`🎯 커서가 포커스 영역을 벗어남: ${cursorOffset} (범위: ${this.currentFocusedError.start}-${this.currentFocusedError.end})`);
+      
+      // 포커스 해제
+      this.clearFocusedError();
+      
+      // 툴팁도 숨기기
+      if ((window as any).globalInlineTooltip) {
+        (window as any).globalInlineTooltip.hide();
+      }
+    }
+  }
+
+  /**
+   * 🎯 현재 커서 위치에 있는 오류 찾기
+   */
+  static findErrorAtCursor(): InlineError | null {
+    if (!this.app) return null;
+
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view) return null;
+
+    const editor = view.editor;
+    const cursor = editor.getCursor();
+    const cursorOffset = editor.posToOffset(cursor);
+
+    // 모든 활성 오류 중에서 커서 위치가 포함된 오류 찾기
+    for (const [, error] of this.activeErrors) {
+      if (cursorOffset >= error.start && cursorOffset <= error.end) {
+        Logger.debug(`🎯 커서 위치에서 오류 발견: "${error.correction.original}" (${error.start}-${error.end})`);
+        return error;
+      }
+    }
+
+    Logger.debug(`🎯 커서 위치에 오류 없음: ${cursorOffset}`);
+    return null;
   }
 
 
@@ -1677,10 +1747,22 @@ export class InlineModeService {
       id: 'inline-next-suggestion',
       name: '다음 제안 선택',
       callback: () => {
-        if (!this.currentFocusedError || !this.currentFocusedError.correction) {
-          new Notice('현재 포커스된 문법 오류가 없습니다. 먼저 오류를 선택해주세요.');
-          return;
+        // 🎯 스마트 포커스: 포커스된 오류가 없으면 커서 위치에서 찾기
+        if (!this.currentFocusedError) {
+          const errorAtCursor = this.findErrorAtCursor();
+          if (errorAtCursor) {
+            this.setFocusedError(errorAtCursor);
+            Logger.log(`🎯 커서 위치에서 자동 포커스: ${errorAtCursor.correction.original}`);
+          } else {
+            new Notice('현재 포커스된 문법 오류가 없습니다. 커서를 오류 단어에 위치시키거나 먼저 오류를 선택해주세요.');
+            return;
+          }
         }
+        
+                 if (!this.currentFocusedError || !this.currentFocusedError.correction) {
+           new Notice('현재 오류에 대한 제안이 없습니다.');
+           return;
+         }
 
         // 🎯 원문 포함한 전체 제안 목록 (원문 → 제안1 → 제안2 → ...)
         const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
@@ -1707,8 +1789,20 @@ export class InlineModeService {
       id: 'inline-previous-suggestion',
       name: '이전 제안 선택',
       callback: () => {
+        // 🎯 스마트 포커스: 포커스된 오류가 없으면 커서 위치에서 찾기
+        if (!this.currentFocusedError) {
+          const errorAtCursor = this.findErrorAtCursor();
+          if (errorAtCursor) {
+            this.setFocusedError(errorAtCursor);
+            Logger.log(`🎯 커서 위치에서 자동 포커스: ${errorAtCursor.correction.original}`);
+          } else {
+            new Notice('현재 포커스된 문법 오류가 없습니다. 커서를 오류 단어에 위치시키거나 먼저 오류를 선택해주세요.');
+            return;
+          }
+        }
+        
         if (!this.currentFocusedError || !this.currentFocusedError.correction) {
-          new Notice('현재 포커스된 문법 오류가 없습니다. 먼저 오류를 선택해주세요.');
+          new Notice('현재 오류에 대한 제안이 없습니다.');
           return;
         }
 

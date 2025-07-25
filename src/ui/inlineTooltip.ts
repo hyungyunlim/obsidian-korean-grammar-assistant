@@ -697,11 +697,15 @@ export class InlineTooltip {
     let isHovering = false;
     
     const startHideTimer = () => {
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+      }
       hideTimeout = setTimeout(() => {
         if (!isHovering) {
+          Logger.debug('🔍 툴팁 자동 숨김 타이머 실행');
           this.hide();
         }
-      }, 300); // 300ms로 줄여서 더 빠른 반응
+      }, 200); // 200ms로 더 빠른 반응
     };
 
     const cancelHideTimer = () => {
@@ -712,23 +716,51 @@ export class InlineTooltip {
     };
 
     const onTargetMouseEnter = () => {
+      Logger.debug('🔍 타겟 요소 마우스 진입');
       isHovering = true;
       cancelHideTimer();
     };
 
     const onTargetMouseLeave = () => {
+      Logger.debug('🔍 타겟 요소 마우스 이탈');
       isHovering = false;
       startHideTimer();
     };
 
     const onTooltipMouseEnter = () => {
+      Logger.debug('🔍 툴팁 마우스 진입');
       isHovering = true;
       cancelHideTimer();
     };
 
     const onTooltipMouseLeave = () => {
+      Logger.debug('🔍 툴팁 마우스 이탈');
       isHovering = false;
       startHideTimer();
+    };
+
+    // 🔧 브라우저 호환성을 위한 추가 이벤트 (마우스가 완전히 벗어났을 때)
+    const onDocumentMouseMove = (e: MouseEvent) => {
+      if (!this.tooltip || !targetElement) return;
+      
+      const tooltipRect = this.tooltip.getBoundingClientRect();
+      const targetRect = targetElement.getBoundingClientRect();
+      
+      const isOverTooltip = (
+        e.clientX >= tooltipRect.left && e.clientX <= tooltipRect.right &&
+        e.clientY >= tooltipRect.top && e.clientY <= tooltipRect.bottom
+      );
+      
+      const isOverTarget = (
+        e.clientX >= targetRect.left && e.clientX <= targetRect.right &&
+        e.clientY >= targetRect.top && e.clientY <= targetRect.bottom
+      );
+      
+      if (!isOverTooltip && !isOverTarget && isHovering) {
+        Logger.debug('🔍 마우스가 완전히 벗어남 - 강제 숨김');
+        isHovering = false;
+        startHideTimer();
+      }
     };
 
     // 이벤트 리스너 등록
@@ -736,6 +768,7 @@ export class InlineTooltip {
     targetElement.addEventListener('mouseleave', onTargetMouseLeave);
     this.tooltip?.addEventListener('mouseenter', onTooltipMouseEnter);
     this.tooltip?.addEventListener('mouseleave', onTooltipMouseLeave);
+    document.addEventListener('mousemove', onDocumentMouseMove);
 
     // 정리 함수 저장 (나중에 제거용)
     (this.tooltip as any)._cleanup = () => {
@@ -743,6 +776,7 @@ export class InlineTooltip {
       targetElement.removeEventListener('mouseleave', onTargetMouseLeave);
       this.tooltip?.removeEventListener('mouseenter', onTooltipMouseEnter);
       this.tooltip?.removeEventListener('mouseleave', onTooltipMouseLeave);
+      document.removeEventListener('mousemove', onDocumentMouseMove);
       if (hideTimeout) clearTimeout(hideTimeout);
     };
   }

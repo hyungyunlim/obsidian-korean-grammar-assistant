@@ -10062,11 +10062,15 @@ var InlineTooltip = class {
     let hideTimeout;
     let isHovering = false;
     const startHideTimer = () => {
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+      }
       hideTimeout = setTimeout(() => {
         if (!isHovering) {
+          Logger.debug("\u{1F50D} \uD234\uD301 \uC790\uB3D9 \uC228\uAE40 \uD0C0\uC774\uBA38 \uC2E4\uD589");
           this.hide();
         }
-      }, 300);
+      }, 200);
     };
     const cancelHideTimer = () => {
       if (hideTimeout) {
@@ -10075,31 +10079,50 @@ var InlineTooltip = class {
       }
     };
     const onTargetMouseEnter = () => {
+      Logger.debug("\u{1F50D} \uD0C0\uAC9F \uC694\uC18C \uB9C8\uC6B0\uC2A4 \uC9C4\uC785");
       isHovering = true;
       cancelHideTimer();
     };
     const onTargetMouseLeave = () => {
+      Logger.debug("\u{1F50D} \uD0C0\uAC9F \uC694\uC18C \uB9C8\uC6B0\uC2A4 \uC774\uD0C8");
       isHovering = false;
       startHideTimer();
     };
     const onTooltipMouseEnter = () => {
+      Logger.debug("\u{1F50D} \uD234\uD301 \uB9C8\uC6B0\uC2A4 \uC9C4\uC785");
       isHovering = true;
       cancelHideTimer();
     };
     const onTooltipMouseLeave = () => {
+      Logger.debug("\u{1F50D} \uD234\uD301 \uB9C8\uC6B0\uC2A4 \uC774\uD0C8");
       isHovering = false;
       startHideTimer();
+    };
+    const onDocumentMouseMove = (e) => {
+      if (!this.tooltip || !targetElement)
+        return;
+      const tooltipRect = this.tooltip.getBoundingClientRect();
+      const targetRect = targetElement.getBoundingClientRect();
+      const isOverTooltip = e.clientX >= tooltipRect.left && e.clientX <= tooltipRect.right && e.clientY >= tooltipRect.top && e.clientY <= tooltipRect.bottom;
+      const isOverTarget = e.clientX >= targetRect.left && e.clientX <= targetRect.right && e.clientY >= targetRect.top && e.clientY <= targetRect.bottom;
+      if (!isOverTooltip && !isOverTarget && isHovering) {
+        Logger.debug("\u{1F50D} \uB9C8\uC6B0\uC2A4\uAC00 \uC644\uC804\uD788 \uBC97\uC5B4\uB0A8 - \uAC15\uC81C \uC228\uAE40");
+        isHovering = false;
+        startHideTimer();
+      }
     };
     targetElement.addEventListener("mouseenter", onTargetMouseEnter);
     targetElement.addEventListener("mouseleave", onTargetMouseLeave);
     (_a = this.tooltip) == null ? void 0 : _a.addEventListener("mouseenter", onTooltipMouseEnter);
     (_b = this.tooltip) == null ? void 0 : _b.addEventListener("mouseleave", onTooltipMouseLeave);
+    document.addEventListener("mousemove", onDocumentMouseMove);
     this.tooltip._cleanup = () => {
       var _a2, _b2;
       targetElement.removeEventListener("mouseenter", onTargetMouseEnter);
       targetElement.removeEventListener("mouseleave", onTargetMouseLeave);
       (_a2 = this.tooltip) == null ? void 0 : _a2.removeEventListener("mouseenter", onTooltipMouseEnter);
       (_b2 = this.tooltip) == null ? void 0 : _b2.removeEventListener("mouseleave", onTooltipMouseLeave);
+      document.removeEventListener("mousemove", onDocumentMouseMove);
       if (hideTimeout)
         clearTimeout(hideTimeout);
     };
@@ -10654,6 +10677,7 @@ var InlineModeService = class {
    */
   static setupEventListeners(view) {
     const editorDOM = view.dom;
+    this.setupCursorMonitoring(view);
     editorDOM.addEventListener("mouseenter", (e) => {
       var _a;
       const target = e.target;
@@ -10837,6 +10861,58 @@ var InlineModeService = class {
       clearTimeout(this.hoverTimeout);
       this.hoverTimeout = null;
     }
+  }
+  /**
+   * 🎯 커서 위치 변경 모니터링 설정
+   */
+  static setupCursorMonitoring(view) {
+    if (!this.app)
+      return;
+    setInterval(() => {
+      this.checkCursorPosition();
+    }, 500);
+    Logger.debug("\u{1F3AF} \uCEE4\uC11C \uC704\uCE58 \uBAA8\uB2C8\uD130\uB9C1 \uC124\uC815 \uC644\uB8CC");
+  }
+  /**
+   * 🎯 커서 위치 체크 (주기적 호출)
+   */
+  static checkCursorPosition() {
+    if (!this.currentFocusedError || !this.app)
+      return;
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian13.MarkdownView);
+    if (!view)
+      return;
+    const editor = view.editor;
+    const cursor = editor.getCursor();
+    const cursorOffset = editor.posToOffset(cursor);
+    if (cursorOffset < this.currentFocusedError.start || cursorOffset > this.currentFocusedError.end) {
+      Logger.debug(`\u{1F3AF} \uCEE4\uC11C\uAC00 \uD3EC\uCEE4\uC2A4 \uC601\uC5ED\uC744 \uBC97\uC5B4\uB0A8: ${cursorOffset} (\uBC94\uC704: ${this.currentFocusedError.start}-${this.currentFocusedError.end})`);
+      this.clearFocusedError();
+      if (window.globalInlineTooltip) {
+        window.globalInlineTooltip.hide();
+      }
+    }
+  }
+  /**
+   * 🎯 현재 커서 위치에 있는 오류 찾기
+   */
+  static findErrorAtCursor() {
+    if (!this.app)
+      return null;
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian13.MarkdownView);
+    if (!view)
+      return null;
+    const editor = view.editor;
+    const cursor = editor.getCursor();
+    const cursorOffset = editor.posToOffset(cursor);
+    for (const [, error] of this.activeErrors) {
+      if (cursorOffset >= error.start && cursorOffset <= error.end) {
+        Logger.debug(`\u{1F3AF} \uCEE4\uC11C \uC704\uCE58\uC5D0\uC11C \uC624\uB958 \uBC1C\uACAC: "${error.correction.original}" (${error.start}-${error.end})`);
+        return error;
+      }
+    }
+    Logger.debug(`\u{1F3AF} \uCEE4\uC11C \uC704\uCE58\uC5D0 \uC624\uB958 \uC5C6\uC74C: ${cursorOffset}`);
+    return null;
   }
   /**
    * 설정 업데이트
@@ -11452,8 +11528,18 @@ var InlineModeService = class {
       id: "inline-next-suggestion",
       name: "\uB2E4\uC74C \uC81C\uC548 \uC120\uD0DD",
       callback: () => {
+        if (!this.currentFocusedError) {
+          const errorAtCursor = this.findErrorAtCursor();
+          if (errorAtCursor) {
+            this.setFocusedError(errorAtCursor);
+            Logger.log(`\u{1F3AF} \uCEE4\uC11C \uC704\uCE58\uC5D0\uC11C \uC790\uB3D9 \uD3EC\uCEE4\uC2A4: ${errorAtCursor.correction.original}`);
+          } else {
+            new import_obsidian12.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uCEE4\uC11C\uB97C \uC624\uB958 \uB2E8\uC5B4\uC5D0 \uC704\uCE58\uC2DC\uD0A4\uAC70\uB098 \uBA3C\uC800 \uC624\uB958\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
+            return;
+          }
+        }
         if (!this.currentFocusedError || !this.currentFocusedError.correction) {
-          new import_obsidian12.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uC624\uB958\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
+          new import_obsidian12.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
           return;
         }
         const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
@@ -11471,8 +11557,18 @@ var InlineModeService = class {
       id: "inline-previous-suggestion",
       name: "\uC774\uC804 \uC81C\uC548 \uC120\uD0DD",
       callback: () => {
+        if (!this.currentFocusedError) {
+          const errorAtCursor = this.findErrorAtCursor();
+          if (errorAtCursor) {
+            this.setFocusedError(errorAtCursor);
+            Logger.log(`\u{1F3AF} \uCEE4\uC11C \uC704\uCE58\uC5D0\uC11C \uC790\uB3D9 \uD3EC\uCEE4\uC2A4: ${errorAtCursor.correction.original}`);
+          } else {
+            new import_obsidian12.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uCEE4\uC11C\uB97C \uC624\uB958 \uB2E8\uC5B4\uC5D0 \uC704\uCE58\uC2DC\uD0A4\uAC70\uB098 \uBA3C\uC800 \uC624\uB958\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
+            return;
+          }
+        }
         if (!this.currentFocusedError || !this.currentFocusedError.correction) {
-          new import_obsidian12.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uC624\uB958\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
+          new import_obsidian12.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
           return;
         }
         const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
