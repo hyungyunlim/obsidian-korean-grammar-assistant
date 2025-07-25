@@ -1786,7 +1786,8 @@ var SpellCheckApiService = class {
         type: "PLAIN_TEXT"
       },
       encoding_type: "UTF8",
-      auto_split: true
+      auto_split: false
+      // 🔧 자동 분할 비활성화하여 불필요한 교정 방지
     };
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -1831,20 +1832,6 @@ var SpellCheckApiService = class {
         corrections: []
       };
     }
-    const lengthDiff = Math.abs(cleanOriginal.length - cleanRevised.length);
-    const maxLength = Math.max(cleanOriginal.length, cleanRevised.length);
-    const lengthSimilarity = maxLength > 0 ? 1 - lengthDiff / maxLength : 1;
-    const charSimilarity = this.calculateCharacterSimilarity(cleanOriginal, cleanRevised);
-    Logger.log("\u{1F4CA} \uC720\uC0AC\uB3C4 \uBD84\uC11D:");
-    Logger.log(`  \uAE38\uC774 \uC720\uC0AC\uB3C4: ${(lengthSimilarity * 100).toFixed(1)}% (\uCC28\uC774: ${lengthDiff}\uC790)`);
-    Logger.log(`  \uBB38\uC790 \uC720\uC0AC\uB3C4: ${(charSimilarity * 100).toFixed(1)}%`);
-    if (lengthSimilarity > 0.95 && charSimilarity > 0.95) {
-      Logger.log("\u2705 \uC720\uC0AC\uB3C4 \uAC80\uC99D: \uD14D\uC2A4\uD2B8\uAC00 \uB9E4\uC6B0 \uC720\uC0AC\uD558\uC5EC \uC624\uB958 \uC5C6\uC74C\uC73C\uB85C \uCC98\uB9AC");
-      return {
-        resultOutput: originalText,
-        corrections: []
-      };
-    }
     if (data.revisedSentences && Array.isArray(data.revisedSentences)) {
       data.revisedSentences.forEach((sentence, sentenceIndex) => {
         var _a2;
@@ -1881,21 +1868,12 @@ var SpellCheckApiService = class {
                 Logger.debug("  -> \uC6D0\uBCF8 \uD14D\uC2A4\uD2B8\uC5D0\uC11C \uCC3E\uC744 \uC218 \uC5C6\uC5B4 \uAC74\uB108\uB700");
                 return;
               }
-              const isSignificantChange = this.isSignificantCorrection(blockOriginalText, block.revised, block.revisions);
-              if (!isSignificantChange) {
-                Logger.debug("  -> \uC758\uBBF8 \uC5C6\uB294 \uBCC0\uACBD\uC73C\uB85C \uAC74\uB108\uB700");
-                return;
-              }
               const suggestions = block.revisions.map((rev) => rev.revised);
               Logger.debug(`  \u{1F50D} API\uC5D0\uC11C \uBC1B\uC740 \uC81C\uC548 \uC218: ${suggestions.length}\uAC1C`);
               Logger.debug("  \uC81C\uC548\uB4E4:", suggestions);
               const uniqueSuggestions = [...new Set(suggestions)].filter((s) => {
-                const basicValid = s !== blockOriginalText && s.trim() !== blockOriginalText.trim() && s.length > 0 && !s.includes("\uFFFD");
-                const normalizedOriginal = blockOriginalText.toLowerCase().replace(/[\s\-_.,!?]/g, "");
-                const normalizedSuggestion = s.toLowerCase().replace(/[\s\-_.,!?]/g, "");
-                const substantiallyDifferent = normalizedOriginal !== normalizedSuggestion;
-                const isValid = basicValid && substantiallyDifferent;
-                Logger.debug(`    "${s}" \uAC80\uC99D - \uAE30\uBCF8: ${basicValid}, \uC2E4\uC9C8\uCC28\uC774: ${substantiallyDifferent}, \uCD5C\uC885: ${isValid}`);
+                const isValid = s !== blockOriginalText && s.trim() !== blockOriginalText.trim() && s.length > 0 && !s.includes("\uFFFD");
+                Logger.debug(`    "${s}" \u2192 "${blockOriginalText}" \uC720\uD6A8\uC131: ${isValid}`);
                 return isValid;
               });
               Logger.debug(`  \u2705 \uC911\uBCF5\uC81C\uAC70 \uD6C4 \uC720\uD6A8\uD55C \uC81C\uC548 \uC218: ${uniqueSuggestions.length}\uAC1C`);
@@ -1946,23 +1924,35 @@ var SpellCheckApiService = class {
     });
     const normalizedSource = originalText.replace(/\s+/g, " ").trim();
     const normalizedResult = resultOutput.replace(/\s+/g, " ").trim();
-    if (corrections.length === 0 && normalizedResult !== normalizedSource) {
-      Logger.log("\uC138\uBD80 \uC815\uBCF4\uAC00 \uC5C6\uC5B4 diff \uB85C\uC9C1 \uC0AC\uC6A9");
+    const hasSignificantChange = normalizedResult !== normalizedSource;
+    const lengthDiff = Math.abs(normalizedSource.length - normalizedResult.length);
+    const isMinorChange = lengthDiff <= 2;
+    if (corrections.length === 0 && hasSignificantChange && !isMinorChange) {
+      Logger.log("\u{1F50D} diff \uB85C\uC9C1 \uC2E4\uD589 \uC870\uAC74:");
+      Logger.log(`  \uD14D\uC2A4\uD2B8 \uBCC0\uACBD: ${hasSignificantChange}`);
+      Logger.log(`  \uAE38\uC774 \uCC28\uC774: ${lengthDiff}\uC790`);
+      Logger.log(`  \uC0AC\uC18C\uD55C \uBCC0\uACBD: ${isMinorChange}`);
+      Logger.log("\u2192 \uC138\uBD80 \uC815\uBCF4\uAC00 \uC5C6\uC5B4 diff \uB85C\uC9C1 \uC0AC\uC6A9");
       Logger.debug("\uC6D0\uBCF8 (\uC815\uADDC\uD654):", normalizedSource);
       Logger.debug("\uACB0\uACFC (\uC815\uADDC\uD654):", normalizedResult);
       const words = originalText.split(/(\s+)/);
       const revisedWords = resultOutput.split(/(\s+)/);
       for (let i = 0; i < Math.min(words.length, revisedWords.length); i++) {
         if (words[i] !== revisedWords[i] && words[i].trim() && revisedWords[i].trim()) {
-          corrections.push({
-            original: words[i],
-            corrected: [revisedWords[i]],
-            help: "\uC790\uB3D9 \uAD50\uC815\uB428"
-          });
+          const wordLengthDiff = Math.abs(words[i].length - revisedWords[i].length);
+          if (wordLengthDiff > 0 || words[i].toLowerCase() !== revisedWords[i].toLowerCase()) {
+            corrections.push({
+              original: words[i],
+              corrected: [revisedWords[i]],
+              help: "\uC790\uB3D9 \uAD50\uC815\uB428"
+            });
+          }
         }
       }
     } else if (corrections.length === 0) {
-      Logger.log("\uB9DE\uCDA4\uBC95 \uC624\uB958 \uC5C6\uC74C - diff \uB85C\uC9C1 \uC2E4\uD589 \uC548\uD568");
+      Logger.log("\u2705 \uB9DE\uCDA4\uBC95 \uC624\uB958 \uC5C6\uC74C - diff \uB85C\uC9C1 \uC2E4\uD589 \uC548\uD568");
+    } else if (hasSignificantChange && isMinorChange) {
+      Logger.log("\u26A0\uFE0F \uC0AC\uC18C\uD55C \uBCC0\uACBD\uC774\uBBC0\uB85C diff \uB85C\uC9C1 \uAC74\uB108\uB700");
     }
     return { resultOutput, corrections };
   }
@@ -2115,22 +2105,6 @@ var SpellCheckApiService = class {
     return positions;
   }
   /**
-   * 두 문자열의 문자 단위 유사도를 계산합니다.
-   * @param str1 문자열 1
-   * @param str2 문자열 2
-   * @returns 문자 단위 유사도 (0 ~ 1)
-   */
-  calculateCharacterSimilarity(str1, str2) {
-    const minLength = Math.min(str1.length, str2.length);
-    let commonChars = 0;
-    for (let i = 0; i < minLength; i++) {
-      if (str1[i] === str2[i]) {
-        commonChars++;
-      }
-    }
-    return minLength > 0 ? commonChars / minLength : 0;
-  }
-  /**
    * 한 글자 오류 필터링을 적용합니다.
    * @param original 원본 텍스트
    * @param suggestions 수정 제안들
@@ -2198,43 +2172,6 @@ var SpellCheckApiService = class {
       return { isException: true, reason: "\uD55C \uAE00\uC790 \u2192 \uC5EC\uB7EC \uAE00\uC790 \uD655\uC7A5" };
     }
     return { isException: false, reason: "\uC77C\uBC18\uC801\uC778 \uD55C \uAE00\uC790 \uAD50\uC815" };
-  }
-  /**
-   * 의미 있는 교정인지 확인합니다.
-   * @param original 원본 텍스트
-   * @param revised 교정된 텍스트
-   * @param revisions 제안 목록
-   * @returns 의미 있는 교정 여부
-   */
-  isSignificantCorrection(original, revised, revisions) {
-    if (original === revised) {
-      Logger.debug("    -> \uC6D0\uBCF8\uACFC \uAD50\uC815\uBCF8\uC774 \uB3D9\uC77C");
-      return false;
-    }
-    if (!original || original.trim().length === 0) {
-      Logger.debug("    -> \uBE48 \uD14D\uC2A4\uD2B8");
-      return false;
-    }
-    const uniqueRevisions = [...new Set(revisions.map((r) => r.revised))];
-    if (uniqueRevisions.length === 1 && uniqueRevisions[0] === original) {
-      Logger.debug("    -> \uBAA8\uB4E0 \uC81C\uC548\uC774 \uC6D0\uBCF8\uACFC \uB3D9\uC77C");
-      return false;
-    }
-    if (original.length === 1 && revised.length === 1) {
-      const exceptions = this.checkSingleCharExceptions(original, revised);
-      if (!exceptions.isException) {
-        Logger.debug("    -> \uD55C \uAE00\uC790 \uAD50\uC815\uC774\uC9C0\uB9CC \uC608\uC678 \uCF00\uC774\uC2A4 \uC544\uB2D8");
-        return false;
-      }
-    }
-    const normalizedOriginal = original.toLowerCase().replace(/[\s\-_.,!?]/g, "");
-    const normalizedRevised = revised.toLowerCase().replace(/[\s\-_.,!?]/g, "");
-    if (normalizedOriginal === normalizedRevised) {
-      Logger.debug("    -> \uC815\uADDC\uD654\uB41C \uD14D\uC2A4\uD2B8\uAC00 \uB3D9\uC77C");
-      return false;
-    }
-    Logger.debug("    -> \uC758\uBBF8 \uC788\uB294 \uAD50\uC815\uC73C\uB85C \uD310\uB2E8");
-    return true;
   }
 };
 
