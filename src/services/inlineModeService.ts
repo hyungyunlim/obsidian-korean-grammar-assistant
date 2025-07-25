@@ -2015,6 +2015,22 @@ export class InlineModeService {
         });
       }
       
+      // 🔥 Obsidian API의 강력한 해결책: workspace.updateOptions()
+      if (this.app && this.currentFocusedError) {
+        // 전체 에디터 확장을 다시 로드하여 decoration 강제 업데이트
+        this.app.workspace.updateOptions();
+        
+        // updateOptions 후 포커스 재설정
+        setTimeout(() => {
+          if (this.currentView && this.currentFocusedError) {
+            this.currentView.dispatch({
+              effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
+            });
+            Logger.debug(`🔥 workspace.updateOptions() 포커스 복원: ${this.currentFocusedError.uniqueId}`);
+          }
+        }, 50); // 50ms 여유를 두고 포커스 복원
+      }
+      
     } catch (error) {
       Logger.error('임시 제안 적용 중 오류:', error);
     }

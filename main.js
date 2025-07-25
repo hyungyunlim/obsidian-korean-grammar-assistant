@@ -11694,6 +11694,17 @@ var InlineModeService = class {
           }
         });
       }
+      if (this.app && this.currentFocusedError) {
+        this.app.workspace.updateOptions();
+        setTimeout(() => {
+          if (this.currentView && this.currentFocusedError) {
+            this.currentView.dispatch({
+              effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
+            });
+            Logger.debug(`\u{1F525} workspace.updateOptions() \uD3EC\uCEE4\uC2A4 \uBCF5\uC6D0: ${this.currentFocusedError.uniqueId}`);
+          }
+        }, 50);
+      }
     } catch (error) {
       Logger.error("\uC784\uC2DC \uC81C\uC548 \uC801\uC6A9 \uC911 \uC624\uB958:", error);
     }
