@@ -4,6 +4,8 @@ import { Correction, InlineError } from '../types/interfaces';
 import { Logger } from '../utils/logger';
 import { globalInlineTooltip } from '../ui/inlineTooltip';
 import { Scope, App, Platform } from 'obsidian';
+import { Notice } from 'obsidian';
+import { MarkdownView } from 'obsidian';
 
 /**
  * 오류 위젯 클래스
@@ -1567,30 +1569,31 @@ export class InlineModeService {
     plugin.addCommand({
       id: 'inline-next-error',
       name: '다음 문법 오류로 이동',
-      editorCheckCallback: (checking: boolean) => {
+      callback: () => {
         // 인라인 모드가 활성화되고 오류가 있는지 확인
-        if (this.activeErrors.size === 0 || !this.currentView) {
-          return false;
+        if (this.activeErrors.size === 0) {
+          new Notice('현재 감지된 문법 오류가 없습니다. 인라인 모드를 활성화하고 문법 검사를 실행해주세요.');
+          return;
         }
 
-        if (!checking) {
-          const sortedErrors = this.getActiveErrors();
-          const currentIndex = this.currentFocusedError 
-            ? sortedErrors.findIndex(error => error.uniqueId === this.currentFocusedError!.uniqueId)
-            : -1;
-          
-          const nextIndex = (currentIndex + 1) % sortedErrors.length;
-          const nextError = sortedErrors[nextIndex];
-          
-          if (nextError) {
-            if ((window as any).globalInlineTooltip) {
-              (window as any).globalInlineTooltip.hide();
-            }
-            this.setFocusedError(nextError);
-            Logger.log(`✅ 다음 오류로 이동: ${nextError.correction.original}`);
+        // 🎯 커서 위치 기반으로 다음 오류 찾기
+        const nextError = this.findNextErrorFromCursor();
+        
+        if (nextError) {
+          // 기존 툴팁 숨기기
+          if ((window as any).globalInlineTooltip) {
+            (window as any).globalInlineTooltip.hide();
           }
+          
+          // 오류 위치로 이동 및 포커스 설정
+          this.moveToError(nextError);
+          this.setFocusedError(nextError);
+          
+          new Notice(`다음 오류: "${nextError.correction.original}"`);
+          Logger.log(`✅ 다음 오류로 이동: ${nextError.correction.original}`);
+        } else {
+          new Notice('다음 오류를 찾을 수 없습니다.');
         }
-        return true;
       }
     });
 
@@ -1598,29 +1601,30 @@ export class InlineModeService {
     plugin.addCommand({
       id: 'inline-previous-error',
       name: '이전 문법 오류로 이동',
-      editorCheckCallback: (checking: boolean) => {
-        if (this.activeErrors.size === 0 || !this.currentView) {
-          return false;
+      callback: () => {
+        if (this.activeErrors.size === 0) {
+          new Notice('현재 감지된 문법 오류가 없습니다. 인라인 모드를 활성화하고 문법 검사를 실행해주세요.');
+          return;
         }
 
-        if (!checking) {
-          const sortedErrors = this.getActiveErrors();
-          const currentIndex = this.currentFocusedError 
-            ? sortedErrors.findIndex(error => error.uniqueId === this.currentFocusedError!.uniqueId)
-            : -1;
-          
-          const prevIndex = currentIndex <= 0 ? sortedErrors.length - 1 : currentIndex - 1;
-          const prevError = sortedErrors[prevIndex];
-          
-          if (prevError) {
-            if ((window as any).globalInlineTooltip) {
-              (window as any).globalInlineTooltip.hide();
-            }
-            this.setFocusedError(prevError);
-            Logger.log(`✅ 이전 오류로 이동: ${prevError.correction.original}`);
+        // 🎯 커서 위치 기반으로 이전 오류 찾기
+        const previousError = this.findPreviousErrorFromCursor();
+        
+        if (previousError) {
+          // 기존 툴팁 숨기기
+          if ((window as any).globalInlineTooltip) {
+            (window as any).globalInlineTooltip.hide();
           }
+          
+          // 오류 위치로 이동 및 포커스 설정
+          this.moveToError(previousError);
+          this.setFocusedError(previousError);
+          
+          new Notice(`이전 오류: "${previousError.correction.original}"`);
+          Logger.log(`✅ 이전 오류로 이동: ${previousError.correction.original}`);
+        } else {
+          new Notice('이전 오류를 찾을 수 없습니다.');
         }
-        return true;
       }
     });
 
@@ -1628,22 +1632,22 @@ export class InlineModeService {
     plugin.addCommand({
       id: 'inline-next-suggestion',
       name: '다음 제안 선택',
-      editorCheckCallback: (checking: boolean) => {
+      callback: () => {
         if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
-          return false;
+          new Notice('현재 포커스된 문법 오류가 없습니다. 먼저 오류를 선택해주세요.');
+          return;
         }
 
         const suggestions = this.currentFocusedError.correction.corrected;
         if (!suggestions || suggestions.length === 0) {
-          return false;
+          new Notice('현재 오류에 대한 제안이 없습니다.');
+          return;
         }
 
-        if (!checking) {
-          this.currentSuggestionIndex = Math.min(suggestions.length - 1, this.currentSuggestionIndex + 1);
-          this.updateTooltipHighlight();
-          Logger.log(`✅ 다음 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
-        }
-        return true;
+        this.currentSuggestionIndex = Math.min(suggestions.length - 1, this.currentSuggestionIndex + 1);
+        this.updateTooltipHighlight();
+        new Notice(`다음 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+        Logger.log(`✅ 다음 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
       }
     });
 
@@ -1651,22 +1655,22 @@ export class InlineModeService {
     plugin.addCommand({
       id: 'inline-previous-suggestion',
       name: '이전 제안 선택',
-      editorCheckCallback: (checking: boolean) => {
+      callback: () => {
         if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
-          return false;
+          new Notice('현재 포커스된 문법 오류가 없습니다. 먼저 오류를 선택해주세요.');
+          return;
         }
 
         const suggestions = this.currentFocusedError.correction.corrected;
         if (!suggestions || suggestions.length === 0) {
-          return false;
+          new Notice('현재 오류에 대한 제안이 없습니다.');
+          return;
         }
 
-        if (!checking) {
-          this.currentSuggestionIndex = Math.max(0, this.currentSuggestionIndex - 1);
-          this.updateTooltipHighlight();
-          Logger.log(`✅ 이전 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
-        }
-        return true;
+        this.currentSuggestionIndex = Math.max(0, this.currentSuggestionIndex - 1);
+        this.updateTooltipHighlight();
+        new Notice(`이전 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+        Logger.log(`✅ 이전 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
       }
     });
 
@@ -1674,24 +1678,24 @@ export class InlineModeService {
     plugin.addCommand({
       id: 'inline-apply-suggestion',
       name: '선택된 제안 적용',
-      editorCheckCallback: (checking: boolean) => {
+      callback: () => {
         if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
-          return false;
+          new Notice('현재 포커스된 문법 오류가 없습니다. 먼저 오류를 선택해주세요.');
+          return;
         }
 
         const suggestions = this.currentFocusedError.correction.corrected;
         if (!suggestions || suggestions.length === 0) {
-          return false;
+          new Notice('현재 오류에 대한 제안이 없습니다.');
+          return;
         }
 
-        if (!checking) {
-          const selectedSuggestion = suggestions[this.currentSuggestionIndex];
-          const originalText = this.currentFocusedError.correction.original;
-          this.applySuggestion(this.currentFocusedError, selectedSuggestion);
-          this.clearFocusedError();
-          Logger.log(`✅ 제안 적용: "${originalText}" → "${selectedSuggestion}"`);
-        }
-        return true;
+        const selectedSuggestion = suggestions[this.currentSuggestionIndex];
+        const originalText = this.currentFocusedError.correction.original;
+        this.applySuggestion(this.currentFocusedError, selectedSuggestion);
+        this.clearFocusedError();
+        new Notice(`제안 적용: "${originalText}" → "${selectedSuggestion}"`);
+        Logger.log(`✅ 제안 적용: "${originalText}" → "${selectedSuggestion}"`);
       }
     });
 
@@ -1699,16 +1703,15 @@ export class InlineModeService {
     plugin.addCommand({
       id: 'inline-unfocus',
       name: '문법 오류 포커스 해제',
-      editorCheckCallback: (checking: boolean) => {
+      callback: () => {
         if (!this.currentFocusedError || !this.currentView) {
-          return false;
+          new Notice('현재 포커스된 문법 오류가 없습니다.');
+          return;
         }
 
-        if (!checking) {
-          this.clearFocusedError();
-          Logger.log('✅ 키보드 네비게이션 해제');
-        }
-        return true;
+        this.clearFocusedError();
+        new Notice('문법 오류 포커스를 해제했습니다.');
+        Logger.log('✅ 키보드 네비게이션 해제');
       }
     });
 
@@ -1782,6 +1785,143 @@ export class InlineModeService {
           // 데스크톱: 호버 우선, 클릭도 지원
           return true; // 호버와 클릭 모두 허용
         }
+    }
+  }
+
+  /**
+   * 🎯 커서 위치 기반 가장 가까운 다음 오류 찾기
+   */
+  static findNextErrorFromCursor(): InlineError | null {
+    if (!this.app || this.activeErrors.size === 0) {
+      return null;
+    }
+
+    try {
+      // 현재 활성 MarkdownView 얻기
+      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (!view || !view.editor) {
+        Logger.warn('현재 활성 Markdown 에디터가 없습니다');
+        return null;
+      }
+
+      // 현재 커서 위치 얻기
+      const cursor = view.editor.getCursor();
+      const cursorOffset = view.editor.posToOffset(cursor);
+      
+      Logger.debug(`커서 위치: line ${cursor.line}, ch ${cursor.ch}, offset ${cursorOffset}`);
+
+      // 활성 오류들을 시작 위치 기준으로 정렬
+      const sortedErrors = Array.from(this.activeErrors.values()).sort((a, b) => a.start - b.start);
+      
+      // 커서 위치보다 뒤에 있는 첫 번째 오류 찾기
+      for (const error of sortedErrors) {
+        if (error.start > cursorOffset) {
+          Logger.debug(`다음 오류 발견: "${error.correction.original}" at offset ${error.start}`);
+          return error;
+        }
+      }
+
+      // 뒤에 오류가 없으면 첫 번째 오류로 순환
+      if (sortedErrors.length > 0) {
+        const firstError = sortedErrors[0];
+        Logger.debug(`마지막까지 도달, 첫 번째 오류로 순환: "${firstError.correction.original}"`);
+        return firstError;
+      }
+      
+      return null;
+    } catch (error) {
+      Logger.error('다음 오류 찾기 중 오류:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 🎯 커서 위치 기반 가장 가까운 이전 오류 찾기
+   */
+  static findPreviousErrorFromCursor(): InlineError | null {
+    if (!this.app || this.activeErrors.size === 0) {
+      return null;
+    }
+
+    try {
+      // 현재 활성 MarkdownView 얻기
+      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (!view || !view.editor) {
+        Logger.warn('현재 활성 Markdown 에디터가 없습니다');
+        return null;
+      }
+
+      // 현재 커서 위치 얻기
+      const cursor = view.editor.getCursor();
+      const cursorOffset = view.editor.posToOffset(cursor);
+      
+      Logger.debug(`커서 위치: line ${cursor.line}, ch ${cursor.ch}, offset ${cursorOffset}`);
+
+      // 활성 오류들을 시작 위치 기준으로 정렬 (역순)
+      const sortedErrors = Array.from(this.activeErrors.values()).sort((a, b) => b.start - a.start);
+      
+      // 커서 위치보다 앞에 있는 첫 번째 오류 찾기
+      for (const error of sortedErrors) {
+        if (error.end < cursorOffset) { // end 사용해서 오류 영역을 완전히 지나친 경우만
+          Logger.debug(`이전 오류 발견: "${error.correction.original}" at offset ${error.start}-${error.end}`);
+          return error;
+        }
+      }
+
+      // 앞에 오류가 없으면 마지막 오류로 순환
+      if (sortedErrors.length > 0) {
+        const lastError = sortedErrors[0]; // 역순 정렬이므로 첫 번째가 가장 뒤의 오류
+        Logger.debug(`처음까지 도달, 마지막 오류로 순환: "${lastError.correction.original}"`);
+        return lastError;
+      }
+      
+      return null;
+    } catch (error) {
+      Logger.error('이전 오류 찾기 중 오류:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 🎯 오류 위치로 커서 이동 및 뷰 스크롤
+   */
+  static moveToError(error: InlineError): void {
+    if (!this.app) {
+      Logger.warn('App 인스턴스가 없어 오류 위치로 이동할 수 없습니다');
+      return;
+    }
+
+    try {
+      // 현재 활성 MarkdownView 얻기
+      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (!view || !view.editor) {
+        Logger.warn('현재 활성 Markdown 에디터가 없습니다');
+        return;
+      }
+
+      const editor = view.editor;
+      
+      // 오류 시작 위치를 EditorPosition으로 변환
+      const startPos = editor.offsetToPos(error.start);
+      const endPos = editor.offsetToPos(error.end);
+      
+      Logger.debug(`오류 위치로 이동: "${error.correction.original}" at line ${startPos.line}, ch ${startPos.ch}`);
+      
+      // 커서를 오류 시작 위치로 이동
+      editor.setCursor(startPos);
+      
+      // 오류 영역을 선택 (선택적)
+      // editor.setSelection(startPos, endPos);
+      
+      // 해당 영역을 화면에 표시되도록 스크롤
+      const range = { from: startPos, to: endPos };
+      editor.scrollIntoView(range, true); // center: true로 중앙에 표시
+      
+      // 에디터에 포커스 (사용자가 바로 편집할 수 있도록)
+      editor.focus();
+      
+    } catch (error) {
+      Logger.error('오류 위치로 이동 중 문제 발생:', error);
     }
   }
 }

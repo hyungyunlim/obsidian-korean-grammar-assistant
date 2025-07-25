@@ -1622,7 +1622,7 @@ __export(main_exports, {
   default: () => KoreanGrammarPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian13 = require("obsidian");
+var import_obsidian15 = require("obsidian");
 init_settings();
 
 // src/orchestrator.ts
@@ -10500,6 +10500,8 @@ window.globalInlineTooltip = globalInlineTooltip;
 
 // src/services/inlineModeService.ts
 var import_obsidian11 = require("obsidian");
+var import_obsidian12 = require("obsidian");
+var import_obsidian13 = require("obsidian");
 var addErrorDecorations = import_state.StateEffect.define({
   map: (val, change) => val
 });
@@ -11384,120 +11386,117 @@ var InlineModeService = class {
     plugin.addCommand({
       id: "inline-next-error",
       name: "\uB2E4\uC74C \uBB38\uBC95 \uC624\uB958\uB85C \uC774\uB3D9",
-      editorCheckCallback: (checking) => {
-        if (this.activeErrors.size === 0 || !this.currentView) {
-          return false;
+      callback: () => {
+        if (this.activeErrors.size === 0) {
+          new import_obsidian12.Notice("\uD604\uC7AC \uAC10\uC9C0\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uC778\uB77C\uC778 \uBAA8\uB4DC\uB97C \uD65C\uC131\uD654\uD558\uACE0 \uBB38\uBC95 \uAC80\uC0AC\uB97C \uC2E4\uD589\uD574\uC8FC\uC138\uC694.");
+          return;
         }
-        if (!checking) {
-          const sortedErrors = this.getActiveErrors();
-          const currentIndex = this.currentFocusedError ? sortedErrors.findIndex((error) => error.uniqueId === this.currentFocusedError.uniqueId) : -1;
-          const nextIndex = (currentIndex + 1) % sortedErrors.length;
-          const nextError = sortedErrors[nextIndex];
-          if (nextError) {
-            if (window.globalInlineTooltip) {
-              window.globalInlineTooltip.hide();
-            }
-            this.setFocusedError(nextError);
-            Logger.log(`\u2705 \uB2E4\uC74C \uC624\uB958\uB85C \uC774\uB3D9: ${nextError.correction.original}`);
+        const nextError = this.findNextErrorFromCursor();
+        if (nextError) {
+          if (window.globalInlineTooltip) {
+            window.globalInlineTooltip.hide();
           }
+          this.moveToError(nextError);
+          this.setFocusedError(nextError);
+          new import_obsidian12.Notice(`\uB2E4\uC74C \uC624\uB958: "${nextError.correction.original}"`);
+          Logger.log(`\u2705 \uB2E4\uC74C \uC624\uB958\uB85C \uC774\uB3D9: ${nextError.correction.original}`);
+        } else {
+          new import_obsidian12.Notice("\uB2E4\uC74C \uC624\uB958\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
         }
-        return true;
       }
     });
     plugin.addCommand({
       id: "inline-previous-error",
       name: "\uC774\uC804 \uBB38\uBC95 \uC624\uB958\uB85C \uC774\uB3D9",
-      editorCheckCallback: (checking) => {
-        if (this.activeErrors.size === 0 || !this.currentView) {
-          return false;
+      callback: () => {
+        if (this.activeErrors.size === 0) {
+          new import_obsidian12.Notice("\uD604\uC7AC \uAC10\uC9C0\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uC778\uB77C\uC778 \uBAA8\uB4DC\uB97C \uD65C\uC131\uD654\uD558\uACE0 \uBB38\uBC95 \uAC80\uC0AC\uB97C \uC2E4\uD589\uD574\uC8FC\uC138\uC694.");
+          return;
         }
-        if (!checking) {
-          const sortedErrors = this.getActiveErrors();
-          const currentIndex = this.currentFocusedError ? sortedErrors.findIndex((error) => error.uniqueId === this.currentFocusedError.uniqueId) : -1;
-          const prevIndex = currentIndex <= 0 ? sortedErrors.length - 1 : currentIndex - 1;
-          const prevError = sortedErrors[prevIndex];
-          if (prevError) {
-            if (window.globalInlineTooltip) {
-              window.globalInlineTooltip.hide();
-            }
-            this.setFocusedError(prevError);
-            Logger.log(`\u2705 \uC774\uC804 \uC624\uB958\uB85C \uC774\uB3D9: ${prevError.correction.original}`);
+        const previousError = this.findPreviousErrorFromCursor();
+        if (previousError) {
+          if (window.globalInlineTooltip) {
+            window.globalInlineTooltip.hide();
           }
+          this.moveToError(previousError);
+          this.setFocusedError(previousError);
+          new import_obsidian12.Notice(`\uC774\uC804 \uC624\uB958: "${previousError.correction.original}"`);
+          Logger.log(`\u2705 \uC774\uC804 \uC624\uB958\uB85C \uC774\uB3D9: ${previousError.correction.original}`);
+        } else {
+          new import_obsidian12.Notice("\uC774\uC804 \uC624\uB958\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
         }
-        return true;
       }
     });
     plugin.addCommand({
       id: "inline-next-suggestion",
       name: "\uB2E4\uC74C \uC81C\uC548 \uC120\uD0DD",
-      editorCheckCallback: (checking) => {
+      callback: () => {
         if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
-          return false;
+          new import_obsidian12.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uC624\uB958\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
+          return;
         }
         const suggestions = this.currentFocusedError.correction.corrected;
         if (!suggestions || suggestions.length === 0) {
-          return false;
+          new import_obsidian12.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
+          return;
         }
-        if (!checking) {
-          this.currentSuggestionIndex = Math.min(suggestions.length - 1, this.currentSuggestionIndex + 1);
-          this.updateTooltipHighlight();
-          Logger.log(`\u2705 \uB2E4\uC74C \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
-        }
-        return true;
+        this.currentSuggestionIndex = Math.min(suggestions.length - 1, this.currentSuggestionIndex + 1);
+        this.updateTooltipHighlight();
+        new import_obsidian12.Notice(`\uB2E4\uC74C \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+        Logger.log(`\u2705 \uB2E4\uC74C \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
       }
     });
     plugin.addCommand({
       id: "inline-previous-suggestion",
       name: "\uC774\uC804 \uC81C\uC548 \uC120\uD0DD",
-      editorCheckCallback: (checking) => {
+      callback: () => {
         if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
-          return false;
+          new import_obsidian12.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uC624\uB958\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
+          return;
         }
         const suggestions = this.currentFocusedError.correction.corrected;
         if (!suggestions || suggestions.length === 0) {
-          return false;
+          new import_obsidian12.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
+          return;
         }
-        if (!checking) {
-          this.currentSuggestionIndex = Math.max(0, this.currentSuggestionIndex - 1);
-          this.updateTooltipHighlight();
-          Logger.log(`\u2705 \uC774\uC804 \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
-        }
-        return true;
+        this.currentSuggestionIndex = Math.max(0, this.currentSuggestionIndex - 1);
+        this.updateTooltipHighlight();
+        new import_obsidian12.Notice(`\uC774\uC804 \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+        Logger.log(`\u2705 \uC774\uC804 \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
       }
     });
     plugin.addCommand({
       id: "inline-apply-suggestion",
       name: "\uC120\uD0DD\uB41C \uC81C\uC548 \uC801\uC6A9",
-      editorCheckCallback: (checking) => {
+      callback: () => {
         if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
-          return false;
+          new import_obsidian12.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uC624\uB958\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
+          return;
         }
         const suggestions = this.currentFocusedError.correction.corrected;
         if (!suggestions || suggestions.length === 0) {
-          return false;
+          new import_obsidian12.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
+          return;
         }
-        if (!checking) {
-          const selectedSuggestion = suggestions[this.currentSuggestionIndex];
-          const originalText = this.currentFocusedError.correction.original;
-          this.applySuggestion(this.currentFocusedError, selectedSuggestion);
-          this.clearFocusedError();
-          Logger.log(`\u2705 \uC81C\uC548 \uC801\uC6A9: "${originalText}" \u2192 "${selectedSuggestion}"`);
-        }
-        return true;
+        const selectedSuggestion = suggestions[this.currentSuggestionIndex];
+        const originalText = this.currentFocusedError.correction.original;
+        this.applySuggestion(this.currentFocusedError, selectedSuggestion);
+        this.clearFocusedError();
+        new import_obsidian12.Notice(`\uC81C\uC548 \uC801\uC6A9: "${originalText}" \u2192 "${selectedSuggestion}"`);
+        Logger.log(`\u2705 \uC81C\uC548 \uC801\uC6A9: "${originalText}" \u2192 "${selectedSuggestion}"`);
       }
     });
     plugin.addCommand({
       id: "inline-unfocus",
       name: "\uBB38\uBC95 \uC624\uB958 \uD3EC\uCEE4\uC2A4 \uD574\uC81C",
-      editorCheckCallback: (checking) => {
+      callback: () => {
         if (!this.currentFocusedError || !this.currentView) {
-          return false;
+          new import_obsidian12.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+          return;
         }
-        if (!checking) {
-          this.clearFocusedError();
-          Logger.log("\u2705 \uD0A4\uBCF4\uB4DC \uB124\uBE44\uAC8C\uC774\uC158 \uD574\uC81C");
-        }
-        return true;
+        this.clearFocusedError();
+        new import_obsidian12.Notice("\uBB38\uBC95 \uC624\uB958 \uD3EC\uCEE4\uC2A4\uB97C \uD574\uC81C\uD588\uC2B5\uB2C8\uB2E4.");
+        Logger.log("\u2705 \uD0A4\uBCF4\uB4DC \uB124\uBE44\uAC8C\uC774\uC158 \uD574\uC81C");
       }
     });
     plugin.addCommand({
@@ -11557,6 +11556,100 @@ var InlineModeService = class {
         }
     }
   }
+  /**
+   * 🎯 커서 위치 기반 가장 가까운 다음 오류 찾기
+   */
+  static findNextErrorFromCursor() {
+    if (!this.app || this.activeErrors.size === 0) {
+      return null;
+    }
+    try {
+      const view = this.app.workspace.getActiveViewOfType(import_obsidian13.MarkdownView);
+      if (!view || !view.editor) {
+        Logger.warn("\uD604\uC7AC \uD65C\uC131 Markdown \uC5D0\uB514\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4");
+        return null;
+      }
+      const cursor = view.editor.getCursor();
+      const cursorOffset = view.editor.posToOffset(cursor);
+      Logger.debug(`\uCEE4\uC11C \uC704\uCE58: line ${cursor.line}, ch ${cursor.ch}, offset ${cursorOffset}`);
+      const sortedErrors = Array.from(this.activeErrors.values()).sort((a, b) => a.start - b.start);
+      for (const error of sortedErrors) {
+        if (error.start > cursorOffset) {
+          Logger.debug(`\uB2E4\uC74C \uC624\uB958 \uBC1C\uACAC: "${error.correction.original}" at offset ${error.start}`);
+          return error;
+        }
+      }
+      if (sortedErrors.length > 0) {
+        const firstError = sortedErrors[0];
+        Logger.debug(`\uB9C8\uC9C0\uB9C9\uAE4C\uC9C0 \uB3C4\uB2EC, \uCCAB \uBC88\uC9F8 \uC624\uB958\uB85C \uC21C\uD658: "${firstError.correction.original}"`);
+        return firstError;
+      }
+      return null;
+    } catch (error) {
+      Logger.error("\uB2E4\uC74C \uC624\uB958 \uCC3E\uAE30 \uC911 \uC624\uB958:", error);
+      return null;
+    }
+  }
+  /**
+   * 🎯 커서 위치 기반 가장 가까운 이전 오류 찾기
+   */
+  static findPreviousErrorFromCursor() {
+    if (!this.app || this.activeErrors.size === 0) {
+      return null;
+    }
+    try {
+      const view = this.app.workspace.getActiveViewOfType(import_obsidian13.MarkdownView);
+      if (!view || !view.editor) {
+        Logger.warn("\uD604\uC7AC \uD65C\uC131 Markdown \uC5D0\uB514\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4");
+        return null;
+      }
+      const cursor = view.editor.getCursor();
+      const cursorOffset = view.editor.posToOffset(cursor);
+      Logger.debug(`\uCEE4\uC11C \uC704\uCE58: line ${cursor.line}, ch ${cursor.ch}, offset ${cursorOffset}`);
+      const sortedErrors = Array.from(this.activeErrors.values()).sort((a, b) => b.start - a.start);
+      for (const error of sortedErrors) {
+        if (error.end < cursorOffset) {
+          Logger.debug(`\uC774\uC804 \uC624\uB958 \uBC1C\uACAC: "${error.correction.original}" at offset ${error.start}-${error.end}`);
+          return error;
+        }
+      }
+      if (sortedErrors.length > 0) {
+        const lastError = sortedErrors[0];
+        Logger.debug(`\uCC98\uC74C\uAE4C\uC9C0 \uB3C4\uB2EC, \uB9C8\uC9C0\uB9C9 \uC624\uB958\uB85C \uC21C\uD658: "${lastError.correction.original}"`);
+        return lastError;
+      }
+      return null;
+    } catch (error) {
+      Logger.error("\uC774\uC804 \uC624\uB958 \uCC3E\uAE30 \uC911 \uC624\uB958:", error);
+      return null;
+    }
+  }
+  /**
+   * 🎯 오류 위치로 커서 이동 및 뷰 스크롤
+   */
+  static moveToError(error) {
+    if (!this.app) {
+      Logger.warn("App \uC778\uC2A4\uD134\uC2A4\uAC00 \uC5C6\uC5B4 \uC624\uB958 \uC704\uCE58\uB85C \uC774\uB3D9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4");
+      return;
+    }
+    try {
+      const view = this.app.workspace.getActiveViewOfType(import_obsidian13.MarkdownView);
+      if (!view || !view.editor) {
+        Logger.warn("\uD604\uC7AC \uD65C\uC131 Markdown \uC5D0\uB514\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4");
+        return;
+      }
+      const editor = view.editor;
+      const startPos = editor.offsetToPos(error.start);
+      const endPos = editor.offsetToPos(error.end);
+      Logger.debug(`\uC624\uB958 \uC704\uCE58\uB85C \uC774\uB3D9: "${error.correction.original}" at line ${startPos.line}, ch ${startPos.ch}`);
+      editor.setCursor(startPos);
+      const range = { from: startPos, to: endPos };
+      editor.scrollIntoView(range, true);
+      editor.focus();
+    } catch (error2) {
+      Logger.error("\uC624\uB958 \uC704\uCE58\uB85C \uC774\uB3D9 \uC911 \uBB38\uC81C \uBC1C\uC0DD:", error2);
+    }
+  }
 };
 InlineModeService.activeErrors = /* @__PURE__ */ new Map();
 InlineModeService.currentView = null;
@@ -11570,9 +11663,9 @@ InlineModeService.currentHoveredError = null;
 InlineModeService.hoverTimeout = null;
 
 // src/ui/koreanGrammarSuggest.ts
-var import_obsidian12 = require("obsidian");
+var import_obsidian14 = require("obsidian");
 init_logger();
-var KoreanGrammarSuggest = class extends import_obsidian12.EditorSuggest {
+var KoreanGrammarSuggest = class extends import_obsidian14.EditorSuggest {
   constructor(app, settings) {
     var _a, _b;
     super(app);
@@ -11709,7 +11802,7 @@ var KoreanGrammarSuggest = class extends import_obsidian12.EditorSuggest {
    * 상세 옵션 메뉴 표시
    */
   showDetailedOptions(suggestion, editor, evt) {
-    const menu = new import_obsidian12.Menu();
+    const menu = new import_obsidian14.Menu();
     suggestion.corrections.forEach((correction, index) => {
       menu.addItem((item) => {
         item.setTitle(correction).setIcon(index === 0 ? "star" : "edit").onClick(() => {
@@ -11750,7 +11843,7 @@ var KoreanGrammarSuggest = class extends import_obsidian12.EditorSuggest {
     );
     this.corrections.delete(suggestion.original);
     Logger.log(`\uB9DE\uCDA4\uBC95 \uC218\uC815 \uC801\uC6A9: "${suggestion.original}" \u2192 "${selectedCorrection}"`);
-    new import_obsidian12.Notice(`"${suggestion.original}"\uC774(\uAC00) "${selectedCorrection}"\uB85C \uC218\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
+    new import_obsidian14.Notice(`"${suggestion.original}"\uC774(\uAC00) "${selectedCorrection}"\uB85C \uC218\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
   }
   /**
    * 오류 무시
@@ -11758,13 +11851,13 @@ var KoreanGrammarSuggest = class extends import_obsidian12.EditorSuggest {
   ignoreError(original) {
     this.corrections.delete(original);
     Logger.log(`\uB9DE\uCDA4\uBC95 \uC624\uB958 \uBB34\uC2DC: "${original}"`);
-    new import_obsidian12.Notice(`"${original}" \uC624\uB958\uB97C \uBB34\uC2DC\uD588\uC2B5\uB2C8\uB2E4.`);
+    new import_obsidian14.Notice(`"${original}" \uC624\uB958\uB97C \uBB34\uC2DC\uD588\uC2B5\uB2C8\uB2E4.`);
   }
   /**
    * 도움말 모달 표시
    */
   showHelpModal(helpText) {
-    const modal = new import_obsidian12.Modal(this.app);
+    const modal = new import_obsidian14.Modal(this.app);
     modal.titleEl.setText("\uB9DE\uCDA4\uBC95 \uB3C4\uC6C0\uB9D0");
     const content = modal.contentEl;
     content.createEl("p", { text: helpText });
@@ -11877,11 +11970,11 @@ var KoreanGrammarSuggest = class extends import_obsidian12.EditorSuggest {
 };
 
 // main.ts
-(0, import_obsidian13.addIcon)(
+(0, import_obsidian15.addIcon)(
   "han-spellchecker",
   `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 18 18" fill="currentColor"><path d="M3.6,3.9c1.3,0,2.9,0,4.2,0,.7,0,2.3-.5,2.3.7,0,.3-.3.5-.6.5-2.2,0-4.6.2-6.8,0-.4,0-.7-.4-.8-.8-.2-.7,1.2-.7,1.5-.4h0ZM6.1,11c-4.2,0-3.7-5.8.7-5.2,3.7.2,3.1,5.6-.5,5.2h-.2ZM3.6,1.6c.7,0,1.5.4,2.3.4.8.1,1.6,0,2.4,0,.8,1.2-1.4,1.5-2.9,1.3-.9,0-2.7-.8-1.9-1.7h0ZM6.3,9.7c2.5,0,1.9-3.4-.6-2.8-1.2.2-1.4,1.8-.5,2.4.2.2.9.2,1,.3h0ZM4.9,13.2c-.1-1.2,1.5-.9,1.6.1.4,1.5-.2,2.3,2,2.1,1,0,6.7-.6,5,1.1-2.3.5-5.4.7-7.6-.3-.6-.8-.3-2.2-.9-3h0ZM11.3,1.1c2.6-.3,1.5,3.8,2,5,.6.4,2.6-.5,2.8.7,0,.4-.3.6-.6.7-.7.1-1.6,0-2.3.1-.2.1,0,.5-.1,1.1,0,1,0,4.2-.8,4.2-.2,0-.5-.3-.6-.6-.3-1.4,0-3.4,0-5,0-1.9,0-3.8-.2-4.6-.1-.4-.5-1.2-.1-1.5h.1Z"/></svg>`
 );
-var KoreanGrammarPlugin = class extends import_obsidian13.Plugin {
+var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
   constructor() {
     super(...arguments);
     this.grammarSuggest = null;
@@ -11939,7 +12032,7 @@ var KoreanGrammarPlugin = class extends import_obsidian13.Plugin {
       name: "\uC778\uB77C\uC778 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC (\uBCA0\uD0C0)",
       callback: async () => {
         if (!this.settings.inlineMode.enabled) {
-          new import_obsidian13.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
+          new import_obsidian15.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
           return;
         }
         await this.executeInlineSpellCheck();
@@ -11950,7 +12043,7 @@ var KoreanGrammarPlugin = class extends import_obsidian13.Plugin {
       name: "\uC778\uB77C\uC778 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC (EditorSuggest)",
       callback: async () => {
         if (!this.settings.inlineMode.enabled) {
-          new import_obsidian13.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
+          new import_obsidian15.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
           return;
         }
         await this.executeInlineSpellCheckWithSuggest();
@@ -11984,17 +12077,17 @@ var KoreanGrammarPlugin = class extends import_obsidian13.Plugin {
   async executeInlineSpellCheck() {
     const activeLeaf = this.app.workspace.activeLeaf;
     if (!activeLeaf) {
-      new import_obsidian13.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian15.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     const editor = activeLeaf.view.editor;
     if (!editor) {
-      new import_obsidian13.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian15.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     const editorView = editor.cm;
     if (!editorView) {
-      new import_obsidian13.Notice("CodeMirror \uC5D0\uB514\uD130 \uBDF0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian15.Notice("CodeMirror \uC5D0\uB514\uD130 \uBDF0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791");
@@ -12002,13 +12095,13 @@ var KoreanGrammarPlugin = class extends import_obsidian13.Plugin {
       InlineModeService.setEditorView(editorView, this.settings, this.app);
       const fullText = editorView.state.doc.toString();
       if (!fullText.trim()) {
-        new import_obsidian13.Notice("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+        new import_obsidian15.Notice("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
         return;
       }
       const apiService = new SpellCheckApiService();
       const result = await apiService.checkSpelling(fullText, this.settings);
       if (!result.corrections || result.corrections.length === 0) {
-        new import_obsidian13.Notice("\uB9DE\uCDA4\uBC95 \uC624\uB958\uAC00 \uBC1C\uACAC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+        new import_obsidian15.Notice("\uB9DE\uCDA4\uBC95 \uC624\uB958\uAC00 \uBC1C\uACAC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
         return;
       }
       InlineModeService.showErrors(
@@ -12018,11 +12111,11 @@ var KoreanGrammarPlugin = class extends import_obsidian13.Plugin {
         this.settings.inlineMode.underlineColor,
         this.app
       );
-      new import_obsidian13.Notice(`${result.corrections.length}\uAC1C\uC758 \uB9DE\uCDA4\uBC95 \uC624\uB958\uB97C \uBC1C\uACAC\uD588\uC2B5\uB2C8\uB2E4.`);
+      new import_obsidian15.Notice(`${result.corrections.length}\uAC1C\uC758 \uB9DE\uCDA4\uBC95 \uC624\uB958\uB97C \uBC1C\uACAC\uD588\uC2B5\uB2C8\uB2E4.`);
       Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: ${result.corrections.length}\uAC1C \uC624\uB958 \uD45C\uC2DC \uC644\uB8CC`);
     } catch (error) {
       Logger.error("\uC778\uB77C\uC778 \uBAA8\uB4DC \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC624\uB958:", error);
-      new import_obsidian13.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian15.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
     }
   }
   /**
@@ -12047,7 +12140,7 @@ var KoreanGrammarPlugin = class extends import_obsidian13.Plugin {
       Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654\uB428 (EditorSuggest + \uD0A4\uBCF4\uB4DC \uB2E8\uCD95\uD0A4)");
     } catch (error) {
       Logger.error("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654 \uC2E4\uD328:", error);
-      new import_obsidian13.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian15.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
     }
   }
   /**
@@ -12068,31 +12161,31 @@ var KoreanGrammarPlugin = class extends import_obsidian13.Plugin {
    */
   async executeInlineSpellCheckWithSuggest() {
     if (!this.grammarSuggest) {
-      new import_obsidian13.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uD65C\uC131\uD654\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian15.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uD65C\uC131\uD654\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
       return;
     }
     const activeLeaf = this.app.workspace.activeLeaf;
     if (!activeLeaf) {
-      new import_obsidian13.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian15.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     const editor = activeLeaf.view.editor;
     if (!editor) {
-      new import_obsidian13.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian15.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     try {
       const fullText = editor.getValue();
       if (!fullText.trim()) {
-        new import_obsidian13.Notice("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+        new import_obsidian15.Notice("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
         return;
       }
       Logger.log("EditorSuggest \uAE30\uBC18 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791");
       await this.grammarSuggest.updateCorrections(fullText);
-      new import_obsidian13.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC\uAC00 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC624\uD0C0\uC5D0 \uCEE4\uC11C\uB97C \uB193\uC73C\uBA74 \uC218\uC815 \uC81C\uC548\uC774 \uD45C\uC2DC\uB429\uB2C8\uB2E4.");
+      new import_obsidian15.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC\uAC00 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC624\uD0C0\uC5D0 \uCEE4\uC11C\uB97C \uB193\uC73C\uBA74 \uC218\uC815 \uC81C\uC548\uC774 \uD45C\uC2DC\uB429\uB2C8\uB2E4.");
     } catch (error) {
       Logger.error("EditorSuggest \uAE30\uBC18 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC624\uB958:", error);
-      new import_obsidian13.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian15.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
     }
   }
 };
