@@ -283,6 +283,12 @@ export class SpellCheckApiService {
     const cleanOriginal = originalText.trim().replace(/\s+/g, ' ');
     const cleanRevised = (data.revised || '').trim().replace(/\s+/g, ' ');
     
+    Logger.log('🔍 전체 텍스트 비교:');
+    Logger.log('  정리된 원본:', `"${cleanOriginal}"`);
+    Logger.log('  정리된 교정:', `"${cleanRevised}"`);
+    Logger.log('  텍스트 동일 여부:', cleanOriginal === cleanRevised);
+    
+    // 1차 검증: 완전히 동일한 경우
     if (cleanOriginal === cleanRevised) {
       Logger.log('✅ 전체 텍스트 검증: 원본과 교정본이 동일하여 오류 없음으로 처리');
       return {
@@ -291,13 +297,25 @@ export class SpellCheckApiService {
       };
     }
     
-    // 변경 비율 검사: 길이 기준 간단한 유사도 체크
+    // 2차 검증: 길이와 문자 유사도로 실질적 동일성 확인
     const lengthDiff = Math.abs(cleanOriginal.length - cleanRevised.length);
     const maxLength = Math.max(cleanOriginal.length, cleanRevised.length);
-    const similarity = maxLength > 0 ? 1 - (lengthDiff / maxLength) : 1;
+    const lengthSimilarity = maxLength > 0 ? 1 - (lengthDiff / maxLength) : 1;
     
-    if (similarity > 0.98 && lengthDiff <= 2) {
-      Logger.log(`⚠️ 텍스트 유사도가 매우 높음 (길이 차이: ${lengthDiff}자) - 세심한 검증 적용`);
+    // 3차 검증: 문자 단위 유사도 계산
+    const charSimilarity = this.calculateCharacterSimilarity(cleanOriginal, cleanRevised);
+    
+    Logger.log('📊 유사도 분석:');
+    Logger.log(`  길이 유사도: ${(lengthSimilarity * 100).toFixed(1)}% (차이: ${lengthDiff}자)`);
+    Logger.log(`  문자 유사도: ${(charSimilarity * 100).toFixed(1)}%`);
+    
+    // 4차 검증: 높은 유사도면 오류 없음으로 처리
+    if (lengthSimilarity > 0.95 && charSimilarity > 0.95) {
+      Logger.log('✅ 유사도 검증: 텍스트가 매우 유사하여 오류 없음으로 처리');
+      return {
+        resultOutput: originalText,
+        corrections: []
+      };
     }
     
     if (data.revisedSentences && Array.isArray(data.revisedSentences)) {
@@ -320,6 +338,17 @@ export class SpellCheckApiService {
             if (block.origin && block.revised && block.revisions) {
               const blockOriginalText = block.origin.content;
               
+              Logger.log(`📝 블록 상세 분석:`);
+              Logger.log(`  원본: "${blockOriginalText}"`);
+              Logger.log(`  교정: "${block.revised}"`);
+              Logger.log(`  원본 = 교정: ${blockOriginalText === block.revised}`);
+              
+              // 🔧 엄격한 검증: 원본과 교정본이 실질적으로 같으면 오류가 아님
+              if (blockOriginalText === block.revised) {
+                Logger.debug('  -> 원본과 교정본이 동일하여 건너뜀');
+                return;
+              }
+              
               // 빈 텍스트나 깨진 문자는 제외
               if (!blockOriginalText || blockOriginalText.trim().length === 0) {
                 Logger.debug('  -> 빈 텍스트로 건너뜀');
@@ -329,6 +358,13 @@ export class SpellCheckApiService {
               // 실제 원문에서 찾을 수 있는지 확인
               if (originalText.indexOf(blockOriginalText) === -1) {
                 Logger.debug('  -> 원본 텍스트에서 찾을 수 없어 건너뜀');
+                return;
+              }
+              
+              // 🔧 추가 검증: 의미 있는 교정인지 확인
+              const isSignificantChange = this.isSignificantCorrection(blockOriginalText, block.revised, block.revisions);
+              if (!isSignificantChange) {
+                Logger.debug('  -> 의미 없는 변경으로 건너뜀');
                 return;
               }
               
@@ -400,16 +436,21 @@ export class SpellCheckApiService {
       });
     }
     
-    // Map에서 배열로 변환
-    const rawCorrections = Array.from(correctionMap.values());
-    
-    // 형태소 분석을 통한 겹침 해결은 improveCorrectionsWithMorphemes에서 처리
-    corrections.push(...rawCorrections);
+    // correctionMap을 배열로 변환
+    corrections.push(...Array.from(correctionMap.values()));
     
     Logger.debug('\n=== 최종 교정 결과 ===');
     Logger.debug('교정 맵 크기:', correctionMap.size);
     Logger.log('최종 교정 배열:', corrections);
-
+    
+    // 🔍 최종 교정 상세 분석
+    Logger.log('📊 최종 교정 상세:');
+    Logger.log(`  총 교정 수: ${corrections.length}개`);
+    corrections.forEach((correction, index) => {
+      Logger.log(`  ${index + 1}. "${correction.original}" → [${correction.corrected.join(', ')}]`);
+      Logger.log(`     설명: ${correction.help}`);
+    });
+    
     // 만약 교정된 텍스트는 있지만 세부 오류 정보가 없는 경우
     // 단, 공백이나 줄바꿈 차이는 무시하고 실제 내용이 다른 경우만 처리
     const normalizedSource = originalText.replace(/\s+/g, ' ').trim();
@@ -652,6 +693,25 @@ export class SpellCheckApiService {
   }
 
   /**
+   * 두 문자열의 문자 단위 유사도를 계산합니다.
+   * @param str1 문자열 1
+   * @param str2 문자열 2
+   * @returns 문자 단위 유사도 (0 ~ 1)
+   */
+  private calculateCharacterSimilarity(str1: string, str2: string): number {
+    const minLength = Math.min(str1.length, str2.length);
+    let commonChars = 0;
+
+    for (let i = 0; i < minLength; i++) {
+      if (str1[i] === str2[i]) {
+        commonChars++;
+      }
+    }
+
+    return minLength > 0 ? commonChars / minLength : 0;
+  }
+
+  /**
    * 한 글자 오류 필터링을 적용합니다.
    * @param original 원본 텍스트
    * @param suggestions 수정 제안들
@@ -734,5 +794,53 @@ export class SpellCheckApiService {
 
     // 일반적인 한 글자 → 한 글자 교정은 필터링
     return { isException: false, reason: '일반적인 한 글자 교정' };
+  }
+
+  /**
+   * 의미 있는 교정인지 확인합니다.
+   * @param original 원본 텍스트
+   * @param revised 교정된 텍스트
+   * @param revisions 제안 목록
+   * @returns 의미 있는 교정 여부
+   */
+  private isSignificantCorrection(original: string, revised: string, revisions: Array<{ revised: string }>): boolean {
+    // 1. 원본과 교정본이 같으면 의미 없음
+    if (original === revised) {
+      Logger.debug('    -> 원본과 교정본이 동일');
+      return false;
+    }
+    
+    // 2. 빈 텍스트면 의미 없음
+    if (!original || original.trim().length === 0) {
+      Logger.debug('    -> 빈 텍스트');
+      return false;
+    }
+    
+    // 3. 제안들이 모두 원본과 같으면 의미 없음
+    const uniqueRevisions = [...new Set(revisions.map(r => r.revised))];
+    if (uniqueRevisions.length === 1 && uniqueRevisions[0] === original) {
+      Logger.debug('    -> 모든 제안이 원본과 동일');
+      return false;
+    }
+    
+    // 4. 한 글자 교정의 경우 예외 케이스 확인
+    if (original.length === 1 && revised.length === 1) {
+      const exceptions = this.checkSingleCharExceptions(original, revised);
+      if (!exceptions.isException) {
+        Logger.debug('    -> 한 글자 교정이지만 예외 케이스 아님');
+        return false;
+      }
+    }
+    
+    // 5. 정규화된 텍스트가 같으면 의미 없음 (대소문자, 공백, 특수문자 무시)
+    const normalizedOriginal = original.toLowerCase().replace(/[\s\-_.,!?]/g, '');
+    const normalizedRevised = revised.toLowerCase().replace(/[\s\-_.,!?]/g, '');
+    if (normalizedOriginal === normalizedRevised) {
+      Logger.debug('    -> 정규화된 텍스트가 동일');
+      return false;
+    }
+    
+    Logger.debug('    -> 의미 있는 교정으로 판단');
+    return true;
   }
 }

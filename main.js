@@ -1820,6 +1820,10 @@ var SpellCheckApiService = class {
     Logger.debug("revisedSentences \uC218:", ((_a = data.revisedSentences) == null ? void 0 : _a.length) || 0);
     const cleanOriginal = originalText.trim().replace(/\s+/g, " ");
     const cleanRevised = (data.revised || "").trim().replace(/\s+/g, " ");
+    Logger.log("\u{1F50D} \uC804\uCCB4 \uD14D\uC2A4\uD2B8 \uBE44\uAD50:");
+    Logger.log("  \uC815\uB9AC\uB41C \uC6D0\uBCF8:", `"${cleanOriginal}"`);
+    Logger.log("  \uC815\uB9AC\uB41C \uAD50\uC815:", `"${cleanRevised}"`);
+    Logger.log("  \uD14D\uC2A4\uD2B8 \uB3D9\uC77C \uC5EC\uBD80:", cleanOriginal === cleanRevised);
     if (cleanOriginal === cleanRevised) {
       Logger.log("\u2705 \uC804\uCCB4 \uD14D\uC2A4\uD2B8 \uAC80\uC99D: \uC6D0\uBCF8\uACFC \uAD50\uC815\uBCF8\uC774 \uB3D9\uC77C\uD558\uC5EC \uC624\uB958 \uC5C6\uC74C\uC73C\uB85C \uCC98\uB9AC");
       return {
@@ -1829,9 +1833,17 @@ var SpellCheckApiService = class {
     }
     const lengthDiff = Math.abs(cleanOriginal.length - cleanRevised.length);
     const maxLength = Math.max(cleanOriginal.length, cleanRevised.length);
-    const similarity = maxLength > 0 ? 1 - lengthDiff / maxLength : 1;
-    if (similarity > 0.98 && lengthDiff <= 2) {
-      Logger.log(`\u26A0\uFE0F \uD14D\uC2A4\uD2B8 \uC720\uC0AC\uB3C4\uAC00 \uB9E4\uC6B0 \uB192\uC74C (\uAE38\uC774 \uCC28\uC774: ${lengthDiff}\uC790) - \uC138\uC2EC\uD55C \uAC80\uC99D \uC801\uC6A9`);
+    const lengthSimilarity = maxLength > 0 ? 1 - lengthDiff / maxLength : 1;
+    const charSimilarity = this.calculateCharacterSimilarity(cleanOriginal, cleanRevised);
+    Logger.log("\u{1F4CA} \uC720\uC0AC\uB3C4 \uBD84\uC11D:");
+    Logger.log(`  \uAE38\uC774 \uC720\uC0AC\uB3C4: ${(lengthSimilarity * 100).toFixed(1)}% (\uCC28\uC774: ${lengthDiff}\uC790)`);
+    Logger.log(`  \uBB38\uC790 \uC720\uC0AC\uB3C4: ${(charSimilarity * 100).toFixed(1)}%`);
+    if (lengthSimilarity > 0.95 && charSimilarity > 0.95) {
+      Logger.log("\u2705 \uC720\uC0AC\uB3C4 \uAC80\uC99D: \uD14D\uC2A4\uD2B8\uAC00 \uB9E4\uC6B0 \uC720\uC0AC\uD558\uC5EC \uC624\uB958 \uC5C6\uC74C\uC73C\uB85C \uCC98\uB9AC");
+      return {
+        resultOutput: originalText,
+        corrections: []
+      };
     }
     if (data.revisedSentences && Array.isArray(data.revisedSentences)) {
       data.revisedSentences.forEach((sentence, sentenceIndex) => {
@@ -1853,12 +1865,25 @@ var SpellCheckApiService = class {
             Logger.debug("  \uC81C\uC548 \uC218:", ((_e = block.revisions) == null ? void 0 : _e.length) || 0);
             if (block.origin && block.revised && block.revisions) {
               const blockOriginalText = block.origin.content;
+              Logger.log(`\u{1F4DD} \uBE14\uB85D \uC0C1\uC138 \uBD84\uC11D:`);
+              Logger.log(`  \uC6D0\uBCF8: "${blockOriginalText}"`);
+              Logger.log(`  \uAD50\uC815: "${block.revised}"`);
+              Logger.log(`  \uC6D0\uBCF8 = \uAD50\uC815: ${blockOriginalText === block.revised}`);
+              if (blockOriginalText === block.revised) {
+                Logger.debug("  -> \uC6D0\uBCF8\uACFC \uAD50\uC815\uBCF8\uC774 \uB3D9\uC77C\uD558\uC5EC \uAC74\uB108\uB700");
+                return;
+              }
               if (!blockOriginalText || blockOriginalText.trim().length === 0) {
                 Logger.debug("  -> \uBE48 \uD14D\uC2A4\uD2B8\uB85C \uAC74\uB108\uB700");
                 return;
               }
               if (originalText.indexOf(blockOriginalText) === -1) {
                 Logger.debug("  -> \uC6D0\uBCF8 \uD14D\uC2A4\uD2B8\uC5D0\uC11C \uCC3E\uC744 \uC218 \uC5C6\uC5B4 \uAC74\uB108\uB700");
+                return;
+              }
+              const isSignificantChange = this.isSignificantCorrection(blockOriginalText, block.revised, block.revisions);
+              if (!isSignificantChange) {
+                Logger.debug("  -> \uC758\uBBF8 \uC5C6\uB294 \uBCC0\uACBD\uC73C\uB85C \uAC74\uB108\uB700");
                 return;
               }
               const suggestions = block.revisions.map((rev) => rev.revised);
@@ -1909,11 +1934,16 @@ var SpellCheckApiService = class {
         }
       });
     }
-    const rawCorrections = Array.from(correctionMap.values());
-    corrections.push(...rawCorrections);
+    corrections.push(...Array.from(correctionMap.values()));
     Logger.debug("\n=== \uCD5C\uC885 \uAD50\uC815 \uACB0\uACFC ===");
     Logger.debug("\uAD50\uC815 \uB9F5 \uD06C\uAE30:", correctionMap.size);
     Logger.log("\uCD5C\uC885 \uAD50\uC815 \uBC30\uC5F4:", corrections);
+    Logger.log("\u{1F4CA} \uCD5C\uC885 \uAD50\uC815 \uC0C1\uC138:");
+    Logger.log(`  \uCD1D \uAD50\uC815 \uC218: ${corrections.length}\uAC1C`);
+    corrections.forEach((correction, index) => {
+      Logger.log(`  ${index + 1}. "${correction.original}" \u2192 [${correction.corrected.join(", ")}]`);
+      Logger.log(`     \uC124\uBA85: ${correction.help}`);
+    });
     const normalizedSource = originalText.replace(/\s+/g, " ").trim();
     const normalizedResult = resultOutput.replace(/\s+/g, " ").trim();
     if (corrections.length === 0 && normalizedResult !== normalizedSource) {
@@ -2085,6 +2115,22 @@ var SpellCheckApiService = class {
     return positions;
   }
   /**
+   * 두 문자열의 문자 단위 유사도를 계산합니다.
+   * @param str1 문자열 1
+   * @param str2 문자열 2
+   * @returns 문자 단위 유사도 (0 ~ 1)
+   */
+  calculateCharacterSimilarity(str1, str2) {
+    const minLength = Math.min(str1.length, str2.length);
+    let commonChars = 0;
+    for (let i = 0; i < minLength; i++) {
+      if (str1[i] === str2[i]) {
+        commonChars++;
+      }
+    }
+    return minLength > 0 ? commonChars / minLength : 0;
+  }
+  /**
    * 한 글자 오류 필터링을 적용합니다.
    * @param original 원본 텍스트
    * @param suggestions 수정 제안들
@@ -2152,6 +2198,43 @@ var SpellCheckApiService = class {
       return { isException: true, reason: "\uD55C \uAE00\uC790 \u2192 \uC5EC\uB7EC \uAE00\uC790 \uD655\uC7A5" };
     }
     return { isException: false, reason: "\uC77C\uBC18\uC801\uC778 \uD55C \uAE00\uC790 \uAD50\uC815" };
+  }
+  /**
+   * 의미 있는 교정인지 확인합니다.
+   * @param original 원본 텍스트
+   * @param revised 교정된 텍스트
+   * @param revisions 제안 목록
+   * @returns 의미 있는 교정 여부
+   */
+  isSignificantCorrection(original, revised, revisions) {
+    if (original === revised) {
+      Logger.debug("    -> \uC6D0\uBCF8\uACFC \uAD50\uC815\uBCF8\uC774 \uB3D9\uC77C");
+      return false;
+    }
+    if (!original || original.trim().length === 0) {
+      Logger.debug("    -> \uBE48 \uD14D\uC2A4\uD2B8");
+      return false;
+    }
+    const uniqueRevisions = [...new Set(revisions.map((r) => r.revised))];
+    if (uniqueRevisions.length === 1 && uniqueRevisions[0] === original) {
+      Logger.debug("    -> \uBAA8\uB4E0 \uC81C\uC548\uC774 \uC6D0\uBCF8\uACFC \uB3D9\uC77C");
+      return false;
+    }
+    if (original.length === 1 && revised.length === 1) {
+      const exceptions = this.checkSingleCharExceptions(original, revised);
+      if (!exceptions.isException) {
+        Logger.debug("    -> \uD55C \uAE00\uC790 \uAD50\uC815\uC774\uC9C0\uB9CC \uC608\uC678 \uCF00\uC774\uC2A4 \uC544\uB2D8");
+        return false;
+      }
+    }
+    const normalizedOriginal = original.toLowerCase().replace(/[\s\-_.,!?]/g, "");
+    const normalizedRevised = revised.toLowerCase().replace(/[\s\-_.,!?]/g, "");
+    if (normalizedOriginal === normalizedRevised) {
+      Logger.debug("    -> \uC815\uADDC\uD654\uB41C \uD14D\uC2A4\uD2B8\uAC00 \uB3D9\uC77C");
+      return false;
+    }
+    Logger.debug("    -> \uC758\uBBF8 \uC788\uB294 \uAD50\uC815\uC73C\uB85C \uD310\uB2E8");
+    return true;
   }
 };
 
