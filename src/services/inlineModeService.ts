@@ -1564,7 +1564,7 @@ export class InlineModeService {
     // 다음 오류로 이동
     plugin.addCommand({
       id: 'inline-next-error',
-      name: 'Go to next grammar error',
+      name: '다음 문법 오류로 이동',
       editorCheckCallback: (checking: boolean) => {
         // 인라인 모드가 활성화되고 오류가 있는지 확인
         if (this.activeErrors.size === 0 || !this.currentView) {
@@ -1595,7 +1595,7 @@ export class InlineModeService {
     // 이전 오류로 이동
     plugin.addCommand({
       id: 'inline-previous-error',
-      name: 'Go to previous grammar error',
+      name: '이전 문법 오류로 이동',
       editorCheckCallback: (checking: boolean) => {
         if (this.activeErrors.size === 0 || !this.currentView) {
           return false;
@@ -1625,7 +1625,7 @@ export class InlineModeService {
     // 다음 제안으로 이동
     plugin.addCommand({
       id: 'inline-next-suggestion',
-      name: 'Select next suggestion',
+      name: '다음 제안 선택',
       editorCheckCallback: (checking: boolean) => {
         if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
           return false;
@@ -1648,7 +1648,7 @@ export class InlineModeService {
     // 이전 제안으로 이동
     plugin.addCommand({
       id: 'inline-previous-suggestion',
-      name: 'Select previous suggestion',
+      name: '이전 제안 선택',
       editorCheckCallback: (checking: boolean) => {
         if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
           return false;
@@ -1671,7 +1671,7 @@ export class InlineModeService {
     // 선택된 제안 적용
     plugin.addCommand({
       id: 'inline-apply-suggestion',
-      name: 'Apply selected suggestion',
+      name: '선택된 제안 적용',
       editorCheckCallback: (checking: boolean) => {
         if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
           return false;
@@ -1696,7 +1696,7 @@ export class InlineModeService {
     // 키보드 네비게이션 해제
     plugin.addCommand({
       id: 'inline-unfocus',
-      name: 'Clear grammar error focus',
+      name: '문법 오류 포커스 해제',
       editorCheckCallback: (checking: boolean) => {
         if (!this.currentFocusedError || !this.currentView) {
           return false;
@@ -1713,7 +1713,7 @@ export class InlineModeService {
     // 인라인 모드 토글
     plugin.addCommand({
       id: 'toggle-inline-mode',
-      name: 'Toggle Korean grammar inline mode',
+      name: '한국어 문법 인라인 모드 토글',
       callback: () => {
         // 설정에서 인라인 모드 토글
         const currentState = plugin.settings?.inlineMode?.enabled || false;
@@ -1734,13 +1734,13 @@ export class InlineModeService {
 
     Logger.log('🎹 인라인 모드: 명령어 등록 완료!');
     Logger.log('📋 등록된 명령어:');
-    Logger.log('  • Korean Grammar Assistant: Go to next grammar error');
-    Logger.log('  • Korean Grammar Assistant: Go to previous grammar error');
-    Logger.log('  • Korean Grammar Assistant: Select next suggestion');
-    Logger.log('  • Korean Grammar Assistant: Select previous suggestion');
-    Logger.log('  • Korean Grammar Assistant: Apply selected suggestion');
-    Logger.log('  • Korean Grammar Assistant: Clear grammar error focus');
-    Logger.log('  • Korean Grammar Assistant: Toggle Korean grammar inline mode');
+    Logger.log('  • Korean Grammar Assistant: 다음 문법 오류로 이동');
+    Logger.log('  • Korean Grammar Assistant: 이전 문법 오류로 이동');
+    Logger.log('  • Korean Grammar Assistant: 다음 제안 선택');
+    Logger.log('  • Korean Grammar Assistant: 이전 제안 선택');
+    Logger.log('  • Korean Grammar Assistant: 선택된 제안 적용');
+    Logger.log('  • Korean Grammar Assistant: 문법 오류 포커스 해제');
+    Logger.log('  • Korean Grammar Assistant: 한국어 문법 인라인 모드 토글');
     Logger.log('💡 Command Palette (Cmd+P)에서 검색하거나 Hotkeys에서 단축키를 설정하세요!');
   }
 }

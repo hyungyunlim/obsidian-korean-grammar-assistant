@@ -11357,7 +11357,7 @@ var InlineModeService = class {
     Logger.log("\u{1F3B9} \uC778\uB77C\uC778 \uBAA8\uB4DC: \uBA85\uB839\uC5B4 \uB4F1\uB85D \uC2DC\uC791");
     plugin.addCommand({
       id: "inline-next-error",
-      name: "Go to next grammar error",
+      name: "\uB2E4\uC74C \uBB38\uBC95 \uC624\uB958\uB85C \uC774\uB3D9",
       editorCheckCallback: (checking) => {
         if (this.activeErrors.size === 0 || !this.currentView) {
           return false;
@@ -11380,7 +11380,7 @@ var InlineModeService = class {
     });
     plugin.addCommand({
       id: "inline-previous-error",
-      name: "Go to previous grammar error",
+      name: "\uC774\uC804 \uBB38\uBC95 \uC624\uB958\uB85C \uC774\uB3D9",
       editorCheckCallback: (checking) => {
         if (this.activeErrors.size === 0 || !this.currentView) {
           return false;
@@ -11403,7 +11403,7 @@ var InlineModeService = class {
     });
     plugin.addCommand({
       id: "inline-next-suggestion",
-      name: "Select next suggestion",
+      name: "\uB2E4\uC74C \uC81C\uC548 \uC120\uD0DD",
       editorCheckCallback: (checking) => {
         if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
           return false;
@@ -11422,7 +11422,7 @@ var InlineModeService = class {
     });
     plugin.addCommand({
       id: "inline-previous-suggestion",
-      name: "Select previous suggestion",
+      name: "\uC774\uC804 \uC81C\uC548 \uC120\uD0DD",
       editorCheckCallback: (checking) => {
         if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
           return false;
@@ -11441,7 +11441,7 @@ var InlineModeService = class {
     });
     plugin.addCommand({
       id: "inline-apply-suggestion",
-      name: "Apply selected suggestion",
+      name: "\uC120\uD0DD\uB41C \uC81C\uC548 \uC801\uC6A9",
       editorCheckCallback: (checking) => {
         if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
           return false;
@@ -11462,7 +11462,7 @@ var InlineModeService = class {
     });
     plugin.addCommand({
       id: "inline-unfocus",
-      name: "Clear grammar error focus",
+      name: "\uBB38\uBC95 \uC624\uB958 \uD3EC\uCEE4\uC2A4 \uD574\uC81C",
       editorCheckCallback: (checking) => {
         if (!this.currentFocusedError || !this.currentView) {
           return false;
@@ -11476,7 +11476,7 @@ var InlineModeService = class {
     });
     plugin.addCommand({
       id: "toggle-inline-mode",
-      name: "Toggle Korean grammar inline mode",
+      name: "\uD55C\uAD6D\uC5B4 \uBB38\uBC95 \uC778\uB77C\uC778 \uBAA8\uB4DC \uD1A0\uAE00",
       callback: () => {
         var _a, _b, _c;
         const currentState = ((_b = (_a = plugin.settings) == null ? void 0 : _a.inlineMode) == null ? void 0 : _b.enabled) || false;
@@ -11495,13 +11495,13 @@ var InlineModeService = class {
     });
     Logger.log("\u{1F3B9} \uC778\uB77C\uC778 \uBAA8\uB4DC: \uBA85\uB839\uC5B4 \uB4F1\uB85D \uC644\uB8CC!");
     Logger.log("\u{1F4CB} \uB4F1\uB85D\uB41C \uBA85\uB839\uC5B4:");
-    Logger.log("  \u2022 Korean Grammar Assistant: Go to next grammar error");
-    Logger.log("  \u2022 Korean Grammar Assistant: Go to previous grammar error");
-    Logger.log("  \u2022 Korean Grammar Assistant: Select next suggestion");
-    Logger.log("  \u2022 Korean Grammar Assistant: Select previous suggestion");
-    Logger.log("  \u2022 Korean Grammar Assistant: Apply selected suggestion");
-    Logger.log("  \u2022 Korean Grammar Assistant: Clear grammar error focus");
-    Logger.log("  \u2022 Korean Grammar Assistant: Toggle Korean grammar inline mode");
+    Logger.log("  \u2022 Korean Grammar Assistant: \uB2E4\uC74C \uBB38\uBC95 \uC624\uB958\uB85C \uC774\uB3D9");
+    Logger.log("  \u2022 Korean Grammar Assistant: \uC774\uC804 \uBB38\uBC95 \uC624\uB958\uB85C \uC774\uB3D9");
+    Logger.log("  \u2022 Korean Grammar Assistant: \uB2E4\uC74C \uC81C\uC548 \uC120\uD0DD");
+    Logger.log("  \u2022 Korean Grammar Assistant: \uC774\uC804 \uC81C\uC548 \uC120\uD0DD");
+    Logger.log("  \u2022 Korean Grammar Assistant: \uC120\uD0DD\uB41C \uC81C\uC548 \uC801\uC6A9");
+    Logger.log("  \u2022 Korean Grammar Assistant: \uBB38\uBC95 \uC624\uB958 \uD3EC\uCEE4\uC2A4 \uD574\uC81C");
+    Logger.log("  \u2022 Korean Grammar Assistant: \uD55C\uAD6D\uC5B4 \uBB38\uBC95 \uC778\uB77C\uC778 \uBAA8\uB4DC \uD1A0\uAE00");
     Logger.log("\u{1F4A1} Command Palette (Cmd+P)\uC5D0\uC11C \uAC80\uC0C9\uD558\uAC70\uB098 Hotkeys\uC5D0\uC11C \uB2E8\uCD95\uD0A4\uB97C \uC124\uC815\uD558\uC138\uC694!");
   }
 };
