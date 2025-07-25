@@ -1623,7 +1623,7 @@ __export(main_exports, {
   default: () => KoreanGrammarPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian12 = require("obsidian");
+var import_obsidian13 = require("obsidian");
 init_settings();
 
 // src/orchestrator.ts
@@ -9452,6 +9452,7 @@ init_logger();
 
 // src/ui/inlineTooltip.ts
 init_logger();
+var import_obsidian10 = require("obsidian");
 var InlineTooltip = class {
   constructor() {
     this.tooltip = null;
@@ -9510,29 +9511,42 @@ var InlineTooltip = class {
   createTooltip(error, targetElement, triggerType) {
     this.tooltip = document.createElement("div");
     this.tooltip.className = "korean-grammar-inline-tooltip";
+    const isMobile = import_obsidian10.Platform.isMobile;
     this.tooltip.style.cssText = `
       position: absolute;
       background: var(--background-primary);
       border: 1px solid var(--background-modifier-border);
-      border-radius: 6px;
+      border-radius: ${isMobile ? "12px" : "6px"};
       padding: 0;
-      box-shadow: var(--shadow-s);
+      box-shadow: ${isMobile ? "0 8px 32px rgba(0, 0, 0, 0.3)" : "var(--shadow-s)"};
       z-index: 1000;
-      font-size: 13px;
+      font-size: ${isMobile ? "14px" : "13px"};
       color: var(--text-normal);
       display: flex;
       flex-direction: column;
-      min-width: 250px;
-      max-width: 450px;
-      max-height: 300px;
+      min-width: ${isMobile ? "280px" : "250px"};
+      max-width: ${isMobile ? "calc(100vw - 32px)" : "450px"};
+      max-height: ${isMobile ? "calc(100vh - 100px)" : "300px"};
       overflow-y: auto;
+      ${isMobile ? "touch-action: manipulation;" : ""}
     `;
+    if (isMobile) {
+      this.tooltip.addEventListener("touchstart", (e) => {
+        e.stopPropagation();
+      }, { passive: true });
+      this.tooltip.addEventListener("touchend", (e) => {
+        e.stopPropagation();
+      }, { passive: true });
+    }
     if (error.isMerged && error.originalErrors && error.originalErrors.length > 0) {
       this.createMergedErrorTooltip(error, targetElement);
     } else {
       this.createSingleErrorTooltip(error, targetElement, triggerType);
     }
     document.body.appendChild(this.tooltip);
+    if (isMobile) {
+      Logger.log(`\u{1F4F1} \uBAA8\uBC14\uC77C \uD234\uD301 \uC0DD\uC131: ${error.correction.original} (${triggerType})`);
+    }
   }
   /**
    * 툴팁 위치 조정
@@ -9544,20 +9558,50 @@ var InlineTooltip = class {
     const tooltipRect = this.tooltip.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const gap = 8;
-    const minSpacing = 12;
+    const isMobile = import_obsidian10.Platform.isMobile;
+    const gap = isMobile ? 20 : 8;
+    const minSpacing = isMobile ? 16 : 12;
+    if (isMobile) {
+      const maxWidth = Math.min(viewportWidth - 32, 350);
+      const maxHeight = Math.min(viewportHeight - 100, 250);
+      this.tooltip.style.maxWidth = `${maxWidth}px`;
+      this.tooltip.style.maxHeight = `${maxHeight}px`;
+      this.tooltip.style.minWidth = `${Math.min(250, maxWidth)}px`;
+      this.tooltip.style.fontSize = "14px";
+      const updatedRect = this.tooltip.getBoundingClientRect();
+      tooltipRect.width = updatedRect.width;
+      tooltipRect.height = updatedRect.height;
+    }
     let finalLeft = 0;
     let finalTop = 0;
-    if (targetRect.bottom + gap + tooltipRect.height <= viewportHeight - minSpacing) {
-      finalTop = targetRect.bottom + gap;
+    if (isMobile) {
+      const fingerHeight = 60;
+      if (targetRect.top - tooltipRect.height - gap - fingerHeight > minSpacing) {
+        finalTop = targetRect.top - tooltipRect.height - gap - fingerHeight;
+      } else if (targetRect.bottom + gap + fingerHeight + tooltipRect.height <= viewportHeight - minSpacing) {
+        finalTop = targetRect.bottom + gap + fingerHeight;
+      } else {
+        finalTop = (viewportHeight - tooltipRect.height) / 2;
+      }
+      finalLeft = (viewportWidth - tooltipRect.width) / 2;
+      if (finalLeft < minSpacing) {
+        finalLeft = minSpacing;
+      } else if (finalLeft + tooltipRect.width > viewportWidth - minSpacing) {
+        finalLeft = viewportWidth - tooltipRect.width - minSpacing;
+      }
+      Logger.log(`\u{1F4F1} \uBAA8\uBC14\uC77C \uD234\uD301 \uC704\uCE58: left=${finalLeft}, top=${finalTop}, \uC190\uAC00\uB77D \uD68C\uD53C=${fingerHeight}px`);
     } else {
-      finalTop = targetRect.top - tooltipRect.height - gap;
-    }
-    finalLeft = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
-    if (finalLeft < minSpacing) {
-      finalLeft = minSpacing;
-    } else if (finalLeft + tooltipRect.width > viewportWidth - minSpacing) {
-      finalLeft = viewportWidth - tooltipRect.width - minSpacing;
+      if (targetRect.bottom + gap + tooltipRect.height <= viewportHeight - minSpacing) {
+        finalTop = targetRect.bottom + gap;
+      } else {
+        finalTop = targetRect.top - tooltipRect.height - gap;
+      }
+      finalLeft = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
+      if (finalLeft < minSpacing) {
+        finalLeft = minSpacing;
+      } else if (finalLeft + tooltipRect.width > viewportWidth - minSpacing) {
+        finalLeft = viewportWidth - tooltipRect.width - minSpacing;
+      }
     }
     if (finalTop < minSpacing) {
       finalTop = minSpacing;
@@ -9569,6 +9613,10 @@ var InlineTooltip = class {
     this.tooltip.style.top = `${finalTop}px`;
     this.tooltip.style.zIndex = "1000";
     this.tooltip.style.visibility = "visible";
+    if (isMobile) {
+      this.tooltip.style.boxShadow = "0 8px 32px rgba(0, 0, 0, 0.3)";
+      this.tooltip.style.borderRadius = "12px";
+    }
   }
   /**
    * 병합된 오류용 툴팁 생성
@@ -9645,29 +9693,47 @@ var InlineTooltip = class {
           text: suggestion,
           cls: "suggestion-button"
         });
+        const isMobile = import_obsidian10.Platform.isMobile;
         suggestionButton.style.cssText = `
           background: var(--interactive-normal);
           border: 1px solid var(--background-modifier-border);
-          border-radius: 3px;
-          padding: 2px 6px;
+          border-radius: ${isMobile ? "6px" : "3px"};
+          padding: ${isMobile ? "8px 12px" : "2px 6px"};
           cursor: pointer;
           transition: all 0.2s;
           color: var(--text-normal);
-          font-size: 11px;
+          font-size: ${isMobile ? "13px" : "11px"};
           white-space: nowrap;
           flex-shrink: 0;
-          max-width: 100px;
+          max-width: ${isMobile ? "120px" : "100px"};
           overflow: hidden;
           text-overflow: ellipsis;
+          min-height: ${isMobile ? "40px" : "auto"};
+          ${isMobile ? "touch-action: manipulation;" : ""}
         `;
-        suggestionButton.addEventListener("mouseenter", () => {
+        const onActivate = () => {
           suggestionButton.style.background = "var(--interactive-hover)";
           suggestionButton.style.transform = "translateY(-1px)";
-        });
-        suggestionButton.addEventListener("mouseleave", () => {
+          if (isMobile && "vibrate" in navigator) {
+            navigator.vibrate(10);
+          }
+        };
+        const onDeactivate = () => {
           suggestionButton.style.background = "var(--interactive-normal)";
           suggestionButton.style.transform = "translateY(0)";
-        });
+        };
+        suggestionButton.addEventListener("mouseenter", onActivate);
+        suggestionButton.addEventListener("mouseleave", onDeactivate);
+        if (isMobile) {
+          suggestionButton.addEventListener("touchstart", (e) => {
+            e.preventDefault();
+            onActivate();
+          }, { passive: false });
+          suggestionButton.addEventListener("touchend", (e) => {
+            e.preventDefault();
+            onDeactivate();
+          }, { passive: false });
+        }
         suggestionButton.addEventListener("click", (e) => {
           e.stopPropagation();
           this.applySuggestionKeepOpen(mergedError, suggestion, targetElement);
@@ -9822,31 +9888,49 @@ var InlineTooltip = class {
         text: suggestion,
         cls: "suggestion-button"
       });
+      const isMobile = import_obsidian10.Platform.isMobile;
       suggestionButton.style.cssText = `
         background: var(--interactive-normal);
         border: 1px solid var(--background-modifier-border);
-        border-radius: 4px;
-        padding: 4px 8px;
+        border-radius: ${isMobile ? "6px" : "4px"};
+        padding: ${isMobile ? "10px 14px" : "4px 8px"};
         cursor: pointer;
         transition: all 0.2s;
         color: var(--text-normal);
-        font-size: 12px;
+        font-size: ${isMobile ? "14px" : "12px"};
         white-space: nowrap;
+        min-height: ${isMobile ? "44px" : "auto"};
+        ${isMobile ? "touch-action: manipulation;" : ""}
       `;
-      suggestionButton.addEventListener("mouseenter", () => {
+      const onActivate = () => {
         suggestionButton.style.background = "var(--interactive-hover) !important";
         suggestionButton.style.color = "var(--text-normal) !important";
         suggestionButton.style.transform = "translateY(-1px)";
         suggestionButton.style.border = "1px solid var(--background-modifier-border) !important";
         suggestionButton.setAttribute("data-hovered", "true");
-      });
-      suggestionButton.addEventListener("mouseleave", () => {
+        if (isMobile && "vibrate" in navigator) {
+          navigator.vibrate(10);
+        }
+      };
+      const onDeactivate = () => {
         suggestionButton.removeAttribute("data-hovered");
         suggestionButton.style.transform = "translateY(0)";
         if (window.InlineModeService) {
           window.InlineModeService.updateTooltipHighlight();
         }
-      });
+      };
+      suggestionButton.addEventListener("mouseenter", onActivate);
+      suggestionButton.addEventListener("mouseleave", onDeactivate);
+      if (isMobile) {
+        suggestionButton.addEventListener("touchstart", (e) => {
+          e.preventDefault();
+          onActivate();
+        }, { passive: false });
+        suggestionButton.addEventListener("touchend", (e) => {
+          e.preventDefault();
+          onDeactivate();
+        }, { passive: false });
+      }
       suggestionButton.addEventListener("click", (e) => {
         e.stopPropagation();
         this.applySuggestion(error, suggestion, targetElement);
@@ -10087,7 +10171,7 @@ var globalInlineTooltip = new InlineTooltip();
 window.globalInlineTooltip = globalInlineTooltip;
 
 // src/services/inlineModeService.ts
-var import_obsidian10 = require("obsidian");
+var import_obsidian11 = require("obsidian");
 var addErrorDecorations = import_state.StateEffect.define({
   map: (val, change) => val
 });
@@ -10297,6 +10381,97 @@ var InlineModeService = class {
       }
     }, true);
     Logger.debug("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC774\uBCA4\uD2B8 \uB9AC\uC2A4\uB108 \uC124\uC815\uB428 (\uC815\uD655\uD55C \uD638\uBC84 \uC694\uC18C\uB9CC \uCC98\uB9AC)");
+    this.setupMobileTouchEvents(editorDOM);
+  }
+  /**
+   * 모바일 터치 이벤트 설정
+   */
+  static setupMobileTouchEvents(editorDOM) {
+    if (!import_obsidian11.Platform.isMobile) {
+      Logger.debug("\uB370\uC2A4\uD06C\uD1B1 \uD658\uACBD: \uD130\uCE58 \uC774\uBCA4\uD2B8 \uB4F1\uB85D\uD558\uC9C0 \uC54A\uC74C");
+      return;
+    }
+    let touchTimer = null;
+    let touchTarget = null;
+    let touchStartTime = 0;
+    const TOUCH_HOLD_DURATION = 600;
+    const MAX_TOUCH_MOVE = 10;
+    let touchStartPos = { x: 0, y: 0 };
+    Logger.log("\u{1F4F1} \uBAA8\uBC14\uC77C \uD130\uCE58 \uC774\uBCA4\uD2B8 \uB4F1\uB85D");
+    editorDOM.addEventListener("touchstart", (e) => {
+      const target = e.target;
+      if (target.classList.contains("korean-grammar-error-inline")) {
+        const touch = e.touches[0];
+        touchStartPos = { x: touch.clientX, y: touch.clientY };
+        touchStartTime = Date.now();
+        touchTarget = target;
+        const errorId = target.getAttribute("data-error-id");
+        if (errorId && this.activeErrors.has(errorId)) {
+          const error = this.activeErrors.get(errorId);
+          setTimeout(() => {
+            if (touchTarget === target && this.activeErrors.has(errorId)) {
+              Logger.log(`\u{1F4F1} \uD130\uCE58\uB85C \uD234\uD301 \uD45C\uC2DC: ${error.correction.original}`);
+              this.handleErrorClick(error, target);
+            }
+          }, 150);
+          touchTimer = setTimeout(() => {
+            if (touchTarget === target && this.activeErrors.has(errorId)) {
+              Logger.log(`\u{1F4F1} \uB871\uD504\uB808\uC2A4\uB85C \uBC14\uB85C \uC218\uC815: ${error.correction.original}`);
+              if ("vibrate" in navigator) {
+                navigator.vibrate(50);
+              }
+              if (error.correction.corrected && error.correction.corrected.length > 0) {
+                const firstSuggestion = error.correction.corrected[0];
+                this.applySuggestion(error, firstSuggestion);
+                Logger.log(`\u{1F4F1} \uB871\uD504\uB808\uC2A4 \uC218\uC815 \uC644\uB8CC: "${error.correction.original}" \u2192 "${firstSuggestion}"`);
+              }
+              touchTarget = null;
+              touchTimer = null;
+            }
+          }, TOUCH_HOLD_DURATION);
+          Logger.debug(`\u{1F4F1} \uD130\uCE58 \uC2DC\uC791: ${error.correction.original}`);
+        }
+      }
+    }, { passive: false });
+    editorDOM.addEventListener("touchend", (e) => {
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+      }
+      const touchDuration = Date.now() - touchStartTime;
+      if (touchDuration < TOUCH_HOLD_DURATION && touchTarget) {
+        Logger.debug(`\u{1F4F1} \uC9E7\uC740 \uD130\uCE58 \uAC10\uC9C0 (${touchDuration}ms)`);
+      }
+      touchTarget = null;
+      touchStartTime = 0;
+    }, { passive: true });
+    editorDOM.addEventListener("touchcancel", () => {
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+        Logger.debug("\u{1F4F1} \uD130\uCE58 \uCDE8\uC18C\uB428");
+      }
+      touchTarget = null;
+      touchStartTime = 0;
+    }, { passive: true });
+    editorDOM.addEventListener("touchmove", (e) => {
+      if (touchTimer && touchTarget) {
+        const touch = e.touches[0];
+        const moveDistance = Math.sqrt(
+          Math.pow(touch.clientX - touchStartPos.x, 2) + Math.pow(touch.clientY - touchStartPos.y, 2)
+        );
+        if (moveDistance > MAX_TOUCH_MOVE) {
+          clearTimeout(touchTimer);
+          touchTimer = null;
+          touchTarget = null;
+          Logger.debug(`\u{1F4F1} \uD130\uCE58 \uC774\uB3D9\uC73C\uB85C \uB871\uD504\uB808\uC2A4 \uCDE8\uC18C (${Math.round(moveDistance)}px)`);
+        }
+      }
+    }, { passive: true });
+    Logger.log("\u{1F4F1} \uBAA8\uBC14\uC77C \uD130\uCE58 \uC774\uBCA4\uD2B8 \uC124\uC815 \uC644\uB8CC");
+    Logger.log("  \u2022 \uD130\uCE58: \uD234\uD301 \uD45C\uC2DC");
+    Logger.log("  \u2022 \uB871\uD504\uB808\uC2A4 (600ms): \uCCAB \uBC88\uC9F8 \uC81C\uC548\uC73C\uB85C \uBC14\uB85C \uC218\uC815");
+    Logger.log("  \u2022 \uD585\uD2F1 \uD53C\uB4DC\uBC31 \uC9C0\uC6D0");
   }
   /**
    * 호버 타이머 정리
@@ -10715,7 +10890,7 @@ var InlineModeService = class {
       this.keyboardScope = null;
       Logger.debug("\uAE30\uC874 \uD0A4\uBCF4\uB4DC \uC2A4\uCF54\uD504 \uC81C\uAC70\uB428");
     }
-    this.keyboardScope = new import_obsidian10.Scope(this.app.scope);
+    this.keyboardScope = new import_obsidian11.Scope(this.app.scope);
     Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uD0A4\uBCF4\uB4DC \uC2A4\uCF54\uD504 \uC0DD\uC131 \uC2DC\uC791");
     this.keyboardScope.register(["Mod", "Alt"], "KeyJ", (evt) => {
       Logger.log("\u{1F3B9} Cmd+Option+J \uD0A4 \uAC10\uC9C0\uB428");
@@ -11042,9 +11217,9 @@ InlineModeService.currentHoveredError = null;
 InlineModeService.hoverTimeout = null;
 
 // src/ui/koreanGrammarSuggest.ts
-var import_obsidian11 = require("obsidian");
+var import_obsidian12 = require("obsidian");
 init_logger();
-var KoreanGrammarSuggest = class extends import_obsidian11.EditorSuggest {
+var KoreanGrammarSuggest = class extends import_obsidian12.EditorSuggest {
   constructor(app, settings) {
     var _a, _b;
     super(app);
@@ -11181,7 +11356,7 @@ var KoreanGrammarSuggest = class extends import_obsidian11.EditorSuggest {
    * 상세 옵션 메뉴 표시
    */
   showDetailedOptions(suggestion, editor, evt) {
-    const menu = new import_obsidian11.Menu();
+    const menu = new import_obsidian12.Menu();
     suggestion.corrections.forEach((correction, index) => {
       menu.addItem((item) => {
         item.setTitle(correction).setIcon(index === 0 ? "star" : "edit").onClick(() => {
@@ -11222,7 +11397,7 @@ var KoreanGrammarSuggest = class extends import_obsidian11.EditorSuggest {
     );
     this.corrections.delete(suggestion.original);
     Logger.log(`\uB9DE\uCDA4\uBC95 \uC218\uC815 \uC801\uC6A9: "${suggestion.original}" \u2192 "${selectedCorrection}"`);
-    new import_obsidian11.Notice(`"${suggestion.original}"\uC774(\uAC00) "${selectedCorrection}"\uB85C \uC218\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
+    new import_obsidian12.Notice(`"${suggestion.original}"\uC774(\uAC00) "${selectedCorrection}"\uB85C \uC218\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
   }
   /**
    * 오류 무시
@@ -11230,13 +11405,13 @@ var KoreanGrammarSuggest = class extends import_obsidian11.EditorSuggest {
   ignoreError(original) {
     this.corrections.delete(original);
     Logger.log(`\uB9DE\uCDA4\uBC95 \uC624\uB958 \uBB34\uC2DC: "${original}"`);
-    new import_obsidian11.Notice(`"${original}" \uC624\uB958\uB97C \uBB34\uC2DC\uD588\uC2B5\uB2C8\uB2E4.`);
+    new import_obsidian12.Notice(`"${original}" \uC624\uB958\uB97C \uBB34\uC2DC\uD588\uC2B5\uB2C8\uB2E4.`);
   }
   /**
    * 도움말 모달 표시
    */
   showHelpModal(helpText) {
-    const modal = new import_obsidian11.Modal(this.app);
+    const modal = new import_obsidian12.Modal(this.app);
     modal.titleEl.setText("\uB9DE\uCDA4\uBC95 \uB3C4\uC6C0\uB9D0");
     const content = modal.contentEl;
     content.createEl("p", { text: helpText });
@@ -11349,11 +11524,11 @@ var KoreanGrammarSuggest = class extends import_obsidian11.EditorSuggest {
 };
 
 // main.ts
-(0, import_obsidian12.addIcon)(
+(0, import_obsidian13.addIcon)(
   "han-spellchecker",
   `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 18 18" fill="currentColor"><path d="M3.6,3.9c1.3,0,2.9,0,4.2,0,.7,0,2.3-.5,2.3.7,0,.3-.3.5-.6.5-2.2,0-4.6.2-6.8,0-.4,0-.7-.4-.8-.8-.2-.7,1.2-.7,1.5-.4h0ZM6.1,11c-4.2,0-3.7-5.8.7-5.2,3.7.2,3.1,5.6-.5,5.2h-.2ZM3.6,1.6c.7,0,1.5.4,2.3.4.8.1,1.6,0,2.4,0,.8,1.2-1.4,1.5-2.9,1.3-.9,0-2.7-.8-1.9-1.7h0ZM6.3,9.7c2.5,0,1.9-3.4-.6-2.8-1.2.2-1.4,1.8-.5,2.4.2.2.9.2,1,.3h0ZM4.9,13.2c-.1-1.2,1.5-.9,1.6.1.4,1.5-.2,2.3,2,2.1,1,0,6.7-.6,5,1.1-2.3.5-5.4.7-7.6-.3-.6-.8-.3-2.2-.9-3h0ZM11.3,1.1c2.6-.3,1.5,3.8,2,5,.6.4,2.6-.5,2.8.7,0,.4-.3.6-.6.7-.7.1-1.6,0-2.3.1-.2.1,0,.5-.1,1.1,0,1,0,4.2-.8,4.2-.2,0-.5-.3-.6-.6-.3-1.4,0-3.4,0-5,0-1.9,0-3.8-.2-4.6-.1-.4-.5-1.2-.1-1.5h.1Z"/></svg>`
 );
-var KoreanGrammarPlugin = class extends import_obsidian12.Plugin {
+var KoreanGrammarPlugin = class extends import_obsidian13.Plugin {
   constructor() {
     super(...arguments);
     this.grammarSuggest = null;
@@ -11410,7 +11585,7 @@ var KoreanGrammarPlugin = class extends import_obsidian12.Plugin {
       name: "\uC778\uB77C\uC778 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC (\uBCA0\uD0C0)",
       callback: async () => {
         if (!this.settings.inlineMode.enabled) {
-          new import_obsidian12.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
+          new import_obsidian13.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
           return;
         }
         await this.executeInlineSpellCheck();
@@ -11421,7 +11596,7 @@ var KoreanGrammarPlugin = class extends import_obsidian12.Plugin {
       name: "\uC778\uB77C\uC778 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC (EditorSuggest)",
       callback: async () => {
         if (!this.settings.inlineMode.enabled) {
-          new import_obsidian12.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
+          new import_obsidian13.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
           return;
         }
         await this.executeInlineSpellCheckWithSuggest();
@@ -11454,17 +11629,17 @@ var KoreanGrammarPlugin = class extends import_obsidian12.Plugin {
   async executeInlineSpellCheck() {
     const activeLeaf = this.app.workspace.activeLeaf;
     if (!activeLeaf) {
-      new import_obsidian12.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian13.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     const editor = activeLeaf.view.editor;
     if (!editor) {
-      new import_obsidian12.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian13.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     const editorView = editor.cm;
     if (!editorView) {
-      new import_obsidian12.Notice("CodeMirror \uC5D0\uB514\uD130 \uBDF0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian13.Notice("CodeMirror \uC5D0\uB514\uD130 \uBDF0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791");
@@ -11472,13 +11647,13 @@ var KoreanGrammarPlugin = class extends import_obsidian12.Plugin {
       InlineModeService.setEditorView(editorView, this.settings, this.app);
       const fullText = editorView.state.doc.toString();
       if (!fullText.trim()) {
-        new import_obsidian12.Notice("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+        new import_obsidian13.Notice("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
         return;
       }
       const apiService = new SpellCheckApiService();
       const result = await apiService.checkSpelling(fullText, this.settings);
       if (!result.corrections || result.corrections.length === 0) {
-        new import_obsidian12.Notice("\uB9DE\uCDA4\uBC95 \uC624\uB958\uAC00 \uBC1C\uACAC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+        new import_obsidian13.Notice("\uB9DE\uCDA4\uBC95 \uC624\uB958\uAC00 \uBC1C\uACAC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
         return;
       }
       InlineModeService.showErrors(
@@ -11488,11 +11663,11 @@ var KoreanGrammarPlugin = class extends import_obsidian12.Plugin {
         this.settings.inlineMode.underlineColor,
         this.app
       );
-      new import_obsidian12.Notice(`${result.corrections.length}\uAC1C\uC758 \uB9DE\uCDA4\uBC95 \uC624\uB958\uB97C \uBC1C\uACAC\uD588\uC2B5\uB2C8\uB2E4.`);
+      new import_obsidian13.Notice(`${result.corrections.length}\uAC1C\uC758 \uB9DE\uCDA4\uBC95 \uC624\uB958\uB97C \uBC1C\uACAC\uD588\uC2B5\uB2C8\uB2E4.`);
       Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: ${result.corrections.length}\uAC1C \uC624\uB958 \uD45C\uC2DC \uC644\uB8CC`);
     } catch (error) {
       Logger.error("\uC778\uB77C\uC778 \uBAA8\uB4DC \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC624\uB958:", error);
-      new import_obsidian12.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian13.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
     }
   }
   /**
@@ -11517,7 +11692,7 @@ var KoreanGrammarPlugin = class extends import_obsidian12.Plugin {
       Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654\uB428 (EditorSuggest + \uD0A4\uBCF4\uB4DC \uB2E8\uCD95\uD0A4)");
     } catch (error) {
       Logger.error("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654 \uC2E4\uD328:", error);
-      new import_obsidian12.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian13.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
     }
   }
   /**
@@ -11538,31 +11713,31 @@ var KoreanGrammarPlugin = class extends import_obsidian12.Plugin {
    */
   async executeInlineSpellCheckWithSuggest() {
     if (!this.grammarSuggest) {
-      new import_obsidian12.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uD65C\uC131\uD654\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian13.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uD65C\uC131\uD654\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
       return;
     }
     const activeLeaf = this.app.workspace.activeLeaf;
     if (!activeLeaf) {
-      new import_obsidian12.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian13.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     const editor = activeLeaf.view.editor;
     if (!editor) {
-      new import_obsidian12.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian13.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     try {
       const fullText = editor.getValue();
       if (!fullText.trim()) {
-        new import_obsidian12.Notice("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+        new import_obsidian13.Notice("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
         return;
       }
       Logger.log("EditorSuggest \uAE30\uBC18 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791");
       await this.grammarSuggest.updateCorrections(fullText);
-      new import_obsidian12.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC\uAC00 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC624\uD0C0\uC5D0 \uCEE4\uC11C\uB97C \uB193\uC73C\uBA74 \uC218\uC815 \uC81C\uC548\uC774 \uD45C\uC2DC\uB429\uB2C8\uB2E4.");
+      new import_obsidian13.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC\uAC00 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC624\uD0C0\uC5D0 \uCEE4\uC11C\uB97C \uB193\uC73C\uBA74 \uC218\uC815 \uC81C\uC548\uC774 \uD45C\uC2DC\uB429\uB2C8\uB2E4.");
     } catch (error) {
       Logger.error("EditorSuggest \uAE30\uBC18 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC624\uB958:", error);
-      new import_obsidian12.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian13.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
     }
   }
 };

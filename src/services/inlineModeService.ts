@@ -3,7 +3,7 @@ import { StateField, StateEffect } from '@codemirror/state';
 import { Correction, InlineError } from '../types/interfaces';
 import { Logger } from '../utils/logger';
 import { globalInlineTooltip } from '../ui/inlineTooltip';
-import { Scope, App } from 'obsidian';
+import { Scope, App, Platform } from 'obsidian';
 
 /**
  * 오류 위젯 클래스
@@ -398,6 +398,130 @@ export class InlineModeService {
     }, true);
     
     Logger.debug('인라인 모드: 이벤트 리스너 설정됨 (정확한 호버 요소만 처리)');
+
+    // 모바일 터치 이벤트 추가
+    this.setupMobileTouchEvents(editorDOM);
+  }
+
+  /**
+   * 모바일 터치 이벤트 설정
+   */
+  private static setupMobileTouchEvents(editorDOM: HTMLElement): void {
+    if (!Platform.isMobile) {
+      Logger.debug('데스크톱 환경: 터치 이벤트 등록하지 않음');
+      return;
+    }
+
+    let touchTimer: NodeJS.Timeout | null = null;
+    let touchTarget: HTMLElement | null = null;
+    let touchStartTime: number = 0;
+    const TOUCH_HOLD_DURATION = 600; // 600ms 롱프레스
+    const MAX_TOUCH_MOVE = 10; // 10px 이내 움직임만 허용
+    let touchStartPos = { x: 0, y: 0 };
+
+    Logger.log('📱 모바일 터치 이벤트 등록');
+
+    // 터치 시작
+    editorDOM.addEventListener('touchstart', (e: TouchEvent) => {
+      const target = e.target as HTMLElement;
+      
+      if (target.classList.contains('korean-grammar-error-inline')) {
+        const touch = e.touches[0];
+        touchStartPos = { x: touch.clientX, y: touch.clientY };
+        touchStartTime = Date.now();
+        touchTarget = target;
+        
+        const errorId = target.getAttribute('data-error-id');
+        if (errorId && this.activeErrors.has(errorId)) {
+          const error = this.activeErrors.get(errorId)!;
+          
+          // 짧은 딜레이 후 툴팁 표시 (일반 터치)
+          setTimeout(() => {
+            if (touchTarget === target && this.activeErrors.has(errorId)) {
+              Logger.log(`📱 터치로 툴팁 표시: ${error.correction.original}`);
+              this.handleErrorClick(error, target);
+            }
+          }, 150);
+          
+          // 롱프레스 타이머 시작
+          touchTimer = setTimeout(() => {
+            if (touchTarget === target && this.activeErrors.has(errorId)) {
+              Logger.log(`📱 롱프레스로 바로 수정: ${error.correction.original}`);
+              
+              // 햅틱 피드백
+              if ('vibrate' in navigator) {
+                navigator.vibrate(50);
+              }
+              
+              // 첫 번째 제안으로 바로 수정
+              if (error.correction.corrected && error.correction.corrected.length > 0) {
+                const firstSuggestion = error.correction.corrected[0];
+                this.applySuggestion(error, firstSuggestion);
+                Logger.log(`📱 롱프레스 수정 완료: "${error.correction.original}" → "${firstSuggestion}"`);
+              }
+              
+              // 터치 상태 정리
+              touchTarget = null;
+              touchTimer = null;
+            }
+          }, TOUCH_HOLD_DURATION);
+          
+          Logger.debug(`📱 터치 시작: ${error.correction.original}`);
+        }
+      }
+    }, { passive: false });
+
+    // 터치 끝
+    editorDOM.addEventListener('touchend', (e: TouchEvent) => {
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+      }
+      
+      // 터치 시간이 짧으면 일반 터치로 간주
+      const touchDuration = Date.now() - touchStartTime;
+      if (touchDuration < TOUCH_HOLD_DURATION && touchTarget) {
+        Logger.debug(`📱 짧은 터치 감지 (${touchDuration}ms)`);
+      }
+      
+      touchTarget = null;
+      touchStartTime = 0;
+    }, { passive: true });
+
+    // 터치 취소
+    editorDOM.addEventListener('touchcancel', () => {
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+        Logger.debug('📱 터치 취소됨');
+      }
+      touchTarget = null;
+      touchStartTime = 0;
+    }, { passive: true });
+
+    // 터치 이동 (스크롤 감지로 롱프레스 취소)
+    editorDOM.addEventListener('touchmove', (e: TouchEvent) => {
+      if (touchTimer && touchTarget) {
+        const touch = e.touches[0];
+        const moveDistance = Math.sqrt(
+          Math.pow(touch.clientX - touchStartPos.x, 2) + 
+          Math.pow(touch.clientY - touchStartPos.y, 2)
+        );
+        
+        // 일정 거리 이상 움직이면 롱프레스 취소
+        if (moveDistance > MAX_TOUCH_MOVE) {
+          clearTimeout(touchTimer);
+          touchTimer = null;
+          touchTarget = null;
+          Logger.debug(`📱 터치 이동으로 롱프레스 취소 (${Math.round(moveDistance)}px)`);
+        }
+      }
+    }, { passive: true });
+
+    Logger.log('📱 모바일 터치 이벤트 설정 완료');
+    Logger.log('  • 터치: 툴팁 표시');
+    Logger.log('  • 롱프레스 (600ms): 첫 번째 제안으로 바로 수정');
+    Logger.log('  • 햅틱 피드백 지원');
   }
 
   /**

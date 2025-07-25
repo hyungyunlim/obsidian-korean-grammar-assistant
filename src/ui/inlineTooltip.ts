@@ -1,5 +1,6 @@
 import { InlineError } from '../types/interfaces';
 import { Logger } from '../utils/logger';
+import { Platform } from 'obsidian';
 
 /**
  * 인라인 오류 툴팁 클래스
@@ -74,24 +75,38 @@ export class InlineTooltip {
     this.tooltip = document.createElement('div');
     this.tooltip.className = 'korean-grammar-inline-tooltip';
     
-    // 툴팁 전체 컨테이너 (세로 레이아웃)
+    const isMobile = Platform.isMobile;
+    
+    // 툴팁 전체 컨테이너 (세로 레이아웃) - 모바일 최적화
     this.tooltip.style.cssText = `
       position: absolute;
       background: var(--background-primary);
       border: 1px solid var(--background-modifier-border);
-      border-radius: 6px;
+      border-radius: ${isMobile ? '12px' : '6px'};
       padding: 0;
-      box-shadow: var(--shadow-s);
+      box-shadow: ${isMobile ? '0 8px 32px rgba(0, 0, 0, 0.3)' : 'var(--shadow-s)'};
       z-index: 1000;
-      font-size: 13px;
+      font-size: ${isMobile ? '14px' : '13px'};
       color: var(--text-normal);
       display: flex;
       flex-direction: column;
-      min-width: 250px;
-      max-width: 450px;
-      max-height: 300px;
+      min-width: ${isMobile ? '280px' : '250px'};
+      max-width: ${isMobile ? 'calc(100vw - 32px)' : '450px'};
+      max-height: ${isMobile ? 'calc(100vh - 100px)' : '300px'};
       overflow-y: auto;
+      ${isMobile ? 'touch-action: manipulation;' : ''}
     `;
+
+    // 모바일에서 터치 이벤트 방지 (툴팁 자체 클릭 시 닫히지 않도록)
+    if (isMobile) {
+      this.tooltip.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+      }, { passive: true });
+      
+      this.tooltip.addEventListener('touchend', (e) => {
+        e.stopPropagation();
+      }, { passive: true });
+    }
 
     // 병합된 오류인 경우 원본 오류별로 구분해서 표시
     if (error.isMerged && error.originalErrors && error.originalErrors.length > 0) {
@@ -101,6 +116,11 @@ export class InlineTooltip {
     }
 
     document.body.appendChild(this.tooltip);
+    
+    // 모바일에서 툴팁 표시 로그
+    if (isMobile) {
+      Logger.log(`📱 모바일 툴팁 생성: ${error.correction.original} (${triggerType})`);
+    }
   }
 
   /**
@@ -114,31 +134,83 @@ export class InlineTooltip {
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     
-    const gap = 8;
-    const minSpacing = 12;
+    const isMobile = Platform.isMobile;
+    const gap = isMobile ? 20 : 8; // 모바일에서는 더 큰 간격
+    const minSpacing = isMobile ? 16 : 12;
+    
+    // 모바일에서 툴팁 크기 조정
+    if (isMobile) {
+      const maxWidth = Math.min(viewportWidth - 32, 350); // 화면 너비의 대부분 사용
+      const maxHeight = Math.min(viewportHeight - 100, 250); // 화면 높이에 맞게 조정
+      
+      this.tooltip.style.maxWidth = `${maxWidth}px`;
+      this.tooltip.style.maxHeight = `${maxHeight}px`;
+      this.tooltip.style.minWidth = `${Math.min(250, maxWidth)}px`;
+      
+      // 모바일에서는 글자 크기도 약간 크게
+      this.tooltip.style.fontSize = '14px';
+      
+      // 재계산을 위해 업데이트된 크기 가져오기
+      const updatedRect = this.tooltip.getBoundingClientRect();
+      tooltipRect.width = updatedRect.width;
+      tooltipRect.height = updatedRect.height;
+    }
     
     let finalLeft = 0;
     let finalTop = 0;
 
-    // 아래쪽에 표시하는 것을 기본으로 하되, 공간이 부족하면 위쪽으로
-    if (targetRect.bottom + gap + tooltipRect.height <= viewportHeight - minSpacing) {
-      // 아래쪽에 표시
-      finalTop = targetRect.bottom + gap;
+    if (isMobile) {
+      // 모바일: 손가락에 가려지지 않도록 항상 위쪽에 표시하거나 중앙에 표시
+      const fingerHeight = 60; // 손가락이 차지하는 대략적인 높이
+      
+      // 위쪽에 충분한 공간이 있으면 위쪽에 표시
+      if (targetRect.top - tooltipRect.height - gap - fingerHeight > minSpacing) {
+        finalTop = targetRect.top - tooltipRect.height - gap - fingerHeight;
+      } 
+      // 아래쪽에 충분한 공간이 있고 손가락 위치를 고려하면 아래쪽에 표시
+      else if (targetRect.bottom + gap + fingerHeight + tooltipRect.height <= viewportHeight - minSpacing) {
+        finalTop = targetRect.bottom + gap + fingerHeight;
+      }
+      // 공간이 부족하면 화면 중앙에 표시
+      else {
+        finalTop = (viewportHeight - tooltipRect.height) / 2;
+      }
+      
+      // 가로 위치는 화면 중앙에 더 가깝게
+      finalLeft = (viewportWidth - tooltipRect.width) / 2;
+      
+      // 경계 보정
+      if (finalLeft < minSpacing) {
+        finalLeft = minSpacing;
+      } else if (finalLeft + tooltipRect.width > viewportWidth - minSpacing) {
+        finalLeft = viewportWidth - tooltipRect.width - minSpacing;
+      }
+      
+      Logger.log(`📱 모바일 툴팁 위치: left=${finalLeft}, top=${finalTop}, 손가락 회피=${fingerHeight}px`);
+      
     } else {
-      // 위쪽에 표시
-      finalTop = targetRect.top - tooltipRect.height - gap;
+      // 데스크톱: 기존 로직
+      // 아래쪽에 표시하는 것을 기본으로 하되, 공간이 부족하면 위쪽으로
+      if (targetRect.bottom + gap + tooltipRect.height <= viewportHeight - minSpacing) {
+        // 아래쪽에 표시
+        finalTop = targetRect.bottom + gap;
+      } else {
+        // 위쪽에 표시
+        finalTop = targetRect.top - tooltipRect.height - gap;
+      }
+
+      // 가로 위치는 타겟 중앙 정렬
+      finalLeft = targetRect.left + (targetRect.width / 2) - (tooltipRect.width / 2);
+
+      // 경계 보정
+      if (finalLeft < minSpacing) {
+        finalLeft = minSpacing;
+      } else if (finalLeft + tooltipRect.width > viewportWidth - minSpacing) {
+        finalLeft = viewportWidth - tooltipRect.width - minSpacing;
+      }
     }
 
-    // 가로 위치는 타겟 중앙 정렬
-    finalLeft = targetRect.left + (targetRect.width / 2) - (tooltipRect.width / 2);
-
-    // 경계 보정
-    if (finalLeft < minSpacing) {
-      finalLeft = minSpacing;
-    } else if (finalLeft + tooltipRect.width > viewportWidth - minSpacing) {
-      finalLeft = viewportWidth - tooltipRect.width - minSpacing;
-    }
-
+    // 추가 경계 보정
     if (finalTop < minSpacing) {
       finalTop = minSpacing;
     } else if (finalTop + tooltipRect.height > viewportHeight - minSpacing) {
@@ -151,6 +223,12 @@ export class InlineTooltip {
     this.tooltip.style.top = `${finalTop}px`;
     this.tooltip.style.zIndex = '1000';
     this.tooltip.style.visibility = 'visible';
+    
+    // 모바일에서 추가 스타일링
+    if (isMobile) {
+      this.tooltip.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3)';
+      this.tooltip.style.borderRadius = '12px';
+    }
   }
 
   /**
@@ -244,32 +322,55 @@ export class InlineTooltip {
           cls: 'suggestion-button'
         });
         
+        const isMobile = Platform.isMobile;
+        
         suggestionButton.style.cssText = `
           background: var(--interactive-normal);
           border: 1px solid var(--background-modifier-border);
-          border-radius: 3px;
-          padding: 2px 6px;
+          border-radius: ${isMobile ? '6px' : '3px'};
+          padding: ${isMobile ? '8px 12px' : '2px 6px'};
           cursor: pointer;
           transition: all 0.2s;
           color: var(--text-normal);
-          font-size: 11px;
+          font-size: ${isMobile ? '13px' : '11px'};
           white-space: nowrap;
           flex-shrink: 0;
-          max-width: 100px;
+          max-width: ${isMobile ? '120px' : '100px'};
           overflow: hidden;
           text-overflow: ellipsis;
+          min-height: ${isMobile ? '40px' : 'auto'};
+          ${isMobile ? 'touch-action: manipulation;' : ''}
         `;
 
-        // 호버 효과
-        suggestionButton.addEventListener('mouseenter', () => {
+        // 호버/터치 효과
+        const onActivate = () => {
           suggestionButton.style.background = 'var(--interactive-hover)';
           suggestionButton.style.transform = 'translateY(-1px)';
-        });
+          if (isMobile && 'vibrate' in navigator) {
+            navigator.vibrate(10);
+          }
+        };
 
-        suggestionButton.addEventListener('mouseleave', () => {
+        const onDeactivate = () => {
           suggestionButton.style.background = 'var(--interactive-normal)';
           suggestionButton.style.transform = 'translateY(0)';
-        });
+        };
+
+        suggestionButton.addEventListener('mouseenter', onActivate);
+        suggestionButton.addEventListener('mouseleave', onDeactivate);
+
+        // 모바일 터치 피드백
+        if (isMobile) {
+          suggestionButton.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // 더블 탭 방지
+            onActivate();
+          }, { passive: false });
+          
+          suggestionButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            onDeactivate();
+          }, { passive: false });
+        }
 
         // 개별 클릭 이벤트 (병합된 오류에서 해당 원본 오류만 적용)
         suggestionButton.addEventListener('click', (e) => {
@@ -459,35 +560,60 @@ export class InlineTooltip {
         cls: 'suggestion-button'
       });
       
+      const isMobile = Platform.isMobile;
+      
       suggestionButton.style.cssText = `
         background: var(--interactive-normal);
         border: 1px solid var(--background-modifier-border);
-        border-radius: 4px;
-        padding: 4px 8px;
+        border-radius: ${isMobile ? '6px' : '4px'};
+        padding: ${isMobile ? '10px 14px' : '4px 8px'};
         cursor: pointer;
         transition: all 0.2s;
         color: var(--text-normal);
-        font-size: 12px;
+        font-size: ${isMobile ? '14px' : '12px'};
         white-space: nowrap;
+        min-height: ${isMobile ? '44px' : 'auto'};
+        ${isMobile ? 'touch-action: manipulation;' : ''}
       `;
 
-      // 호버 효과 (키보드 하이라이트보다 우선)
-      suggestionButton.addEventListener('mouseenter', () => {
+      // 호버/터치 효과 함수
+      const onActivate = () => {
         suggestionButton.style.background = 'var(--interactive-hover) !important';
         suggestionButton.style.color = 'var(--text-normal) !important';
         suggestionButton.style.transform = 'translateY(-1px)';
         suggestionButton.style.border = '1px solid var(--background-modifier-border) !important';
         suggestionButton.setAttribute('data-hovered', 'true');
-      });
+        
+        if (isMobile && 'vibrate' in navigator) {
+          navigator.vibrate(10);
+        }
+      };
 
-      suggestionButton.addEventListener('mouseleave', () => {
+      const onDeactivate = () => {
         suggestionButton.removeAttribute('data-hovered');
         suggestionButton.style.transform = 'translateY(0)';
         // 키보드 하이라이트 상태 복원
         if ((window as any).InlineModeService) {
           (window as any).InlineModeService.updateTooltipHighlight();
         }
-      });
+      };
+
+      // 호버 효과 (키보드 하이라이트보다 우선)
+      suggestionButton.addEventListener('mouseenter', onActivate);
+      suggestionButton.addEventListener('mouseleave', onDeactivate);
+
+      // 모바일 터치 피드백
+      if (isMobile) {
+        suggestionButton.addEventListener('touchstart', (e) => {
+          e.preventDefault(); // 더블 탭 방지
+          onActivate();
+        }, { passive: false });
+        
+        suggestionButton.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          onDeactivate();
+        }, { passive: false });
+      }
 
       // 클릭 이벤트
       suggestionButton.addEventListener('click', (e) => {
