@@ -117,6 +117,13 @@ export const clearAllErrorDecorations = StateEffect.define<boolean>({
 });
 
 /**
+ * 포커스된 오류 설정 Effect
+ */
+export const setFocusedErrorDecoration = StateEffect.define<string | null>({
+  map: (val, change) => val
+});
+
+/**
  * 오류 데코레이션 상태 필드
  */
 export const errorDecorationField = StateField.define<DecorationSet>({
@@ -158,16 +165,19 @@ export const errorDecorationField = StateField.define<DecorationSet>({
         const { errors, underlineStyle, underlineColor } = effect.value;
         
         const newDecorations = errors.map(error => {
+          // 포커스된 오류인지 확인 (현재는 항상 false이지만 나중에 상태 확인)
+          const isFocused = false; // TODO: 포커스 상태 확인
+          
           // Mark decoration을 사용하여 원본 텍스트를 유지하면서 스타일 적용
           return Decoration.mark({
-            class: 'korean-grammar-error-inline',
+            class: `korean-grammar-error-inline ${isFocused ? 'korean-grammar-focused' : ''}`,
             attributes: {
               'data-error-id': error.uniqueId,
               'data-original': error.correction.original,
               'data-corrected': JSON.stringify(error.correction.corrected),
               'role': 'button',
               'tabindex': '0',
-              'style': `
+              'style': isFocused ? '' : `
                 text-decoration-line: underline !important;
                 text-decoration-style: ${underlineStyle} !important;
                 text-decoration-color: ${underlineColor} !important;
@@ -178,6 +188,9 @@ export const errorDecorationField = StateField.define<DecorationSet>({
             }
           }).range(error.start, error.end);
         });
+        
+        // ⚠️ CRITICAL: CodeMirror 6에서는 decoration이 from 위치 기준으로 정렬되어야 함
+        newDecorations.sort((a, b) => a.from - b.from);
         
         decorations = decorations.update({
           add: newDecorations,
@@ -194,6 +207,50 @@ export const errorDecorationField = StateField.define<DecorationSet>({
         });
       } else if (effect.is(clearAllErrorDecorations)) {
         decorations = Decoration.none;
+      } else if (effect.is(setFocusedErrorDecoration)) {
+        const focusedErrorId = effect.value;
+        Logger.log(`🎯 포커스 decoration 업데이트: ${focusedErrorId}`);
+        
+        // 모든 decoration을 다시 생성해야 함 (포커스 상태 변경을 위해)
+        // 현재 활성 오류들을 가져와서 다시 decoration 생성
+        const activeErrorsArray = InlineModeService.getActiveErrors();
+        Logger.debug(`🎯 포커스 decoration 업데이트 시작: ${activeErrorsArray.length}개 오류, 타겟: ${focusedErrorId}`);
+        
+        if (activeErrorsArray.length > 0) {
+          const newDecorations = activeErrorsArray.map(error => {
+            const isFocused = error.uniqueId === focusedErrorId;
+            
+            // 디버깅용 로그
+            if (isFocused) {
+              Logger.debug(`🎯 포커스 매칭: "${error.correction.original}" (${error.uniqueId}) at ${error.start}-${error.end}`);
+            }
+            
+            return Decoration.mark({
+              class: `korean-grammar-error-inline ${isFocused ? 'korean-grammar-focused' : ''}`,
+              attributes: {
+                'data-error-id': error.uniqueId,
+                'data-original': error.correction.original,
+                'data-corrected': JSON.stringify(error.correction.corrected),
+                'role': 'button',
+                'tabindex': '0',
+                'style': isFocused ? '' : `
+                  text-decoration-line: underline !important;
+                  text-decoration-style: wavy !important;
+                  text-decoration-color: #ff0000 !important;
+                  text-decoration-thickness: 2px !important;
+                  background-color: rgba(255, 0, 0, 0.05) !important;
+                  cursor: pointer !important;
+                `
+              }
+            }).range(error.start, error.end);
+          });
+          
+          // ⚠️ CRITICAL: CodeMirror 6에서는 decoration이 from 위치 기준으로 정렬되어야 함
+          newDecorations.sort((a, b) => a.from - b.from);
+          
+          // 기존 decoration을 모두 지우고 새로 설정
+          decorations = Decoration.set(newDecorations);
+        }
       }
     }
     
@@ -233,8 +290,12 @@ export class InlineModeService {
     // 이벤트 리스너 추가
     this.setupEventListeners(view);
     
-    // 키보드 스코프 초기화
-    this.initializeKeyboardScope();
+    // 키보드 스코프 초기화 (App 인스턴스가 있을 때만)
+    if (app) {
+      this.initializeKeyboardScope();
+    } else {
+      Logger.debug('setEditorView: App 인스턴스가 없어 키보드 스코프 초기화 건너뜀');
+    }
     
     Logger.debug('인라인 모드: 에디터 뷰 설정됨');
   }
@@ -317,13 +378,21 @@ export class InlineModeService {
       }
     }, true);
     
-    // 포커스 이벤트 (오류 요소 클릭 시)
+    // 포커스 이벤트 (오류 요소 클릭 시) - 무한 루프 방지 가드 추가
     editorDOM.addEventListener('focus', (e) => {
       const target = e.target as HTMLElement;
       if (target.classList.contains('korean-grammar-error-inline')) {
         const errorId = target.getAttribute('data-error-id');
         if (errorId && this.activeErrors.has(errorId)) {
-          this.setFocusedError(this.activeErrors.get(errorId)!);
+          const error = this.activeErrors.get(errorId)!;
+          
+          // 이미 같은 오류가 포커스되어 있으면 무한 루프 방지를 위해 스킵
+          if (this.currentFocusedError && this.currentFocusedError.uniqueId === error.uniqueId) {
+            Logger.debug(`이미 포커스된 오류 스킵: ${error.uniqueId}`);
+            return;
+          }
+          
+          this.setFocusedError(error);
         }
       }
     }, true);
@@ -357,12 +426,16 @@ export class InlineModeService {
     view: EditorView, 
     corrections: Correction[], 
     underlineStyle: string = 'wavy',
-    underlineColor: string = '#ff0000'
+    underlineColor: string = '#ff0000',
+    app?: App
   ): void {
     if (!view || !corrections.length) {
       Logger.warn('인라인 모드: 뷰나 교정 데이터가 없습니다.');
       return;
     }
+
+    // 뷰 설정은 setEditorView에서 처리되므로 여기서는 생략
+    // (중복 초기화 방지)
 
     // 기존 오류 제거
     this.clearErrors(view);
@@ -391,7 +464,8 @@ export class InlineModeService {
         const isWordBoundary = this.isValidWordBoundary(beforeChar, afterChar, searchText);
         
         if (isWordBoundary) {
-          const uniqueId = `${index}_${occurrence}`;
+          // 🎯 위치 정보를 포함한 더 정확한 uniqueId 생성 (겹치는 오류 구분을 위해)
+          const uniqueId = `${index}_${occurrence}_${foundIndex}`;
           const lineInfo = doc.lineAt(foundIndex);
           
           const error: InlineError = {
@@ -407,7 +481,7 @@ export class InlineModeService {
           errors.push(error);
           this.activeErrors.set(uniqueId, error);
           
-          Logger.debug(`오류 위치 설정: "${searchText}" at ${foundIndex}-${foundIndex + searchText.length}`);
+          Logger.debug(`🎯 오류 위치 설정: "${searchText}" (${uniqueId}) at ${foundIndex}-${foundIndex + searchText.length}`);
           occurrence++;
         }
         
@@ -415,12 +489,106 @@ export class InlineModeService {
       }
     });
 
+    // 🔧 겹치는 오류 병합 (분절 하이라이팅 방지)
+    const mergedErrors = this.mergeOverlappingErrors(errors);
+    Logger.debug(`🔧 오류 병합: ${errors.length}개 → ${mergedErrors.length}개`);
+
     // 데코레이션 추가
     view.dispatch({
-      effects: addErrorDecorations.of({ errors, underlineStyle, underlineColor })
+      effects: addErrorDecorations.of({ errors: mergedErrors, underlineStyle, underlineColor })
     });
 
-    Logger.log(`인라인 모드: ${errors.length}개 오류 표시됨`);
+    Logger.log(`인라인 모드: ${mergedErrors.length}개 오류 표시됨 (병합 후)`);
+  }
+
+  /**
+   * 겹치는 오류들을 병합하여 분절된 하이라이팅 방지
+   */
+  private static mergeOverlappingErrors(errors: InlineError[]): InlineError[] {
+    if (errors.length <= 1) return errors;
+
+    // 위치 기준으로 정렬
+    const sortedErrors = [...errors].sort((a, b) => {
+      if (a.start !== b.start) return a.start - b.start;
+      return a.end - b.end;
+    });
+
+    const merged: InlineError[] = [];
+    let current = sortedErrors[0];
+
+    for (let i = 1; i < sortedErrors.length; i++) {
+      const next = sortedErrors[i];
+      
+      // 겹치거나 매우 가까운 경우 병합 (1글자 이내 간격)
+      const isOverlapping = current.end > next.start;
+      const isAdjacent = current.end >= next.start - 1;
+      
+      if (isOverlapping || isAdjacent) {
+        const doc = this.currentView?.state.doc;
+        const mergedStart = Math.min(current.start, next.start);
+        const mergedEnd = Math.max(current.end, next.end);
+        const mergedText = doc?.sliceString(mergedStart, mergedEnd) || '';
+        
+        // 디버그 정보 개선 (병합 전 텍스트 저장)
+        const currentText = doc?.sliceString(current.start, current.end) || current.correction.original;
+        const nextText = doc?.sliceString(next.start, next.end) || next.correction.original;
+        
+        // 원본 오류들 수집 (재귀적으로 병합된 경우도 고려)
+        const originalErrors: InlineError[] = [];
+        if (current.isMerged && current.originalErrors) {
+          originalErrors.push(...current.originalErrors);
+        } else {
+          originalErrors.push(current);
+        }
+        
+        if (next.isMerged && next.originalErrors) {
+          originalErrors.push(...next.originalErrors);
+        } else {
+          originalErrors.push(next);
+        }
+        
+        // 병합된 교정 제안 생성 (중복 제거)
+        const mergedCorrected = [...new Set([
+          ...current.correction.corrected,
+          ...next.correction.corrected
+        ])];
+        
+        // 병합된 오류 생성
+        const mergedError: InlineError = {
+          correction: {
+            original: mergedText,
+            corrected: mergedCorrected,
+            help: current.correction.help || next.correction.help
+          },
+          start: mergedStart,
+          end: mergedEnd,
+          line: current.line,
+          ch: current.ch,
+          uniqueId: `merged_${current.uniqueId}_${next.uniqueId}`,
+          isActive: true,
+          isMerged: true,
+          originalErrors: originalErrors // 원본 오류들 보존
+        };
+        
+        // activeErrors 맵 업데이트
+        this.activeErrors.delete(current.uniqueId);
+        this.activeErrors.delete(next.uniqueId);
+        this.activeErrors.set(mergedError.uniqueId, mergedError);
+        
+        current = mergedError;
+        
+        Logger.debug(`🔗 오류 병합: "${currentText}" (${current.start}-${current.end}) + "${nextText}" (${next.start}-${next.end}) → "${mergedText}" (${mergedStart}-${mergedEnd}), 원본 오류 ${originalErrors.length}개 보존`);
+      } else {
+        // 겹치지 않으면 현재 오류를 결과에 추가하고 다음으로 이동
+        merged.push(current);
+        current = next;
+      }
+    }
+    
+    // 마지막 오류 추가
+    merged.push(current);
+    
+    return merged;
   }
 
   /**
@@ -554,10 +722,24 @@ export class InlineModeService {
   }
 
   /**
-   * 현재 활성화된 오류 목록 반환
+   * 현재 활성화된 오류 목록 반환 (위치 기준 정렬)
    */
   static getActiveErrors(): InlineError[] {
-    return Array.from(this.activeErrors.values());
+    const errors = Array.from(this.activeErrors.values());
+    
+    // 🎯 키보드 네비게이션 개선: 위치 기준으로 정렬하여 순차적 이동 보장
+    return errors.sort((a, b) => {
+      // 1차: 시작 위치 기준 정렬
+      if (a.start !== b.start) {
+        return a.start - b.start;
+      }
+      // 2차: 끝 위치 기준 정렬 (겹치는 경우 짧은 것 우선)
+      if (a.end !== b.end) {
+        return a.end - b.end;
+      }
+      // 3차: uniqueId 기준 정렬 (안정적인 순서 보장)
+      return a.uniqueId.localeCompare(b.uniqueId);
+    });
   }
 
   /**
@@ -607,135 +789,394 @@ export class InlineModeService {
     }
 
     try {
-      // 현재 문서에서 실제 텍스트 확인
-      const doc = this.currentView.state.doc;
-      const actualText = doc.sliceString(error.start, error.end);
-      
-      Logger.debug(`텍스트 교체 시도: 범위[${error.start}-${error.end}], 예상="${error.correction.original}", 실제="${actualText}", 교체="${suggestion}"`);
-      
-      // 실제 텍스트가 예상과 다르면 정확한 위치 재검색
-      let fromPos = error.start;
-      let toPos = error.end;
-      
-      if (actualText !== error.correction.original) {
-        Logger.warn(`텍스트 불일치 감지, 재검색 시도: "${error.correction.original}"`);
-        
-        // 전체 문서에서 해당 텍스트 재검색
-        const fullText = doc.toString();
-        const searchIndex = fullText.indexOf(error.correction.original, Math.max(0, error.start - 100));
-        
-        if (searchIndex !== -1) {
-          fromPos = searchIndex;
-          toPos = searchIndex + error.correction.original.length;
-          Logger.debug(`재검색 성공: 새 범위[${fromPos}-${toPos}]`);
-        } else {
-          Logger.error(`재검색 실패: "${error.correction.original}" 텍스트를 찾을 수 없음`);
-          return;
-        }
+      // 병합된 오류인 경우 개별 적용 처리
+      if (error.isMerged && error.originalErrors) {
+        this.applyIndividualSuggestion(error, suggestion);
+        return;
       }
 
-      // 텍스트 교체 (확실한 범위로)
-      this.currentView.dispatch({
-        changes: {
-          from: fromPos,
-          to: toPos,
-          insert: suggestion
-        }
-      });
+      // 일반 오류인 경우 기존 로직 사용
+      this.applySingleSuggestion(error, suggestion);
+    } catch (err) {
+      Logger.error('수정 제안 적용 중 오류:', err);
+    }
+  }
 
-      // 해당 오류 제거 (교체 후)
-      this.removeError(this.currentView, error.uniqueId);
+  /**
+   * 개별 교정 제안 적용 (병합된 오류에서 특정 부분만 교체)
+   */
+  private static applyIndividualSuggestion(mergedError: InlineError, suggestion: string): void {
+    if (!mergedError.originalErrors || !this.currentView) return;
 
+    // 제안과 일치하는 원본 오류 찾기
+    const targetError = mergedError.originalErrors.find(originalError => 
+      originalError.correction.corrected.includes(suggestion)
+    );
+
+    if (!targetError) {
+      Logger.warn(`일치하는 원본 오류를 찾을 수 없음: ${suggestion}`);
+      return;
+    }
+
+    Logger.debug(`🎯 개별 교정 적용: "${targetError.correction.original}" → "${suggestion}" (${targetError.start}-${targetError.end})`);
+
+    // 개별 오류만 교체
+    this.applySingleSuggestion(targetError, suggestion);
+
+    // 병합된 오류에서 해당 원본 오류 제거
+    mergedError.originalErrors = mergedError.originalErrors.filter(err => err.uniqueId !== targetError.uniqueId);
+    
+    // 원본 오류가 모두 처리되면 병합된 오류도 제거
+    if (mergedError.originalErrors.length === 0) {
+      this.removeError(this.currentView, mergedError.uniqueId);
+    } else {
+      // 남은 오류들로 병합된 오류 업데이트
+      this.updateMergedErrorAfterIndividualApplication(mergedError);
+    }
+  }
+
+  /**
+   * 단일 오류에 대한 교정 제안 적용
+   */
+  private static applySingleSuggestion(error: InlineError, suggestion: string): void {
+    if (!this.currentView) return;
+
+    // 현재 문서에서 실제 텍스트 확인
+    const doc = this.currentView.state.doc;
+    const actualText = doc.sliceString(error.start, error.end);
+    
+    Logger.debug(`텍스트 교체 시도: 범위[${error.start}-${error.end}], 예상="${error.correction.original}", 실제="${actualText}", 교체="${suggestion}"`);
+    
+    // 실제 텍스트가 예상과 다르면 정확한 위치 재검색
+    let fromPos = error.start;
+    let toPos = error.end;
+    
+    if (actualText !== error.correction.original) {
+      Logger.warn(`텍스트 불일치 감지, 재검색 시도: "${error.correction.original}"`);
+      
+      // 전체 문서에서 해당 텍스트 재검색
+      const fullText = doc.toString();
+      const searchIndex = fullText.indexOf(error.correction.original, Math.max(0, error.start - 100));
+      
+      if (searchIndex !== -1) {
+        fromPos = searchIndex;
+        toPos = searchIndex + error.correction.original.length;
+        Logger.debug(`재검색 성공: 새 범위[${fromPos}-${toPos}]`);
+      } else {
+        Logger.error(`재검색 실패: "${error.correction.original}" 텍스트를 찾을 수 없음`);
+        return;
+      }
+    }
+
+    // 텍스트 교체 (확실한 범위로)
+    this.currentView.dispatch({
+      changes: {
+        from: fromPos,
+        to: toPos,
+        insert: suggestion
+      }
+    });
+
+    // 해당 오류 제거 (교체 후)
+    this.removeError(this.currentView, error.uniqueId);
+
+    // 툴팁 유지 모드가 아닐 때만 툴팁 숨기기
+    const isKeepOpenMode = (window as any).tooltipKeepOpenMode;
+    if (!isKeepOpenMode) {
       // 툴팁 숨기기 (확실하게)
       if ((window as any).globalInlineTooltip) {
         (window as any).globalInlineTooltip.hide();
       }
-
+      
       // 키보드 네비게이션 모드도 해제
       this.clearFocusedError();
-
-      Logger.log(`인라인 모드: 텍스트 교체 완료 - "${error.correction.original}" → "${suggestion}" (${fromPos}-${toPos})`);
-
-    } catch (err) {
-      Logger.error('텍스트 교체 실패:', err);
-      
-      // 에러 발생 시에도 툴팁 숨기기
-      if ((window as any).globalInlineTooltip) {
-        (window as any).globalInlineTooltip.hide();
-      }
+    } else {
+      Logger.debug('툴팁 유지 모드: 툴팁 숨기기 건너뜀');
     }
+
+    Logger.log(`인라인 모드: 교정 완료 - "${error.correction.original}" → "${suggestion}"`);
+  }
+
+  /**
+   * 개별 적용 후 병합된 오류 업데이트
+   */
+  private static updateMergedErrorAfterIndividualApplication(mergedError: InlineError): void {
+    if (!mergedError.originalErrors || !this.currentView) return;
+
+    // 남은 원본 오류들로 새로운 범위 계산
+    const remainingErrors = mergedError.originalErrors;
+    const newStart = Math.min(...remainingErrors.map(err => err.start));
+    const newEnd = Math.max(...remainingErrors.map(err => err.end));
+    
+    const doc = this.currentView.state.doc;
+    const newText = doc.sliceString(newStart, newEnd);
+    
+    // 남은 교정 제안들 수집
+    const remainingCorrected = [...new Set(
+      remainingErrors.flatMap(err => err.correction.corrected)
+    )];
+
+    // 병합된 오류 정보 업데이트
+    mergedError.start = newStart;
+    mergedError.end = newEnd;
+    mergedError.correction.original = newText;
+    mergedError.correction.corrected = remainingCorrected;
+
+    // activeErrors 맵 업데이트
+    this.activeErrors.set(mergedError.uniqueId, mergedError);
+
+    // decoration 업데이트를 위해 다시 표시
+    const mergedErrors = [mergedError];
+    this.currentView.dispatch({
+      effects: addErrorDecorations.of({ 
+        errors: mergedErrors, 
+        underlineStyle: 'wavy', 
+        underlineColor: '#ff0000' 
+      })
+    });
+
+    // 툴팁이 표시 중이면 업데이트된 내용으로 다시 표시
+    if ((window as any).globalInlineTooltip && (window as any).globalInlineTooltip.visible) {
+      setTimeout(() => {
+        const errorElement = this.findErrorElement(mergedError);
+        if (errorElement && (window as any).globalInlineTooltip) {
+          // 기존 툴팁 숨기고 새로 표시
+          (window as any).globalInlineTooltip.hide();
+          setTimeout(() => {
+            (window as any).globalInlineTooltip.show(mergedError, errorElement, 'click');
+          }, 50);
+        }
+      }, 100);
+    }
+
+    Logger.debug(`🔄 병합된 오류 업데이트: ${remainingErrors.length}개 오류 남음, 새 범위[${newStart}-${newEnd}], 툴팁 재표시 예약`);
   }
 
   /**
    * 키보드 스코프 초기화
    */
   static initializeKeyboardScope(): void {
+    if (!this.app) {
+      Logger.warn('App 인스턴스가 없어 키보드 스코프를 초기화할 수 없습니다');
+      return;
+    }
+
     // 기존 스코프가 있으면 제거
     if (this.keyboardScope) {
+      this.app.keymap.popScope(this.keyboardScope);
       this.keyboardScope = null;
     }
 
-    // 새로운 스코프 생성 (전역 스코프를 부모로 설정)
-    this.keyboardScope = new Scope();
+    // 새로운 스코프 생성 (앱의 전역 스코프를 부모로 설정)
+    this.keyboardScope = new Scope(this.app.scope);
 
-    // CMD+Shift+Left: 이전 수정 제안
-    this.keyboardScope.register(['Mod', 'Shift'], 'ArrowLeft', (evt) => {
-      if (!this.currentFocusedError) return false;
+    // Ctrl+Shift+J: 다음 오류로 이동 (충돌 방지용 조합)
+    this.keyboardScope.register(['Ctrl', 'Shift'], 'KeyJ', (evt) => {
+      Logger.log('Ctrl+Shift+J 키 감지됨');
+      // 인라인 모드가 활성화되지 않았으면 이벤트 패스
+      if (this.activeErrors.size === 0 || !this.currentView) {
+        Logger.log(`조건 실패: activeErrors.size=${this.activeErrors.size}, currentView=${!!this.currentView}`);
+        return false;
+      }
+      
+      // 정렬된 오류 배열 사용 (위치 기준)
+      const sortedErrors = this.getActiveErrors();
+      const currentIndex = this.currentFocusedError 
+        ? sortedErrors.findIndex(error => error.uniqueId === this.currentFocusedError!.uniqueId)
+        : -1;
+      
+      const nextIndex = (currentIndex + 1) % sortedErrors.length;
+      const nextError = sortedErrors[nextIndex];
+      if (nextError) {
+        // 기존 툴팁 먼저 숨기기
+        if ((window as any).globalInlineTooltip) {
+          (window as any).globalInlineTooltip.hide();
+        }
+        
+        this.setFocusedError(nextError);
+        
+        // 무한루프 방지를 위해 툴팁 표시 임시 비활성화
+        // setTimeout(() => {
+        //   this.showTooltipForFocusedError();
+        // }, 50);
+      }
+      
+      Logger.log('다음 오류로 이동 (Ctrl+Shift+J)');
+      evt.preventDefault();
+      return false;
+    });
+    
+    // Ctrl+Shift+K: 이전 오류로 이동 (충돌 방지용 조합)
+    this.keyboardScope.register(['Ctrl', 'Shift'], 'KeyK', (evt) => {
+      if (this.activeErrors.size === 0 || !this.currentView) return false;
+      
+      // 정렬된 오류 배열 사용 (위치 기준)
+      const sortedErrors = this.getActiveErrors();
+      const currentIndex = this.currentFocusedError 
+        ? sortedErrors.findIndex(error => error.uniqueId === this.currentFocusedError!.uniqueId)
+        : -1;
+      
+      const prevIndex = currentIndex <= 0 ? sortedErrors.length - 1 : currentIndex - 1;
+      const prevError = sortedErrors[prevIndex];
+      if (prevError) {
+        // 기존 툴팁 먼저 숨기기
+        if ((window as any).globalInlineTooltip) {
+          (window as any).globalInlineTooltip.hide();
+        }
+        
+        this.setFocusedError(prevError);
+        
+        // 무한루프 방지를 위해 툴팁 표시 임시 비활성화
+        // setTimeout(() => {
+        //   this.showTooltipForFocusedError();
+        // }, 50);
+      }
+      
+      Logger.log('이전 오류로 이동 (Ctrl+Shift+K)');
+      evt.preventDefault();
+      return false;
+    });
+    
+    // Ctrl+Shift+H: 이전 제안 (충돌 방지용 조합)
+    this.keyboardScope.register(['Ctrl', 'Shift'], 'KeyH', (evt) => {
+      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) return false;
       
       const suggestions = this.currentFocusedError.correction.corrected;
+      if (!suggestions || suggestions.length === 0) return false;
+      
       this.currentSuggestionIndex = Math.max(0, this.currentSuggestionIndex - 1);
       this.updateTooltipHighlight();
-      Logger.debug(`수정 제안 선택: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
-      return false; // 이벤트 전파 중단
+      Logger.log(`이전 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length}) - Ctrl+Shift+H`);
+      evt.preventDefault();
+      return false;
     });
-
-    // CMD+Shift+Right: 다음 수정 제안
-    this.keyboardScope.register(['Mod', 'Shift'], 'ArrowRight', (evt) => {
-      if (!this.currentFocusedError) return false;
+    
+    // Ctrl+Shift+L: 다음 제안 (충돌 방지용 조합)
+    this.keyboardScope.register(['Ctrl', 'Shift'], 'KeyL', (evt) => {
+      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) return false;
       
       const suggestions = this.currentFocusedError.correction.corrected;
+      if (!suggestions || suggestions.length === 0) return false;
+      
       this.currentSuggestionIndex = Math.min(suggestions.length - 1, this.currentSuggestionIndex + 1);
       this.updateTooltipHighlight();
-      Logger.debug(`수정 제안 선택: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+      Logger.log(`다음 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length}) - Ctrl+Shift+L`);
+      evt.preventDefault();
       return false;
     });
-
-    // CMD+Enter: 선택된 제안 적용
-    this.keyboardScope.register(['Mod'], 'Enter', (evt) => {
-      if (!this.currentFocusedError) return false;
+    
+    // Ctrl+Shift+Enter: 제안 적용 (충돌 방지용 조합)
+    this.keyboardScope.register(['Ctrl', 'Shift'], 'Enter', (evt) => {
+      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) return false;
       
       const suggestions = this.currentFocusedError.correction.corrected;
+      if (!suggestions || suggestions.length === 0) return false;
+      
       const selectedSuggestion = suggestions[this.currentSuggestionIndex];
+      const originalText = this.currentFocusedError.correction.original;
       this.applySuggestion(this.currentFocusedError, selectedSuggestion);
       this.clearFocusedError();
+      Logger.log(`제안 적용: "${originalText}" → "${selectedSuggestion}" (Ctrl+Shift+Enter)`);
+      evt.preventDefault();
       return false;
     });
-
-    // Escape: 키보드 네비게이션 해제
-    this.keyboardScope.register([], 'Escape', (evt) => {
-      if (!this.currentFocusedError) return false;
+    
+    // Ctrl+Shift+Escape: 포커스 해제 (충돌 방지용 조합)
+    this.keyboardScope.register(['Ctrl', 'Shift'], 'Escape', (evt) => {
+      if (!this.currentFocusedError || !this.currentView) return false;
       
       this.clearFocusedError();
+      Logger.log('키보드 네비게이션 해제 (Ctrl+Shift+Escape)');
+      evt.preventDefault();
       return false;
     });
 
-    Logger.debug('인라인 모드: 키보드 스코프 초기화됨');
+    // 추가 테스트용 F키 조합 (거의 충돌하지 않음)
+    // F10: 다음 오류로 이동 (단순 테스트용)
+    this.keyboardScope.register([], 'F10', (evt) => {
+      if (this.activeErrors.size === 0 || !this.currentView) return false;
+      
+      // 정렬된 오류 배열 사용 (위치 기준)
+      const sortedErrors = this.getActiveErrors();
+      const currentIndex = this.currentFocusedError 
+        ? sortedErrors.findIndex(error => error.uniqueId === this.currentFocusedError!.uniqueId)
+        : -1;
+      
+      const nextIndex = (currentIndex + 1) % sortedErrors.length;
+      const nextError = sortedErrors[nextIndex];
+      if (nextError) {
+        // 기존 툴팁 먼저 숨기기
+        if ((window as any).globalInlineTooltip) {
+          (window as any).globalInlineTooltip.hide();
+        }
+        
+        this.setFocusedError(nextError);
+        
+        // 무한루프 방지를 위해 툴팁 표시 임시 비활성화
+        // setTimeout(() => {
+        //   this.showTooltipForFocusedError();
+        // }, 50);
+      }
+      
+      Logger.log('다음 오류로 이동 (F10)');
+      evt.preventDefault();
+      return false;
+    });
+
+    // F9: 이전 오류로 이동 (단순 테스트용)
+    this.keyboardScope.register([], 'F9', (evt) => {
+      if (this.activeErrors.size === 0 || !this.currentView) return false;
+      
+      // 정렬된 오류 배열 사용 (위치 기준)
+      const sortedErrors = this.getActiveErrors();
+      const currentIndex = this.currentFocusedError 
+        ? sortedErrors.findIndex(error => error.uniqueId === this.currentFocusedError!.uniqueId)
+        : -1;
+      
+      const prevIndex = currentIndex <= 0 ? sortedErrors.length - 1 : currentIndex - 1;
+      const prevError = sortedErrors[prevIndex];
+      if (prevError) {
+        // 기존 툴팁 먼저 숨기기
+        if ((window as any).globalInlineTooltip) {
+          (window as any).globalInlineTooltip.hide();
+        }
+        
+        this.setFocusedError(prevError);
+        
+        // 무한루프 방지를 위해 툴팁 표시 임시 비활성화
+        // setTimeout(() => {
+        //   this.showTooltipForFocusedError();
+        // }, 50);
+      }
+      
+      Logger.log('이전 오류로 이동 (F9)');
+      evt.preventDefault();
+      return false;
+    });
+
+    // 스코프를 앱의 키맵에 푸시
+    this.app.keymap.pushScope(this.keyboardScope);
+
+    Logger.log('인라인 모드: 키보드 스코프 초기화됨 - Ctrl+Shift+J/K(오류이동), H/L(제안), Enter(적용), Esc(해제), F9/F10(테스트용)');
   }
 
   /**
    * 포커스된 오류 설정
    */
   static setFocusedError(error: InlineError): void {
+    // 이전 포커스 제거
+    if (this.currentFocusedError) {
+      this.removeFocusHighlight(this.currentFocusedError);
+    }
+    
     this.currentFocusedError = error;
     this.currentSuggestionIndex = 0;
     
     // 해당 오류 요소에 포커스 표시
     this.highlightFocusedError(error);
     
-    // 키보드 스코프 활성화
-    if (this.keyboardScope && this.app) {
-      this.app.keymap.pushScope(this.keyboardScope);
-    }
+    // 에디터 커서를 해당 오류 위치로 이동
+    this.moveEditorCursorToError(error);
     
     Logger.debug(`오류 포커스 설정: ${error.correction.original}`);
   }
@@ -746,11 +1187,6 @@ export class InlineModeService {
   static clearFocusedError(): void {
     if (this.currentFocusedError) {
       this.removeFocusHighlight(this.currentFocusedError);
-    }
-    
-    // 키보드 스코프 비활성화
-    if (this.keyboardScope && this.app) {
-      this.app.keymap.popScope(this.keyboardScope);
     }
     
     this.currentFocusedError = null;
@@ -765,36 +1201,80 @@ export class InlineModeService {
   }
 
   /**
-   * 포커스된 오류 하이라이트
+   * 포커스된 오류에 대한 툴팁 표시
    */
-  static highlightFocusedError(error: InlineError): void {
-    const elements = document.querySelectorAll(`[data-error-id="${error.uniqueId}"]`);
-    elements.forEach(element => {
-      const htmlElement = element as HTMLElement;
-      htmlElement.style.outline = '2px solid var(--interactive-accent)';
-      htmlElement.style.outlineOffset = '2px';
-      htmlElement.style.borderRadius = '3px';
-      htmlElement.setAttribute('tabindex', '0');
-      htmlElement.focus();
-    });
+  static showTooltipForFocusedError(): void {
+    if (!this.currentFocusedError) return;
     
-    Logger.debug(`오류 하이라이트 적용: ${error.uniqueId}`);
+    // 오류에 해당하는 DOM 요소 찾기
+    const elements = document.querySelectorAll(`[data-error-id="${this.currentFocusedError.uniqueId}"]`);
+    if (elements.length > 0) {
+      const targetElement = elements[0] as HTMLElement;
+      globalInlineTooltip.show(this.currentFocusedError, targetElement, 'click');
+      Logger.debug(`포커스된 오류에 툴팁 표시: ${this.currentFocusedError.correction.original}`);
+    }
   }
 
   /**
-   * 포커스 하이라이트 제거
+   * 포커스된 오류 하이라이트 (CodeMirror 6 decoration 사용)
    */
-  static removeFocusHighlight(error: InlineError): void {
-    const elements = document.querySelectorAll(`[data-error-id="${error.uniqueId}"]`);
-    elements.forEach(element => {
-      const htmlElement = element as HTMLElement;
-      htmlElement.style.outline = '';
-      htmlElement.style.outlineOffset = '';
-      htmlElement.style.borderRadius = '';
-      htmlElement.removeAttribute('tabindex');
+  static highlightFocusedError(error: InlineError): void {
+    if (!this.currentView) {
+      Logger.warn('에디터 뷰가 없어 포커스 하이라이트 실패');
+      return;
+    }
+    
+    Logger.log(`🎯 CodeMirror decoration으로 포커스 하이라이트: "${error.correction.original}" (${error.uniqueId}) at ${error.start}-${error.end}`);
+    
+    // 현재 모든 활성 오류 로그 (디버깅용)
+    const allErrors = this.getActiveErrors();
+    Logger.debug(`🎯 현재 활성 오류들: ${allErrors.map(e => `"${e.correction.original}"(${e.uniqueId})[${e.start}-${e.end}]`).join(', ')}`);
+    
+    // StateEffect를 사용해서 decoration 업데이트
+    this.currentView.dispatch({
+      effects: [setFocusedErrorDecoration.of(error.uniqueId)]
     });
     
-    Logger.debug(`오류 하이라이트 제거: ${error.uniqueId}`);
+    Logger.log(`🎯 포커스 decoration dispatch 완료: ${error.uniqueId}`);
+  }
+
+  /**
+   * 에디터 커서를 오류 위치로 이동
+   */
+  static moveEditorCursorToError(error: InlineError): void {
+    if (!this.currentView) return;
+    
+    try {
+      // 에디터 커서를 오류 시작 위치로 이동
+      const cursorPos = error.start;
+      this.currentView.dispatch({
+        selection: { anchor: cursorPos, head: cursorPos },
+        scrollIntoView: true
+      });
+      
+      Logger.debug(`커서 이동: ${error.correction.original} (위치: ${error.start})`);
+    } catch (e) {
+      Logger.warn('커서 이동 실패:', e);
+    }
+  }
+
+  /**
+   * 포커스 하이라이트 제거 (CodeMirror 6 decoration 사용)
+   */
+  static removeFocusHighlight(error: InlineError): void {
+    if (!this.currentView) {
+      Logger.warn('에디터 뷰가 없어 포커스 하이라이트 제거 실패');
+      return;
+    }
+    
+    Logger.debug(`🔄 포커스 decoration 제거: "${error.correction.original}"`);
+    
+    // StateEffect를 사용해서 포커스 해제 (null로 설정)
+    this.currentView.dispatch({
+      effects: [setFocusedErrorDecoration.of(null)]
+    });
+    
+    Logger.debug(`🔄 포커스 decoration 제거 완료`);
   }
 
   /**

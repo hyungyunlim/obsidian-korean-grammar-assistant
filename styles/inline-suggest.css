@@ -23,6 +23,29 @@
   border-bottom-color: #cc0000 !important;
 }
 
+/* 키보드로 포커스된 오류 스타일 */
+.korean-grammar-focused,
+.cm-editor .korean-grammar-focused,
+.cm-content .korean-grammar-focused {
+  outline: 3px solid #ff6b6b !important;
+  outline-offset: 2px !important;
+  border-radius: 4px !important;
+  background-color: rgba(255, 107, 107, 0.15) !important;
+  box-shadow: 0 0 8px rgba(255, 107, 107, 0.6) !important;
+  z-index: 1000 !important;
+  animation: focusPulse 2s ease-in-out infinite !important;
+}
+
+/* 포커스 펄스 애니메이션 */
+@keyframes focusPulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(255, 107, 107, 0.6) !important;
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(255, 107, 107, 0.9) !important;
+  }
+}
+
 /* 인라인 툴팁 스타일 */
 .korean-grammar-tooltip {
   position: fixed;

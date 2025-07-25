@@ -184,7 +184,7 @@ export default class KoreanGrammarPlugin extends Plugin {
 
     try {
       // 에디터 뷰 및 설정 초기화
-      InlineModeService.setEditorView(editorView, this.settings);
+      InlineModeService.setEditorView(editorView, this.settings, this.app);
 
       // 전체 텍스트 가져오기
       const fullText = editorView.state.doc.toString();
@@ -207,7 +207,8 @@ export default class KoreanGrammarPlugin extends Plugin {
         editorView,
         result.corrections,
         this.settings.inlineMode.underlineStyle,
-        this.settings.inlineMode.underlineColor
+        this.settings.inlineMode.underlineColor,
+        this.app
       );
 
       new Notice(`${result.corrections.length}개의 맞춤법 오류를 발견했습니다.`);

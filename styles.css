@@ -1426,6 +1426,25 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   background-color: rgba(255, 0, 0, 0.1) !important;
   border-bottom-color: #cc0000 !important;
 }
+.korean-grammar-focused,
+.cm-editor .korean-grammar-focused,
+.cm-content .korean-grammar-focused {
+  outline: 3px solid #ff6b6b !important;
+  outline-offset: 2px !important;
+  border-radius: 4px !important;
+  background-color: rgba(255, 107, 107, 0.15) !important;
+  box-shadow: 0 0 8px rgba(255, 107, 107, 0.6) !important;
+  z-index: 1000 !important;
+  animation: focusPulse 2s ease-in-out infinite !important;
+}
+@keyframes focusPulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(255, 107, 107, 0.6) !important;
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(255, 107, 107, 0.9) !important;
+  }
+}
 .korean-grammar-tooltip {
   position: fixed;
   z-index: 10000;

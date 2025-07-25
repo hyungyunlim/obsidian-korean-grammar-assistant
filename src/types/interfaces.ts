@@ -207,4 +207,6 @@ export interface InlineError {
   ch: number; // 라인 내 문자 위치
   uniqueId: string; // 고유 식별자
   isActive: boolean; // 활성 상태 (수정되면 false)
+  originalErrors?: InlineError[]; // 병합된 경우 원본 오류들 (개별 적용용)
+  isMerged?: boolean; // 병합된 오류인지 여부
 }

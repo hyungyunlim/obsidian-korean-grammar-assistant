@@ -1895,8 +1895,12 @@ var SpellCheckApiService = class {
     Logger.debug("\n=== \uCD5C\uC885 \uAD50\uC815 \uACB0\uACFC ===");
     Logger.debug("\uAD50\uC815 \uB9F5 \uD06C\uAE30:", correctionMap.size);
     Logger.log("\uCD5C\uC885 \uAD50\uC815 \uBC30\uC5F4:", corrections);
-    if (corrections.length === 0 && resultOutput !== originalText) {
+    const normalizedOriginal = originalText.replace(/\s+/g, " ").trim();
+    const normalizedResult = resultOutput.replace(/\s+/g, " ").trim();
+    if (corrections.length === 0 && normalizedResult !== normalizedOriginal) {
       Logger.log("\uC138\uBD80 \uC815\uBCF4\uAC00 \uC5C6\uC5B4 diff \uB85C\uC9C1 \uC0AC\uC6A9");
+      Logger.debug("\uC6D0\uBCF8 (\uC815\uADDC\uD654):", normalizedOriginal);
+      Logger.debug("\uACB0\uACFC (\uC815\uADDC\uD654):", normalizedResult);
       const words = originalText.split(/(\s+)/);
       const revisedWords = resultOutput.split(/(\s+)/);
       for (let i = 0; i < Math.min(words.length, revisedWords.length); i++) {
@@ -1908,6 +1912,8 @@ var SpellCheckApiService = class {
           });
         }
       }
+    } else if (corrections.length === 0) {
+      Logger.log("\uB9DE\uCDA4\uBC95 \uC624\uB958 \uC5C6\uC74C - diff \uB85C\uC9C1 \uC2E4\uD589 \uC548\uD568");
     }
     return { resultOutput, corrections };
   }
@@ -9516,9 +9522,269 @@ var InlineTooltip = class {
       color: var(--text-normal);
       display: flex;
       flex-direction: column;
-      min-width: 200px;
-      max-width: 400px;
+      min-width: 250px;
+      max-width: 450px;
+      max-height: 300px;
+      overflow-y: auto;
     `;
+    if (error.isMerged && error.originalErrors && error.originalErrors.length > 0) {
+      this.createMergedErrorTooltip(error, targetElement);
+    } else {
+      this.createSingleErrorTooltip(error, targetElement, triggerType);
+    }
+    document.body.appendChild(this.tooltip);
+  }
+  /**
+   * 툴팁 위치 조정
+   */
+  positionTooltip(targetElement) {
+    if (!this.tooltip)
+      return;
+    const targetRect = targetElement.getBoundingClientRect();
+    const tooltipRect = this.tooltip.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const gap = 8;
+    const minSpacing = 12;
+    let finalLeft = 0;
+    let finalTop = 0;
+    if (targetRect.bottom + gap + tooltipRect.height <= viewportHeight - minSpacing) {
+      finalTop = targetRect.bottom + gap;
+    } else {
+      finalTop = targetRect.top - tooltipRect.height - gap;
+    }
+    finalLeft = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
+    if (finalLeft < minSpacing) {
+      finalLeft = minSpacing;
+    } else if (finalLeft + tooltipRect.width > viewportWidth - minSpacing) {
+      finalLeft = viewportWidth - tooltipRect.width - minSpacing;
+    }
+    if (finalTop < minSpacing) {
+      finalTop = minSpacing;
+    } else if (finalTop + tooltipRect.height > viewportHeight - minSpacing) {
+      finalTop = viewportHeight - tooltipRect.height - minSpacing;
+    }
+    this.tooltip.style.position = "fixed";
+    this.tooltip.style.left = `${finalLeft}px`;
+    this.tooltip.style.top = `${finalTop}px`;
+    this.tooltip.style.zIndex = "1000";
+    this.tooltip.style.visibility = "visible";
+  }
+  /**
+   * 병합된 오류용 툴팁 생성
+   */
+  createMergedErrorTooltip(mergedError, targetElement) {
+    if (!this.tooltip || !mergedError.originalErrors)
+      return;
+    const header = this.tooltip.createEl("div", { cls: "tooltip-header" });
+    header.style.cssText = `
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--background-modifier-border);
+      background: var(--background-secondary);
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+    `;
+    header.textContent = `${mergedError.originalErrors.length}\uAC1C\uC758 \uC624\uB958\uAC00 \uBCD1\uD569\uB428`;
+    const scrollContainer = this.tooltip.createEl("div", { cls: "tooltip-scroll-container" });
+    scrollContainer.style.cssText = `
+      flex: 1;
+      overflow-y: auto;
+      max-height: 250px;
+    `;
+    mergedError.originalErrors.forEach((originalError, index) => {
+      const errorSection = scrollContainer.createEl("div", { cls: "error-section" });
+      errorSection.style.cssText = `
+        padding: 8px 12px;
+        ${index > 0 ? "border-top: 1px solid var(--background-modifier-border-hover);" : ""}
+      `;
+      const errorLine = errorSection.createEl("div", { cls: "error-line" });
+      errorLine.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;
+        min-height: 28px;
+      `;
+      const errorWord = errorLine.createEl("span", {
+        text: originalError.correction.original,
+        cls: "error-word"
+      });
+      errorWord.style.cssText = `
+        color: var(--text-error);
+        font-weight: 600;
+        background: rgba(255, 0, 0, 0.1);
+        padding: 3px 6px;
+        border-radius: 3px;
+        font-size: 12px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        min-width: 60px;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      `;
+      const arrow = errorLine.createEl("span", { text: "\u2192" });
+      arrow.style.cssText = `
+        color: var(--text-muted);
+        font-weight: bold;
+        flex-shrink: 0;
+      `;
+      const suggestionsList = errorLine.createEl("div", { cls: "suggestions-list" });
+      suggestionsList.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex: 1;
+        flex-wrap: wrap;
+        overflow: hidden;
+      `;
+      originalError.correction.corrected.forEach((suggestion) => {
+        const suggestionButton = suggestionsList.createEl("button", {
+          text: suggestion,
+          cls: "suggestion-button"
+        });
+        suggestionButton.style.cssText = `
+          background: var(--interactive-normal);
+          border: 1px solid var(--background-modifier-border);
+          border-radius: 3px;
+          padding: 2px 6px;
+          cursor: pointer;
+          transition: all 0.2s;
+          color: var(--text-normal);
+          font-size: 11px;
+          white-space: nowrap;
+          flex-shrink: 0;
+          max-width: 100px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        `;
+        suggestionButton.addEventListener("mouseenter", () => {
+          suggestionButton.style.background = "var(--interactive-hover)";
+          suggestionButton.style.transform = "translateY(-1px)";
+        });
+        suggestionButton.addEventListener("mouseleave", () => {
+          suggestionButton.style.background = "var(--interactive-normal)";
+          suggestionButton.style.transform = "translateY(0)";
+        });
+        suggestionButton.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this.applySuggestionKeepOpen(mergedError, suggestion, targetElement);
+        });
+      });
+      if (originalError.correction.help) {
+        const helpContainer = errorLine.createEl("div", { cls: "help-container" });
+        helpContainer.style.cssText = `
+          display: flex;
+          align-items: center;
+          margin-left: 4px;
+          flex-shrink: 0;
+        `;
+        this.createHelpIcon(originalError.correction.help, helpContainer);
+      }
+    });
+    const footer = this.tooltip.createEl("div", { cls: "tooltip-footer" });
+    footer.style.cssText = `
+      padding: 6px 12px;
+      border-top: 1px solid var(--background-modifier-border);
+      background: var(--background-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    `;
+    const infoText = footer.createEl("span", {
+      text: "\uAC1C\uBCC4 \uD074\uB9AD\uC73C\uB85C \uD558\uB098\uC529 \uC218\uC815",
+      cls: "info-text"
+    });
+    infoText.style.cssText = `
+      font-size: 10px;
+      color: var(--text-muted);
+      flex: 1;
+    `;
+    const closeButton = footer.createEl("button", {
+      text: "\uB2EB\uAE30",
+      cls: "close-button"
+    });
+    closeButton.style.cssText = `
+      background: var(--interactive-normal);
+      color: var(--text-normal);
+      border: 1px solid var(--background-modifier-border);
+      border-radius: 3px;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 10px;
+      transition: all 0.2s;
+    `;
+    closeButton.addEventListener("mouseenter", () => {
+      closeButton.style.background = "var(--interactive-hover)";
+    });
+    closeButton.addEventListener("mouseleave", () => {
+      closeButton.style.background = "var(--interactive-normal)";
+    });
+    closeButton.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.hide();
+    });
+    this.setupHoverEvents(targetElement);
+  }
+  /**
+   * 호버 이벤트 설정 (공통)
+   */
+  setupHoverEvents(targetElement) {
+    var _a, _b;
+    let hideTimeout;
+    let isHovering = false;
+    const startHideTimer = () => {
+      hideTimeout = setTimeout(() => {
+        if (!isHovering) {
+          this.hide();
+        }
+      }, 300);
+    };
+    const cancelHideTimer = () => {
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+        hideTimeout = void 0;
+      }
+    };
+    const onTargetMouseEnter = () => {
+      isHovering = true;
+      cancelHideTimer();
+    };
+    const onTargetMouseLeave = () => {
+      isHovering = false;
+      startHideTimer();
+    };
+    const onTooltipMouseEnter = () => {
+      isHovering = true;
+      cancelHideTimer();
+    };
+    const onTooltipMouseLeave = () => {
+      isHovering = false;
+      startHideTimer();
+    };
+    targetElement.addEventListener("mouseenter", onTargetMouseEnter);
+    targetElement.addEventListener("mouseleave", onTargetMouseLeave);
+    (_a = this.tooltip) == null ? void 0 : _a.addEventListener("mouseenter", onTooltipMouseEnter);
+    (_b = this.tooltip) == null ? void 0 : _b.addEventListener("mouseleave", onTooltipMouseLeave);
+    this.tooltip._cleanup = () => {
+      var _a2, _b2;
+      targetElement.removeEventListener("mouseenter", onTargetMouseEnter);
+      targetElement.removeEventListener("mouseleave", onTargetMouseLeave);
+      (_a2 = this.tooltip) == null ? void 0 : _a2.removeEventListener("mouseenter", onTooltipMouseEnter);
+      (_b2 = this.tooltip) == null ? void 0 : _b2.removeEventListener("mouseleave", onTooltipMouseLeave);
+      if (hideTimeout)
+        clearTimeout(hideTimeout);
+    };
+  }
+  /**
+   * 단일 오류용 툴팁 생성 (기존 로직 유지)
+   */
+  createSingleErrorTooltip(error, targetElement, triggerType) {
+    if (!this.tooltip)
+      return;
     const mainContent = this.tooltip.createEl("div", { cls: "tooltip-main-content" });
     mainContent.style.cssText = `
       display: flex;
@@ -9549,6 +9815,7 @@ var InlineTooltip = class {
       display: flex;
       align-items: center;
       gap: 6px;
+      flex-wrap: wrap;
     `;
     error.correction.corrected.forEach((suggestion, index) => {
       const suggestionButton = suggestionsList.createEl("button", {
@@ -9589,229 +9856,18 @@ var InlineTooltip = class {
     actionsContainer.style.cssText = `
       display: flex;
       align-items: center;
-      gap: 4px;
-      margin-left: 8px;
-      opacity: 0.6;
+      gap: 6px;
     `;
-    const checkIcon = actionsContainer.createEl("span", {
-      text: "\u2713",
-      cls: "check-icon"
-    });
-    checkIcon.style.cssText = `
-      color: var(--text-success);
-      font-size: 18px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      padding: 2px;
-      border-radius: 3px;
-      user-select: none;
-    `;
-    checkIcon.addEventListener("mouseenter", () => {
-      checkIcon.style.backgroundColor = "var(--background-modifier-hover)";
-      checkIcon.style.transform = "scale(1.1)";
-      checkIcon.style.opacity = "1";
-    });
-    checkIcon.addEventListener("mouseleave", () => {
-      checkIcon.style.backgroundColor = "transparent";
-      checkIcon.style.transform = "scale(1)";
-      checkIcon.style.opacity = "0.8";
-    });
-    checkIcon.addEventListener("click", (e) => {
-      e.stopPropagation();
-      this.ignoreError(error, targetElement);
-    });
-    const closeIcon = actionsContainer.createEl("span", {
-      text: "\xD7",
-      cls: "close-icon"
-    });
-    closeIcon.style.cssText = `
-      color: var(--text-muted);
-      font-size: 20px;
-      font-weight: 400;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      padding: 2px;
-      border-radius: 3px;
-      user-select: none;
-      line-height: 1;
-    `;
-    closeIcon.addEventListener("mouseenter", () => {
-      closeIcon.style.backgroundColor = "var(--background-modifier-hover)";
-      closeIcon.style.color = "var(--text-normal)";
-      closeIcon.style.transform = "scale(1.1)";
-    });
-    closeIcon.addEventListener("mouseleave", () => {
-      closeIcon.style.backgroundColor = "transparent";
-      closeIcon.style.color = "var(--text-muted)";
-      closeIcon.style.transform = "scale(1)";
-    });
-    closeIcon.addEventListener("click", (e) => {
-      e.stopPropagation();
-      this.hide();
-    });
-    const reasonArea = this.tooltip.createEl("div", { cls: "tooltip-reason-area" });
-    reasonArea.style.cssText = `
-      padding: 6px 12px;
-      border-top: 1px solid var(--background-modifier-border);
-      font-size: 10px;
-      color: var(--text-muted);
-      line-height: 1.3;
-      opacity: 0.8;
-      background: var(--background-secondary);
-      border-radius: 0 0 6px 6px;
-      text-align: center;
-    `;
-    const reason = this.generateErrorReason(error);
-    reasonArea.textContent = reason;
-    this.tooltip.style.position = "fixed";
-    this.tooltip.style.left = "-9999px";
-    this.tooltip.style.top = "-9999px";
-    this.tooltip.style.visibility = "hidden";
-    document.body.appendChild(this.tooltip);
+    if (error.correction.help) {
+      this.createHelpIcon(error.correction.help, actionsContainer);
+    }
     if (triggerType === "hover") {
-      let hideTimeout;
-      let isHovering = false;
-      const startHideTimer = () => {
-        hideTimeout = setTimeout(() => {
-          if (!isHovering) {
-            this.hide();
-          }
-        }, 500);
-      };
-      const cancelHideTimer = () => {
-        if (hideTimeout) {
-          clearTimeout(hideTimeout);
-          hideTimeout = void 0;
-        }
-      };
-      const onTargetMouseEnter = () => {
-        isHovering = true;
-        cancelHideTimer();
-      };
-      const onTargetMouseLeave = () => {
-        isHovering = false;
-        startHideTimer();
-      };
-      const onTooltipMouseEnter = () => {
-        isHovering = true;
-        cancelHideTimer();
-      };
-      const onTooltipMouseLeave = () => {
-        isHovering = false;
-        startHideTimer();
-      };
-      targetElement.addEventListener("mouseenter", onTargetMouseEnter);
-      targetElement.addEventListener("mouseleave", onTargetMouseLeave);
-      this.tooltip.addEventListener("mouseenter", onTooltipMouseEnter);
-      this.tooltip.addEventListener("mouseleave", onTooltipMouseLeave);
-      this.tooltip._cleanup = () => {
-        var _a, _b;
-        targetElement.removeEventListener("mouseenter", onTargetMouseEnter);
-        targetElement.removeEventListener("mouseleave", onTargetMouseLeave);
-        (_a = this.tooltip) == null ? void 0 : _a.removeEventListener("mouseenter", onTooltipMouseEnter);
-        (_b = this.tooltip) == null ? void 0 : _b.removeEventListener("mouseleave", onTooltipMouseLeave);
-        if (hideTimeout)
-          clearTimeout(hideTimeout);
-      };
+      this.setupHoverEvents(targetElement);
     } else {
       setTimeout(() => {
         document.addEventListener("click", this.handleOutsideClick.bind(this), { once: true });
       }, 0);
     }
-  }
-  /**
-   * 툴팁 위치 조정 (Obsidian API 참고 개선 버전)
-   */
-  positionTooltip(targetElement) {
-    if (!this.tooltip)
-      return;
-    if (!this.tooltip.parentNode) {
-      document.body.appendChild(this.tooltip);
-    }
-    const targetRect = targetElement.getBoundingClientRect();
-    const tooltipRect = this.tooltip.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const gap = 8;
-    const minSpacing = 12;
-    let finalLeft = 0;
-    let finalTop = 0;
-    let selectedPlacement = "bottom";
-    const spaces = {
-      bottom: viewportHeight - targetRect.bottom - gap,
-      top: targetRect.top - gap,
-      right: viewportWidth - targetRect.right - gap,
-      left: targetRect.left - gap
-    };
-    const placements = [
-      {
-        name: "bottom",
-        available: spaces.bottom >= tooltipRect.height,
-        left: targetRect.left + targetRect.width / 2 - tooltipRect.width / 2,
-        top: targetRect.bottom + gap
-      },
-      {
-        name: "top",
-        available: spaces.top >= tooltipRect.height,
-        left: targetRect.left + targetRect.width / 2 - tooltipRect.width / 2,
-        top: targetRect.top - tooltipRect.height - gap
-      },
-      {
-        name: "right",
-        available: spaces.right >= tooltipRect.width,
-        left: targetRect.right + gap,
-        top: targetRect.top + targetRect.height / 2 - tooltipRect.height / 2
-      },
-      {
-        name: "left",
-        available: spaces.left >= tooltipRect.width,
-        left: targetRect.left - tooltipRect.width - gap,
-        top: targetRect.top + targetRect.height / 2 - tooltipRect.height / 2
-      }
-    ];
-    const availablePlacement = placements.find((p) => p.available);
-    if (availablePlacement) {
-      selectedPlacement = availablePlacement.name;
-      finalLeft = availablePlacement.left;
-      finalTop = availablePlacement.top;
-    } else {
-      const maxSpaceEntry = Object.entries(spaces).reduce(
-        (max, [key, value]) => value > max.value ? { key, value } : max,
-        { key: "bottom", value: spaces.bottom }
-      );
-      const forcedPlacement = placements.find((p) => p.name === maxSpaceEntry.key);
-      if (forcedPlacement) {
-        selectedPlacement = forcedPlacement.name;
-        finalLeft = forcedPlacement.left;
-        finalTop = forcedPlacement.top;
-      }
-    }
-    if (selectedPlacement === "bottom" || selectedPlacement === "top") {
-      if (finalLeft < minSpacing) {
-        finalLeft = minSpacing;
-      } else if (finalLeft + tooltipRect.width > viewportWidth - minSpacing) {
-        finalLeft = viewportWidth - tooltipRect.width - minSpacing;
-      }
-    }
-    if (selectedPlacement === "left" || selectedPlacement === "right") {
-      if (finalTop < minSpacing) {
-        finalTop = minSpacing;
-      } else if (finalTop + tooltipRect.height > viewportHeight - minSpacing) {
-        finalTop = viewportHeight - tooltipRect.height - minSpacing;
-      }
-    }
-    finalLeft = Math.max(minSpacing, Math.min(finalLeft, viewportWidth - tooltipRect.width - minSpacing));
-    finalTop = Math.max(minSpacing, Math.min(finalTop, viewportHeight - tooltipRect.height - minSpacing));
-    this.tooltip.style.position = "fixed";
-    this.tooltip.style.left = `${finalLeft}px`;
-    this.tooltip.style.top = `${finalTop}px`;
-    this.tooltip.style.zIndex = "1000";
-    this.tooltip.style.visibility = "visible";
-    Logger.debug(`\uD234\uD301 \uC704\uCE58 \uACC4\uC0B0 (Obsidian \uC2A4\uD0C0\uC77C): placement=${selectedPlacement}, left=${finalLeft}, top=${finalTop}`);
-    Logger.debug(`\uD0C0\uAC9F \uC704\uCE58: (${targetRect.left}, ${targetRect.top}, ${targetRect.width}x${targetRect.height})`);
-    Logger.debug(`\uD234\uD301 \uD06C\uAE30: ${tooltipRect.width}x${tooltipRect.height}, \uBDF0\uD3EC\uD2B8: ${viewportWidth}x${viewportHeight}`);
-    Logger.debug(`\uACF5\uAC04 \uBD84\uC11D: bottom=${spaces.bottom}, top=${spaces.top}, right=${spaces.right}, left=${spaces.left}`);
   }
   /**
    * 수정 제안 적용
@@ -9822,6 +9878,20 @@ var InlineTooltip = class {
       window.InlineModeService.applySuggestion(error, suggestion);
     }
     this.hide();
+  }
+  /**
+   * 수정 제안 적용 (클릭 후 툴팁 유지)
+   */
+  applySuggestionKeepOpen(mergedError, suggestion, targetElement) {
+    Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC218\uC815 \uC81C\uC548 \uC801\uC6A9 (\uD074\uB9AD \uD6C4 \uD234\uD301 \uC720\uC9C0) - "${mergedError.correction.original}" \u2192 "${suggestion}"`);
+    window.tooltipKeepOpenMode = true;
+    if (window.InlineModeService) {
+      window.InlineModeService.applySuggestion(mergedError, suggestion);
+    }
+    setTimeout(() => {
+      window.tooltipKeepOpenMode = false;
+    }, 200);
+    Logger.debug("\uD234\uD301 \uC720\uC9C0 \uBAA8\uB4DC\uB85C \uAD50\uC815 \uC801\uC6A9 \uC644\uB8CC");
   }
   /**
    * 오류 무시
@@ -9861,6 +9931,157 @@ var InlineTooltip = class {
     }
     return "\uC5B8\uC5B4 \uD45C\uD604 \uAC1C\uC120";
   }
+  /**
+   * 도움말 상세 표시
+   */
+  showHelpDetail(helpText, helpIcon) {
+    const helpTooltip = document.createElement("div");
+    helpTooltip.className = "korean-grammar-help-tooltip";
+    helpTooltip.style.cssText = `
+      position: fixed;
+      background: var(--background-primary);
+      border: 1px solid var(--background-modifier-border);
+      border-radius: 6px;
+      padding: 0;
+      box-shadow: var(--shadow-s);
+      z-index: 1001;
+      font-size: 13px;
+      color: var(--text-normal);
+      display: flex;
+      flex-direction: column;
+      min-width: 250px;
+      max-width: 400px;
+      max-height: 300px;
+    `;
+    const helpHeader = helpTooltip.createEl("div", { cls: "help-header" });
+    helpHeader.style.cssText = `
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--background-modifier-border);
+      background: var(--background-secondary);
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+    `;
+    helpHeader.textContent = "\u{1F4D6} \uBB38\uBC95 \uB3C4\uC6C0\uB9D0";
+    const helpContent = helpTooltip.createEl("div", { cls: "help-content" });
+    helpContent.style.cssText = `
+      padding: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 13px;
+      color: var(--text-normal);
+      line-height: 1.4;
+      overflow-y: auto;
+      flex: 1;
+    `;
+    helpContent.textContent = helpText;
+    const buttonArea = helpTooltip.createEl("div", { cls: "help-buttons" });
+    buttonArea.style.cssText = `
+      padding: 8px 12px;
+      border-top: 1px solid var(--background-modifier-border);
+      background: var(--background-secondary);
+      display: flex;
+      justify-content: center;
+    `;
+    const closeButton = buttonArea.createEl("button", {
+      text: "\uD655\uC778",
+      cls: "help-close-button"
+    });
+    closeButton.style.cssText = `
+      background: var(--interactive-accent);
+      color: var(--text-on-accent);
+      border: none;
+      border-radius: 4px;
+      padding: 6px 16px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.2s;
+    `;
+    closeButton.addEventListener("mouseenter", () => {
+      closeButton.style.background = "var(--interactive-accent-hover)";
+    });
+    closeButton.addEventListener("mouseleave", () => {
+      closeButton.style.background = "var(--interactive-accent)";
+    });
+    closeButton.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (helpTooltip.parentNode) {
+        helpTooltip.parentNode.removeChild(helpTooltip);
+      }
+    });
+    const handleOutsideClick = (event) => {
+      if (helpTooltip && !helpTooltip.contains(event.target)) {
+        if (helpTooltip.parentNode) {
+          helpTooltip.parentNode.removeChild(helpTooltip);
+        }
+        document.removeEventListener("click", handleOutsideClick);
+      }
+    };
+    document.body.appendChild(helpTooltip);
+    const helpIconRect = helpIcon.getBoundingClientRect();
+    const tooltipRect = helpTooltip.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    let left = helpIconRect.left + helpIconRect.width / 2 - tooltipRect.width / 2;
+    let top = helpIconRect.bottom + 8;
+    if (left < 12)
+      left = 12;
+    if (left + tooltipRect.width > viewportWidth - 12) {
+      left = viewportWidth - tooltipRect.width - 12;
+    }
+    if (top + tooltipRect.height > viewportHeight - 12) {
+      top = helpIconRect.top - tooltipRect.height - 8;
+    }
+    helpTooltip.style.left = `${left}px`;
+    helpTooltip.style.top = `${top}px`;
+    setTimeout(() => {
+      document.addEventListener("click", handleOutsideClick);
+    }, 100);
+    Logger.debug(`\uB3C4\uC6C0\uB9D0 \uD45C\uC2DC: "${helpText.substring(0, 50)}..."`);
+  }
+  /**
+   * 도움말 아이콘 생성 (공통)
+   */
+  createHelpIcon(helpText, container) {
+    if (!helpText)
+      return;
+    const helpIcon = container.createEl("span", { text: "?" });
+    helpIcon.style.cssText = `
+      color: var(--text-muted);
+      cursor: pointer;
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--text-muted);
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: bold;
+      transition: all 0.2s;
+      background: var(--background-primary);
+      flex-shrink: 0;
+    `;
+    helpIcon.title = helpText;
+    helpIcon.addEventListener("mouseenter", () => {
+      helpIcon.style.background = "var(--interactive-hover)";
+      helpIcon.style.borderColor = "var(--text-normal)";
+      helpIcon.style.color = "var(--text-normal)";
+      helpIcon.style.transform = "scale(1.1)";
+    });
+    helpIcon.addEventListener("mouseleave", () => {
+      helpIcon.style.background = "var(--background-primary)";
+      helpIcon.style.borderColor = "var(--text-muted)";
+      helpIcon.style.color = "var(--text-muted)";
+      helpIcon.style.transform = "scale(1)";
+    });
+    helpIcon.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.showHelpDetail(helpText, helpIcon);
+    });
+  }
 };
 var globalInlineTooltip = new InlineTooltip();
 window.globalInlineTooltip = globalInlineTooltip;
@@ -9874,6 +10095,9 @@ var removeErrorDecorations = import_state.StateEffect.define({
   map: (val, change) => val
 });
 var clearAllErrorDecorations = import_state.StateEffect.define({
+  map: (val, change) => val
+});
+var setFocusedErrorDecoration = import_state.StateEffect.define({
   map: (val, change) => val
 });
 var errorDecorationField = import_state.StateField.define({
@@ -9903,15 +10127,16 @@ var errorDecorationField = import_state.StateField.define({
       if (effect.is(addErrorDecorations)) {
         const { errors, underlineStyle, underlineColor } = effect.value;
         const newDecorations = errors.map((error) => {
+          const isFocused = false;
           return import_view.Decoration.mark({
-            class: "korean-grammar-error-inline",
+            class: `korean-grammar-error-inline ${isFocused ? "korean-grammar-focused" : ""}`,
             attributes: {
               "data-error-id": error.uniqueId,
               "data-original": error.correction.original,
               "data-corrected": JSON.stringify(error.correction.corrected),
               "role": "button",
               "tabindex": "0",
-              "style": `
+              "style": isFocused ? "" : `
                 text-decoration-line: underline !important;
                 text-decoration-style: ${underlineStyle} !important;
                 text-decoration-color: ${underlineColor} !important;
@@ -9922,6 +10147,7 @@ var errorDecorationField = import_state.StateField.define({
             }
           }).range(error.start, error.end);
         });
+        newDecorations.sort((a, b) => a.from - b.from);
         decorations = decorations.update({
           add: newDecorations,
           sort: true
@@ -9937,6 +10163,39 @@ var errorDecorationField = import_state.StateField.define({
         });
       } else if (effect.is(clearAllErrorDecorations)) {
         decorations = import_view.Decoration.none;
+      } else if (effect.is(setFocusedErrorDecoration)) {
+        const focusedErrorId = effect.value;
+        Logger.log(`\u{1F3AF} \uD3EC\uCEE4\uC2A4 decoration \uC5C5\uB370\uC774\uD2B8: ${focusedErrorId}`);
+        const activeErrorsArray = InlineModeService.getActiveErrors();
+        Logger.debug(`\u{1F3AF} \uD3EC\uCEE4\uC2A4 decoration \uC5C5\uB370\uC774\uD2B8 \uC2DC\uC791: ${activeErrorsArray.length}\uAC1C \uC624\uB958, \uD0C0\uAC9F: ${focusedErrorId}`);
+        if (activeErrorsArray.length > 0) {
+          const newDecorations = activeErrorsArray.map((error) => {
+            const isFocused = error.uniqueId === focusedErrorId;
+            if (isFocused) {
+              Logger.debug(`\u{1F3AF} \uD3EC\uCEE4\uC2A4 \uB9E4\uCE6D: "${error.correction.original}" (${error.uniqueId}) at ${error.start}-${error.end}`);
+            }
+            return import_view.Decoration.mark({
+              class: `korean-grammar-error-inline ${isFocused ? "korean-grammar-focused" : ""}`,
+              attributes: {
+                "data-error-id": error.uniqueId,
+                "data-original": error.correction.original,
+                "data-corrected": JSON.stringify(error.correction.corrected),
+                "role": "button",
+                "tabindex": "0",
+                "style": isFocused ? "" : `
+                  text-decoration-line: underline !important;
+                  text-decoration-style: wavy !important;
+                  text-decoration-color: #ff0000 !important;
+                  text-decoration-thickness: 2px !important;
+                  background-color: rgba(255, 0, 0, 0.05) !important;
+                  cursor: pointer !important;
+                `
+              }
+            }).range(error.start, error.end);
+          });
+          newDecorations.sort((a, b) => a.from - b.from);
+          decorations = import_view.Decoration.set(newDecorations);
+        }
       }
     }
     return decorations;
@@ -9956,7 +10215,11 @@ var InlineModeService = class {
       this.app = app;
     }
     this.setupEventListeners(view);
-    this.initializeKeyboardScope();
+    if (app) {
+      this.initializeKeyboardScope();
+    } else {
+      Logger.debug("setEditorView: App \uC778\uC2A4\uD134\uC2A4\uAC00 \uC5C6\uC5B4 \uD0A4\uBCF4\uB4DC \uC2A4\uCF54\uD504 \uCD08\uAE30\uD654 \uAC74\uB108\uB700");
+    }
     Logger.debug("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC5D0\uB514\uD130 \uBDF0 \uC124\uC815\uB428");
   }
   /**
@@ -10024,7 +10287,12 @@ var InlineModeService = class {
       if (target.classList.contains("korean-grammar-error-inline")) {
         const errorId = target.getAttribute("data-error-id");
         if (errorId && this.activeErrors.has(errorId)) {
-          this.setFocusedError(this.activeErrors.get(errorId));
+          const error = this.activeErrors.get(errorId);
+          if (this.currentFocusedError && this.currentFocusedError.uniqueId === error.uniqueId) {
+            Logger.debug(`\uC774\uBBF8 \uD3EC\uCEE4\uC2A4\uB41C \uC624\uB958 \uC2A4\uD0B5: ${error.uniqueId}`);
+            return;
+          }
+          this.setFocusedError(error);
         }
       }
     }, true);
@@ -10049,7 +10317,7 @@ var InlineModeService = class {
   /**
    * 오류 표시
    */
-  static showErrors(view, corrections, underlineStyle = "wavy", underlineColor = "#ff0000") {
+  static showErrors(view, corrections, underlineStyle = "wavy", underlineColor = "#ff0000", app) {
     if (!view || !corrections.length) {
       Logger.warn("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uBDF0\uB098 \uAD50\uC815 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
@@ -10070,7 +10338,7 @@ var InlineModeService = class {
         const afterChar = foundIndex + searchText.length < fullText.length ? fullText[foundIndex + searchText.length] : " ";
         const isWordBoundary = this.isValidWordBoundary(beforeChar, afterChar, searchText);
         if (isWordBoundary) {
-          const uniqueId = `${index}_${occurrence}`;
+          const uniqueId = `${index}_${occurrence}_${foundIndex}`;
           const lineInfo = doc.lineAt(foundIndex);
           const error = {
             correction,
@@ -10083,16 +10351,87 @@ var InlineModeService = class {
           };
           errors.push(error);
           this.activeErrors.set(uniqueId, error);
-          Logger.debug(`\uC624\uB958 \uC704\uCE58 \uC124\uC815: "${searchText}" at ${foundIndex}-${foundIndex + searchText.length}`);
+          Logger.debug(`\u{1F3AF} \uC624\uB958 \uC704\uCE58 \uC124\uC815: "${searchText}" (${uniqueId}) at ${foundIndex}-${foundIndex + searchText.length}`);
           occurrence++;
         }
         searchIndex = foundIndex + 1;
       }
     });
+    const mergedErrors = this.mergeOverlappingErrors(errors);
+    Logger.debug(`\u{1F527} \uC624\uB958 \uBCD1\uD569: ${errors.length}\uAC1C \u2192 ${mergedErrors.length}\uAC1C`);
     view.dispatch({
-      effects: addErrorDecorations.of({ errors, underlineStyle, underlineColor })
+      effects: addErrorDecorations.of({ errors: mergedErrors, underlineStyle, underlineColor })
     });
-    Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: ${errors.length}\uAC1C \uC624\uB958 \uD45C\uC2DC\uB428`);
+    Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: ${mergedErrors.length}\uAC1C \uC624\uB958 \uD45C\uC2DC\uB428 (\uBCD1\uD569 \uD6C4)`);
+  }
+  /**
+   * 겹치는 오류들을 병합하여 분절된 하이라이팅 방지
+   */
+  static mergeOverlappingErrors(errors) {
+    var _a;
+    if (errors.length <= 1)
+      return errors;
+    const sortedErrors = [...errors].sort((a, b) => {
+      if (a.start !== b.start)
+        return a.start - b.start;
+      return a.end - b.end;
+    });
+    const merged = [];
+    let current = sortedErrors[0];
+    for (let i = 1; i < sortedErrors.length; i++) {
+      const next = sortedErrors[i];
+      const isOverlapping = current.end > next.start;
+      const isAdjacent = current.end >= next.start - 1;
+      if (isOverlapping || isAdjacent) {
+        const doc = (_a = this.currentView) == null ? void 0 : _a.state.doc;
+        const mergedStart = Math.min(current.start, next.start);
+        const mergedEnd = Math.max(current.end, next.end);
+        const mergedText = (doc == null ? void 0 : doc.sliceString(mergedStart, mergedEnd)) || "";
+        const currentText = (doc == null ? void 0 : doc.sliceString(current.start, current.end)) || current.correction.original;
+        const nextText = (doc == null ? void 0 : doc.sliceString(next.start, next.end)) || next.correction.original;
+        const originalErrors = [];
+        if (current.isMerged && current.originalErrors) {
+          originalErrors.push(...current.originalErrors);
+        } else {
+          originalErrors.push(current);
+        }
+        if (next.isMerged && next.originalErrors) {
+          originalErrors.push(...next.originalErrors);
+        } else {
+          originalErrors.push(next);
+        }
+        const mergedCorrected = [.../* @__PURE__ */ new Set([
+          ...current.correction.corrected,
+          ...next.correction.corrected
+        ])];
+        const mergedError = {
+          correction: {
+            original: mergedText,
+            corrected: mergedCorrected,
+            help: current.correction.help || next.correction.help
+          },
+          start: mergedStart,
+          end: mergedEnd,
+          line: current.line,
+          ch: current.ch,
+          uniqueId: `merged_${current.uniqueId}_${next.uniqueId}`,
+          isActive: true,
+          isMerged: true,
+          originalErrors
+          // 원본 오류들 보존
+        };
+        this.activeErrors.delete(current.uniqueId);
+        this.activeErrors.delete(next.uniqueId);
+        this.activeErrors.set(mergedError.uniqueId, mergedError);
+        current = mergedError;
+        Logger.debug(`\u{1F517} \uC624\uB958 \uBCD1\uD569: "${currentText}" (${current.start}-${current.end}) + "${nextText}" (${next.start}-${next.end}) \u2192 "${mergedText}" (${mergedStart}-${mergedEnd}), \uC6D0\uBCF8 \uC624\uB958 ${originalErrors.length}\uAC1C \uBCF4\uC874`);
+      } else {
+        merged.push(current);
+        current = next;
+      }
+    }
+    merged.push(current);
+    return merged;
   }
   /**
    * 특정 오류 제거
@@ -10196,10 +10535,19 @@ var InlineModeService = class {
     }
   }
   /**
-   * 현재 활성화된 오류 목록 반환
+   * 현재 활성화된 오류 목록 반환 (위치 기준 정렬)
    */
   static getActiveErrors() {
-    return Array.from(this.activeErrors.values());
+    const errors = Array.from(this.activeErrors.values());
+    return errors.sort((a, b) => {
+      if (a.start !== b.start) {
+        return a.start - b.start;
+      }
+      if (a.end !== b.end) {
+        return a.end - b.end;
+      }
+      return a.uniqueId.localeCompare(b.uniqueId);
+    });
   }
   /**
    * 특정 위치의 오류 찾기
@@ -10240,97 +10588,264 @@ var InlineModeService = class {
       return;
     }
     try {
-      const doc = this.currentView.state.doc;
-      const actualText = doc.sliceString(error.start, error.end);
-      Logger.debug(`\uD14D\uC2A4\uD2B8 \uAD50\uCCB4 \uC2DC\uB3C4: \uBC94\uC704[${error.start}-${error.end}], \uC608\uC0C1="${error.correction.original}", \uC2E4\uC81C="${actualText}", \uAD50\uCCB4="${suggestion}"`);
-      let fromPos = error.start;
-      let toPos = error.end;
-      if (actualText !== error.correction.original) {
-        Logger.warn(`\uD14D\uC2A4\uD2B8 \uBD88\uC77C\uCE58 \uAC10\uC9C0, \uC7AC\uAC80\uC0C9 \uC2DC\uB3C4: "${error.correction.original}"`);
-        const fullText = doc.toString();
-        const searchIndex = fullText.indexOf(error.correction.original, Math.max(0, error.start - 100));
-        if (searchIndex !== -1) {
-          fromPos = searchIndex;
-          toPos = searchIndex + error.correction.original.length;
-          Logger.debug(`\uC7AC\uAC80\uC0C9 \uC131\uACF5: \uC0C8 \uBC94\uC704[${fromPos}-${toPos}]`);
-        } else {
-          Logger.error(`\uC7AC\uAC80\uC0C9 \uC2E4\uD328: "${error.correction.original}" \uD14D\uC2A4\uD2B8\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC74C`);
-          return;
-        }
+      if (error.isMerged && error.originalErrors) {
+        this.applyIndividualSuggestion(error, suggestion);
+        return;
       }
-      this.currentView.dispatch({
-        changes: {
-          from: fromPos,
-          to: toPos,
-          insert: suggestion
-        }
-      });
-      this.removeError(this.currentView, error.uniqueId);
+      this.applySingleSuggestion(error, suggestion);
+    } catch (err) {
+      Logger.error("\uC218\uC815 \uC81C\uC548 \uC801\uC6A9 \uC911 \uC624\uB958:", err);
+    }
+  }
+  /**
+   * 개별 교정 제안 적용 (병합된 오류에서 특정 부분만 교체)
+   */
+  static applyIndividualSuggestion(mergedError, suggestion) {
+    if (!mergedError.originalErrors || !this.currentView)
+      return;
+    const targetError = mergedError.originalErrors.find(
+      (originalError) => originalError.correction.corrected.includes(suggestion)
+    );
+    if (!targetError) {
+      Logger.warn(`\uC77C\uCE58\uD558\uB294 \uC6D0\uBCF8 \uC624\uB958\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC74C: ${suggestion}`);
+      return;
+    }
+    Logger.debug(`\u{1F3AF} \uAC1C\uBCC4 \uAD50\uC815 \uC801\uC6A9: "${targetError.correction.original}" \u2192 "${suggestion}" (${targetError.start}-${targetError.end})`);
+    this.applySingleSuggestion(targetError, suggestion);
+    mergedError.originalErrors = mergedError.originalErrors.filter((err) => err.uniqueId !== targetError.uniqueId);
+    if (mergedError.originalErrors.length === 0) {
+      this.removeError(this.currentView, mergedError.uniqueId);
+    } else {
+      this.updateMergedErrorAfterIndividualApplication(mergedError);
+    }
+  }
+  /**
+   * 단일 오류에 대한 교정 제안 적용
+   */
+  static applySingleSuggestion(error, suggestion) {
+    if (!this.currentView)
+      return;
+    const doc = this.currentView.state.doc;
+    const actualText = doc.sliceString(error.start, error.end);
+    Logger.debug(`\uD14D\uC2A4\uD2B8 \uAD50\uCCB4 \uC2DC\uB3C4: \uBC94\uC704[${error.start}-${error.end}], \uC608\uC0C1="${error.correction.original}", \uC2E4\uC81C="${actualText}", \uAD50\uCCB4="${suggestion}"`);
+    let fromPos = error.start;
+    let toPos = error.end;
+    if (actualText !== error.correction.original) {
+      Logger.warn(`\uD14D\uC2A4\uD2B8 \uBD88\uC77C\uCE58 \uAC10\uC9C0, \uC7AC\uAC80\uC0C9 \uC2DC\uB3C4: "${error.correction.original}"`);
+      const fullText = doc.toString();
+      const searchIndex = fullText.indexOf(error.correction.original, Math.max(0, error.start - 100));
+      if (searchIndex !== -1) {
+        fromPos = searchIndex;
+        toPos = searchIndex + error.correction.original.length;
+        Logger.debug(`\uC7AC\uAC80\uC0C9 \uC131\uACF5: \uC0C8 \uBC94\uC704[${fromPos}-${toPos}]`);
+      } else {
+        Logger.error(`\uC7AC\uAC80\uC0C9 \uC2E4\uD328: "${error.correction.original}" \uD14D\uC2A4\uD2B8\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC74C`);
+        return;
+      }
+    }
+    this.currentView.dispatch({
+      changes: {
+        from: fromPos,
+        to: toPos,
+        insert: suggestion
+      }
+    });
+    this.removeError(this.currentView, error.uniqueId);
+    const isKeepOpenMode = window.tooltipKeepOpenMode;
+    if (!isKeepOpenMode) {
       if (window.globalInlineTooltip) {
         window.globalInlineTooltip.hide();
       }
       this.clearFocusedError();
-      Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uD14D\uC2A4\uD2B8 \uAD50\uCCB4 \uC644\uB8CC - "${error.correction.original}" \u2192 "${suggestion}" (${fromPos}-${toPos})`);
-    } catch (err) {
-      Logger.error("\uD14D\uC2A4\uD2B8 \uAD50\uCCB4 \uC2E4\uD328:", err);
-      if (window.globalInlineTooltip) {
-        window.globalInlineTooltip.hide();
-      }
+    } else {
+      Logger.debug("\uD234\uD301 \uC720\uC9C0 \uBAA8\uB4DC: \uD234\uD301 \uC228\uAE30\uAE30 \uAC74\uB108\uB700");
     }
+    Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uAD50\uC815 \uC644\uB8CC - "${error.correction.original}" \u2192 "${suggestion}"`);
+  }
+  /**
+   * 개별 적용 후 병합된 오류 업데이트
+   */
+  static updateMergedErrorAfterIndividualApplication(mergedError) {
+    if (!mergedError.originalErrors || !this.currentView)
+      return;
+    const remainingErrors = mergedError.originalErrors;
+    const newStart = Math.min(...remainingErrors.map((err) => err.start));
+    const newEnd = Math.max(...remainingErrors.map((err) => err.end));
+    const doc = this.currentView.state.doc;
+    const newText = doc.sliceString(newStart, newEnd);
+    const remainingCorrected = [...new Set(
+      remainingErrors.flatMap((err) => err.correction.corrected)
+    )];
+    mergedError.start = newStart;
+    mergedError.end = newEnd;
+    mergedError.correction.original = newText;
+    mergedError.correction.corrected = remainingCorrected;
+    this.activeErrors.set(mergedError.uniqueId, mergedError);
+    const mergedErrors = [mergedError];
+    this.currentView.dispatch({
+      effects: addErrorDecorations.of({
+        errors: mergedErrors,
+        underlineStyle: "wavy",
+        underlineColor: "#ff0000"
+      })
+    });
+    if (window.globalInlineTooltip && window.globalInlineTooltip.visible) {
+      setTimeout(() => {
+        const errorElement = this.findErrorElement(mergedError);
+        if (errorElement && window.globalInlineTooltip) {
+          window.globalInlineTooltip.hide();
+          setTimeout(() => {
+            window.globalInlineTooltip.show(mergedError, errorElement, "click");
+          }, 50);
+        }
+      }, 100);
+    }
+    Logger.debug(`\u{1F504} \uBCD1\uD569\uB41C \uC624\uB958 \uC5C5\uB370\uC774\uD2B8: ${remainingErrors.length}\uAC1C \uC624\uB958 \uB0A8\uC74C, \uC0C8 \uBC94\uC704[${newStart}-${newEnd}], \uD234\uD301 \uC7AC\uD45C\uC2DC \uC608\uC57D`);
   }
   /**
    * 키보드 스코프 초기화
    */
   static initializeKeyboardScope() {
+    if (!this.app) {
+      Logger.warn("App \uC778\uC2A4\uD134\uC2A4\uAC00 \uC5C6\uC5B4 \uD0A4\uBCF4\uB4DC \uC2A4\uCF54\uD504\uB97C \uCD08\uAE30\uD654\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4");
+      return;
+    }
     if (this.keyboardScope) {
+      this.app.keymap.popScope(this.keyboardScope);
       this.keyboardScope = null;
     }
-    this.keyboardScope = new import_obsidian10.Scope();
-    this.keyboardScope.register(["Mod", "Shift"], "ArrowLeft", (evt) => {
-      if (!this.currentFocusedError)
+    this.keyboardScope = new import_obsidian10.Scope(this.app.scope);
+    this.keyboardScope.register(["Ctrl", "Shift"], "KeyJ", (evt) => {
+      Logger.log("Ctrl+Shift+J \uD0A4 \uAC10\uC9C0\uB428");
+      if (this.activeErrors.size === 0 || !this.currentView) {
+        Logger.log(`\uC870\uAC74 \uC2E4\uD328: activeErrors.size=${this.activeErrors.size}, currentView=${!!this.currentView}`);
+        return false;
+      }
+      const sortedErrors = this.getActiveErrors();
+      const currentIndex = this.currentFocusedError ? sortedErrors.findIndex((error) => error.uniqueId === this.currentFocusedError.uniqueId) : -1;
+      const nextIndex = (currentIndex + 1) % sortedErrors.length;
+      const nextError = sortedErrors[nextIndex];
+      if (nextError) {
+        if (window.globalInlineTooltip) {
+          window.globalInlineTooltip.hide();
+        }
+        this.setFocusedError(nextError);
+      }
+      Logger.log("\uB2E4\uC74C \uC624\uB958\uB85C \uC774\uB3D9 (Ctrl+Shift+J)");
+      evt.preventDefault();
+      return false;
+    });
+    this.keyboardScope.register(["Ctrl", "Shift"], "KeyK", (evt) => {
+      if (this.activeErrors.size === 0 || !this.currentView)
+        return false;
+      const sortedErrors = this.getActiveErrors();
+      const currentIndex = this.currentFocusedError ? sortedErrors.findIndex((error) => error.uniqueId === this.currentFocusedError.uniqueId) : -1;
+      const prevIndex = currentIndex <= 0 ? sortedErrors.length - 1 : currentIndex - 1;
+      const prevError = sortedErrors[prevIndex];
+      if (prevError) {
+        if (window.globalInlineTooltip) {
+          window.globalInlineTooltip.hide();
+        }
+        this.setFocusedError(prevError);
+      }
+      Logger.log("\uC774\uC804 \uC624\uB958\uB85C \uC774\uB3D9 (Ctrl+Shift+K)");
+      evt.preventDefault();
+      return false;
+    });
+    this.keyboardScope.register(["Ctrl", "Shift"], "KeyH", (evt) => {
+      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction)
         return false;
       const suggestions = this.currentFocusedError.correction.corrected;
+      if (!suggestions || suggestions.length === 0)
+        return false;
       this.currentSuggestionIndex = Math.max(0, this.currentSuggestionIndex - 1);
       this.updateTooltipHighlight();
-      Logger.debug(`\uC218\uC815 \uC81C\uC548 \uC120\uD0DD: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+      Logger.log(`\uC774\uC804 \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length}) - Ctrl+Shift+H`);
+      evt.preventDefault();
       return false;
     });
-    this.keyboardScope.register(["Mod", "Shift"], "ArrowRight", (evt) => {
-      if (!this.currentFocusedError)
+    this.keyboardScope.register(["Ctrl", "Shift"], "KeyL", (evt) => {
+      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction)
         return false;
       const suggestions = this.currentFocusedError.correction.corrected;
+      if (!suggestions || suggestions.length === 0)
+        return false;
       this.currentSuggestionIndex = Math.min(suggestions.length - 1, this.currentSuggestionIndex + 1);
       this.updateTooltipHighlight();
-      Logger.debug(`\uC218\uC815 \uC81C\uC548 \uC120\uD0DD: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+      Logger.log(`\uB2E4\uC74C \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length}) - Ctrl+Shift+L`);
+      evt.preventDefault();
       return false;
     });
-    this.keyboardScope.register(["Mod"], "Enter", (evt) => {
-      if (!this.currentFocusedError)
+    this.keyboardScope.register(["Ctrl", "Shift"], "Enter", (evt) => {
+      if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction)
         return false;
       const suggestions = this.currentFocusedError.correction.corrected;
+      if (!suggestions || suggestions.length === 0)
+        return false;
       const selectedSuggestion = suggestions[this.currentSuggestionIndex];
+      const originalText = this.currentFocusedError.correction.original;
       this.applySuggestion(this.currentFocusedError, selectedSuggestion);
       this.clearFocusedError();
+      Logger.log(`\uC81C\uC548 \uC801\uC6A9: "${originalText}" \u2192 "${selectedSuggestion}" (Ctrl+Shift+Enter)`);
+      evt.preventDefault();
       return false;
     });
-    this.keyboardScope.register([], "Escape", (evt) => {
-      if (!this.currentFocusedError)
+    this.keyboardScope.register(["Ctrl", "Shift"], "Escape", (evt) => {
+      if (!this.currentFocusedError || !this.currentView)
         return false;
       this.clearFocusedError();
+      Logger.log("\uD0A4\uBCF4\uB4DC \uB124\uBE44\uAC8C\uC774\uC158 \uD574\uC81C (Ctrl+Shift+Escape)");
+      evt.preventDefault();
       return false;
     });
-    Logger.debug("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uD0A4\uBCF4\uB4DC \uC2A4\uCF54\uD504 \uCD08\uAE30\uD654\uB428");
+    this.keyboardScope.register([], "F10", (evt) => {
+      if (this.activeErrors.size === 0 || !this.currentView)
+        return false;
+      const sortedErrors = this.getActiveErrors();
+      const currentIndex = this.currentFocusedError ? sortedErrors.findIndex((error) => error.uniqueId === this.currentFocusedError.uniqueId) : -1;
+      const nextIndex = (currentIndex + 1) % sortedErrors.length;
+      const nextError = sortedErrors[nextIndex];
+      if (nextError) {
+        if (window.globalInlineTooltip) {
+          window.globalInlineTooltip.hide();
+        }
+        this.setFocusedError(nextError);
+      }
+      Logger.log("\uB2E4\uC74C \uC624\uB958\uB85C \uC774\uB3D9 (F10)");
+      evt.preventDefault();
+      return false;
+    });
+    this.keyboardScope.register([], "F9", (evt) => {
+      if (this.activeErrors.size === 0 || !this.currentView)
+        return false;
+      const sortedErrors = this.getActiveErrors();
+      const currentIndex = this.currentFocusedError ? sortedErrors.findIndex((error) => error.uniqueId === this.currentFocusedError.uniqueId) : -1;
+      const prevIndex = currentIndex <= 0 ? sortedErrors.length - 1 : currentIndex - 1;
+      const prevError = sortedErrors[prevIndex];
+      if (prevError) {
+        if (window.globalInlineTooltip) {
+          window.globalInlineTooltip.hide();
+        }
+        this.setFocusedError(prevError);
+      }
+      Logger.log("\uC774\uC804 \uC624\uB958\uB85C \uC774\uB3D9 (F9)");
+      evt.preventDefault();
+      return false;
+    });
+    this.app.keymap.pushScope(this.keyboardScope);
+    Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uD0A4\uBCF4\uB4DC \uC2A4\uCF54\uD504 \uCD08\uAE30\uD654\uB428 - Ctrl+Shift+J/K(\uC624\uB958\uC774\uB3D9), H/L(\uC81C\uC548), Enter(\uC801\uC6A9), Esc(\uD574\uC81C), F9/F10(\uD14C\uC2A4\uD2B8\uC6A9)");
   }
   /**
    * 포커스된 오류 설정
    */
   static setFocusedError(error) {
+    if (this.currentFocusedError) {
+      this.removeFocusHighlight(this.currentFocusedError);
+    }
     this.currentFocusedError = error;
     this.currentSuggestionIndex = 0;
     this.highlightFocusedError(error);
-    if (this.keyboardScope && this.app) {
-      this.app.keymap.pushScope(this.keyboardScope);
-    }
+    this.moveEditorCursorToError(error);
     Logger.debug(`\uC624\uB958 \uD3EC\uCEE4\uC2A4 \uC124\uC815: ${error.correction.original}`);
   }
   /**
@@ -10340,9 +10855,6 @@ var InlineModeService = class {
     if (this.currentFocusedError) {
       this.removeFocusHighlight(this.currentFocusedError);
     }
-    if (this.keyboardScope && this.app) {
-      this.app.keymap.popScope(this.keyboardScope);
-    }
     this.currentFocusedError = null;
     this.currentSuggestionIndex = 0;
     if (window.globalInlineTooltip) {
@@ -10351,33 +10863,64 @@ var InlineModeService = class {
     Logger.debug("\uC624\uB958 \uD3EC\uCEE4\uC2A4 \uD574\uC81C");
   }
   /**
-   * 포커스된 오류 하이라이트
+   * 포커스된 오류에 대한 툴팁 표시
    */
-  static highlightFocusedError(error) {
-    const elements = document.querySelectorAll(`[data-error-id="${error.uniqueId}"]`);
-    elements.forEach((element) => {
-      const htmlElement = element;
-      htmlElement.style.outline = "2px solid var(--interactive-accent)";
-      htmlElement.style.outlineOffset = "2px";
-      htmlElement.style.borderRadius = "3px";
-      htmlElement.setAttribute("tabindex", "0");
-      htmlElement.focus();
-    });
-    Logger.debug(`\uC624\uB958 \uD558\uC774\uB77C\uC774\uD2B8 \uC801\uC6A9: ${error.uniqueId}`);
+  static showTooltipForFocusedError() {
+    if (!this.currentFocusedError)
+      return;
+    const elements = document.querySelectorAll(`[data-error-id="${this.currentFocusedError.uniqueId}"]`);
+    if (elements.length > 0) {
+      const targetElement = elements[0];
+      globalInlineTooltip.show(this.currentFocusedError, targetElement, "click");
+      Logger.debug(`\uD3EC\uCEE4\uC2A4\uB41C \uC624\uB958\uC5D0 \uD234\uD301 \uD45C\uC2DC: ${this.currentFocusedError.correction.original}`);
+    }
   }
   /**
-   * 포커스 하이라이트 제거
+   * 포커스된 오류 하이라이트 (CodeMirror 6 decoration 사용)
+   */
+  static highlightFocusedError(error) {
+    if (!this.currentView) {
+      Logger.warn("\uC5D0\uB514\uD130 \uBDF0\uAC00 \uC5C6\uC5B4 \uD3EC\uCEE4\uC2A4 \uD558\uC774\uB77C\uC774\uD2B8 \uC2E4\uD328");
+      return;
+    }
+    Logger.log(`\u{1F3AF} CodeMirror decoration\uC73C\uB85C \uD3EC\uCEE4\uC2A4 \uD558\uC774\uB77C\uC774\uD2B8: "${error.correction.original}" (${error.uniqueId}) at ${error.start}-${error.end}`);
+    const allErrors = this.getActiveErrors();
+    Logger.debug(`\u{1F3AF} \uD604\uC7AC \uD65C\uC131 \uC624\uB958\uB4E4: ${allErrors.map((e) => `"${e.correction.original}"(${e.uniqueId})[${e.start}-${e.end}]`).join(", ")}`);
+    this.currentView.dispatch({
+      effects: [setFocusedErrorDecoration.of(error.uniqueId)]
+    });
+    Logger.log(`\u{1F3AF} \uD3EC\uCEE4\uC2A4 decoration dispatch \uC644\uB8CC: ${error.uniqueId}`);
+  }
+  /**
+   * 에디터 커서를 오류 위치로 이동
+   */
+  static moveEditorCursorToError(error) {
+    if (!this.currentView)
+      return;
+    try {
+      const cursorPos = error.start;
+      this.currentView.dispatch({
+        selection: { anchor: cursorPos, head: cursorPos },
+        scrollIntoView: true
+      });
+      Logger.debug(`\uCEE4\uC11C \uC774\uB3D9: ${error.correction.original} (\uC704\uCE58: ${error.start})`);
+    } catch (e) {
+      Logger.warn("\uCEE4\uC11C \uC774\uB3D9 \uC2E4\uD328:", e);
+    }
+  }
+  /**
+   * 포커스 하이라이트 제거 (CodeMirror 6 decoration 사용)
    */
   static removeFocusHighlight(error) {
-    const elements = document.querySelectorAll(`[data-error-id="${error.uniqueId}"]`);
-    elements.forEach((element) => {
-      const htmlElement = element;
-      htmlElement.style.outline = "";
-      htmlElement.style.outlineOffset = "";
-      htmlElement.style.borderRadius = "";
-      htmlElement.removeAttribute("tabindex");
+    if (!this.currentView) {
+      Logger.warn("\uC5D0\uB514\uD130 \uBDF0\uAC00 \uC5C6\uC5B4 \uD3EC\uCEE4\uC2A4 \uD558\uC774\uB77C\uC774\uD2B8 \uC81C\uAC70 \uC2E4\uD328");
+      return;
+    }
+    Logger.debug(`\u{1F504} \uD3EC\uCEE4\uC2A4 decoration \uC81C\uAC70: "${error.correction.original}"`);
+    this.currentView.dispatch({
+      effects: [setFocusedErrorDecoration.of(null)]
     });
-    Logger.debug(`\uC624\uB958 \uD558\uC774\uB77C\uC774\uD2B8 \uC81C\uAC70: ${error.uniqueId}`);
+    Logger.debug(`\u{1F504} \uD3EC\uCEE4\uC2A4 decoration \uC81C\uAC70 \uC644\uB8CC`);
   }
   /**
    * 단어 경계 유효성 검사
@@ -10871,7 +11414,7 @@ var KoreanGrammarPlugin = class extends import_obsidian12.Plugin {
     }
     Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791");
     try {
-      InlineModeService.setEditorView(editorView, this.settings);
+      InlineModeService.setEditorView(editorView, this.settings, this.app);
       const fullText = editorView.state.doc.toString();
       if (!fullText.trim()) {
         new import_obsidian12.Notice("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
@@ -10887,7 +11430,8 @@ var KoreanGrammarPlugin = class extends import_obsidian12.Plugin {
         editorView,
         result.corrections,
         this.settings.inlineMode.underlineStyle,
-        this.settings.inlineMode.underlineColor
+        this.settings.inlineMode.underlineColor,
+        this.app
       );
       new import_obsidian12.Notice(`${result.corrections.length}\uAC1C\uC758 \uB9DE\uCDA4\uBC95 \uC624\uB958\uB97C \uBC1C\uACAC\uD588\uC2B5\uB2C8\uB2E4.`);
       Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: ${result.corrections.length}\uAC1C \uC624\uB958 \uD45C\uC2DC \uC644\uB8CC`);

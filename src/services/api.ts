@@ -382,8 +382,15 @@ export class SpellCheckApiService {
     Logger.log('최종 교정 배열:', corrections);
 
     // 만약 교정된 텍스트는 있지만 세부 오류 정보가 없는 경우
-    if (corrections.length === 0 && resultOutput !== originalText) {
+    // 단, 공백이나 줄바꿈 차이는 무시하고 실제 내용이 다른 경우만 처리
+    const normalizedOriginal = originalText.replace(/\s+/g, ' ').trim();
+    const normalizedResult = resultOutput.replace(/\s+/g, ' ').trim();
+    
+    if (corrections.length === 0 && normalizedResult !== normalizedOriginal) {
       Logger.log('세부 정보가 없어 diff 로직 사용');
+      Logger.debug('원본 (정규화):', normalizedOriginal);
+      Logger.debug('결과 (정규화):', normalizedResult);
+      
       // 간단한 diff 로직으로 변경된 부분 찾기
       const words = originalText.split(/(\s+)/);
       const revisedWords = resultOutput.split(/(\s+)/);
@@ -397,6 +404,8 @@ export class SpellCheckApiService {
           });
         }
       }
+    } else if (corrections.length === 0) {
+      Logger.log('맞춤법 오류 없음 - diff 로직 실행 안함');
     }
     
     return { resultOutput, corrections };
