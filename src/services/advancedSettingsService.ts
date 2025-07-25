@@ -1,4 +1,5 @@
 import { PluginSettings } from '../types/interfaces';
+import { DEFAULT_INLINE_MODE_SETTINGS } from './settings';
 import { Logger } from '../utils/logger';
 
 /**
@@ -360,7 +361,8 @@ export class AdvancedSettingsService {
         showTokenWarning: true,
         tokenWarningThreshold: 1500
       },
-      filterSingleCharErrors: true
+      filterSingleCharErrors: true,
+      inlineMode: DEFAULT_INLINE_MODE_SETTINGS
     };
 
     Logger.debug('설정을 기본값으로 재설정');

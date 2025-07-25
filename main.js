@@ -524,6 +524,110 @@ var init_logger = __esm({
   }
 });
 
+// src/services/settings.ts
+function loadApiConfig() {
+  try {
+    if (typeof require !== "undefined") {
+      const fs = require("fs");
+      const path = require("path");
+      const configPath = path.join(__dirname, "../../api-config.json");
+      if (fs.existsSync(configPath)) {
+        const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+        Logger.debug("\uB85C\uCEEC API \uC124\uC815 \uD30C\uC77C\uC744 \uB85C\uB4DC\uD588\uC2B5\uB2C8\uB2E4.");
+        return config;
+      }
+    }
+  } catch (error) {
+    Logger.debug("\uB85C\uCEEC API \uC124\uC815 \uD30C\uC77C\uC744 \uB85C\uB4DC\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uAE30\uBCF8\uAC12\uC744 \uC0AC\uC6A9\uD569\uB2C8\uB2E4.");
+  }
+  return {
+    apiKey: "",
+    // 사용자가 직접 입력해야 함
+    apiHost: "bareun-api.junlim.org",
+    apiPort: 443,
+    ignoredWords: [],
+    ai: DEFAULT_AI_SETTINGS,
+    filterSingleCharErrors: true,
+    // 기본적으로 한 글자 오류 필터링 활성화
+    inlineMode: DEFAULT_INLINE_MODE_SETTINGS
+  };
+}
+var DEFAULT_INLINE_MODE_SETTINGS, DEFAULT_SETTINGS, SettingsService;
+var init_settings = __esm({
+  "src/services/settings.ts"() {
+    init_aiModels();
+    init_logger();
+    DEFAULT_INLINE_MODE_SETTINGS = {
+      enabled: false,
+      // 베타 기능이므로 기본적으로 비활성화
+      showUnderline: true,
+      underlineStyle: "wavy",
+      underlineColor: "#ff0000",
+      showTooltipOnHover: true,
+      showTooltipOnClick: true,
+      autoCheck: false,
+      // 향후 구현 예정
+      autoCheckDelay: 2e3
+    };
+    DEFAULT_SETTINGS = loadApiConfig();
+    SettingsService = class {
+      /**
+       * 설정 유효성을 검사합니다.
+       * @param settings 검사할 설정
+       * @returns 유효성 검사 결과
+       */
+      static validateSettings(settings) {
+        const errors = [];
+        if (!settings.apiKey || settings.apiKey.trim() === "") {
+          errors.push("API \uD0A4\uAC00 \uC124\uC815\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+        }
+        if (!settings.apiHost || settings.apiHost.trim() === "") {
+          errors.push("API \uD638\uC2A4\uD2B8\uAC00 \uC124\uC815\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+        }
+        if (!settings.apiPort || settings.apiPort <= 0 || settings.apiPort > 65535) {
+          errors.push("\uC720\uD6A8\uD558\uC9C0 \uC54A\uC740 \uD3EC\uD2B8 \uBC88\uD638\uC785\uB2C8\uB2E4.");
+        }
+        return {
+          isValid: errors.length === 0,
+          errors
+        };
+      }
+      /**
+       * 설정을 기본값과 병합합니다.
+       * @param userSettings 사용자 설정
+       * @returns 병합된 설정
+       */
+      static mergeWithDefaults(userSettings) {
+        const mergedSettings = Object.assign({}, DEFAULT_SETTINGS, userSettings);
+        if (userSettings.ai) {
+          mergedSettings.ai = Object.assign({}, DEFAULT_AI_SETTINGS, userSettings.ai);
+        } else {
+          mergedSettings.ai = Object.assign({}, DEFAULT_AI_SETTINGS);
+        }
+        if (userSettings.inlineMode) {
+          mergedSettings.inlineMode = Object.assign({}, DEFAULT_INLINE_MODE_SETTINGS, userSettings.inlineMode);
+        } else {
+          mergedSettings.inlineMode = Object.assign({}, DEFAULT_INLINE_MODE_SETTINGS);
+        }
+        if (userSettings.filterSingleCharErrors === void 0) {
+          mergedSettings.filterSingleCharErrors = DEFAULT_SETTINGS.filterSingleCharErrors;
+        }
+        return mergedSettings;
+      }
+      /**
+       * API 엔드포인트 URL을 생성합니다.
+       * @param settings 플러그인 설정
+       * @returns API URL
+       */
+      static buildApiUrl(settings) {
+        const protocol = settings.apiPort === 443 ? "https" : "http";
+        const port = settings.apiPort === 443 || settings.apiPort === 80 ? "" : `:${settings.apiPort}`;
+        return `${protocol}://${settings.apiHost}${port}/bareun/api/v1/correct-error`;
+      }
+    };
+  }
+});
+
 // src/services/errorHandler.ts
 var errorHandler_exports = {};
 __export(errorHandler_exports, {
@@ -1139,6 +1243,7 @@ __export(advancedSettingsService_exports, {
 var AdvancedSettingsService;
 var init_advancedSettingsService = __esm({
   "src/services/advancedSettingsService.ts"() {
+    init_settings();
     init_logger();
     AdvancedSettingsService = class {
       /**
@@ -1366,7 +1471,8 @@ var init_advancedSettingsService = __esm({
             showTokenWarning: true,
             tokenWarningThreshold: 1500
           },
-          filterSingleCharErrors: true
+          filterSingleCharErrors: true,
+          inlineMode: DEFAULT_INLINE_MODE_SETTINGS
         };
         Logger.debug("\uC124\uC815\uC744 \uAE30\uBCF8\uAC12\uC73C\uB85C \uC7AC\uC124\uC815");
         return defaultSettings;
@@ -1517,88 +1623,8 @@ __export(main_exports, {
   default: () => KoreanGrammarPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian10 = require("obsidian");
-
-// src/services/settings.ts
-init_aiModels();
-init_logger();
-function loadApiConfig() {
-  try {
-    if (typeof require !== "undefined") {
-      const fs = require("fs");
-      const path = require("path");
-      const configPath = path.join(__dirname, "../../api-config.json");
-      if (fs.existsSync(configPath)) {
-        const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-        Logger.debug("\uB85C\uCEEC API \uC124\uC815 \uD30C\uC77C\uC744 \uB85C\uB4DC\uD588\uC2B5\uB2C8\uB2E4.");
-        return config;
-      }
-    }
-  } catch (error) {
-    Logger.debug("\uB85C\uCEEC API \uC124\uC815 \uD30C\uC77C\uC744 \uB85C\uB4DC\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uAE30\uBCF8\uAC12\uC744 \uC0AC\uC6A9\uD569\uB2C8\uB2E4.");
-  }
-  return {
-    apiKey: "",
-    // 사용자가 직접 입력해야 함
-    apiHost: "bareun-api.junlim.org",
-    apiPort: 443,
-    ignoredWords: [],
-    ai: DEFAULT_AI_SETTINGS,
-    filterSingleCharErrors: true
-    // 기본적으로 한 글자 오류 필터링 활성화
-  };
-}
-var DEFAULT_SETTINGS = loadApiConfig();
-var SettingsService = class {
-  /**
-   * 설정 유효성을 검사합니다.
-   * @param settings 검사할 설정
-   * @returns 유효성 검사 결과
-   */
-  static validateSettings(settings) {
-    const errors = [];
-    if (!settings.apiKey || settings.apiKey.trim() === "") {
-      errors.push("API \uD0A4\uAC00 \uC124\uC815\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
-    }
-    if (!settings.apiHost || settings.apiHost.trim() === "") {
-      errors.push("API \uD638\uC2A4\uD2B8\uAC00 \uC124\uC815\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
-    }
-    if (!settings.apiPort || settings.apiPort <= 0 || settings.apiPort > 65535) {
-      errors.push("\uC720\uD6A8\uD558\uC9C0 \uC54A\uC740 \uD3EC\uD2B8 \uBC88\uD638\uC785\uB2C8\uB2E4.");
-    }
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
-  }
-  /**
-   * 설정을 기본값과 병합합니다.
-   * @param userSettings 사용자 설정
-   * @returns 병합된 설정
-   */
-  static mergeWithDefaults(userSettings) {
-    const mergedSettings = Object.assign({}, DEFAULT_SETTINGS, userSettings);
-    if (userSettings.ai) {
-      mergedSettings.ai = Object.assign({}, DEFAULT_AI_SETTINGS, userSettings.ai);
-    } else {
-      mergedSettings.ai = Object.assign({}, DEFAULT_AI_SETTINGS);
-    }
-    if (userSettings.filterSingleCharErrors === void 0) {
-      mergedSettings.filterSingleCharErrors = DEFAULT_SETTINGS.filterSingleCharErrors;
-    }
-    return mergedSettings;
-  }
-  /**
-   * API 엔드포인트 URL을 생성합니다.
-   * @param settings 플러그인 설정
-   * @returns API URL
-   */
-  static buildApiUrl(settings) {
-    const protocol = settings.apiPort === 443 ? "https" : "http";
-    const port = settings.apiPort === 443 || settings.apiPort === 80 ? "" : `:${settings.apiPort}`;
-    return `${protocol}://${settings.apiHost}${port}/bareun/api/v1/correct-error`;
-  }
-};
+var import_obsidian12 = require("obsidian");
+init_settings();
 
 // src/orchestrator.ts
 var import_obsidian8 = require("obsidian");
@@ -2579,6 +2605,9 @@ var OptimizedSpellCheckService = class {
     return await this.apiService.analyzeMorphemes(text, settings);
   }
 };
+
+// src/orchestrator.ts
+init_settings();
 
 // src/services/ignoredWords.ts
 var IgnoredWordsService = class {
@@ -8277,6 +8306,9 @@ var ModernSettingsTab = class extends import_obsidian9.PluginSettingTab {
       case "performance":
         this.createMonitoringTab(this.contentContainer);
         break;
+      case "beta":
+        this.createBetaFeaturesTab(this.contentContainer);
+        break;
     }
   }
   /**
@@ -8303,7 +8335,8 @@ var ModernSettingsTab = class extends import_obsidian9.PluginSettingTab {
       { id: "basic", label: "\uAE30\uBCF8 \uC124\uC815", icon: "\u2699\uFE0F", desc: "API \uD0A4 \uBC0F \uAE30\uBCF8 \uC635\uC158" },
       { id: "ai", label: "AI \uC124\uC815", icon: "\u{1F916}", desc: "AI \uC790\uB3D9 \uAD50\uC815 \uAE30\uB2A5" },
       { id: "advanced", label: "\uACE0\uAE09 \uAD00\uB9AC", icon: "\u{1F527}", desc: "\uBC31\uC5C5, \uBCF5\uC6D0, \uAC80\uC99D" },
-      { id: "performance", label: "\uC131\uB2A5 \uBAA8\uB2C8\uD130\uB9C1", icon: "\u{1F4CA}", desc: "\uD1B5\uACC4 \uBC0F \uCD5C\uC801\uD654" }
+      { id: "performance", label: "\uC131\uB2A5 \uBAA8\uB2C8\uD130\uB9C1", icon: "\u{1F4CA}", desc: "\uD1B5\uACC4 \uBC0F \uCD5C\uC801\uD654" },
+      { id: "beta", label: "\uBCA0\uD0C0 \uAE30\uB2A5", icon: "\u{1F9EA}", desc: "\uC778\uB77C\uC778 \uBAA8\uB4DC \uB4F1 \uC2E4\uD5D8\uC801 \uAE30\uB2A5" }
     ];
     tabs.forEach((tab) => {
       const isActive = this.currentTab === tab.id;
@@ -9304,15 +9337,1429 @@ var ModernSettingsTab = class extends import_obsidian9.PluginSettingTab {
       });
     }
   }
+  /**
+   * 베타 기능 탭을 생성합니다
+   */
+  createBetaFeaturesTab(containerEl) {
+    this.createBetaWarningSection(containerEl);
+    this.createInlineModeSection(containerEl);
+  }
+  /**
+   * 베타 기능 경고 섹션을 생성합니다
+   */
+  createBetaWarningSection(containerEl) {
+    const section = containerEl.createEl("div", { cls: "ksc-section" });
+    section.createEl("h3", {
+      text: "\u26A0\uFE0F \uBCA0\uD0C0 \uAE30\uB2A5 \uC548\uB0B4",
+      cls: "ksc-section-title"
+    });
+    const warningBox = section.createEl("div", {
+      cls: "ksc-warning-box",
+      attr: {
+        style: "background: rgba(255, 196, 0, 0.1); border: 1px solid rgba(255, 196, 0, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 20px;"
+      }
+    });
+    warningBox.createEl("div", {
+      text: "\u{1F9EA} \uC2E4\uD5D8\uC801 \uAE30\uB2A5",
+      attr: { style: "font-weight: 600; color: var(--text-warning); margin-bottom: 8px;" }
+    });
+    const warnings = [
+      "\uC774 \uC139\uC158\uC758 \uAE30\uB2A5\uB4E4\uC740 \uBCA0\uD0C0 \uBC84\uC804\uC785\uB2C8\uB2E4.",
+      "\uC77C\uBD80 \uAE30\uB2A5\uC774 \uC608\uC0C1\uACFC \uB2E4\uB974\uAC8C \uB3D9\uC791\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+      "\uD53C\uB4DC\uBC31\uACFC \uBC84\uADF8 \uB9AC\uD3EC\uD2B8\uB294 \uC5B8\uC81C\uB098 \uD658\uC601\uD569\uB2C8\uB2E4.",
+      "\uC548\uC815\uD654 \uD6C4 \uC815\uC2DD \uAE30\uB2A5\uC73C\uB85C \uC2B9\uACA9\uB420 \uC608\uC815\uC785\uB2C8\uB2E4."
+    ];
+    warnings.forEach((warning) => {
+      warningBox.createEl("div", {
+        text: `\u2022 ${warning}`,
+        attr: { style: "color: var(--text-muted); margin-bottom: 4px; font-size: 14px;" }
+      });
+    });
+  }
+  /**
+   * 인라인 모드 설정 섹션을 생성합니다
+   */
+  createInlineModeSection(containerEl) {
+    const section = containerEl.createEl("div", { cls: "ksc-section" });
+    section.createEl("h3", {
+      text: "\u{1F4DD} \uC778\uB77C\uC778 \uBAA8\uB4DC",
+      cls: "ksc-section-title"
+    });
+    const descBox = section.createEl("div", {
+      cls: "ksc-info-box",
+      attr: {
+        style: "background: var(--background-secondary); border-radius: 8px; padding: 16px; margin-bottom: 20px;"
+      }
+    });
+    descBox.createEl("div", {
+      text: "\u{1F3AF} \uC5D0\uB514\uD130 \uB0B4 \uC2E4\uC2DC\uAC04 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC",
+      attr: { style: "font-weight: 600; margin-bottom: 8px;" }
+    });
+    const features = [
+      "\uC624\uD0C0 \uD14D\uC2A4\uD2B8\uC5D0 \uBC11\uC904 \uD45C\uC2DC",
+      "\uD638\uBC84/\uD074\uB9AD\uC73C\uB85C \uC218\uC815 \uC81C\uC548 \uD655\uC778",
+      "\uC0AC\uC6A9\uC790 \uD3B8\uC9D1 \uC2DC \uBC11\uC904 \uC790\uB3D9 \uC81C\uAC70",
+      "Command Palette\uB85C \uAC80\uC0AC \uC2E4\uD589"
+    ];
+    features.forEach((feature) => {
+      descBox.createEl("div", {
+        text: `\u2022 ${feature}`,
+        attr: { style: "color: var(--text-muted); margin-bottom: 4px;" }
+      });
+    });
+    new import_obsidian9.Setting(section).setName("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654").setDesc("\uC5D0\uB514\uD130 \uB0B4\uC5D0\uC11C \uC2E4\uC2DC\uAC04\uC73C\uB85C \uB9DE\uCDA4\uBC95 \uC624\uB958\uB97C \uD45C\uC2DC\uD569\uB2C8\uB2E4.").addToggle((toggle) => toggle.setValue(this.plugin.settings.inlineMode.enabled).onChange(async (value) => {
+      this.plugin.settings.inlineMode.enabled = value;
+      await this.plugin.saveSettings();
+      Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 ${value ? "\uD65C\uC131\uD654" : "\uBE44\uD65C\uC131\uD654"}\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
+      new import_obsidian9.Notice(`\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 ${value ? "\uD65C\uC131\uD654" : "\uBE44\uD65C\uC131\uD654"}\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
+    }));
+    if (this.plugin.settings.inlineMode.enabled) {
+      new import_obsidian9.Setting(section).setName("\uBC11\uC904 \uC2A4\uD0C0\uC77C").setDesc("\uC624\uB958 \uD45C\uC2DC\uC5D0 \uC0AC\uC6A9\uD560 \uBC11\uC904 \uC2A4\uD0C0\uC77C\uC744 \uC120\uD0DD\uD558\uC138\uC694.").addDropdown((dropdown) => dropdown.addOption("wavy", "\uBB3C\uACB0\uC120 (\uCD94\uCC9C)").addOption("solid", "\uC9C1\uC120").addOption("dotted", "\uC810\uC120").addOption("dashed", "\uD30C\uC120").setValue(this.plugin.settings.inlineMode.underlineStyle).onChange(async (value) => {
+        this.plugin.settings.inlineMode.underlineStyle = value;
+        await this.plugin.saveSettings();
+      }));
+      new import_obsidian9.Setting(section).setName("\uBC11\uC904 \uC0C9\uC0C1").setDesc("\uC624\uB958 \uD45C\uC2DC\uC5D0 \uC0AC\uC6A9\uD560 \uBC11\uC904 \uC0C9\uC0C1\uC744 \uC124\uC815\uD558\uC138\uC694.").addText((text) => text.setPlaceholder("#ff0000").setValue(this.plugin.settings.inlineMode.underlineColor).onChange(async (value) => {
+        if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
+          this.plugin.settings.inlineMode.underlineColor = value;
+          await this.plugin.saveSettings();
+        }
+      }));
+      new import_obsidian9.Setting(section).setName("\uD638\uBC84 \uC2DC \uD234\uD301 \uD45C\uC2DC").setDesc("\uC624\uB958\uC5D0 \uB9C8\uC6B0\uC2A4\uB97C \uC62C\uB838\uC744 \uB54C \uC218\uC815 \uC81C\uC548\uC744 \uD45C\uC2DC\uD569\uB2C8\uB2E4.").addToggle((toggle) => toggle.setValue(this.plugin.settings.inlineMode.showTooltipOnHover).onChange(async (value) => {
+        this.plugin.settings.inlineMode.showTooltipOnHover = value;
+        await this.plugin.saveSettings();
+      }));
+      new import_obsidian9.Setting(section).setName("\uD074\uB9AD \uC2DC \uD234\uD301 \uD45C\uC2DC").setDesc("\uC624\uB958\uB97C \uD074\uB9AD\uD588\uC744 \uB54C \uC218\uC815 \uC81C\uC548\uC744 \uD45C\uC2DC\uD569\uB2C8\uB2E4.").addToggle((toggle) => toggle.setValue(this.plugin.settings.inlineMode.showTooltipOnClick).onChange(async (value) => {
+        this.plugin.settings.inlineMode.showTooltipOnClick = value;
+        await this.plugin.saveSettings();
+      }));
+    }
+  }
 };
 
 // main.ts
 init_logger();
-(0, import_obsidian10.addIcon)(
+
+// src/services/inlineModeService.ts
+var import_view = require("@codemirror/view");
+var import_state = require("@codemirror/state");
+init_logger();
+
+// src/ui/inlineTooltip.ts
+init_logger();
+var InlineTooltip = class {
+  constructor() {
+    this.tooltip = null;
+    this.currentError = null;
+    this.isVisible = false;
+  }
+  /**
+   * 툴팁 표시
+   */
+  show(error, targetElement, triggerType) {
+    var _a;
+    if (this.isVisible && ((_a = this.currentError) == null ? void 0 : _a.uniqueId) === error.uniqueId) {
+      Logger.debug(`\uC778\uB77C\uC778 \uD234\uD301 \uC774\uBBF8 \uD45C\uC2DC \uC911: ${error.correction.original}`);
+      return;
+    }
+    this.hide();
+    this.currentError = error;
+    this.createTooltip(error, targetElement, triggerType);
+    this.positionTooltip(targetElement);
+    this.isVisible = true;
+    Logger.debug(`\uC778\uB77C\uC778 \uD234\uD301 \uD45C\uC2DC: ${error.correction.original} (${triggerType})`);
+  }
+  /**
+   * 툴팁 숨김
+   */
+  hide() {
+    if (this.tooltip) {
+      try {
+        if (this.tooltip._cleanup) {
+          this.tooltip._cleanup();
+        }
+        if (this.tooltip.parentNode) {
+          this.tooltip.parentNode.removeChild(this.tooltip);
+        } else {
+          this.tooltip.remove();
+        }
+        Logger.debug("\uC778\uB77C\uC778 \uD234\uD301 \uC228\uAE40 \uC644\uB8CC");
+      } catch (err) {
+        Logger.warn("\uD234\uD301 \uC81C\uAC70 \uC911 \uC624\uB958:", err);
+      } finally {
+        this.tooltip = null;
+        this.currentError = null;
+        this.isVisible = false;
+      }
+    }
+  }
+  /**
+   * 툴팁이 표시 중인지 확인
+   */
+  get visible() {
+    return this.isVisible;
+  }
+  /**
+   * 툴팁 생성
+   */
+  createTooltip(error, targetElement, triggerType) {
+    this.tooltip = document.createElement("div");
+    this.tooltip.className = "korean-grammar-inline-tooltip";
+    this.tooltip.style.cssText = `
+      position: absolute;
+      background: var(--background-primary);
+      border: 1px solid var(--background-modifier-border);
+      border-radius: 6px;
+      padding: 0;
+      box-shadow: var(--shadow-s);
+      z-index: 1000;
+      font-size: 13px;
+      color: var(--text-normal);
+      display: flex;
+      flex-direction: column;
+      min-width: 200px;
+      max-width: 400px;
+    `;
+    const mainContent = this.tooltip.createEl("div", { cls: "tooltip-main-content" });
+    mainContent.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      white-space: nowrap;
+    `;
+    const errorWord = mainContent.createEl("span", {
+      text: error.correction.original,
+      cls: "error-word"
+    });
+    errorWord.style.cssText = `
+      color: var(--text-error);
+      font-weight: 600;
+      background: rgba(255, 0, 0, 0.1);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 12px;
+    `;
+    const arrow = mainContent.createEl("span", { text: "\u2192" });
+    arrow.style.cssText = `
+      color: var(--text-muted);
+      font-weight: bold;
+    `;
+    const suggestionsList = mainContent.createEl("div", { cls: "suggestions-list" });
+    suggestionsList.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    `;
+    error.correction.corrected.forEach((suggestion, index) => {
+      const suggestionButton = suggestionsList.createEl("button", {
+        text: suggestion,
+        cls: "suggestion-button"
+      });
+      suggestionButton.style.cssText = `
+        background: var(--interactive-normal);
+        border: 1px solid var(--background-modifier-border);
+        border-radius: 4px;
+        padding: 4px 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: var(--text-normal);
+        font-size: 12px;
+        white-space: nowrap;
+      `;
+      suggestionButton.addEventListener("mouseenter", () => {
+        suggestionButton.style.background = "var(--interactive-hover) !important";
+        suggestionButton.style.color = "var(--text-normal) !important";
+        suggestionButton.style.transform = "translateY(-1px)";
+        suggestionButton.style.border = "1px solid var(--background-modifier-border) !important";
+        suggestionButton.setAttribute("data-hovered", "true");
+      });
+      suggestionButton.addEventListener("mouseleave", () => {
+        suggestionButton.removeAttribute("data-hovered");
+        suggestionButton.style.transform = "translateY(0)";
+        if (window.InlineModeService) {
+          window.InlineModeService.updateTooltipHighlight();
+        }
+      });
+      suggestionButton.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.applySuggestion(error, suggestion, targetElement);
+      });
+    });
+    const actionsContainer = mainContent.createEl("div", { cls: "actions-container" });
+    actionsContainer.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 8px;
+      opacity: 0.6;
+    `;
+    const checkIcon = actionsContainer.createEl("span", {
+      text: "\u2713",
+      cls: "check-icon"
+    });
+    checkIcon.style.cssText = `
+      color: var(--text-success);
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      padding: 2px;
+      border-radius: 3px;
+      user-select: none;
+    `;
+    checkIcon.addEventListener("mouseenter", () => {
+      checkIcon.style.backgroundColor = "var(--background-modifier-hover)";
+      checkIcon.style.transform = "scale(1.1)";
+      checkIcon.style.opacity = "1";
+    });
+    checkIcon.addEventListener("mouseleave", () => {
+      checkIcon.style.backgroundColor = "transparent";
+      checkIcon.style.transform = "scale(1)";
+      checkIcon.style.opacity = "0.8";
+    });
+    checkIcon.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.ignoreError(error, targetElement);
+    });
+    const closeIcon = actionsContainer.createEl("span", {
+      text: "\xD7",
+      cls: "close-icon"
+    });
+    closeIcon.style.cssText = `
+      color: var(--text-muted);
+      font-size: 20px;
+      font-weight: 400;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      padding: 2px;
+      border-radius: 3px;
+      user-select: none;
+      line-height: 1;
+    `;
+    closeIcon.addEventListener("mouseenter", () => {
+      closeIcon.style.backgroundColor = "var(--background-modifier-hover)";
+      closeIcon.style.color = "var(--text-normal)";
+      closeIcon.style.transform = "scale(1.1)";
+    });
+    closeIcon.addEventListener("mouseleave", () => {
+      closeIcon.style.backgroundColor = "transparent";
+      closeIcon.style.color = "var(--text-muted)";
+      closeIcon.style.transform = "scale(1)";
+    });
+    closeIcon.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.hide();
+    });
+    const reasonArea = this.tooltip.createEl("div", { cls: "tooltip-reason-area" });
+    reasonArea.style.cssText = `
+      padding: 6px 12px;
+      border-top: 1px solid var(--background-modifier-border);
+      font-size: 10px;
+      color: var(--text-muted);
+      line-height: 1.3;
+      opacity: 0.8;
+      background: var(--background-secondary);
+      border-radius: 0 0 6px 6px;
+      text-align: center;
+    `;
+    const reason = this.generateErrorReason(error);
+    reasonArea.textContent = reason;
+    this.tooltip.style.position = "fixed";
+    this.tooltip.style.left = "-9999px";
+    this.tooltip.style.top = "-9999px";
+    this.tooltip.style.visibility = "hidden";
+    document.body.appendChild(this.tooltip);
+    if (triggerType === "hover") {
+      let hideTimeout;
+      let isHovering = false;
+      const startHideTimer = () => {
+        hideTimeout = setTimeout(() => {
+          if (!isHovering) {
+            this.hide();
+          }
+        }, 500);
+      };
+      const cancelHideTimer = () => {
+        if (hideTimeout) {
+          clearTimeout(hideTimeout);
+          hideTimeout = void 0;
+        }
+      };
+      const onTargetMouseEnter = () => {
+        isHovering = true;
+        cancelHideTimer();
+      };
+      const onTargetMouseLeave = () => {
+        isHovering = false;
+        startHideTimer();
+      };
+      const onTooltipMouseEnter = () => {
+        isHovering = true;
+        cancelHideTimer();
+      };
+      const onTooltipMouseLeave = () => {
+        isHovering = false;
+        startHideTimer();
+      };
+      targetElement.addEventListener("mouseenter", onTargetMouseEnter);
+      targetElement.addEventListener("mouseleave", onTargetMouseLeave);
+      this.tooltip.addEventListener("mouseenter", onTooltipMouseEnter);
+      this.tooltip.addEventListener("mouseleave", onTooltipMouseLeave);
+      this.tooltip._cleanup = () => {
+        var _a, _b;
+        targetElement.removeEventListener("mouseenter", onTargetMouseEnter);
+        targetElement.removeEventListener("mouseleave", onTargetMouseLeave);
+        (_a = this.tooltip) == null ? void 0 : _a.removeEventListener("mouseenter", onTooltipMouseEnter);
+        (_b = this.tooltip) == null ? void 0 : _b.removeEventListener("mouseleave", onTooltipMouseLeave);
+        if (hideTimeout)
+          clearTimeout(hideTimeout);
+      };
+    } else {
+      setTimeout(() => {
+        document.addEventListener("click", this.handleOutsideClick.bind(this), { once: true });
+      }, 0);
+    }
+  }
+  /**
+   * 툴팁 위치 조정 (Obsidian API 참고 개선 버전)
+   */
+  positionTooltip(targetElement) {
+    if (!this.tooltip)
+      return;
+    if (!this.tooltip.parentNode) {
+      document.body.appendChild(this.tooltip);
+    }
+    const targetRect = targetElement.getBoundingClientRect();
+    const tooltipRect = this.tooltip.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const gap = 8;
+    const minSpacing = 12;
+    let finalLeft = 0;
+    let finalTop = 0;
+    let selectedPlacement = "bottom";
+    const spaces = {
+      bottom: viewportHeight - targetRect.bottom - gap,
+      top: targetRect.top - gap,
+      right: viewportWidth - targetRect.right - gap,
+      left: targetRect.left - gap
+    };
+    const placements = [
+      {
+        name: "bottom",
+        available: spaces.bottom >= tooltipRect.height,
+        left: targetRect.left + targetRect.width / 2 - tooltipRect.width / 2,
+        top: targetRect.bottom + gap
+      },
+      {
+        name: "top",
+        available: spaces.top >= tooltipRect.height,
+        left: targetRect.left + targetRect.width / 2 - tooltipRect.width / 2,
+        top: targetRect.top - tooltipRect.height - gap
+      },
+      {
+        name: "right",
+        available: spaces.right >= tooltipRect.width,
+        left: targetRect.right + gap,
+        top: targetRect.top + targetRect.height / 2 - tooltipRect.height / 2
+      },
+      {
+        name: "left",
+        available: spaces.left >= tooltipRect.width,
+        left: targetRect.left - tooltipRect.width - gap,
+        top: targetRect.top + targetRect.height / 2 - tooltipRect.height / 2
+      }
+    ];
+    const availablePlacement = placements.find((p) => p.available);
+    if (availablePlacement) {
+      selectedPlacement = availablePlacement.name;
+      finalLeft = availablePlacement.left;
+      finalTop = availablePlacement.top;
+    } else {
+      const maxSpaceEntry = Object.entries(spaces).reduce(
+        (max, [key, value]) => value > max.value ? { key, value } : max,
+        { key: "bottom", value: spaces.bottom }
+      );
+      const forcedPlacement = placements.find((p) => p.name === maxSpaceEntry.key);
+      if (forcedPlacement) {
+        selectedPlacement = forcedPlacement.name;
+        finalLeft = forcedPlacement.left;
+        finalTop = forcedPlacement.top;
+      }
+    }
+    if (selectedPlacement === "bottom" || selectedPlacement === "top") {
+      if (finalLeft < minSpacing) {
+        finalLeft = minSpacing;
+      } else if (finalLeft + tooltipRect.width > viewportWidth - minSpacing) {
+        finalLeft = viewportWidth - tooltipRect.width - minSpacing;
+      }
+    }
+    if (selectedPlacement === "left" || selectedPlacement === "right") {
+      if (finalTop < minSpacing) {
+        finalTop = minSpacing;
+      } else if (finalTop + tooltipRect.height > viewportHeight - minSpacing) {
+        finalTop = viewportHeight - tooltipRect.height - minSpacing;
+      }
+    }
+    finalLeft = Math.max(minSpacing, Math.min(finalLeft, viewportWidth - tooltipRect.width - minSpacing));
+    finalTop = Math.max(minSpacing, Math.min(finalTop, viewportHeight - tooltipRect.height - minSpacing));
+    this.tooltip.style.position = "fixed";
+    this.tooltip.style.left = `${finalLeft}px`;
+    this.tooltip.style.top = `${finalTop}px`;
+    this.tooltip.style.zIndex = "1000";
+    this.tooltip.style.visibility = "visible";
+    Logger.debug(`\uD234\uD301 \uC704\uCE58 \uACC4\uC0B0 (Obsidian \uC2A4\uD0C0\uC77C): placement=${selectedPlacement}, left=${finalLeft}, top=${finalTop}`);
+    Logger.debug(`\uD0C0\uAC9F \uC704\uCE58: (${targetRect.left}, ${targetRect.top}, ${targetRect.width}x${targetRect.height})`);
+    Logger.debug(`\uD234\uD301 \uD06C\uAE30: ${tooltipRect.width}x${tooltipRect.height}, \uBDF0\uD3EC\uD2B8: ${viewportWidth}x${viewportHeight}`);
+    Logger.debug(`\uACF5\uAC04 \uBD84\uC11D: bottom=${spaces.bottom}, top=${spaces.top}, right=${spaces.right}, left=${spaces.left}`);
+  }
+  /**
+   * 수정 제안 적용
+   */
+  applySuggestion(error, suggestion, targetElement) {
+    Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC218\uC815 \uC81C\uC548 \uC801\uC6A9 - "${error.correction.original}" \u2192 "${suggestion}"`);
+    if (window.InlineModeService) {
+      window.InlineModeService.applySuggestion(error, suggestion);
+    }
+    this.hide();
+  }
+  /**
+   * 오류 무시
+   */
+  ignoreError(error, targetElement) {
+    Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC624\uB958 \uBB34\uC2DC - "${error.correction.original}"`);
+    if (window.InlineModeService) {
+      window.InlineModeService.removeError(null, error.uniqueId);
+    }
+    this.hide();
+  }
+  /**
+   * 바깥 클릭 처리
+   */
+  handleOutsideClick(event) {
+    if (this.tooltip && !this.tooltip.contains(event.target)) {
+      this.hide();
+    }
+  }
+  /**
+   * 오류 이유 생성
+   */
+  generateErrorReason(error) {
+    const original = error.correction.original;
+    const corrected = error.correction.corrected;
+    if (corrected.length === 0) {
+      return "\uC218\uC815 \uC81C\uC548\uC774 \uC5C6\uB294 \uC624\uB958\uC785\uB2C8\uB2E4";
+    }
+    if (original.includes(" ") !== corrected[0].includes(" ")) {
+      return "\uB744\uC5B4\uC4F0\uAE30 \uC624\uB958";
+    }
+    if (Math.abs(original.length - corrected[0].length) <= 2) {
+      return "\uB9DE\uCDA4\uBC95 \uC624\uB958";
+    }
+    if (original.length !== corrected[0].length) {
+      return "\uBB38\uBC95 \uC624\uB958";
+    }
+    return "\uC5B8\uC5B4 \uD45C\uD604 \uAC1C\uC120";
+  }
+};
+var globalInlineTooltip = new InlineTooltip();
+window.globalInlineTooltip = globalInlineTooltip;
+
+// src/services/inlineModeService.ts
+var import_obsidian10 = require("obsidian");
+var addErrorDecorations = import_state.StateEffect.define({
+  map: (val, change) => val
+});
+var removeErrorDecorations = import_state.StateEffect.define({
+  map: (val, change) => val
+});
+var clearAllErrorDecorations = import_state.StateEffect.define({
+  map: (val, change) => val
+});
+var errorDecorationField = import_state.StateField.define({
+  create() {
+    return import_view.Decoration.none;
+  },
+  update(decorations, tr) {
+    decorations = decorations.map(tr.changes);
+    if (tr.docChanged) {
+      const changedRanges = [];
+      tr.changes.iterChanges((fromA, toA, fromB, toB) => {
+        changedRanges.push({ from: fromA, to: toA });
+      });
+      if (changedRanges.length > 0) {
+        decorations = decorations.update({
+          filter: (from, to, decoration) => {
+            return !changedRanges.some(
+              (range) => from >= range.from && from <= range.to || to >= range.from && to <= range.to || from <= range.from && to >= range.to
+            );
+          }
+        });
+        InlineModeService.removeErrorsInRanges(changedRanges);
+        Logger.debug(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uD14D\uC2A4\uD2B8 \uBCC0\uACBD\uC73C\uB85C \uC624\uB958 \uC81C\uAC70\uB428 (${changedRanges.length}\uAC1C \uBC94\uC704)`);
+      }
+    }
+    for (let effect of tr.effects) {
+      if (effect.is(addErrorDecorations)) {
+        const { errors, underlineStyle, underlineColor } = effect.value;
+        const newDecorations = errors.map((error) => {
+          return import_view.Decoration.mark({
+            class: "korean-grammar-error-inline",
+            attributes: {
+              "data-error-id": error.uniqueId,
+              "data-original": error.correction.original,
+              "data-corrected": JSON.stringify(error.correction.corrected),
+              "role": "button",
+              "tabindex": "0",
+              "style": `
+                text-decoration-line: underline !important;
+                text-decoration-style: ${underlineStyle} !important;
+                text-decoration-color: ${underlineColor} !important;
+                text-decoration-thickness: 2px !important;
+                background-color: rgba(255, 0, 0, 0.05) !important;
+                cursor: pointer !important;
+              `
+            }
+          }).range(error.start, error.end);
+        });
+        decorations = decorations.update({
+          add: newDecorations,
+          sort: true
+        });
+      } else if (effect.is(removeErrorDecorations)) {
+        const errorIds = effect.value;
+        decorations = decorations.update({
+          filter: (from, to, decoration) => {
+            var _a;
+            const errorId = (_a = decoration.spec.attributes) == null ? void 0 : _a["data-error-id"];
+            return errorId ? !errorIds.includes(errorId) : true;
+          }
+        });
+      } else if (effect.is(clearAllErrorDecorations)) {
+        decorations = import_view.Decoration.none;
+      }
+    }
+    return decorations;
+  },
+  provide: (field) => import_view.EditorView.decorations.from(field)
+});
+var InlineModeService = class {
+  /**
+   * 에디터 뷰 및 설정 초기화
+   */
+  static setEditorView(view, settings, app) {
+    this.currentView = view;
+    if (settings) {
+      this.settings = settings;
+    }
+    if (app) {
+      this.app = app;
+    }
+    this.setupEventListeners(view);
+    this.initializeKeyboardScope();
+    Logger.debug("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC5D0\uB514\uD130 \uBDF0 \uC124\uC815\uB428");
+  }
+  /**
+   * 이벤트 리스너 설정 (겹치는 오류 영역 처리 개선)
+   */
+  static setupEventListeners(view) {
+    const editorDOM = view.dom;
+    editorDOM.addEventListener("mouseenter", (e) => {
+      var _a;
+      const target = e.target;
+      if (target.classList.contains("korean-grammar-error-inline")) {
+        const errorId = target.getAttribute("data-error-id");
+        if (errorId && this.activeErrors.has(errorId)) {
+          const error = this.activeErrors.get(errorId);
+          if (((_a = this.currentHoveredError) == null ? void 0 : _a.uniqueId) === errorId) {
+            Logger.debug(`\uC774\uBBF8 \uD638\uBC84 \uC911\uC778 \uC624\uB958: ${error.correction.original}`);
+            return;
+          }
+          this.clearHoverTimeout();
+          Logger.debug(`\uC0C8\uB85C\uC6B4 \uC624\uB958 \uD638\uBC84 \uC2DC\uC791: "${error.correction.original}" (ID: ${errorId})`);
+          this.hoverTimeout = setTimeout(() => {
+            this.currentHoveredError = error;
+            this.handleErrorHover(error, target);
+          }, 300);
+        }
+      }
+    }, true);
+    editorDOM.addEventListener("mouseleave", (e) => {
+      var _a;
+      const target = e.target;
+      if (target.classList.contains("korean-grammar-error-inline")) {
+        const errorId = target.getAttribute("data-error-id");
+        if (((_a = this.currentHoveredError) == null ? void 0 : _a.uniqueId) === errorId) {
+          Logger.debug(`\uC624\uB958 \uD638\uBC84 \uC885\uB8CC: "${this.currentHoveredError.correction.original}" (ID: ${errorId})`);
+          this.clearHoverTimeout();
+          setTimeout(() => {
+            var _a2;
+            if (((_a2 = this.currentHoveredError) == null ? void 0 : _a2.uniqueId) === errorId) {
+              this.currentHoveredError = null;
+            }
+          }, 150);
+        }
+      }
+    }, true);
+    editorDOM.addEventListener("click", (e) => {
+      try {
+        const target = e.target;
+        if (target && target.classList && target.classList.contains("korean-grammar-error-inline")) {
+          e.preventDefault();
+          e.stopPropagation();
+          const errorId = target.getAttribute("data-error-id");
+          if (errorId && this.activeErrors.has(errorId)) {
+            const error = this.activeErrors.get(errorId);
+            if (error) {
+              this.handleErrorClick(error, target);
+            }
+          }
+        }
+      } catch (err) {
+        Logger.error("\uD074\uB9AD \uC774\uBCA4\uD2B8 \uCC98\uB9AC \uC911 \uC624\uB958:", err);
+      }
+    }, true);
+    editorDOM.addEventListener("focus", (e) => {
+      const target = e.target;
+      if (target.classList.contains("korean-grammar-error-inline")) {
+        const errorId = target.getAttribute("data-error-id");
+        if (errorId && this.activeErrors.has(errorId)) {
+          this.setFocusedError(this.activeErrors.get(errorId));
+        }
+      }
+    }, true);
+    Logger.debug("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC774\uBCA4\uD2B8 \uB9AC\uC2A4\uB108 \uC124\uC815\uB428 (\uC815\uD655\uD55C \uD638\uBC84 \uC694\uC18C\uB9CC \uCC98\uB9AC)");
+  }
+  /**
+   * 호버 타이머 정리
+   */
+  static clearHoverTimeout() {
+    if (this.hoverTimeout) {
+      clearTimeout(this.hoverTimeout);
+      this.hoverTimeout = null;
+    }
+  }
+  /**
+   * 설정 업데이트
+   */
+  static updateSettings(settings) {
+    this.settings = settings;
+    Logger.debug("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC124\uC815 \uC5C5\uB370\uC774\uD2B8\uB428");
+  }
+  /**
+   * 오류 표시
+   */
+  static showErrors(view, corrections, underlineStyle = "wavy", underlineColor = "#ff0000") {
+    if (!view || !corrections.length) {
+      Logger.warn("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uBDF0\uB098 \uAD50\uC815 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
+    this.clearErrors(view);
+    const doc = view.state.doc;
+    const fullText = doc.toString();
+    const errors = [];
+    corrections.forEach((correction, index) => {
+      const searchText = correction.original;
+      let searchIndex = 0;
+      let occurrence = 0;
+      while (true) {
+        const foundIndex = fullText.indexOf(searchText, searchIndex);
+        if (foundIndex === -1)
+          break;
+        const beforeChar = foundIndex > 0 ? fullText[foundIndex - 1] : " ";
+        const afterChar = foundIndex + searchText.length < fullText.length ? fullText[foundIndex + searchText.length] : " ";
+        const isWordBoundary = this.isValidWordBoundary(beforeChar, afterChar, searchText);
+        if (isWordBoundary) {
+          const uniqueId = `${index}_${occurrence}`;
+          const lineInfo = doc.lineAt(foundIndex);
+          const error = {
+            correction,
+            start: foundIndex,
+            end: foundIndex + searchText.length,
+            line: lineInfo.number,
+            ch: foundIndex - lineInfo.from,
+            uniqueId,
+            isActive: true
+          };
+          errors.push(error);
+          this.activeErrors.set(uniqueId, error);
+          Logger.debug(`\uC624\uB958 \uC704\uCE58 \uC124\uC815: "${searchText}" at ${foundIndex}-${foundIndex + searchText.length}`);
+          occurrence++;
+        }
+        searchIndex = foundIndex + 1;
+      }
+    });
+    view.dispatch({
+      effects: addErrorDecorations.of({ errors, underlineStyle, underlineColor })
+    });
+    Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: ${errors.length}\uAC1C \uC624\uB958 \uD45C\uC2DC\uB428`);
+  }
+  /**
+   * 특정 오류 제거
+   */
+  static removeError(view, errorId) {
+    const targetView = view || this.currentView;
+    if (!targetView || !this.activeErrors.has(errorId))
+      return;
+    this.activeErrors.delete(errorId);
+    targetView.dispatch({
+      effects: removeErrorDecorations.of([errorId])
+    });
+    Logger.debug(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC624\uB958 \uC81C\uAC70\uB428 (${errorId})`);
+  }
+  /**
+   * 모든 오류 제거
+   */
+  static clearErrors(view) {
+    if (!view)
+      return;
+    this.activeErrors.clear();
+    view.dispatch({
+      effects: clearAllErrorDecorations.of(true)
+    });
+    Logger.debug("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uBAA8\uB4E0 \uC624\uB958 \uC81C\uAC70\uB428");
+  }
+  /**
+   * 특정 범위의 오류들을 activeErrors에서 제거
+   */
+  static removeErrorsInRanges(ranges) {
+    const errorsToRemove = [];
+    this.activeErrors.forEach((error, errorId) => {
+      const errorOverlaps = ranges.some(
+        (range) => error.start >= range.from && error.start <= range.to || error.end >= range.from && error.end <= range.to || error.start <= range.from && error.end >= range.to
+      );
+      if (errorOverlaps) {
+        errorsToRemove.push(errorId);
+      }
+    });
+    errorsToRemove.forEach((errorId) => {
+      this.activeErrors.delete(errorId);
+    });
+    if (errorsToRemove.length > 0) {
+      Logger.debug(`\uC778\uB77C\uC778 \uBAA8\uB4DC: activeErrors\uC5D0\uC11C ${errorsToRemove.length}\uAC1C \uC624\uB958 \uC81C\uAC70\uB428`);
+    }
+  }
+  /**
+   * 텍스트 범위의 오류 제거 (사용자 편집 시)
+   */
+  static removeErrorsInRange(view, from, to) {
+    if (!view)
+      return;
+    const errorsToRemove = [];
+    this.activeErrors.forEach((error, errorId) => {
+      if (error.start < to && error.end > from) {
+        errorsToRemove.push(errorId);
+      }
+    });
+    if (errorsToRemove.length > 0) {
+      errorsToRemove.forEach((id) => this.activeErrors.delete(id));
+      view.dispatch({
+        effects: removeErrorDecorations.of(errorsToRemove)
+      });
+      Logger.debug(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uBC94\uC704 \uB0B4 ${errorsToRemove.length}\uAC1C \uC624\uB958 \uC81C\uAC70\uB428`);
+    }
+  }
+  /**
+   * 오류 호버 핸들러
+   */
+  static handleErrorHover(error, hoveredElement) {
+    var _a, _b;
+    Logger.debug(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC624\uB958 \uD638\uBC84 - ${error.correction.original}`);
+    if ((_b = (_a = this.settings) == null ? void 0 : _a.inlineMode) == null ? void 0 : _b.showTooltipOnHover) {
+      const targetElement = hoveredElement || this.findErrorElement(error);
+      if (targetElement) {
+        globalInlineTooltip.show(error, targetElement, "hover");
+      }
+    }
+  }
+  /**
+   * 오류 클릭 핸들러
+   */
+  static handleErrorClick(error, clickedElement) {
+    Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC624\uB958 \uD074\uB9AD - ${error.correction.original}`);
+    try {
+      if (window.globalInlineTooltip) {
+        window.globalInlineTooltip.hide();
+      }
+      if (error.correction.corrected && error.correction.corrected.length > 0) {
+        const firstSuggestion = error.correction.corrected[0];
+        this.applySuggestion(error, firstSuggestion);
+        Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uCCAB \uBC88\uC9F8 \uC81C\uC548 \uC790\uB3D9 \uC801\uC6A9 - "${error.correction.original}" \u2192 "${firstSuggestion}"`);
+      } else {
+        Logger.warn(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC218\uC815 \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4 - ${error.correction.original}`);
+      }
+    } catch (err) {
+      Logger.error("\uC624\uB958 \uD074\uB9AD \uCC98\uB9AC \uC911 \uBB38\uC81C \uBC1C\uC0DD:", err);
+      if (window.globalInlineTooltip) {
+        window.globalInlineTooltip.hide();
+      }
+    }
+  }
+  /**
+   * 현재 활성화된 오류 목록 반환
+   */
+  static getActiveErrors() {
+    return Array.from(this.activeErrors.values());
+  }
+  /**
+   * 특정 위치의 오류 찾기
+   */
+  static getErrorAtPosition(pos) {
+    for (const error of this.activeErrors.values()) {
+      if (pos >= error.start && pos <= error.end) {
+        return error;
+      }
+    }
+    return null;
+  }
+  /**
+   * 오류에 해당하는 DOM 요소 찾기 (위치 기반 정확한 매칭)
+   */
+  static findErrorElement(error) {
+    const exactElement = document.querySelector(`[data-error-id="${error.uniqueId}"]`);
+    if (exactElement) {
+      return exactElement;
+    }
+    const errorElements = document.querySelectorAll(".korean-grammar-error-inline");
+    for (let i = 0; i < errorElements.length; i++) {
+      const element = errorElements[i];
+      if (element.textContent === error.correction.original) {
+        Logger.warn(`\uC815\uD655\uD55C ID \uB9E4\uCE6D \uC2E4\uD328, \uD14D\uC2A4\uD2B8 \uAE30\uBC18 \uB9E4\uCE6D \uC0AC\uC6A9: ${error.correction.original}`);
+        return element;
+      }
+    }
+    Logger.warn(`\uC624\uB958 \uC694\uC18C\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC74C: ${error.correction.original} (ID: ${error.uniqueId})`);
+    return null;
+  }
+  /**
+   * 수정 제안 적용
+   */
+  static applySuggestion(error, suggestion) {
+    if (!this.currentView) {
+      Logger.error("\uC5D0\uB514\uD130 \uBDF0\uAC00 \uC124\uC815\uB418\uC9C0 \uC54A\uC74C");
+      return;
+    }
+    try {
+      const doc = this.currentView.state.doc;
+      const actualText = doc.sliceString(error.start, error.end);
+      Logger.debug(`\uD14D\uC2A4\uD2B8 \uAD50\uCCB4 \uC2DC\uB3C4: \uBC94\uC704[${error.start}-${error.end}], \uC608\uC0C1="${error.correction.original}", \uC2E4\uC81C="${actualText}", \uAD50\uCCB4="${suggestion}"`);
+      let fromPos = error.start;
+      let toPos = error.end;
+      if (actualText !== error.correction.original) {
+        Logger.warn(`\uD14D\uC2A4\uD2B8 \uBD88\uC77C\uCE58 \uAC10\uC9C0, \uC7AC\uAC80\uC0C9 \uC2DC\uB3C4: "${error.correction.original}"`);
+        const fullText = doc.toString();
+        const searchIndex = fullText.indexOf(error.correction.original, Math.max(0, error.start - 100));
+        if (searchIndex !== -1) {
+          fromPos = searchIndex;
+          toPos = searchIndex + error.correction.original.length;
+          Logger.debug(`\uC7AC\uAC80\uC0C9 \uC131\uACF5: \uC0C8 \uBC94\uC704[${fromPos}-${toPos}]`);
+        } else {
+          Logger.error(`\uC7AC\uAC80\uC0C9 \uC2E4\uD328: "${error.correction.original}" \uD14D\uC2A4\uD2B8\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC74C`);
+          return;
+        }
+      }
+      this.currentView.dispatch({
+        changes: {
+          from: fromPos,
+          to: toPos,
+          insert: suggestion
+        }
+      });
+      this.removeError(this.currentView, error.uniqueId);
+      if (window.globalInlineTooltip) {
+        window.globalInlineTooltip.hide();
+      }
+      this.clearFocusedError();
+      Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uD14D\uC2A4\uD2B8 \uAD50\uCCB4 \uC644\uB8CC - "${error.correction.original}" \u2192 "${suggestion}" (${fromPos}-${toPos})`);
+    } catch (err) {
+      Logger.error("\uD14D\uC2A4\uD2B8 \uAD50\uCCB4 \uC2E4\uD328:", err);
+      if (window.globalInlineTooltip) {
+        window.globalInlineTooltip.hide();
+      }
+    }
+  }
+  /**
+   * 키보드 스코프 초기화
+   */
+  static initializeKeyboardScope() {
+    if (this.keyboardScope) {
+      this.keyboardScope = null;
+    }
+    this.keyboardScope = new import_obsidian10.Scope();
+    this.keyboardScope.register(["Mod", "Shift"], "ArrowLeft", (evt) => {
+      if (!this.currentFocusedError)
+        return false;
+      const suggestions = this.currentFocusedError.correction.corrected;
+      this.currentSuggestionIndex = Math.max(0, this.currentSuggestionIndex - 1);
+      this.updateTooltipHighlight();
+      Logger.debug(`\uC218\uC815 \uC81C\uC548 \uC120\uD0DD: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+      return false;
+    });
+    this.keyboardScope.register(["Mod", "Shift"], "ArrowRight", (evt) => {
+      if (!this.currentFocusedError)
+        return false;
+      const suggestions = this.currentFocusedError.correction.corrected;
+      this.currentSuggestionIndex = Math.min(suggestions.length - 1, this.currentSuggestionIndex + 1);
+      this.updateTooltipHighlight();
+      Logger.debug(`\uC218\uC815 \uC81C\uC548 \uC120\uD0DD: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+      return false;
+    });
+    this.keyboardScope.register(["Mod"], "Enter", (evt) => {
+      if (!this.currentFocusedError)
+        return false;
+      const suggestions = this.currentFocusedError.correction.corrected;
+      const selectedSuggestion = suggestions[this.currentSuggestionIndex];
+      this.applySuggestion(this.currentFocusedError, selectedSuggestion);
+      this.clearFocusedError();
+      return false;
+    });
+    this.keyboardScope.register([], "Escape", (evt) => {
+      if (!this.currentFocusedError)
+        return false;
+      this.clearFocusedError();
+      return false;
+    });
+    Logger.debug("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uD0A4\uBCF4\uB4DC \uC2A4\uCF54\uD504 \uCD08\uAE30\uD654\uB428");
+  }
+  /**
+   * 포커스된 오류 설정
+   */
+  static setFocusedError(error) {
+    this.currentFocusedError = error;
+    this.currentSuggestionIndex = 0;
+    this.highlightFocusedError(error);
+    if (this.keyboardScope && this.app) {
+      this.app.keymap.pushScope(this.keyboardScope);
+    }
+    Logger.debug(`\uC624\uB958 \uD3EC\uCEE4\uC2A4 \uC124\uC815: ${error.correction.original}`);
+  }
+  /**
+   * 포커스된 오류 해제
+   */
+  static clearFocusedError() {
+    if (this.currentFocusedError) {
+      this.removeFocusHighlight(this.currentFocusedError);
+    }
+    if (this.keyboardScope && this.app) {
+      this.app.keymap.popScope(this.keyboardScope);
+    }
+    this.currentFocusedError = null;
+    this.currentSuggestionIndex = 0;
+    if (window.globalInlineTooltip) {
+      window.globalInlineTooltip.hide();
+    }
+    Logger.debug("\uC624\uB958 \uD3EC\uCEE4\uC2A4 \uD574\uC81C");
+  }
+  /**
+   * 포커스된 오류 하이라이트
+   */
+  static highlightFocusedError(error) {
+    const elements = document.querySelectorAll(`[data-error-id="${error.uniqueId}"]`);
+    elements.forEach((element) => {
+      const htmlElement = element;
+      htmlElement.style.outline = "2px solid var(--interactive-accent)";
+      htmlElement.style.outlineOffset = "2px";
+      htmlElement.style.borderRadius = "3px";
+      htmlElement.setAttribute("tabindex", "0");
+      htmlElement.focus();
+    });
+    Logger.debug(`\uC624\uB958 \uD558\uC774\uB77C\uC774\uD2B8 \uC801\uC6A9: ${error.uniqueId}`);
+  }
+  /**
+   * 포커스 하이라이트 제거
+   */
+  static removeFocusHighlight(error) {
+    const elements = document.querySelectorAll(`[data-error-id="${error.uniqueId}"]`);
+    elements.forEach((element) => {
+      const htmlElement = element;
+      htmlElement.style.outline = "";
+      htmlElement.style.outlineOffset = "";
+      htmlElement.style.borderRadius = "";
+      htmlElement.removeAttribute("tabindex");
+    });
+    Logger.debug(`\uC624\uB958 \uD558\uC774\uB77C\uC774\uD2B8 \uC81C\uAC70: ${error.uniqueId}`);
+  }
+  /**
+   * 단어 경계 유효성 검사
+   */
+  static isValidWordBoundary(beforeChar, afterChar, searchText) {
+    const punctuation = /[\s.,;:!?'"()[\]{}<>]/;
+    return true;
+  }
+  /**
+   * 툴팁의 수정 제안 하이라이트 업데이트
+   */
+  static updateTooltipHighlight() {
+    const tooltip = document.querySelector(".korean-grammar-inline-tooltip");
+    if (!tooltip)
+      return;
+    const suggestionButtons = tooltip.querySelectorAll(".suggestion-button");
+    suggestionButtons.forEach((button, index) => {
+      const htmlButton = button;
+      if (htmlButton.getAttribute("data-hovered") === "true") {
+        return;
+      }
+      if (index === this.currentSuggestionIndex) {
+        htmlButton.style.background = "var(--interactive-accent)";
+        htmlButton.style.color = "var(--text-on-accent)";
+        htmlButton.style.fontWeight = "600";
+        htmlButton.style.border = "1px solid var(--interactive-accent)";
+      } else {
+        htmlButton.style.background = "var(--interactive-normal)";
+        htmlButton.style.color = "var(--text-normal)";
+        htmlButton.style.fontWeight = "normal";
+        htmlButton.style.border = "1px solid var(--background-modifier-border)";
+      }
+    });
+  }
+  /**
+   * 서비스 정리 (메모리 누수 방지)
+   */
+  static cleanup() {
+    var _a;
+    this.activeErrors.clear();
+    this.currentView = null;
+    this.settings = null;
+    this.currentFocusedError = null;
+    this.currentSuggestionIndex = 0;
+    this.currentHoveredError = null;
+    this.clearHoverTimeout();
+    if (this.keyboardScope) {
+      this.keyboardScope = null;
+    }
+    if ((_a = window.globalInlineTooltip) == null ? void 0 : _a.visible) {
+      window.globalInlineTooltip.hide();
+    }
+    Logger.debug("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC11C\uBE44\uC2A4 \uC815\uB9AC\uB428 (\uACB9\uCE58\uB294 \uC601\uC5ED \uCC98\uB9AC \uD3EC\uD568)");
+  }
+};
+InlineModeService.activeErrors = /* @__PURE__ */ new Map();
+InlineModeService.currentView = null;
+InlineModeService.settings = null;
+InlineModeService.currentFocusedError = null;
+InlineModeService.currentSuggestionIndex = 0;
+InlineModeService.keyboardScope = null;
+InlineModeService.app = null;
+InlineModeService.currentHoveredError = null;
+InlineModeService.hoverTimeout = null;
+
+// src/ui/koreanGrammarSuggest.ts
+var import_obsidian11 = require("obsidian");
+init_logger();
+var KoreanGrammarSuggest = class extends import_obsidian11.EditorSuggest {
+  constructor(app, settings) {
+    var _a, _b;
+    super(app);
+    this.settings = settings;
+    this.corrections = /* @__PURE__ */ new Map();
+    this.lastCheckTime = 0;
+    this.checkCooldown = 1e3;
+    // 1초 쿨다운
+    // 한글 패턴 정규식
+    this.koreanPattern = /[\u3131-\u318E\uAC00-\uD7A3]+/g;
+    this.wordBoundaryPattern = /[^\u3131-\u318E\uAC00-\uD7A3\s]/;
+    this.apiService = new SpellCheckApiService();
+    this.limit = ((_b = (_a = this.settings) == null ? void 0 : _a.inlineMode) == null ? void 0 : _b.maxSuggestions) || 5;
+    this.setInstructions([
+      { command: "\u2191\u2193", purpose: "\uD0D0\uC0C9" },
+      { command: "\u21B5", purpose: "\uC120\uD0DD" },
+      { command: "esc", purpose: "\uB2EB\uAE30" },
+      { command: "Ctrl+Space", purpose: "\uC790\uC138\uD788" }
+    ]);
+    Logger.debug("KoreanGrammarSuggest \uCD08\uAE30\uD654\uB428");
+  }
+  /**
+   * 트리거 조건 확인
+   * 한글 단어에서 맞춤법 오류 감지 시 제안 시스템 활성화
+   */
+  onTrigger(cursor, editor, file) {
+    if (Date.now() - this.lastCheckTime < this.checkCooldown) {
+      return null;
+    }
+    const wordMatch = this.findKoreanWordAtCursor(cursor, editor);
+    if (!wordMatch) {
+      return null;
+    }
+    const correction = this.corrections.get(wordMatch.word);
+    if (!correction || correction.corrected.length === 0) {
+      return null;
+    }
+    Logger.debug(`\uB9DE\uCDA4\uBC95 \uC81C\uC548 \uD2B8\uB9AC\uAC70: "${wordMatch.word}"`);
+    return {
+      start: { line: wordMatch.line, ch: wordMatch.start },
+      end: { line: wordMatch.line, ch: wordMatch.end },
+      query: wordMatch.word
+    };
+  }
+  /**
+   * 수정 제안 생성
+   */
+  async getSuggestions(context) {
+    const correction = this.corrections.get(context.query);
+    if (!correction) {
+      return [];
+    }
+    const suggestion = {
+      original: correction.original,
+      corrections: correction.corrected,
+      help: correction.help,
+      range: { start: context.start, end: context.end },
+      confidence: this.calculateConfidence(correction)
+    };
+    Logger.debug(`\uC81C\uC548 \uC0DD\uC131: ${correction.corrected.length}\uAC1C \uC218\uC815\uC548`);
+    return [suggestion];
+  }
+  /**
+   * 제안 항목 렌더링
+   */
+  renderSuggestion(suggestion, el) {
+    const container = el.createDiv({ cls: "kgc-suggestion-container" });
+    const header = container.createDiv({ cls: "kgc-suggestion-header" });
+    header.createSpan({
+      cls: "kgc-suggestion-error-icon",
+      text: "\u274C"
+    });
+    header.createSpan({
+      cls: "kgc-suggestion-error-text",
+      text: suggestion.original
+    });
+    if (suggestion.confidence !== void 0) {
+      header.createSpan({
+        cls: "kgc-suggestion-confidence",
+        text: `${suggestion.confidence}%`
+      });
+    }
+    const correctionsList = container.createDiv({ cls: "kgc-suggestion-corrections" });
+    suggestion.corrections.forEach((correction, index) => {
+      const correctionItem = correctionsList.createDiv({
+        cls: "kgc-suggestion-item",
+        attr: { "data-index": index.toString() }
+      });
+      correctionItem.createSpan({
+        cls: "kgc-suggestion-check-icon",
+        text: "\u2713"
+      });
+      correctionItem.createSpan({
+        cls: "kgc-suggestion-text",
+        text: correction
+      });
+      if (index === 0) {
+        correctionItem.addClass("kgc-suggestion-item--primary");
+      }
+    });
+    if (suggestion.help) {
+      const helpSection = container.createDiv({ cls: "kgc-suggestion-help" });
+      helpSection.createSpan({
+        cls: "kgc-suggestion-help-icon",
+        text: "\u{1F4A1}"
+      });
+      helpSection.createSpan({
+        cls: "kgc-suggestion-help-text",
+        text: suggestion.help
+      });
+    }
+    const footer = container.createDiv({ cls: "kgc-suggestion-footer" });
+    footer.createSpan({
+      cls: "kgc-suggestion-hint",
+      text: "Ctrl+Space: \uC0C1\uC138 \uC635\uC158"
+    });
+  }
+  /**
+   * 제안 선택 처리
+   */
+  selectSuggestion(suggestion, evt) {
+    var _a;
+    const editor = (_a = this.context) == null ? void 0 : _a.editor;
+    if (!editor)
+      return;
+    if (evt.ctrlKey || evt.metaKey || evt.code === "Space") {
+      this.showDetailedOptions(suggestion, editor, evt);
+      return;
+    }
+    const selectedCorrection = suggestion.corrections[0];
+    this.applySuggestion(suggestion, selectedCorrection, editor);
+  }
+  /**
+   * 상세 옵션 메뉴 표시
+   */
+  showDetailedOptions(suggestion, editor, evt) {
+    const menu = new import_obsidian11.Menu();
+    suggestion.corrections.forEach((correction, index) => {
+      menu.addItem((item) => {
+        item.setTitle(correction).setIcon(index === 0 ? "star" : "edit").onClick(() => {
+          this.applySuggestion(suggestion, correction, editor);
+        });
+        if (index === 0) {
+          item.setSection("\uCD94\uCC9C");
+        }
+      });
+    });
+    menu.addSeparator();
+    menu.addItem((item) => {
+      item.setTitle("\uC774 \uC624\uB958 \uBB34\uC2DC").setIcon("x").onClick(() => {
+        this.ignoreError(suggestion.original);
+      });
+    });
+    if (suggestion.help) {
+      menu.addItem((item) => {
+        item.setTitle("\uB3C4\uC6C0\uB9D0 \uBCF4\uAE30").setIcon("help-circle").onClick(() => {
+          this.showHelpModal(suggestion.help);
+        });
+      });
+    }
+    if (evt instanceof MouseEvent) {
+      menu.showAtMouseEvent(evt);
+    } else {
+      menu.showAtPosition({ x: 0, y: 0 });
+    }
+  }
+  /**
+   * 수정 제안 적용
+   */
+  applySuggestion(suggestion, selectedCorrection, editor) {
+    editor.replaceRange(
+      selectedCorrection,
+      suggestion.range.start,
+      suggestion.range.end
+    );
+    this.corrections.delete(suggestion.original);
+    Logger.log(`\uB9DE\uCDA4\uBC95 \uC218\uC815 \uC801\uC6A9: "${suggestion.original}" \u2192 "${selectedCorrection}"`);
+    new import_obsidian11.Notice(`"${suggestion.original}"\uC774(\uAC00) "${selectedCorrection}"\uB85C \uC218\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
+  }
+  /**
+   * 오류 무시
+   */
+  ignoreError(original) {
+    this.corrections.delete(original);
+    Logger.log(`\uB9DE\uCDA4\uBC95 \uC624\uB958 \uBB34\uC2DC: "${original}"`);
+    new import_obsidian11.Notice(`"${original}" \uC624\uB958\uB97C \uBB34\uC2DC\uD588\uC2B5\uB2C8\uB2E4.`);
+  }
+  /**
+   * 도움말 모달 표시
+   */
+  showHelpModal(helpText) {
+    const modal = new import_obsidian11.Modal(this.app);
+    modal.titleEl.setText("\uB9DE\uCDA4\uBC95 \uB3C4\uC6C0\uB9D0");
+    const content = modal.contentEl;
+    content.createEl("p", { text: helpText });
+    const buttonContainer = content.createDiv({ cls: "modal-button-container" });
+    buttonContainer.createEl("button", {
+      text: "\uB2EB\uAE30",
+      cls: "mod-cta"
+    }).addEventListener("click", () => {
+      modal.close();
+    });
+    modal.open();
+  }
+  /**
+   * 커서 위치의 한글 단어 찾기
+   */
+  findKoreanWordAtCursor(cursor, editor) {
+    const line = editor.getLine(cursor.line);
+    const cursorPos = cursor.ch;
+    let start = cursorPos;
+    let end = cursorPos;
+    while (start > 0) {
+      const char = line[start - 1];
+      if (this.isKoreanChar(char)) {
+        start--;
+      } else {
+        break;
+      }
+    }
+    while (end < line.length) {
+      const char = line[end];
+      if (this.isKoreanChar(char)) {
+        end++;
+      } else {
+        break;
+      }
+    }
+    if (end - start < 1) {
+      return null;
+    }
+    const word = line.slice(start, end);
+    if (!this.isKoreanWord(word)) {
+      return null;
+    }
+    return {
+      word,
+      start,
+      end,
+      line: cursor.line
+    };
+  }
+  /**
+   * 한글 문자 확인
+   */
+  isKoreanChar(char) {
+    const code = char.charCodeAt(0);
+    return code >= 12593 && code <= 12686 || // 한글 자모
+    code >= 44032 && code <= 55203;
+  }
+  /**
+   * 한글 단어 확인
+   */
+  isKoreanWord(word) {
+    return word.length >= 1 && /[\uAC00-\uD7A3]/.test(word);
+  }
+  /**
+   * 신뢰도 계산
+   */
+  calculateConfidence(correction) {
+    let confidence = 80;
+    if (correction.corrected.length === 1) {
+      confidence += 10;
+    }
+    if (correction.help && correction.help.trim()) {
+      confidence += 10;
+    }
+    return Math.min(confidence, 100);
+  }
+  /**
+   * 맞춤법 검사 결과 업데이트
+   */
+  async updateCorrections(text) {
+    try {
+      this.lastCheckTime = Date.now();
+      const result = await this.apiService.checkSpelling(text, this.settings);
+      this.corrections.clear();
+      result.corrections.forEach((correction) => {
+        this.corrections.set(correction.original, correction);
+      });
+      Logger.debug(`\uAD50\uC815 \uC815\uBCF4 \uC5C5\uB370\uC774\uD2B8: ${result.corrections.length}\uAC1C \uC624\uB958`);
+    } catch (error) {
+      Logger.error("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2E4\uD328:", error);
+    }
+  }
+  /**
+   * 설정 업데이트
+   */
+  updateSettings(settings) {
+    var _a, _b;
+    this.settings = settings;
+    this.limit = ((_a = settings == null ? void 0 : settings.inlineMode) == null ? void 0 : _a.maxSuggestions) || 5;
+    this.checkCooldown = ((_b = settings == null ? void 0 : settings.inlineMode) == null ? void 0 : _b.checkDelay) || 1e3;
+  }
+  /**
+   * 서비스 정리
+   */
+  cleanup() {
+    this.corrections.clear();
+    Logger.debug("KoreanGrammarSuggest \uC815\uB9AC\uB428");
+  }
+};
+
+// main.ts
+(0, import_obsidian12.addIcon)(
   "han-spellchecker",
   `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 18 18" fill="currentColor"><path d="M3.6,3.9c1.3,0,2.9,0,4.2,0,.7,0,2.3-.5,2.3.7,0,.3-.3.5-.6.5-2.2,0-4.6.2-6.8,0-.4,0-.7-.4-.8-.8-.2-.7,1.2-.7,1.5-.4h0ZM6.1,11c-4.2,0-3.7-5.8.7-5.2,3.7.2,3.1,5.6-.5,5.2h-.2ZM3.6,1.6c.7,0,1.5.4,2.3.4.8.1,1.6,0,2.4,0,.8,1.2-1.4,1.5-2.9,1.3-.9,0-2.7-.8-1.9-1.7h0ZM6.3,9.7c2.5,0,1.9-3.4-.6-2.8-1.2.2-1.4,1.8-.5,2.4.2.2.9.2,1,.3h0ZM4.9,13.2c-.1-1.2,1.5-.9,1.6.1.4,1.5-.2,2.3,2,2.1,1,0,6.7-.6,5,1.1-2.3.5-5.4.7-7.6-.3-.6-.8-.3-2.2-.9-3h0ZM11.3,1.1c2.6-.3,1.5,3.8,2,5,.6.4,2.6-.5,2.8.7,0,.4-.3.6-.6.7-.7.1-1.6,0-2.3.1-.2.1,0,.5-.1,1.1,0,1,0,4.2-.8,4.2-.2,0-.5-.3-.6-.6-.3-1.4,0-3.4,0-5,0-1.9,0-3.8-.2-4.6-.1-.4-.5-1.2-.1-1.5h.1Z"/></svg>`
 );
-var KoreanGrammarPlugin = class extends import_obsidian10.Plugin {
+var KoreanGrammarPlugin = class extends import_obsidian12.Plugin {
+  constructor() {
+    super(...arguments);
+    this.grammarSuggest = null;
+  }
   async onload() {
     if (false) {
       Logger.configureForProduction();
@@ -9360,9 +10807,35 @@ var KoreanGrammarPlugin = class extends import_obsidian10.Plugin {
         await this.orchestrator.executeCurrentSentence();
       }
     });
+    this.addCommand({
+      id: "inline-spell-check",
+      name: "\uC778\uB77C\uC778 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC (\uBCA0\uD0C0)",
+      callback: async () => {
+        if (!this.settings.inlineMode.enabled) {
+          new import_obsidian12.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
+          return;
+        }
+        await this.executeInlineSpellCheck();
+      }
+    });
+    this.addCommand({
+      id: "inline-spell-check-suggest",
+      name: "\uC778\uB77C\uC778 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC (EditorSuggest)",
+      callback: async () => {
+        if (!this.settings.inlineMode.enabled) {
+          new import_obsidian12.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
+          return;
+        }
+        await this.executeInlineSpellCheckWithSuggest();
+      }
+    });
+    if (this.settings.inlineMode.enabled) {
+      this.enableInlineMode();
+    }
     this.addSettingTab(new ModernSettingsTab(this.app, this));
   }
   onunload() {
+    this.disableInlineMode();
     if (this.orchestrator) {
       this.orchestrator.destroy();
     }
@@ -9375,6 +10848,114 @@ var KoreanGrammarPlugin = class extends import_obsidian10.Plugin {
     await this.saveData(this.settings);
     if (this.orchestrator) {
       this.orchestrator.updateSettings(this.settings);
+    }
+  }
+  /**
+   * 인라인 맞춤법 검사 실행
+   */
+  async executeInlineSpellCheck() {
+    const activeLeaf = this.app.workspace.activeLeaf;
+    if (!activeLeaf) {
+      new import_obsidian12.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
+    const editor = activeLeaf.view.editor;
+    if (!editor) {
+      new import_obsidian12.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
+    const editorView = editor.cm;
+    if (!editorView) {
+      new import_obsidian12.Notice("CodeMirror \uC5D0\uB514\uD130 \uBDF0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
+    Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791");
+    try {
+      InlineModeService.setEditorView(editorView, this.settings);
+      const fullText = editorView.state.doc.toString();
+      if (!fullText.trim()) {
+        new import_obsidian12.Notice("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+        return;
+      }
+      const apiService = new SpellCheckApiService();
+      const result = await apiService.checkSpelling(fullText, this.settings);
+      if (!result.corrections || result.corrections.length === 0) {
+        new import_obsidian12.Notice("\uB9DE\uCDA4\uBC95 \uC624\uB958\uAC00 \uBC1C\uACAC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+        return;
+      }
+      InlineModeService.showErrors(
+        editorView,
+        result.corrections,
+        this.settings.inlineMode.underlineStyle,
+        this.settings.inlineMode.underlineColor
+      );
+      new import_obsidian12.Notice(`${result.corrections.length}\uAC1C\uC758 \uB9DE\uCDA4\uBC95 \uC624\uB958\uB97C \uBC1C\uACAC\uD588\uC2B5\uB2C8\uB2E4.`);
+      Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: ${result.corrections.length}\uAC1C \uC624\uB958 \uD45C\uC2DC \uC644\uB8CC`);
+    } catch (error) {
+      Logger.error("\uC778\uB77C\uC778 \uBAA8\uB4DC \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC624\uB958:", error);
+      new import_obsidian12.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+    }
+  }
+  /**
+   * 인라인 모드 활성화
+   */
+  enableInlineMode() {
+    if (this.grammarSuggest)
+      return;
+    try {
+      this.grammarSuggest = new KoreanGrammarSuggest(this.app, this.settings);
+      this.registerEditorSuggest(this.grammarSuggest);
+      this.registerEditorExtension([errorDecorationField]);
+      window.InlineModeService = InlineModeService;
+      Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654\uB428 (EditorSuggest)");
+    } catch (error) {
+      Logger.error("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654 \uC2E4\uD328:", error);
+      new import_obsidian12.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+    }
+  }
+  /**
+   * 인라인 모드 비활성화
+   */
+  disableInlineMode() {
+    if (this.grammarSuggest) {
+      this.grammarSuggest.cleanup();
+      this.grammarSuggest = null;
+    }
+    if (window.InlineModeService) {
+      delete window.InlineModeService;
+    }
+    Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC \uBE44\uD65C\uC131\uD654\uB428");
+  }
+  /**
+   * EditorSuggest 기반 인라인 맞춤법 검사 실행
+   */
+  async executeInlineSpellCheckWithSuggest() {
+    if (!this.grammarSuggest) {
+      new import_obsidian12.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uD65C\uC131\uD654\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
+    const activeLeaf = this.app.workspace.activeLeaf;
+    if (!activeLeaf) {
+      new import_obsidian12.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
+    const editor = activeLeaf.view.editor;
+    if (!editor) {
+      new import_obsidian12.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
+    try {
+      const fullText = editor.getValue();
+      if (!fullText.trim()) {
+        new import_obsidian12.Notice("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+        return;
+      }
+      Logger.log("EditorSuggest \uAE30\uBC18 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791");
+      await this.grammarSuggest.updateCorrections(fullText);
+      new import_obsidian12.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC\uAC00 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC624\uD0C0\uC5D0 \uCEE4\uC11C\uB97C \uB193\uC73C\uBA74 \uC218\uC815 \uC81C\uC548\uC774 \uD45C\uC2DC\uB429\uB2C8\uB2E4.");
+    } catch (error) {
+      Logger.error("EditorSuggest \uAE30\uBC18 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC624\uB958:", error);
+      new import_obsidian12.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
     }
   }
 };

@@ -9,6 +9,7 @@
 @import url("modals.css");
 @import url("keyboard.css");
 @import url("settings.css");
+@import url("inline-suggest.css");
 @import url("responsive.css");
 
 /* Additional CSS classes for replacing inline styles that were not component-specific */

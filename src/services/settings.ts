@@ -1,6 +1,20 @@
-import { PluginSettings } from '../types/interfaces';
+import { PluginSettings, InlineModeSettings } from '../types/interfaces';
 import { DEFAULT_AI_SETTINGS } from '../constants/aiModels';
 import { Logger } from '../utils/logger';
+
+/**
+ * 기본 인라인 모드 설정
+ */
+export const DEFAULT_INLINE_MODE_SETTINGS: InlineModeSettings = {
+  enabled: false, // 베타 기능이므로 기본적으로 비활성화
+  showUnderline: true,
+  underlineStyle: 'wavy',
+  underlineColor: '#ff0000',
+  showTooltipOnHover: true,
+  showTooltipOnClick: true,
+  autoCheck: false, // 향후 구현 예정
+  autoCheckDelay: 2000
+};
 
 /**
  * API 설정 파일에서 기본값 로드 (로컬 개발용)
@@ -30,7 +44,8 @@ function loadApiConfig(): PluginSettings {
     apiPort: 443,
     ignoredWords: [],
     ai: DEFAULT_AI_SETTINGS,
-    filterSingleCharErrors: true // 기본적으로 한 글자 오류 필터링 활성화
+    filterSingleCharErrors: true, // 기본적으로 한 글자 오류 필터링 활성화
+    inlineMode: DEFAULT_INLINE_MODE_SETTINGS
   };
 }
 
@@ -83,6 +98,13 @@ export class SettingsService {
       mergedSettings.ai = Object.assign({}, DEFAULT_AI_SETTINGS, userSettings.ai);
     } else {
       mergedSettings.ai = Object.assign({}, DEFAULT_AI_SETTINGS);
+    }
+    
+    // 인라인 모드 설정이 있으면 기본값과 병합
+    if (userSettings.inlineMode) {
+      mergedSettings.inlineMode = Object.assign({}, DEFAULT_INLINE_MODE_SETTINGS, userSettings.inlineMode);
+    } else {
+      mergedSettings.inlineMode = Object.assign({}, DEFAULT_INLINE_MODE_SETTINGS);
     }
     
     // 새로 추가된 필터링 옵션이 없으면 기본값 설정

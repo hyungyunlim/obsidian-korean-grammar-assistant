@@ -30,6 +30,7 @@ export interface PluginSettings {
   ignoredWords: string[]; // 예외 처리된 단어들
   ai: AISettings; // AI 설정 추가
   filterSingleCharErrors: boolean; // 한 글자 오류 필터링 옵션
+  inlineMode: InlineModeSettings; // 인라인 모드 설정 추가
 }
 
 /**
@@ -179,4 +180,31 @@ export interface AIAnalysisRequest {
 export interface AIClient {
   chat(messages: Array<{role: string, content: string}>, maxTokens: number, model: string): Promise<string>;
   fetchModels?(): Promise<string[]>;
+}
+
+/**
+ * 인라인 모드 설정 인터페이스
+ */
+export interface InlineModeSettings {
+  enabled: boolean; // 베타 기능 활성화 여부
+  showUnderline: boolean; // 밑줄 표시 여부
+  underlineStyle: 'wavy' | 'solid' | 'dotted' | 'dashed'; // 밑줄 스타일
+  underlineColor: string; // 밑줄 색상
+  showTooltipOnHover: boolean; // 호버 시 툴팁 표시 여부
+  showTooltipOnClick: boolean; // 클릭 시 툴팁 표시 여부
+  autoCheck: boolean; // 타이핑 중단 시 자동 검사 여부 (향후 구현)
+  autoCheckDelay: number; // 자동 검사 지연 시간 (ms)
+}
+
+/**
+ * 인라인 오류 정보 인터페이스
+ */
+export interface InlineError {
+  correction: Correction;
+  start: number; // 에디터 내 시작 위치
+  end: number; // 에디터 내 끝 위치
+  line: number; // 라인 번호
+  ch: number; // 라인 내 문자 위치
+  uniqueId: string; // 고유 식별자
+  isActive: boolean; // 활성 상태 (수정되면 false)
 }

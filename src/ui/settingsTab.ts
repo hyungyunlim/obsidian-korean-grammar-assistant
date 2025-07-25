@@ -9,7 +9,7 @@ import { createMetricsDisplay, createValidationDisplay, clearElement } from '../
 /**
  * 탭 타입 정의
  */
-type SettingsTab = 'basic' | 'ai' | 'advanced' | 'performance';
+type SettingsTab = 'basic' | 'ai' | 'advanced' | 'performance' | 'beta';
 
 /**
  * 현대적인 탭 기반 설정 인터페이스
@@ -679,6 +679,9 @@ export class ModernSettingsTab extends PluginSettingTab {
       case 'performance':
         this.createMonitoringTab(this.contentContainer);
         break;
+      case 'beta':
+        this.createBetaFeaturesTab(this.contentContainer);
+        break;
     }
   }
 
@@ -711,7 +714,8 @@ export class ModernSettingsTab extends PluginSettingTab {
       { id: 'basic', label: '기본 설정', icon: '⚙️', desc: 'API 키 및 기본 옵션' },
       { id: 'ai', label: 'AI 설정', icon: '🤖', desc: 'AI 자동 교정 기능' },
       { id: 'advanced', label: '고급 관리', icon: '🔧', desc: '백업, 복원, 검증' },
-      { id: 'performance', label: '성능 모니터링', icon: '📊', desc: '통계 및 최적화' }
+      { id: 'performance', label: '성능 모니터링', icon: '📊', desc: '통계 및 최적화' },
+      { id: 'beta', label: '베타 기능', icon: '🧪', desc: '인라인 모드 등 실험적 기능' }
     ];
 
     tabs.forEach(tab => {
@@ -2142,6 +2146,157 @@ export class ModernSettingsTab extends PluginSettingTab {
         text: '💡 팁: 의미있는 한 글자 교정(조사, 어미 등)은 자동으로 예외 처리됩니다.',
         attr: { style: 'color: var(--text-accent); font-size: 13px; margin-top: 4px;' }
       });
+    }
+  }
+
+  /**
+   * 베타 기능 탭을 생성합니다
+   */
+  private createBetaFeaturesTab(containerEl: HTMLElement): void {
+    // 경고 메시지 섹션
+    this.createBetaWarningSection(containerEl);
+    
+    // 인라인 모드 설정 섹션
+    this.createInlineModeSection(containerEl);
+  }
+
+  /**
+   * 베타 기능 경고 섹션을 생성합니다
+   */
+  private createBetaWarningSection(containerEl: HTMLElement): void {
+    const section = containerEl.createEl('div', { cls: 'ksc-section' });
+    
+    section.createEl('h3', { 
+      text: '⚠️ 베타 기능 안내',
+      cls: 'ksc-section-title'
+    });
+
+    const warningBox = section.createEl('div', { 
+      cls: 'ksc-warning-box',
+      attr: { 
+        style: 'background: rgba(255, 196, 0, 0.1); border: 1px solid rgba(255, 196, 0, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 20px;'
+      }
+    });
+
+    warningBox.createEl('div', {
+      text: '🧪 실험적 기능',
+      attr: { style: 'font-weight: 600; color: var(--text-warning); margin-bottom: 8px;' }
+    });
+
+    const warnings = [
+      '이 섹션의 기능들은 베타 버전입니다.',
+      '일부 기능이 예상과 다르게 동작할 수 있습니다.',
+      '피드백과 버그 리포트는 언제나 환영합니다.',
+      '안정화 후 정식 기능으로 승격될 예정입니다.'
+    ];
+
+    warnings.forEach(warning => {
+      warningBox.createEl('div', {
+        text: `• ${warning}`,
+        attr: { style: 'color: var(--text-muted); margin-bottom: 4px; font-size: 14px;' }
+      });
+    });
+  }
+
+  /**
+   * 인라인 모드 설정 섹션을 생성합니다
+   */
+  private createInlineModeSection(containerEl: HTMLElement): void {
+    const section = containerEl.createEl('div', { cls: 'ksc-section' });
+    
+    section.createEl('h3', { 
+      text: '📝 인라인 모드',
+      cls: 'ksc-section-title'
+    });
+
+    // 기능 설명
+    const descBox = section.createEl('div', { 
+      cls: 'ksc-info-box',
+      attr: { 
+        style: 'background: var(--background-secondary); border-radius: 8px; padding: 16px; margin-bottom: 20px;'
+      }
+    });
+
+    descBox.createEl('div', {
+      text: '🎯 에디터 내 실시간 맞춤법 검사',
+      attr: { style: 'font-weight: 600; margin-bottom: 8px;' }
+    });
+
+    const features = [
+      '오타 텍스트에 밑줄 표시',
+      '호버/클릭으로 수정 제안 확인',
+      '사용자 편집 시 밑줄 자동 제거',
+      'Command Palette로 검사 실행'
+    ];
+
+    features.forEach(feature => {
+      descBox.createEl('div', {
+        text: `• ${feature}`,
+        attr: { style: 'color: var(--text-muted); margin-bottom: 4px;' }
+      });
+    });
+
+    // 활성화 토글
+    new Setting(section)
+      .setName('인라인 모드 활성화')
+      .setDesc('에디터 내에서 실시간으로 맞춤법 오류를 표시합니다.')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.inlineMode.enabled)
+        .onChange(async (value) => {
+          this.plugin.settings.inlineMode.enabled = value;
+          await this.plugin.saveSettings();
+          Logger.log(`인라인 모드가 ${value ? '활성화' : '비활성화'}되었습니다.`);
+          new Notice(`인라인 모드가 ${value ? '활성화' : '비활성화'}되었습니다.`);
+        }));
+
+    // 밑줄 스타일 설정 (인라인 모드가 활성화된 경우에만)
+    if (this.plugin.settings.inlineMode.enabled) {
+      new Setting(section)
+        .setName('밑줄 스타일')
+        .setDesc('오류 표시에 사용할 밑줄 스타일을 선택하세요.')
+        .addDropdown(dropdown => dropdown
+          .addOption('wavy', '물결선 (추천)')
+          .addOption('solid', '직선')
+          .addOption('dotted', '점선')
+          .addOption('dashed', '파선')
+          .setValue(this.plugin.settings.inlineMode.underlineStyle)
+          .onChange(async (value: 'wavy' | 'solid' | 'dotted' | 'dashed') => {
+            this.plugin.settings.inlineMode.underlineStyle = value;
+            await this.plugin.saveSettings();
+          }));
+
+      new Setting(section)
+        .setName('밑줄 색상')
+        .setDesc('오류 표시에 사용할 밑줄 색상을 설정하세요.')
+        .addText(text => text
+          .setPlaceholder('#ff0000')
+          .setValue(this.plugin.settings.inlineMode.underlineColor)
+          .onChange(async (value) => {
+            if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
+              this.plugin.settings.inlineMode.underlineColor = value;
+              await this.plugin.saveSettings();
+            }
+          }));
+
+      new Setting(section)
+        .setName('호버 시 툴팁 표시')
+        .setDesc('오류에 마우스를 올렸을 때 수정 제안을 표시합니다.')
+        .addToggle(toggle => toggle
+          .setValue(this.plugin.settings.inlineMode.showTooltipOnHover)
+          .onChange(async (value) => {
+            this.plugin.settings.inlineMode.showTooltipOnHover = value;
+            await this.plugin.saveSettings();
+          }));
+
+      new Setting(section)
+        .setName('클릭 시 툴팁 표시')
+        .setDesc('오류를 클릭했을 때 수정 제안을 표시합니다.')
+        .addToggle(toggle => toggle
+          .setValue(this.plugin.settings.inlineMode.showTooltipOnClick)
+          .onChange(async (value) => {
+            this.plugin.settings.inlineMode.showTooltipOnClick = value;
+            await this.plugin.saveSettings();
+          }));
     }
   }
 }

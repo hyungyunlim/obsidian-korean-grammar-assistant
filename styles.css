@@ -1409,6 +1409,321 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   font-size: 12px !important;
 }
 
+/* styles/inline-suggest.css */
+.korean-grammar-error-inline,
+.cm-editor .korean-grammar-error-inline,
+.cm-content .korean-grammar-error-inline {
+  display: inline !important;
+  position: relative !important;
+  cursor: pointer !important;
+  border-bottom: 2px wavy #ff0000 !important;
+  text-decoration: none !important;
+  transition: all 0.2s ease !important;
+}
+.korean-grammar-error-inline:hover,
+.cm-editor .korean-grammar-error-inline:hover,
+.cm-content .korean-grammar-error-inline:hover {
+  background-color: rgba(255, 0, 0, 0.1) !important;
+  border-bottom-color: #cc0000 !important;
+}
+.korean-grammar-tooltip {
+  position: fixed;
+  z-index: 10000;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 200px;
+  max-width: 300px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.korean-grammar-tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.korean-grammar-tooltip-error {
+  font-weight: 600;
+  color: var(--text-error);
+  text-decoration: line-through;
+}
+.korean-grammar-tooltip-suggestions {
+  margin-bottom: 8px;
+}
+.korean-grammar-tooltip-suggestion {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  background: transparent;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  color: var(--text-normal);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.korean-grammar-tooltip-suggestion:hover {
+  background: var(--background-modifier-hover);
+  border-color: var(--interactive-accent);
+}
+.korean-grammar-tooltip-suggestion--primary {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+  font-weight: 500;
+}
+.korean-grammar-tooltip-suggestion--primary:hover {
+  background: var(--interactive-accent-hover);
+}
+.korean-grammar-tooltip-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+.korean-grammar-tooltip-ignore {
+  flex: 1;
+  padding: 4px 8px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.korean-grammar-tooltip-ignore:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+@media (max-width: 768px) {
+  .korean-grammar-tooltip {
+    min-width: 250px;
+    max-width: 90vw;
+    font-size: 14px;
+  }
+  .korean-grammar-tooltip-suggestion {
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+  .korean-grammar-tooltip-ignore {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}
+@media (pointer: coarse) {
+  .korean-grammar-tooltip-suggestion {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  .korean-grammar-tooltip-ignore {
+    min-height: 36px;
+  }
+}
+.kgc-suggestion-container {
+  padding: 12px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  min-width: 280px;
+  max-width: 400px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-normal);
+}
+.kgc-suggestion-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.kgc-suggestion-error-icon {
+  font-size: 14px;
+  color: var(--text-error);
+}
+.kgc-suggestion-error-text {
+  font-weight: 600;
+  color: var(--text-error);
+  text-decoration: line-through;
+  text-decoration-color: var(--text-error);
+  text-decoration-thickness: 2px;
+}
+.kgc-suggestion-confidence {
+  margin-left: auto;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.kgc-suggestion-corrections {
+  margin-bottom: 8px;
+}
+.kgc-suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  margin-bottom: 2px;
+}
+.kgc-suggestion-item:hover {
+  background: var(--background-modifier-hover);
+}
+.kgc-suggestion-item--primary {
+  background: var(--interactive-accent-hover);
+  color: var(--text-on-accent);
+  font-weight: 500;
+}
+.kgc-suggestion-item--primary:hover {
+  background: var(--interactive-accent);
+}
+.kgc-suggestion-check-icon {
+  color: var(--text-success);
+  font-size: 12px;
+  font-weight: bold;
+}
+.kgc-suggestion-item--primary .kgc-suggestion-check-icon {
+  color: var(--text-on-accent);
+}
+.kgc-suggestion-text {
+  flex: 1;
+  font-weight: inherit;
+}
+.kgc-suggestion-help {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px;
+  background: var(--background-secondary);
+  border-radius: 4px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  line-height: 1.3;
+}
+.kgc-suggestion-help-icon {
+  color: var(--text-accent);
+  font-size: 14px;
+  margin-top: 1px;
+}
+.kgc-suggestion-help-text {
+  color: var(--text-muted);
+  flex: 1;
+}
+.kgc-suggestion-footer {
+  border-top: 1px solid var(--background-modifier-border);
+  padding-top: 6px;
+  text-align: center;
+}
+.kgc-suggestion-hint {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-style: italic;
+}
+@media (max-width: 768px) {
+  .kgc-suggestion-container {
+    min-width: 260px;
+    max-width: 90vw;
+    font-size: 14px;
+  }
+  .kgc-suggestion-item {
+    padding: 10px 8px;
+    margin-bottom: 4px;
+  }
+  .kgc-suggestion-help {
+    font-size: 13px;
+  }
+}
+@media (pointer: coarse) {
+  .kgc-suggestion-item {
+    min-height: 44px;
+    padding: 8px;
+  }
+  .kgc-suggestion-container {
+    padding: 16px;
+  }
+}
+.theme-dark .kgc-suggestion-item--primary {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+.theme-dark .kgc-suggestion-item--primary:hover {
+  background: var(--interactive-accent-hover);
+}
+@media (prefers-contrast: high) {
+  .kgc-suggestion-container {
+    border-width: 2px;
+  }
+  .kgc-suggestion-item {
+    border: 1px solid transparent;
+  }
+  .kgc-suggestion-item:hover,
+  .kgc-suggestion-item--primary {
+    border-color: var(--text-accent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kgc-suggestion-item {
+    transition: none;
+  }
+}
+.suggestion-item[aria-selected=true] .kgc-suggestion-item {
+  background: var(--background-modifier-hover);
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+.suggestion-container .kgc-suggestion-container {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 8px 12px;
+}
+.suggestion-item .kgc-suggestion-container {
+  padding: 0;
+  border: none;
+  background: transparent;
+  min-width: auto;
+  max-width: none;
+}
+.suggestion-item .kgc-suggestion-item {
+  background: transparent;
+  margin-bottom: 0;
+  border-radius: 0;
+  padding: 4px 0;
+}
+.suggestion-item:hover .kgc-suggestion-item,
+.suggestion-item[aria-selected=true] .kgc-suggestion-item {
+  background: var(--background-modifier-hover);
+}
+.suggestion-item .kgc-suggestion-header {
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+}
+.suggestion-item .kgc-suggestion-help {
+  background: var(--background-modifier-hover);
+  margin-bottom: 4px;
+  padding: 6px;
+}
+.suggestion-item .kgc-suggestion-footer {
+  border-top: none;
+  padding-top: 2px;
+  margin-top: 4px;
+}
+
 /* styles/responsive.css */
 @supports (padding-top: env(safe-area-inset-top)) {
   #correctionPopup {

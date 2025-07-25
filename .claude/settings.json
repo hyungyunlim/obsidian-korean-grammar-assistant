@@ -1,0 +1,54 @@
+{
+  "allowedTools": [
+    "Edit",
+    "MultiEdit", 
+    "Write",
+    "Read",
+    "Bash",
+    "Grep",
+    "Glob",
+    "LS",
+    "Task",
+    "TodoWrite",
+    "WebSearch",
+    "WebFetch"
+  ],
+  "rules": [
+    "Focus on Korean Grammar Assistant plugin development",
+    "Prioritize mobile optimization and AI feature enhancement",  
+    "Use specialized subagents for domain-specific tasks",
+    "Maintain cross-platform compatibility (desktop/mobile)",
+    "Follow Obsidian plugin guidelines strictly",
+    "Optimize for performance and memory usage",
+    "Keep Korean language support as top priority"
+  ],
+  "projectContext": {
+    "name": "Korean Grammar Assistant for Obsidian",
+    "description": "한국어 맞춤법 검사 플러그인 with AI-powered suggestions",
+    "mainFeatures": [
+      "Bareun.ai API integration for Korean grammar checking",
+      "AI auto-correction with multiple providers (OpenAI, Anthropic, Google, Ollama)",
+      "Mobile-optimized touch interface with haptic feedback", 
+      "18 keyboard shortcuts for efficient navigation",
+      "5-stage toggle system with color coding",
+      "Dynamic pagination for large documents",
+      "Real-time preview with click-to-edit functionality"
+    ],
+    "technicalStack": {
+      "language": "TypeScript",
+      "platform": "Obsidian Plugin API",
+      "ui": "HTML/CSS with responsive design",
+      "ai": "Multiple AI providers with token optimization",
+      "build": "ESBuild with TypeScript compilation"
+    }
+  },
+  "subagents": {
+    "mobile-debug": "Mobile UI/UX debugging and optimization",
+    "ai-feature": "AI functionality development and enhancement", 
+    "ui-optimizer": "User interface and experience optimization",
+    "korean-nlp": "Korean language processing and grammar logic",
+    "performance-audit": "Performance analysis and memory optimization",
+    "release-manager": "Release management and deployment automation",
+    "obsidian-integration": "Obsidian API integration and compatibility"
+  }
+}

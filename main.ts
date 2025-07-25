@@ -15,6 +15,11 @@ import { SpellCheckOrchestrator } from './src/orchestrator';
 import { ModernSettingsTab } from './src/ui/settingsTab';
 import { Logger } from './src/utils/logger';
 
+// Import inline mode components
+import { errorDecorationField, InlineModeService } from './src/services/inlineModeService';
+import { SpellCheckApiService } from './src/services/api';
+import { KoreanGrammarSuggest } from './src/ui/koreanGrammarSuggest';
+
 // 한글 맞춤법 검사 아이콘 등록
 addIcon(
   "han-spellchecker",
@@ -27,6 +32,7 @@ addIcon(
 export default class KoreanGrammarPlugin extends Plugin {
   settings: PluginSettings;
   orchestrator: SpellCheckOrchestrator;
+  grammarSuggest: KoreanGrammarSuggest | null = null;
 
   async onload() {
     // 환경에 따른 로거 최적화 설정
@@ -92,11 +98,45 @@ export default class KoreanGrammarPlugin extends Plugin {
       },
     });
 
+    // 인라인 모드 명령어 추가 (베타 기능)
+    this.addCommand({
+      id: "inline-spell-check",
+      name: "인라인 맞춤법 검사 (베타)",
+      callback: async () => {
+        if (!this.settings.inlineMode.enabled) {
+          new Notice("인라인 모드가 비활성화되어 있습니다. 설정에서 베타 기능을 활성화하세요.");
+          return;
+        }
+        await this.executeInlineSpellCheck();
+      },
+    });
+
+    // EditorSuggest 기반 인라인 모드 명령어 추가
+    this.addCommand({
+      id: "inline-spell-check-suggest",
+      name: "인라인 맞춤법 검사 (EditorSuggest)",
+      callback: async () => {
+        if (!this.settings.inlineMode.enabled) {
+          new Notice("인라인 모드가 비활성화되어 있습니다. 설정에서 베타 기능을 활성화하세요.");
+          return;
+        }
+        await this.executeInlineSpellCheckWithSuggest();
+      },
+    });
+
+    // 인라인 모드가 활성화된 경우 EditorSuggest 등록
+    if (this.settings.inlineMode.enabled) {
+      this.enableInlineMode();
+    }
+
     // 설정 탭 추가
     this.addSettingTab(new ModernSettingsTab(this.app, this));
   }
 
   onunload() {
+    // 인라인 모드 정리
+    this.disableInlineMode();
+    
     // 오케스트레이터 정리
     if (this.orchestrator) {
       this.orchestrator.destroy();
@@ -113,6 +153,153 @@ export default class KoreanGrammarPlugin extends Plugin {
     // 오케스트레이터 설정 업데이트
     if (this.orchestrator) {
       this.orchestrator.updateSettings(this.settings);
+    }
+  }
+
+  /**
+   * 인라인 맞춤법 검사 실행
+   */
+  async executeInlineSpellCheck(): Promise<void> {
+    const activeLeaf = this.app.workspace.activeLeaf;
+    if (!activeLeaf) {
+      new Notice("활성화된 편집기가 없습니다.");
+      return;
+    }
+
+    // @ts-ignore - Obsidian 내부 API 사용
+    const editor = activeLeaf.view.editor;
+    if (!editor) {
+      new Notice("편집기를 찾을 수 없습니다.");
+      return;
+    }
+
+    // @ts-ignore - CodeMirror 6 에디터 뷰 접근
+    const editorView = editor.cm;
+    if (!editorView) {
+      new Notice("CodeMirror 에디터 뷰를 찾을 수 없습니다.");
+      return;
+    }
+
+    Logger.log('인라인 모드: 맞춤법 검사 시작');
+
+    try {
+      // 에디터 뷰 및 설정 초기화
+      InlineModeService.setEditorView(editorView, this.settings);
+
+      // 전체 텍스트 가져오기
+      const fullText = editorView.state.doc.toString();
+      if (!fullText.trim()) {
+        new Notice("검사할 텍스트가 없습니다.");
+        return;
+      }
+
+      // API 서비스를 통해 맞춤법 검사 실행
+      const apiService = new SpellCheckApiService();
+      const result = await apiService.checkSpelling(fullText, this.settings);
+
+      if (!result.corrections || result.corrections.length === 0) {
+        new Notice("맞춤법 오류가 발견되지 않았습니다.");
+        return;
+      }
+
+      // 인라인 모드로 오류 표시
+      InlineModeService.showErrors(
+        editorView,
+        result.corrections,
+        this.settings.inlineMode.underlineStyle,
+        this.settings.inlineMode.underlineColor
+      );
+
+      new Notice(`${result.corrections.length}개의 맞춤법 오류를 발견했습니다.`);
+      Logger.log(`인라인 모드: ${result.corrections.length}개 오류 표시 완료`);
+
+    } catch (error) {
+      Logger.error('인라인 모드 맞춤법 검사 오류:', error);
+      new Notice('맞춤법 검사 중 오류가 발생했습니다.');
+    }
+  }
+
+  /**
+   * 인라인 모드 활성화
+   */
+  enableInlineMode(): void {
+    if (this.grammarSuggest) return; // 이미 활성화됨
+
+    try {
+      // EditorSuggest 인스턴스 생성
+      this.grammarSuggest = new KoreanGrammarSuggest(this.app, this.settings);
+      this.registerEditorSuggest(this.grammarSuggest);
+
+      // 기존 Widget 기반 시스템도 병행 (향후 단계적 제거 예정)
+      this.registerEditorExtension([errorDecorationField]);
+      (window as any).InlineModeService = InlineModeService;
+
+      Logger.log('인라인 모드 활성화됨 (EditorSuggest)');
+
+    } catch (error) {
+      Logger.error('인라인 모드 활성화 실패:', error);
+      new Notice('인라인 모드 활성화에 실패했습니다.');
+    }
+  }
+
+  /**
+   * 인라인 모드 비활성화
+   */
+  disableInlineMode(): void {
+    if (this.grammarSuggest) {
+      this.grammarSuggest.cleanup();
+      // EditorSuggest는 별도 해제 메서드가 없으므로 참조만 제거
+      this.grammarSuggest = null;
+    }
+
+    // 전역 객체 정리
+    if ((window as any).InlineModeService) {
+      delete (window as any).InlineModeService;
+    }
+
+    Logger.log('인라인 모드 비활성화됨');
+  }
+
+  /**
+   * EditorSuggest 기반 인라인 맞춤법 검사 실행
+   */
+  async executeInlineSpellCheckWithSuggest(): Promise<void> {
+    if (!this.grammarSuggest) {
+      new Notice('인라인 모드가 활성화되지 않았습니다.');
+      return;
+    }
+
+    const activeLeaf = this.app.workspace.activeLeaf;
+    if (!activeLeaf) {
+      new Notice('활성화된 편집기가 없습니다.');
+      return;
+    }
+
+    // @ts-ignore - Obsidian 내부 API 사용
+    const editor = activeLeaf.view.editor;
+    if (!editor) {
+      new Notice('편집기를 찾을 수 없습니다.');
+      return;
+    }
+
+    try {
+      // 전체 텍스트 가져오기
+      const fullText = editor.getValue();
+      if (!fullText.trim()) {
+        new Notice('검사할 텍스트가 없습니다.');
+        return;
+      }
+
+      Logger.log('EditorSuggest 기반 맞춤법 검사 시작');
+
+      // 맞춤법 검사 실행 및 결과를 EditorSuggest에 업데이트
+      await this.grammarSuggest.updateCorrections(fullText);
+
+      new Notice('맞춤법 검사가 완료되었습니다. 오타에 커서를 놓으면 수정 제안이 표시됩니다.');
+
+    } catch (error) {
+      Logger.error('EditorSuggest 기반 맞춤법 검사 오류:', error);
+      new Notice('맞춤법 검사 중 오류가 발생했습니다.');
     }
   }
 }
