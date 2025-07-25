@@ -1216,7 +1216,8 @@ export class InlineModeService {
         return false;
       }
       
-      const suggestions = this.currentFocusedError.correction.corrected;
+      // 🎯 원문 포함한 전체 제안 목록 (원문 → 제안1 → 제안2 → ...)
+      const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
       if (!suggestions || suggestions.length === 0) {
         Logger.log('❌ 제안이 없음');
         return false;
@@ -1238,7 +1239,8 @@ export class InlineModeService {
         return false;
       }
       
-      const suggestions = this.currentFocusedError.correction.corrected;
+      // 🎯 원문 포함한 전체 제안 목록 (원문 → 제안1 → 제안2 → ...)
+      const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
       if (!suggestions || suggestions.length === 0) {
         Logger.log('❌ 제안이 없음');
         return false;
@@ -1260,7 +1262,8 @@ export class InlineModeService {
         return false;
       }
       
-      const suggestions = this.currentFocusedError.correction.corrected;
+      // 🎯 원문 포함한 전체 제안 목록 (원문 → 제안1 → 제안2 → ...)
+      const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
       if (!suggestions || suggestions.length === 0) {
         Logger.log('❌ 제안이 없음');
         return false;
@@ -1295,7 +1298,8 @@ export class InlineModeService {
       Logger.log('🎹 Ctrl+Shift+Enter 키 감지됨 (호환성)');
       if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) return false;
       
-      const suggestions = this.currentFocusedError.correction.corrected;
+      // 🎯 원문 포함한 전체 제안 목록 (원문 → 제안1 → 제안2 → ...)
+      const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
       if (!suggestions || suggestions.length === 0) return false;
       
       const selectedSuggestion = suggestions[this.currentSuggestionIndex];
@@ -1642,7 +1646,8 @@ export class InlineModeService {
           return;
         }
 
-        const suggestions = this.currentFocusedError.correction.corrected;
+        // 🎯 원문 포함한 전체 제안 목록 (원문 → 제안1 → 제안2 → ...)
+        const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
         if (!suggestions || suggestions.length === 0) {
           new Notice('현재 오류에 대한 제안이 없습니다.');
           return;
@@ -1671,7 +1676,8 @@ export class InlineModeService {
           return;
         }
 
-        const suggestions = this.currentFocusedError.correction.corrected;
+        // 🎯 원문 포함한 전체 제안 목록 (원문 → 제안1 → 제안2 → ...)
+        const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
         if (!suggestions || suggestions.length === 0) {
           new Notice('현재 오류에 대한 제안이 없습니다.');
           return;
@@ -1700,7 +1706,8 @@ export class InlineModeService {
           return;
         }
 
-        const suggestions = this.currentFocusedError.correction.corrected;
+        // 🎯 원문 포함한 전체 제안 목록 (원문 → 제안1 → 제안2 → ...)
+        const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
         if (!suggestions || suggestions.length === 0) {
           new Notice('현재 오류에 대한 제안이 없습니다.');
           return;
@@ -1956,7 +1963,8 @@ export class InlineModeService {
         return;
       }
 
-      const suggestions = this.currentFocusedError.correction.corrected;
+      // 🎯 원문 포함한 전체 제안 목록 사용
+      const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
       if (!suggestions || suggestions.length === 0) {
         return;
       }
@@ -1989,35 +1997,22 @@ export class InlineModeService {
         }
       }
       
-      // 🎯 decoration 다시 적용 (하이라이팅 유지)
-      if (this.currentView) {
-        // 모든 decoration 지우고 다시 적용
+      // 🔥 더 강력한 포커스 유지 전략
+      if (this.currentView && this.currentFocusedError) {
+        // 즉시 포커스 재설정 시도
         this.currentView.dispatch({
-          effects: [clearAllErrorDecorations.of(true)]
+          effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
         });
         
-        // 조금 기다린 후 decoration 다시 적용 (CodeMirror 업데이트 대기)
-        setTimeout(() => {
-          if (this.currentView) {
-            const activeErrorsArray = this.getActiveErrors();
+        // 추가: 더 강력한 재설정을 위해 한 번 더 시도
+        requestAnimationFrame(() => {
+          if (this.currentView && this.currentFocusedError) {
             this.currentView.dispatch({
-              effects: addErrorDecorations.of({ 
-                errors: activeErrorsArray, 
-                underlineStyle: 'wavy', 
-                underlineColor: '#ff0000' 
-              })
+              effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
             });
-            
-            // 포커스된 오류 하이라이트 다시 적용
-            if (this.currentFocusedError) {
-              this.currentView.dispatch({
-                effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
-              });
-            }
-            
-            Logger.debug(`🎯 decoration 재적용 완료: ${activeErrorsArray.length}개 오류`);
+            Logger.debug(`🔥 강화된 포커스 재설정: ${this.currentFocusedError.uniqueId}`);
           }
-        }, 10); // 10ms 지연
+        });
       }
       
     } catch (error) {

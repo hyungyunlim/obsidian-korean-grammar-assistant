@@ -11433,7 +11433,7 @@ var InlineModeService = class {
           new import_obsidian12.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uC624\uB958\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
           return;
         }
-        const suggestions = this.currentFocusedError.correction.corrected;
+        const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
         if (!suggestions || suggestions.length === 0) {
           new import_obsidian12.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
           return;
@@ -11452,7 +11452,7 @@ var InlineModeService = class {
           new import_obsidian12.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uC624\uB958\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
           return;
         }
-        const suggestions = this.currentFocusedError.correction.corrected;
+        const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
         if (!suggestions || suggestions.length === 0) {
           new import_obsidian12.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
           return;
@@ -11471,7 +11471,7 @@ var InlineModeService = class {
           new import_obsidian12.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uC624\uB958\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
           return;
         }
-        const suggestions = this.currentFocusedError.correction.corrected;
+        const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
         if (!suggestions || suggestions.length === 0) {
           new import_obsidian12.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
           return;
@@ -11661,7 +11661,7 @@ var InlineModeService = class {
         Logger.warn("\uD604\uC7AC \uD65C\uC131 Markdown \uC5D0\uB514\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4");
         return;
       }
-      const suggestions = this.currentFocusedError.correction.corrected;
+      const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
       if (!suggestions || suggestions.length === 0) {
         return;
       }
@@ -11681,28 +11681,18 @@ var InlineModeService = class {
           error.end += lengthDiff;
         }
       }
-      if (this.currentView) {
+      if (this.currentView && this.currentFocusedError) {
         this.currentView.dispatch({
-          effects: [clearAllErrorDecorations.of(true)]
+          effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
         });
-        setTimeout(() => {
-          if (this.currentView) {
-            const activeErrorsArray = this.getActiveErrors();
+        requestAnimationFrame(() => {
+          if (this.currentView && this.currentFocusedError) {
             this.currentView.dispatch({
-              effects: addErrorDecorations.of({
-                errors: activeErrorsArray,
-                underlineStyle: "wavy",
-                underlineColor: "#ff0000"
-              })
+              effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
             });
-            if (this.currentFocusedError) {
-              this.currentView.dispatch({
-                effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
-              });
-            }
-            Logger.debug(`\u{1F3AF} decoration \uC7AC\uC801\uC6A9 \uC644\uB8CC: ${activeErrorsArray.length}\uAC1C \uC624\uB958`);
+            Logger.debug(`\u{1F525} \uAC15\uD654\uB41C \uD3EC\uCEE4\uC2A4 \uC7AC\uC124\uC815: ${this.currentFocusedError.uniqueId}`);
           }
-        }, 10);
+        });
       }
     } catch (error) {
       Logger.error("\uC784\uC2DC \uC81C\uC548 \uC801\uC6A9 \uC911 \uC624\uB958:", error);
