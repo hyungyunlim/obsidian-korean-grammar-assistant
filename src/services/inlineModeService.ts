@@ -334,10 +334,13 @@ export class InlineModeService {
           
           Logger.debug(`새로운 오류 호버 시작: "${error.correction.original}" (ID: ${errorId})`);
           
+          // 🔧 마우스 위치 정보 수집
+          const mousePosition = { x: e.clientX, y: e.clientY };
+          
           this.hoverTimeout = setTimeout(() => {
             // 호버 상태 업데이트 (실제 호버된 오류만 정확히 처리)
             this.currentHoveredError = error;
-            this.handleErrorHover(error, target);
+            this.handleErrorHover(error, target, mousePosition);
           }, 300);
         }
       }
@@ -383,8 +386,9 @@ export class InlineModeService {
           if (errorId && this.activeErrors.has(errorId)) {
             const error = this.activeErrors.get(errorId);
             if (error) {
-              // 실제 클릭된 DOM 요소를 함께 전달
-              this.handleErrorClick(error, target);
+              // 🔧 마우스 위치 정보를 함께 전달
+              const mousePosition = { x: e.clientX, y: e.clientY };
+              this.handleErrorClick(error, target, mousePosition);
             }
           }
         }
@@ -507,7 +511,9 @@ export class InlineModeService {
           
           // 짧은 딜레이 후 툴팁 표시
           setTimeout(() => {
-            this.handleErrorTooltip(error, target);
+            // 🔧 터치 위치 정보를 함께 전달
+            const touchPosition = { x: touchStartPos.x, y: touchStartPos.y };
+            this.handleErrorTooltip(error, target, touchPosition);
           }, 50);
         }
       }
@@ -830,7 +836,7 @@ export class InlineModeService {
   /**
    * 오류 호버 핸들러
    */
-  static handleErrorHover(error: InlineError, hoveredElement?: HTMLElement): void {
+  static handleErrorHover(error: InlineError, hoveredElement?: HTMLElement, mousePosition?: { x: number; y: number }): void {
     Logger.debug(`인라인 모드: 오류 호버 - ${error.correction.original}`);
     
     // 호버 시 툴팁 표시 (설정에서 활성화된 경우)
@@ -838,7 +844,8 @@ export class InlineModeService {
       // 실제 호버된 요소가 전달되면 그것을 사용, 없으면 기존 방식으로 찾기
       const targetElement = hoveredElement || this.findErrorElement(error);
       if (targetElement) {
-        globalInlineTooltip.show(error, targetElement, 'hover');
+        // 🔧 마우스 위치 정보를 툴팁에 전달
+        globalInlineTooltip.show(error, targetElement, 'hover', mousePosition);
       }
     }
   }
@@ -846,7 +853,7 @@ export class InlineModeService {
   /**
    * 오류 클릭 핸들러
    */
-  static handleErrorClick(error: InlineError, clickedElement?: HTMLElement): void {
+  static handleErrorClick(error: InlineError, clickedElement?: HTMLElement, mousePosition?: { x: number; y: number }): void {
     Logger.log(`인라인 모드: 오류 클릭 - ${error.correction.original}`);
     
     try {
@@ -876,14 +883,15 @@ export class InlineModeService {
   /**
    * 오류 툴팁 표시 핸들러 (바로 적용하지 않고 툴팁만 표시)
    */
-  static handleErrorTooltip(error: InlineError, targetElement?: HTMLElement): void {
+  static handleErrorTooltip(error: InlineError, targetElement?: HTMLElement, touchPosition?: { x: number; y: number }): void {
     Logger.log(`인라인 모드: 오류 툴팁 표시 - ${error.correction.original}`);
     
     try {
       // 실제 타겟 요소가 전달되면 그것을 사용, 없으면 기존 방식으로 찾기
       const element = targetElement || this.findErrorElement(error);
       if (element) {
-        globalInlineTooltip.show(error, element, 'click');
+        // 🔧 마우스/터치 위치 정보를 툴팁에 전달
+        globalInlineTooltip.show(error, element, 'click', touchPosition);
       } else {
         Logger.warn(`인라인 모드: 타겟 요소를 찾을 수 없습니다 - ${error.correction.original}`);
       }

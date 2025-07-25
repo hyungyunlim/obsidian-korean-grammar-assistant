@@ -15,7 +15,7 @@ export class InlineTooltip {
   /**
    * 툴팁 표시
    */
-  show(error: InlineError, targetElement: HTMLElement, triggerType: 'hover' | 'click'): void {
+  show(error: InlineError, targetElement: HTMLElement, triggerType: 'hover' | 'click', mousePosition?: { x: number; y: number }): void {
     // 같은 오류에 대한 툴팁이 이미 표시 중이면 무시
     if (this.isVisible && this.currentError?.uniqueId === error.uniqueId) {
       Logger.debug(`인라인 툴팁 이미 표시 중: ${error.correction.original}`);
@@ -26,7 +26,7 @@ export class InlineTooltip {
     
     this.currentError = error;
     this.createTooltip(error, targetElement, triggerType);
-    this.positionTooltip(targetElement);
+    this.positionTooltip(targetElement, mousePosition);
     this.isVisible = true;
 
     Logger.debug(`인라인 툴팁 표시: ${error.correction.original} (${triggerType})`);
@@ -126,7 +126,7 @@ export class InlineTooltip {
   /**
    * 툴팁 위치 조정 (Obsidian API 기반 고급 처리)
    */
-  private positionTooltip(targetElement: HTMLElement): void {
+  private positionTooltip(targetElement: HTMLElement, mousePosition?: { x: number; y: number }): void {
     if (!this.tooltip) return;
 
     const targetRect = targetElement.getBoundingClientRect();
@@ -179,9 +179,9 @@ export class InlineTooltip {
     });
 
     if (isMobile) {
-      this.positionTooltipMobile(targetElement, targetRect, viewportWidth, viewportHeight, keyboardHeight, isPhone, editorContainerRect);
+      this.positionTooltipMobile(targetElement, targetRect, viewportWidth, viewportHeight, keyboardHeight, isPhone, editorContainerRect, mousePosition);
     } else {
-      this.positionTooltipDesktop(targetElement, targetRect, viewportWidth, viewportHeight, editorContainerRect);
+      this.positionTooltipDesktop(targetElement, targetRect, viewportWidth, viewportHeight, editorContainerRect, mousePosition);
     }
   }
 
@@ -195,7 +195,8 @@ export class InlineTooltip {
     viewportHeight: number,
     keyboardHeight: number,
     isPhone: boolean,
-    editorContainerRect: DOMRect | null = null
+    editorContainerRect: DOMRect | null = null,
+    mousePosition?: { x: number; y: number }
   ): void {
     if (!this.tooltip) return;
 
@@ -214,13 +215,31 @@ export class InlineTooltip {
     this.tooltip.style.maxHeight = `${adaptiveSize.maxHeight}px`;
     this.tooltip.style.minWidth = `${adaptiveSize.minWidth}px`;
     this.tooltip.style.fontSize = adaptiveSize.fontSize;
+
+    // 🎯 터치/마우스 위치 우선 고려 (모바일 엣지케이스 해결)
+    let referenceCenterX: number;
+    let referenceCenterY: number;
     
-    // 🔧 화면 구석 감지 (에디터 영역 기준)
+    if (mousePosition) {
+      // 🔧 터치 위치 기반: 정확한 터치 지점 주변에 표시
+      referenceCenterX = mousePosition.x;
+      referenceCenterY = mousePosition.y;
+      
+      Logger.debug(`🎯 터치 위치 기반 툴팁 배치: (${mousePosition.x}, ${mousePosition.y})`);
+    } else {
+      // 🔧 기존 방식: targetElement 중심
+      referenceCenterX = targetRect.left + targetRect.width / 2;
+      referenceCenterY = targetRect.top + targetRect.height / 2;
+      
+      Logger.debug(`📍 타겟 요소 기반 툴팁 배치: (${referenceCenterX}, ${referenceCenterY})`);
+    }
+    
+    // 🔧 화면 구석 감지 (에디터 영역 및 터치 위치 기준)
     const cornerThreshold = 60;
-    const effectiveLeft = Math.max(targetRect.left, editorLeft);
-    const effectiveRight = Math.min(targetRect.right, editorLeft + editorWidth);
-    const effectiveTop = Math.max(targetRect.top, editorTop);
-    const effectiveBottom = Math.min(targetRect.bottom, editorTop + editorHeight);
+    const effectiveLeft = Math.max(referenceCenterX - 8, editorLeft);
+    const effectiveRight = Math.min(referenceCenterX + 8, editorLeft + editorWidth);
+    const effectiveTop = Math.max(referenceCenterY - 10, editorTop);
+    const effectiveBottom = Math.min(referenceCenterY + 10, editorTop + editorHeight);
     
     const isLeftEdge = effectiveLeft - editorLeft < cornerThreshold;
     const isRightEdge = editorLeft + editorWidth - effectiveRight < cornerThreshold;
@@ -233,7 +252,7 @@ export class InlineTooltip {
     let finalLeft = 0;
     let finalTop = 0;
 
-    // 🔧 가로 위치 계산 (적응형 너비 고려)
+    // 🔧 가로 위치 계산 (터치 위치 고려)
     if (isLeftEdge) {
       finalLeft = Math.max(safeMargin, editorLeft + safeMargin);
       Logger.debug('📱 왼쪽 구석 감지: 에디터 영역 내 오른쪽으로 이동');
@@ -241,40 +260,47 @@ export class InlineTooltip {
       finalLeft = Math.min(viewportWidth - adaptiveSize.width - safeMargin, editorLeft + editorWidth - adaptiveSize.width - safeMargin);
       Logger.debug('📱 오른쪽 구석 감지: 에디터 영역 내 왼쪽으로 이동');
     } else {
-      // 중앙 영역: 에디터 중앙 정렬 (적응형 너비 고려)
-      const editorCenterX = editorLeft + editorWidth / 2;
-      finalLeft = Math.max(safeMargin, Math.min(
-        editorCenterX - adaptiveSize.width / 2,
-        viewportWidth - adaptiveSize.width - safeMargin
-      ));
+      // 중앙 영역: 터치 위치 중심 정렬
+      if (mousePosition) {
+        finalLeft = Math.max(safeMargin, Math.min(
+          referenceCenterX - adaptiveSize.width / 2,
+          viewportWidth - adaptiveSize.width - safeMargin
+        ));
+      } else {
+        // 기존 방식: 에디터 중앙 정렬
+        const editorCenterX = editorLeft + editorWidth / 2;
+        finalLeft = Math.max(safeMargin, Math.min(
+          editorCenterX - adaptiveSize.width / 2,
+          viewportWidth - adaptiveSize.width - safeMargin
+        ));
+      }
     }
 
-    // 🔧 세로 위치 계산 (키보드 및 에디터 영역 고려)
+    // 🔧 세로 위치 계산 (키보드 및 터치 위치 고려)
     const effectiveViewportHeight = Math.min(viewportHeight - keyboardHeight, editorTop + editorHeight);
-    const spaceAbove = effectiveTop - editorTop;
-    const spaceBelow = effectiveViewportHeight - effectiveBottom;
+    const spaceAbove = referenceCenterY - editorTop;
+    const spaceBelow = effectiveViewportHeight - referenceCenterY;
     
     if (isTopEdge && spaceBelow > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
-      finalTop = effectiveBottom + fingerOffset;
+      finalTop = referenceCenterY + fingerOffset;
       Logger.debug('📱 상단 구석: 아래쪽 배치');
     } else if (isBottomEdge && spaceAbove > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
-      finalTop = effectiveTop - adaptiveSize.maxHeight - fingerOffset;
+      finalTop = referenceCenterY - adaptiveSize.maxHeight - fingerOffset;
       Logger.debug('📱 하단 구석: 위쪽 배치');
     } else if (spaceAbove > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
-      finalTop = effectiveTop - adaptiveSize.maxHeight - 30;
+      finalTop = referenceCenterY - adaptiveSize.maxHeight - 30;
     } else if (spaceBelow > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
-      finalTop = effectiveBottom + 30;
+      finalTop = referenceCenterY + 30;
     } else {
-      // 공간 매우 부족: 에디터 중앙 (타겟 피하면서)
-      const editorCenterY = editorTop + editorHeight / 2;
-      const targetCenterY = (effectiveTop + effectiveBottom) / 2;
+      // 공간 매우 부족: 화면 중앙 (터치 지점 피하면서)
+      const centerY = effectiveViewportHeight / 2;
       
-      if (Math.abs(editorCenterY - targetCenterY) < adaptiveSize.maxHeight / 2) {
-        finalTop = Math.max(editorTop + safeMargin, effectiveTop - adaptiveSize.maxHeight - 20);
+      if (Math.abs(centerY - referenceCenterY) < adaptiveSize.maxHeight / 2) {
+        finalTop = Math.max(editorTop + safeMargin, referenceCenterY - adaptiveSize.maxHeight - 20);
       } else {
-        finalTop = Math.max(editorTop + safeMargin, editorCenterY - adaptiveSize.maxHeight / 2);
+        finalTop = Math.max(editorTop + safeMargin, centerY - adaptiveSize.maxHeight / 2);
       }
-      Logger.debug('📱 공간 부족: 에디터 중앙 배치');
+      Logger.debug('📱 공간 부족: 중앙 배치 (터치 지점 고려)');
     }
 
     // 🔧 최종 경계 보정 (에디터 및 키보드 고려)
@@ -298,7 +324,9 @@ export class InlineTooltip {
       keyboard: { visible: keyboardHeight > 0, height: keyboardHeight },
       spaces: { above: spaceAbove, below: spaceBelow },
       editor: editorContainerRect ? `${editorWidth}x${editorHeight} at (${editorLeft}, ${editorTop})` : 'none',
-      adaptive: `${adaptiveSize.width}px (내용 맞춤)`
+      adaptive: `${adaptiveSize.width}px (내용 맞춤)`,
+      touchMode: mousePosition ? `touch (${mousePosition.x}, ${mousePosition.y})` : 'element center',
+      reference: `(${referenceCenterX}, ${referenceCenterY})`
     });
   }
 
@@ -310,7 +338,8 @@ export class InlineTooltip {
     targetRect: DOMRect,
     viewportWidth: number,
     viewportHeight: number,
-    editorContainerRect: DOMRect | null = null
+    editorContainerRect: DOMRect | null = null,
+    mousePosition?: { x: number; y: number }
   ): void {
     if (!this.tooltip) return;
 
@@ -333,36 +362,64 @@ export class InlineTooltip {
     const gap = 8;
     const minSpacing = 12;
 
-    // 🔧 화면 구석 감지 (에디터 기준)
+    // 🎯 마우스 위치 우선 고려 (엣지케이스 해결)
+    let referenceRect: DOMRect;
+    let referenceCenterX: number;
+    let referenceCenterY: number;
+    
+    if (mousePosition) {
+      // 🔧 마우스 위치 기반: 두 줄로 나뉜 오류의 정확한 처리
+      referenceCenterX = mousePosition.x;
+      referenceCenterY = mousePosition.y;
+      
+      // 마우스 위치 주변의 가상 사각형 생성 (16x20px)
+      referenceRect = new DOMRect(
+        mousePosition.x - 8, 
+        mousePosition.y - 10, 
+        16, 
+        20
+      );
+      
+      Logger.debug(`🎯 마우스 위치 기반 툴팁 배치: (${mousePosition.x}, ${mousePosition.y})`);
+    } else {
+      // 🔧 기존 방식: targetElement 중심
+      referenceRect = targetRect;
+      referenceCenterX = targetRect.left + targetRect.width / 2;
+      referenceCenterY = targetRect.top + targetRect.height / 2;
+      
+      Logger.debug(`📍 타겟 요소 기반 툴팁 배치: (${referenceCenterX}, ${referenceCenterY})`);
+    }
+
+    // 🔧 화면 구석 감지 (에디터 및 마우스 위치 기준)
     const cornerThreshold = 100;
-    const isLeftEdge = targetRect.left - editorLeft < cornerThreshold;
-    const isRightEdge = editorLeft + editorWidth - targetRect.right < cornerThreshold;
-    const isTopEdge = targetRect.top - editorTop < cornerThreshold;
-    const isBottomEdge = editorTop + editorHeight - targetRect.bottom < cornerThreshold;
+    const isLeftEdge = referenceCenterX - editorLeft < cornerThreshold;
+    const isRightEdge = editorLeft + editorWidth - referenceCenterX < cornerThreshold;
+    const isTopEdge = referenceCenterY - editorTop < cornerThreshold;
+    const isBottomEdge = editorTop + editorHeight - referenceCenterY < cornerThreshold;
 
     let finalLeft = 0;
     let finalTop = 0;
 
-    // 🔧 세로 위치 (구석 고려)
+    // 🔧 세로 위치 (구석 고려, 마우스 위치 기준)
     if (isBottomEdge) {
-      finalTop = targetRect.top - adaptiveSize.maxHeight - gap;
+      finalTop = referenceCenterY - adaptiveSize.maxHeight - gap - 15;
       Logger.debug('🖥️ 하단 구석: 위쪽 강제 배치');
-    } else if (targetRect.bottom + gap + adaptiveSize.maxHeight <= Math.min(viewportHeight, editorTop + editorHeight) - minSpacing) {
-      finalTop = targetRect.bottom + gap;
+    } else if (referenceCenterY + gap + adaptiveSize.maxHeight <= Math.min(viewportHeight, editorTop + editorHeight) - minSpacing) {
+      finalTop = referenceCenterY + gap + 15;
     } else {
-      finalTop = targetRect.top - adaptiveSize.maxHeight - gap;
+      finalTop = referenceCenterY - adaptiveSize.maxHeight - gap - 15;
     }
 
-    // 🔧 가로 위치 (구석 고려, 적응형 너비 사용)
+    // 🔧 가로 위치 (구석 고려, 마우스 위치 기준)
     if (isLeftEdge) {
-      finalLeft = Math.max(targetRect.left, editorLeft);
-      Logger.debug('🖥️ 왼쪽 구석: 왼쪽 정렬');
+      finalLeft = Math.max(referenceCenterX, editorLeft);
+      Logger.debug('🖥️ 왼쪽 구석: 마우스 오른쪽 정렬');
     } else if (isRightEdge) {
-      finalLeft = Math.min(targetRect.right - adaptiveSize.width, editorLeft + editorWidth - adaptiveSize.width);
-      Logger.debug('🖥️ 오른쪽 구석: 오른쪽 정렬');
+      finalLeft = Math.min(referenceCenterX - adaptiveSize.width, editorLeft + editorWidth - adaptiveSize.width);
+      Logger.debug('🖥️ 오른쪽 구석: 마우스 왼쪽 정렬');
     } else {
-      // 일반적인 경우: 중앙 정렬 (적응형 너비 고려)
-      finalLeft = targetRect.left + (targetRect.width / 2) - (adaptiveSize.width / 2);
+      // 일반적인 경우: 마우스 중심 정렬
+      finalLeft = referenceCenterX - (adaptiveSize.width / 2);
     }
 
     // 🔧 최종 경계 보정 (에디터 영역 고려)
@@ -385,7 +442,9 @@ export class InlineTooltip {
     Logger.log(`🖥️ 데스크톱 툴팁 위치: ${adaptiveSize.width}x${adaptiveSize.maxHeight} at (${finalLeft}, ${finalTop})`, {
       corners: { isLeftEdge, isRightEdge, isTopEdge, isBottomEdge },
       editor: editorContainerRect ? `${editorWidth}x${editorHeight} at (${editorLeft}, ${editorTop})` : 'none',
-      adaptive: `${adaptiveSize.width}px (내용 맞춤)`
+      adaptive: `${adaptiveSize.width}px (내용 맞춤)`,
+      mouseMode: mousePosition ? `mouse (${mousePosition.x}, ${mousePosition.y})` : 'element center',
+      reference: `(${referenceCenterX}, ${referenceCenterY})`
     });
   }
 
