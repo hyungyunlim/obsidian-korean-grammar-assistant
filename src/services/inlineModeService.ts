@@ -435,15 +435,7 @@ export class InlineModeService {
         if (errorId && this.activeErrors.has(errorId)) {
           const error = this.activeErrors.get(errorId)!;
           
-          // 짧은 딜레이 후 툴팁 표시 (일반 터치)
-          setTimeout(() => {
-            if (touchTarget === target && this.activeErrors.has(errorId)) {
-              Logger.log(`📱 터치로 툴팁 표시: ${error.correction.original}`);
-              this.handleErrorClick(error, target);
-            }
-          }, 150);
-          
-          // 롱프레스 타이머 시작
+          // 롱프레스 타이머 시작 (툴팁보다 우선)
           touchTimer = setTimeout(() => {
             if (touchTarget === target && this.activeErrors.has(errorId)) {
               Logger.log(`📱 롱프레스로 바로 수정: ${error.correction.original}`);
@@ -473,15 +465,29 @@ export class InlineModeService {
 
     // 터치 끝
     editorDOM.addEventListener('touchend', (e: TouchEvent) => {
+      const wasTouchTimer = touchTimer !== null;
+      
+      // 롱프레스 타이머 취소
       if (touchTimer) {
         clearTimeout(touchTimer);
         touchTimer = null;
       }
       
-      // 터치 시간이 짧으면 일반 터치로 간주
+      // 터치 시간이 짧으면 일반 터치로 간주하여 툴팁 표시
       const touchDuration = Date.now() - touchStartTime;
-      if (touchDuration < TOUCH_HOLD_DURATION && touchTarget) {
-        Logger.debug(`📱 짧은 터치 감지 (${touchDuration}ms)`);
+      if (touchDuration < TOUCH_HOLD_DURATION && touchTarget && wasTouchTimer) {
+        const target = touchTarget;
+        const errorId = target.getAttribute('data-error-id');
+        
+        if (errorId && this.activeErrors.has(errorId)) {
+          const error = this.activeErrors.get(errorId)!;
+          Logger.log(`📱 짧은 터치로 툴팁 표시 (${touchDuration}ms): ${error.correction.original}`);
+          
+          // 짧은 딜레이 후 툴팁 표시
+          setTimeout(() => {
+            this.handleErrorClick(error, target);
+          }, 50);
+        }
       }
       
       touchTarget = null;

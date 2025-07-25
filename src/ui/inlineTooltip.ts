@@ -328,17 +328,17 @@ export class InlineTooltip {
           background: var(--interactive-normal);
           border: 1px solid var(--background-modifier-border);
           border-radius: ${isMobile ? '6px' : '3px'};
-          padding: ${isMobile ? '8px 12px' : '2px 6px'};
+          padding: ${isMobile ? '4px 8px' : '2px 6px'};
           cursor: pointer;
           transition: all 0.2s;
           color: var(--text-normal);
-          font-size: ${isMobile ? '13px' : '11px'};
+          font-size: ${isMobile ? '12px' : '11px'};
           white-space: nowrap;
           flex-shrink: 0;
           max-width: ${isMobile ? '120px' : '100px'};
           overflow: hidden;
           text-overflow: ellipsis;
-          min-height: ${isMobile ? '40px' : 'auto'};
+          min-height: ${isMobile ? '28px' : 'auto'};
           ${isMobile ? 'touch-action: manipulation;' : ''}
         `;
 
@@ -566,13 +566,13 @@ export class InlineTooltip {
         background: var(--interactive-normal);
         border: 1px solid var(--background-modifier-border);
         border-radius: ${isMobile ? '6px' : '4px'};
-        padding: ${isMobile ? '10px 14px' : '4px 8px'};
+        padding: ${isMobile ? '6px 10px' : '4px 8px'};
         cursor: pointer;
         transition: all 0.2s;
         color: var(--text-normal);
-        font-size: ${isMobile ? '14px' : '12px'};
+        font-size: ${isMobile ? '13px' : '12px'};
         white-space: nowrap;
-        min-height: ${isMobile ? '44px' : 'auto'};
+        min-height: ${isMobile ? '32px' : 'auto'};
         ${isMobile ? 'touch-action: manipulation;' : ''}
       `;
 

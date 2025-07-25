@@ -9698,17 +9698,17 @@ var InlineTooltip = class {
           background: var(--interactive-normal);
           border: 1px solid var(--background-modifier-border);
           border-radius: ${isMobile ? "6px" : "3px"};
-          padding: ${isMobile ? "8px 12px" : "2px 6px"};
+          padding: ${isMobile ? "4px 8px" : "2px 6px"};
           cursor: pointer;
           transition: all 0.2s;
           color: var(--text-normal);
-          font-size: ${isMobile ? "13px" : "11px"};
+          font-size: ${isMobile ? "12px" : "11px"};
           white-space: nowrap;
           flex-shrink: 0;
           max-width: ${isMobile ? "120px" : "100px"};
           overflow: hidden;
           text-overflow: ellipsis;
-          min-height: ${isMobile ? "40px" : "auto"};
+          min-height: ${isMobile ? "28px" : "auto"};
           ${isMobile ? "touch-action: manipulation;" : ""}
         `;
         const onActivate = () => {
@@ -9893,13 +9893,13 @@ var InlineTooltip = class {
         background: var(--interactive-normal);
         border: 1px solid var(--background-modifier-border);
         border-radius: ${isMobile ? "6px" : "4px"};
-        padding: ${isMobile ? "10px 14px" : "4px 8px"};
+        padding: ${isMobile ? "6px 10px" : "4px 8px"};
         cursor: pointer;
         transition: all 0.2s;
         color: var(--text-normal);
-        font-size: ${isMobile ? "14px" : "12px"};
+        font-size: ${isMobile ? "13px" : "12px"};
         white-space: nowrap;
-        min-height: ${isMobile ? "44px" : "auto"};
+        min-height: ${isMobile ? "32px" : "auto"};
         ${isMobile ? "touch-action: manipulation;" : ""}
       `;
       const onActivate = () => {
@@ -10408,12 +10408,6 @@ var InlineModeService = class {
         const errorId = target.getAttribute("data-error-id");
         if (errorId && this.activeErrors.has(errorId)) {
           const error = this.activeErrors.get(errorId);
-          setTimeout(() => {
-            if (touchTarget === target && this.activeErrors.has(errorId)) {
-              Logger.log(`\u{1F4F1} \uD130\uCE58\uB85C \uD234\uD301 \uD45C\uC2DC: ${error.correction.original}`);
-              this.handleErrorClick(error, target);
-            }
-          }, 150);
           touchTimer = setTimeout(() => {
             if (touchTarget === target && this.activeErrors.has(errorId)) {
               Logger.log(`\u{1F4F1} \uB871\uD504\uB808\uC2A4\uB85C \uBC14\uB85C \uC218\uC815: ${error.correction.original}`);
@@ -10434,13 +10428,22 @@ var InlineModeService = class {
       }
     }, { passive: false });
     editorDOM.addEventListener("touchend", (e) => {
+      const wasTouchTimer = touchTimer !== null;
       if (touchTimer) {
         clearTimeout(touchTimer);
         touchTimer = null;
       }
       const touchDuration = Date.now() - touchStartTime;
-      if (touchDuration < TOUCH_HOLD_DURATION && touchTarget) {
-        Logger.debug(`\u{1F4F1} \uC9E7\uC740 \uD130\uCE58 \uAC10\uC9C0 (${touchDuration}ms)`);
+      if (touchDuration < TOUCH_HOLD_DURATION && touchTarget && wasTouchTimer) {
+        const target = touchTarget;
+        const errorId = target.getAttribute("data-error-id");
+        if (errorId && this.activeErrors.has(errorId)) {
+          const error = this.activeErrors.get(errorId);
+          Logger.log(`\u{1F4F1} \uC9E7\uC740 \uD130\uCE58\uB85C \uD234\uD301 \uD45C\uC2DC (${touchDuration}ms): ${error.correction.original}`);
+          setTimeout(() => {
+            this.handleErrorClick(error, target);
+          }, 50);
+        }
       }
       touchTarget = null;
       touchStartTime = 0;
