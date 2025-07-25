@@ -9647,15 +9647,18 @@ var InlineTooltip = class {
     const editorTop = (editorContainerRect == null ? void 0 : editorContainerRect.top) || 0;
     const editorWidth = (editorContainerRect == null ? void 0 : editorContainerRect.width) || viewportWidth;
     const editorHeight = (editorContainerRect == null ? void 0 : editorContainerRect.height) || viewportHeight;
-    const baseWidth = isPhone ? 300 : 350;
-    const fixedWidth = Math.min(baseWidth, Math.min(viewportWidth, editorWidth) - 32);
-    const baseHeight = isPhone ? 180 : 220;
-    const availableHeight = Math.min(viewportHeight, editorHeight) - keyboardHeight - 60;
-    const maxHeight = Math.min(baseHeight, availableHeight * 0.6);
-    this.tooltip.style.width = `${fixedWidth}px`;
-    this.tooltip.style.maxHeight = `${maxHeight}px`;
-    this.tooltip.style.minWidth = `${fixedWidth}px`;
-    this.tooltip.style.fontSize = isPhone ? "13px" : "14px";
+    const adaptiveSize = this.calculateAdaptiveTooltipSize(
+      viewportWidth,
+      viewportHeight,
+      keyboardHeight,
+      isPhone,
+      editorWidth,
+      editorHeight
+    );
+    this.tooltip.style.width = `${adaptiveSize.width}px`;
+    this.tooltip.style.maxHeight = `${adaptiveSize.maxHeight}px`;
+    this.tooltip.style.minWidth = `${adaptiveSize.minWidth}px`;
+    this.tooltip.style.fontSize = adaptiveSize.fontSize;
     const cornerThreshold = 60;
     const effectiveLeft = Math.max(targetRect.left, editorLeft);
     const effectiveRight = Math.min(targetRect.right, editorLeft + editorWidth);
@@ -9673,43 +9676,43 @@ var InlineTooltip = class {
       finalLeft = Math.max(safeMargin, editorLeft + safeMargin);
       Logger.debug("\u{1F4F1} \uC67C\uCABD \uAD6C\uC11D \uAC10\uC9C0: \uC5D0\uB514\uD130 \uC601\uC5ED \uB0B4 \uC624\uB978\uCABD\uC73C\uB85C \uC774\uB3D9");
     } else if (isRightEdge) {
-      finalLeft = Math.min(viewportWidth - fixedWidth - safeMargin, editorLeft + editorWidth - fixedWidth - safeMargin);
+      finalLeft = Math.min(viewportWidth - adaptiveSize.width - safeMargin, editorLeft + editorWidth - adaptiveSize.width - safeMargin);
       Logger.debug("\u{1F4F1} \uC624\uB978\uCABD \uAD6C\uC11D \uAC10\uC9C0: \uC5D0\uB514\uD130 \uC601\uC5ED \uB0B4 \uC67C\uCABD\uC73C\uB85C \uC774\uB3D9");
     } else {
       const editorCenterX = editorLeft + editorWidth / 2;
       finalLeft = Math.max(safeMargin, Math.min(
-        editorCenterX - fixedWidth / 2,
-        viewportWidth - fixedWidth - safeMargin
+        editorCenterX - adaptiveSize.width / 2,
+        viewportWidth - adaptiveSize.width - safeMargin
       ));
     }
     const effectiveViewportHeight = Math.min(viewportHeight - keyboardHeight, editorTop + editorHeight);
     const spaceAbove = effectiveTop - editorTop;
     const spaceBelow = effectiveViewportHeight - effectiveBottom;
-    if (isTopEdge && spaceBelow > maxHeight + fingerOffset + safeMargin) {
+    if (isTopEdge && spaceBelow > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
       finalTop = effectiveBottom + fingerOffset;
       Logger.debug("\u{1F4F1} \uC0C1\uB2E8 \uAD6C\uC11D: \uC544\uB798\uCABD \uBC30\uCE58");
-    } else if (isBottomEdge && spaceAbove > maxHeight + fingerOffset + safeMargin) {
-      finalTop = effectiveTop - maxHeight - fingerOffset;
+    } else if (isBottomEdge && spaceAbove > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
+      finalTop = effectiveTop - adaptiveSize.maxHeight - fingerOffset;
       Logger.debug("\u{1F4F1} \uD558\uB2E8 \uAD6C\uC11D: \uC704\uCABD \uBC30\uCE58");
-    } else if (spaceAbove > maxHeight + fingerOffset + safeMargin) {
-      finalTop = effectiveTop - maxHeight - 30;
-    } else if (spaceBelow > maxHeight + fingerOffset + safeMargin) {
+    } else if (spaceAbove > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
+      finalTop = effectiveTop - adaptiveSize.maxHeight - 30;
+    } else if (spaceBelow > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
       finalTop = effectiveBottom + 30;
     } else {
       const editorCenterY = editorTop + editorHeight / 2;
       const targetCenterY = (effectiveTop + effectiveBottom) / 2;
-      if (Math.abs(editorCenterY - targetCenterY) < maxHeight / 2) {
-        finalTop = Math.max(editorTop + safeMargin, effectiveTop - maxHeight - 20);
+      if (Math.abs(editorCenterY - targetCenterY) < adaptiveSize.maxHeight / 2) {
+        finalTop = Math.max(editorTop + safeMargin, effectiveTop - adaptiveSize.maxHeight - 20);
       } else {
-        finalTop = Math.max(editorTop + safeMargin, editorCenterY - maxHeight / 2);
+        finalTop = Math.max(editorTop + safeMargin, editorCenterY - adaptiveSize.maxHeight / 2);
       }
       Logger.debug("\u{1F4F1} \uACF5\uAC04 \uBD80\uC871: \uC5D0\uB514\uD130 \uC911\uC559 \uBC30\uCE58");
     }
     finalTop = Math.max(
       Math.max(safeMargin, editorTop),
-      Math.min(finalTop, effectiveViewportHeight - maxHeight - safeMargin)
+      Math.min(finalTop, effectiveViewportHeight - adaptiveSize.maxHeight - safeMargin)
     );
-    finalLeft = Math.max(safeMargin, Math.min(finalLeft, viewportWidth - fixedWidth - safeMargin));
+    finalLeft = Math.max(safeMargin, Math.min(finalLeft, viewportWidth - adaptiveSize.width - safeMargin));
     this.tooltip.style.position = "fixed";
     this.tooltip.style.left = `${finalLeft}px`;
     this.tooltip.style.top = `${finalTop}px`;
@@ -9717,11 +9720,12 @@ var InlineTooltip = class {
     this.tooltip.style.visibility = "visible";
     this.tooltip.style.boxShadow = "0 8px 32px rgba(0, 0, 0, 0.3)";
     this.tooltip.style.borderRadius = "12px";
-    Logger.log(`\u{1F4F1} \uCD5C\uC885 \uBAA8\uBC14\uC77C \uD234\uD301 \uC704\uCE58: ${fixedWidth}x${maxHeight} at (${finalLeft}, ${finalTop})`, {
+    Logger.log(`\u{1F4F1} \uCD5C\uC885 \uBAA8\uBC14\uC77C \uD234\uD301 \uC704\uCE58: ${adaptiveSize.width}x${adaptiveSize.maxHeight} at (${finalLeft}, ${finalTop})`, {
       corners: { isLeftEdge, isRightEdge, isTopEdge, isBottomEdge },
       keyboard: { visible: keyboardHeight > 0, height: keyboardHeight },
       spaces: { above: spaceAbove, below: spaceBelow },
-      editor: editorContainerRect ? `${editorWidth}x${editorHeight} at (${editorLeft}, ${editorTop})` : "none"
+      editor: editorContainerRect ? `${editorWidth}x${editorHeight} at (${editorLeft}, ${editorTop})` : "none",
+      adaptive: `${adaptiveSize.width}px (\uB0B4\uC6A9 \uB9DE\uCDA4)`
     });
   }
   /**
@@ -9730,13 +9734,24 @@ var InlineTooltip = class {
   positionTooltipDesktop(targetElement, targetRect, viewportWidth, viewportHeight, editorContainerRect = null) {
     if (!this.tooltip)
       return;
-    const tooltipRect = this.tooltip.getBoundingClientRect();
-    const gap = 8;
-    const minSpacing = 12;
     const editorLeft = (editorContainerRect == null ? void 0 : editorContainerRect.left) || 0;
     const editorTop = (editorContainerRect == null ? void 0 : editorContainerRect.top) || 0;
     const editorWidth = (editorContainerRect == null ? void 0 : editorContainerRect.width) || viewportWidth;
     const editorHeight = (editorContainerRect == null ? void 0 : editorContainerRect.height) || viewportHeight;
+    const adaptiveSize = this.calculateAdaptiveTooltipSize(
+      viewportWidth,
+      viewportHeight,
+      0,
+      false,
+      editorWidth,
+      editorHeight
+    );
+    this.tooltip.style.width = `${adaptiveSize.width}px`;
+    this.tooltip.style.maxHeight = `${adaptiveSize.maxHeight}px`;
+    this.tooltip.style.minWidth = `${adaptiveSize.minWidth}px`;
+    this.tooltip.style.fontSize = adaptiveSize.fontSize;
+    const gap = 8;
+    const minSpacing = 12;
     const cornerThreshold = 100;
     const isLeftEdge = targetRect.left - editorLeft < cornerThreshold;
     const isRightEdge = editorLeft + editorWidth - targetRect.right < cornerThreshold;
@@ -9745,38 +9760,39 @@ var InlineTooltip = class {
     let finalLeft = 0;
     let finalTop = 0;
     if (isBottomEdge) {
-      finalTop = targetRect.top - tooltipRect.height - gap;
+      finalTop = targetRect.top - adaptiveSize.maxHeight - gap;
       Logger.debug("\u{1F5A5}\uFE0F \uD558\uB2E8 \uAD6C\uC11D: \uC704\uCABD \uAC15\uC81C \uBC30\uCE58");
-    } else if (targetRect.bottom + gap + tooltipRect.height <= Math.min(viewportHeight, editorTop + editorHeight) - minSpacing) {
+    } else if (targetRect.bottom + gap + adaptiveSize.maxHeight <= Math.min(viewportHeight, editorTop + editorHeight) - minSpacing) {
       finalTop = targetRect.bottom + gap;
     } else {
-      finalTop = targetRect.top - tooltipRect.height - gap;
+      finalTop = targetRect.top - adaptiveSize.maxHeight - gap;
     }
     if (isLeftEdge) {
       finalLeft = Math.max(targetRect.left, editorLeft);
       Logger.debug("\u{1F5A5}\uFE0F \uC67C\uCABD \uAD6C\uC11D: \uC67C\uCABD \uC815\uB82C");
     } else if (isRightEdge) {
-      finalLeft = Math.min(targetRect.right - tooltipRect.width, editorLeft + editorWidth - tooltipRect.width);
+      finalLeft = Math.min(targetRect.right - adaptiveSize.width, editorLeft + editorWidth - adaptiveSize.width);
       Logger.debug("\u{1F5A5}\uFE0F \uC624\uB978\uCABD \uAD6C\uC11D: \uC624\uB978\uCABD \uC815\uB82C");
     } else {
-      finalLeft = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
+      finalLeft = targetRect.left + targetRect.width / 2 - adaptiveSize.width / 2;
     }
     finalLeft = Math.max(
       Math.max(minSpacing, editorLeft),
-      Math.min(finalLeft, Math.min(viewportWidth, editorLeft + editorWidth) - tooltipRect.width - minSpacing)
+      Math.min(finalLeft, Math.min(viewportWidth, editorLeft + editorWidth) - adaptiveSize.width - minSpacing)
     );
     finalTop = Math.max(
       Math.max(minSpacing, editorTop),
-      Math.min(finalTop, Math.min(viewportHeight, editorTop + editorHeight) - tooltipRect.height - minSpacing)
+      Math.min(finalTop, Math.min(viewportHeight, editorTop + editorHeight) - adaptiveSize.maxHeight - minSpacing)
     );
     this.tooltip.style.position = "fixed";
     this.tooltip.style.left = `${finalLeft}px`;
     this.tooltip.style.top = `${finalTop}px`;
     this.tooltip.style.zIndex = "1000";
     this.tooltip.style.visibility = "visible";
-    Logger.log(`\u{1F5A5}\uFE0F \uB370\uC2A4\uD06C\uD1B1 \uD234\uD301 \uC704\uCE58: ${tooltipRect.width}x${tooltipRect.height} at (${finalLeft}, ${finalTop})`, {
+    Logger.log(`\u{1F5A5}\uFE0F \uB370\uC2A4\uD06C\uD1B1 \uD234\uD301 \uC704\uCE58: ${adaptiveSize.width}x${adaptiveSize.maxHeight} at (${finalLeft}, ${finalTop})`, {
       corners: { isLeftEdge, isRightEdge, isTopEdge, isBottomEdge },
-      editor: editorContainerRect ? `${editorWidth}x${editorHeight} at (${editorLeft}, ${editorTop})` : "none"
+      editor: editorContainerRect ? `${editorWidth}x${editorHeight} at (${editorLeft}, ${editorTop})` : "none",
+      adaptive: `${adaptiveSize.width}px (\uB0B4\uC6A9 \uB9DE\uCDA4)`
     });
   }
   /**
@@ -10336,6 +10352,67 @@ var InlineTooltip = class {
       e.stopPropagation();
       this.showHelpDetail(helpText, helpIcon);
     });
+  }
+  /**
+   * 툴팁 내용에 따른 적응형 크기 계산
+   */
+  calculateAdaptiveTooltipSize(viewportWidth, viewportHeight, keyboardHeight, isPhone, editorWidth, editorHeight) {
+    if (!this.tooltip) {
+      return { width: 250, maxHeight: 200, minWidth: 200, fontSize: "14px" };
+    }
+    const originalDisplay = this.tooltip.style.display;
+    const originalVisibility = this.tooltip.style.visibility;
+    const originalPosition = this.tooltip.style.position;
+    const originalWidth = this.tooltip.style.width;
+    this.tooltip.style.position = "absolute";
+    this.tooltip.style.visibility = "hidden";
+    this.tooltip.style.display = "block";
+    this.tooltip.style.width = "auto";
+    this.tooltip.style.maxWidth = "none";
+    this.tooltip.style.minWidth = "none";
+    const naturalWidth = this.tooltip.scrollWidth;
+    const naturalHeight = this.tooltip.scrollHeight;
+    Logger.debug(`\u{1F4CF} \uD234\uD301 \uC790\uC5F0 \uD06C\uAE30: ${naturalWidth}x${naturalHeight}`);
+    let minWidth, maxWidth, maxHeight, fontSize;
+    if (import_obsidian10.Platform.isMobile) {
+      fontSize = isPhone ? "13px" : "14px";
+      minWidth = isPhone ? 200 : 240;
+      maxWidth = Math.min(
+        isPhone ? 320 : 380,
+        Math.min(viewportWidth, editorWidth) - 32
+      );
+      const availableHeight = Math.min(viewportHeight, editorHeight) - keyboardHeight - 60;
+      maxHeight = Math.min(
+        isPhone ? 180 : 220,
+        availableHeight * 0.6
+      );
+    } else {
+      fontSize = "14px";
+      minWidth = 180;
+      maxWidth = Math.min(500, Math.min(viewportWidth, editorWidth) - 40);
+      maxHeight = Math.min(300, Math.min(viewportHeight, editorHeight) - 40);
+    }
+    let optimalWidth = naturalWidth + 24;
+    optimalWidth = Math.max(minWidth, optimalWidth);
+    optimalWidth = Math.min(maxWidth, optimalWidth);
+    this.tooltip.style.display = originalDisplay;
+    this.tooltip.style.visibility = originalVisibility;
+    this.tooltip.style.position = originalPosition;
+    this.tooltip.style.width = originalWidth;
+    const result = {
+      width: optimalWidth,
+      maxHeight,
+      minWidth: optimalWidth,
+      // 계산된 너비로 고정
+      fontSize
+    };
+    Logger.log(`\u{1F3AF} \uC801\uC751\uD615 \uD234\uD301 \uD06C\uAE30:`, {
+      natural: `${naturalWidth}x${naturalHeight}`,
+      calculated: `${optimalWidth}x${maxHeight}`,
+      range: `${minWidth}-${maxWidth}`,
+      platform: import_obsidian10.Platform.isMobile ? isPhone ? "phone" : "tablet" : "desktop"
+    });
+    return result;
   }
 };
 var globalInlineTooltip = new InlineTooltip();

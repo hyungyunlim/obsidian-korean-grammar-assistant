@@ -205,17 +205,15 @@ export class InlineTooltip {
     const editorWidth = editorContainerRect?.width || viewportWidth;
     const editorHeight = editorContainerRect?.height || viewportHeight;
 
-    // 🔧 화면 크기에 따른 적응형 크기
-    const baseWidth = isPhone ? 300 : 350;
-    const fixedWidth = Math.min(baseWidth, Math.min(viewportWidth, editorWidth) - 32);
-    const baseHeight = isPhone ? 180 : 220;
-    const availableHeight = Math.min(viewportHeight, editorHeight) - keyboardHeight - 60;
-    const maxHeight = Math.min(baseHeight, availableHeight * 0.6);
+    // 🔧 내용에 따른 적응형 크기 계산
+    const adaptiveSize = this.calculateAdaptiveTooltipSize(
+      viewportWidth, viewportHeight, keyboardHeight, isPhone, editorWidth, editorHeight
+    );
     
-    this.tooltip.style.width = `${fixedWidth}px`;
-    this.tooltip.style.maxHeight = `${maxHeight}px`;
-    this.tooltip.style.minWidth = `${fixedWidth}px`;
-    this.tooltip.style.fontSize = isPhone ? '13px' : '14px';
+    this.tooltip.style.width = `${adaptiveSize.width}px`;
+    this.tooltip.style.maxHeight = `${adaptiveSize.maxHeight}px`;
+    this.tooltip.style.minWidth = `${adaptiveSize.minWidth}px`;
+    this.tooltip.style.fontSize = adaptiveSize.fontSize;
     
     // 🔧 화면 구석 감지 (에디터 영역 기준)
     const cornerThreshold = 60;
@@ -235,19 +233,19 @@ export class InlineTooltip {
     let finalLeft = 0;
     let finalTop = 0;
 
-    // 🔧 가로 위치 계산 (에디터 영역 고려)
+    // 🔧 가로 위치 계산 (적응형 너비 고려)
     if (isLeftEdge) {
       finalLeft = Math.max(safeMargin, editorLeft + safeMargin);
       Logger.debug('📱 왼쪽 구석 감지: 에디터 영역 내 오른쪽으로 이동');
     } else if (isRightEdge) {
-      finalLeft = Math.min(viewportWidth - fixedWidth - safeMargin, editorLeft + editorWidth - fixedWidth - safeMargin);
+      finalLeft = Math.min(viewportWidth - adaptiveSize.width - safeMargin, editorLeft + editorWidth - adaptiveSize.width - safeMargin);
       Logger.debug('📱 오른쪽 구석 감지: 에디터 영역 내 왼쪽으로 이동');
     } else {
-      // 중앙 영역: 에디터 중앙 정렬
+      // 중앙 영역: 에디터 중앙 정렬 (적응형 너비 고려)
       const editorCenterX = editorLeft + editorWidth / 2;
       finalLeft = Math.max(safeMargin, Math.min(
-        editorCenterX - fixedWidth / 2,
-        viewportWidth - fixedWidth - safeMargin
+        editorCenterX - adaptiveSize.width / 2,
+        viewportWidth - adaptiveSize.width - safeMargin
       ));
     }
 
@@ -256,25 +254,25 @@ export class InlineTooltip {
     const spaceAbove = effectiveTop - editorTop;
     const spaceBelow = effectiveViewportHeight - effectiveBottom;
     
-    if (isTopEdge && spaceBelow > maxHeight + fingerOffset + safeMargin) {
+    if (isTopEdge && spaceBelow > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
       finalTop = effectiveBottom + fingerOffset;
       Logger.debug('📱 상단 구석: 아래쪽 배치');
-    } else if (isBottomEdge && spaceAbove > maxHeight + fingerOffset + safeMargin) {
-      finalTop = effectiveTop - maxHeight - fingerOffset;
+    } else if (isBottomEdge && spaceAbove > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
+      finalTop = effectiveTop - adaptiveSize.maxHeight - fingerOffset;
       Logger.debug('📱 하단 구석: 위쪽 배치');
-    } else if (spaceAbove > maxHeight + fingerOffset + safeMargin) {
-      finalTop = effectiveTop - maxHeight - 30;
-    } else if (spaceBelow > maxHeight + fingerOffset + safeMargin) {
+    } else if (spaceAbove > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
+      finalTop = effectiveTop - adaptiveSize.maxHeight - 30;
+    } else if (spaceBelow > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
       finalTop = effectiveBottom + 30;
     } else {
       // 공간 매우 부족: 에디터 중앙 (타겟 피하면서)
       const editorCenterY = editorTop + editorHeight / 2;
       const targetCenterY = (effectiveTop + effectiveBottom) / 2;
       
-      if (Math.abs(editorCenterY - targetCenterY) < maxHeight / 2) {
-        finalTop = Math.max(editorTop + safeMargin, effectiveTop - maxHeight - 20);
+      if (Math.abs(editorCenterY - targetCenterY) < adaptiveSize.maxHeight / 2) {
+        finalTop = Math.max(editorTop + safeMargin, effectiveTop - adaptiveSize.maxHeight - 20);
       } else {
-        finalTop = Math.max(editorTop + safeMargin, editorCenterY - maxHeight / 2);
+        finalTop = Math.max(editorTop + safeMargin, editorCenterY - adaptiveSize.maxHeight / 2);
       }
       Logger.debug('📱 공간 부족: 에디터 중앙 배치');
     }
@@ -282,9 +280,9 @@ export class InlineTooltip {
     // 🔧 최종 경계 보정 (에디터 및 키보드 고려)
     finalTop = Math.max(
       Math.max(safeMargin, editorTop), 
-      Math.min(finalTop, effectiveViewportHeight - maxHeight - safeMargin)
+      Math.min(finalTop, effectiveViewportHeight - adaptiveSize.maxHeight - safeMargin)
     );
-    finalLeft = Math.max(safeMargin, Math.min(finalLeft, viewportWidth - fixedWidth - safeMargin));
+    finalLeft = Math.max(safeMargin, Math.min(finalLeft, viewportWidth - adaptiveSize.width - safeMargin));
 
     // 🔧 위치 적용
     this.tooltip.style.position = 'fixed';
@@ -295,11 +293,12 @@ export class InlineTooltip {
     this.tooltip.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3)';
     this.tooltip.style.borderRadius = '12px';
 
-    Logger.log(`📱 최종 모바일 툴팁 위치: ${fixedWidth}x${maxHeight} at (${finalLeft}, ${finalTop})`, {
+    Logger.log(`📱 최종 모바일 툴팁 위치: ${adaptiveSize.width}x${adaptiveSize.maxHeight} at (${finalLeft}, ${finalTop})`, {
       corners: { isLeftEdge, isRightEdge, isTopEdge, isBottomEdge },
       keyboard: { visible: keyboardHeight > 0, height: keyboardHeight },
       spaces: { above: spaceAbove, below: spaceBelow },
-      editor: editorContainerRect ? `${editorWidth}x${editorHeight} at (${editorLeft}, ${editorTop})` : 'none'
+      editor: editorContainerRect ? `${editorWidth}x${editorHeight} at (${editorLeft}, ${editorTop})` : 'none',
+      adaptive: `${adaptiveSize.width}px (내용 맞춤)`
     });
   }
 
@@ -315,15 +314,24 @@ export class InlineTooltip {
   ): void {
     if (!this.tooltip) return;
 
-    const tooltipRect = this.tooltip.getBoundingClientRect();
-    const gap = 8;
-    const minSpacing = 12;
-
     // 🔧 에디터 컨테이너 정보 고려
     const editorLeft = editorContainerRect?.left || 0;
     const editorTop = editorContainerRect?.top || 0;
     const editorWidth = editorContainerRect?.width || viewportWidth;
     const editorHeight = editorContainerRect?.height || viewportHeight;
+
+    // 🔧 내용에 따른 적응형 크기 계산
+    const adaptiveSize = this.calculateAdaptiveTooltipSize(
+      viewportWidth, viewportHeight, 0, false, editorWidth, editorHeight
+    );
+    
+    this.tooltip.style.width = `${adaptiveSize.width}px`;
+    this.tooltip.style.maxHeight = `${adaptiveSize.maxHeight}px`;
+    this.tooltip.style.minWidth = `${adaptiveSize.minWidth}px`;
+    this.tooltip.style.fontSize = adaptiveSize.fontSize;
+
+    const gap = 8;
+    const minSpacing = 12;
 
     // 🔧 화면 구석 감지 (에디터 기준)
     const cornerThreshold = 100;
@@ -337,33 +345,34 @@ export class InlineTooltip {
 
     // 🔧 세로 위치 (구석 고려)
     if (isBottomEdge) {
-      finalTop = targetRect.top - tooltipRect.height - gap;
+      finalTop = targetRect.top - adaptiveSize.maxHeight - gap;
       Logger.debug('🖥️ 하단 구석: 위쪽 강제 배치');
-    } else if (targetRect.bottom + gap + tooltipRect.height <= Math.min(viewportHeight, editorTop + editorHeight) - minSpacing) {
+    } else if (targetRect.bottom + gap + adaptiveSize.maxHeight <= Math.min(viewportHeight, editorTop + editorHeight) - minSpacing) {
       finalTop = targetRect.bottom + gap;
     } else {
-      finalTop = targetRect.top - tooltipRect.height - gap;
+      finalTop = targetRect.top - adaptiveSize.maxHeight - gap;
     }
 
-    // 🔧 가로 위치 (구석 고려)
+    // 🔧 가로 위치 (구석 고려, 적응형 너비 사용)
     if (isLeftEdge) {
       finalLeft = Math.max(targetRect.left, editorLeft);
       Logger.debug('🖥️ 왼쪽 구석: 왼쪽 정렬');
     } else if (isRightEdge) {
-      finalLeft = Math.min(targetRect.right - tooltipRect.width, editorLeft + editorWidth - tooltipRect.width);
+      finalLeft = Math.min(targetRect.right - adaptiveSize.width, editorLeft + editorWidth - adaptiveSize.width);
       Logger.debug('🖥️ 오른쪽 구석: 오른쪽 정렬');
     } else {
-      finalLeft = targetRect.left + (targetRect.width / 2) - (tooltipRect.width / 2);
+      // 일반적인 경우: 중앙 정렬 (적응형 너비 고려)
+      finalLeft = targetRect.left + (targetRect.width / 2) - (adaptiveSize.width / 2);
     }
 
     // 🔧 최종 경계 보정 (에디터 영역 고려)
     finalLeft = Math.max(
       Math.max(minSpacing, editorLeft), 
-      Math.min(finalLeft, Math.min(viewportWidth, editorLeft + editorWidth) - tooltipRect.width - minSpacing)
+      Math.min(finalLeft, Math.min(viewportWidth, editorLeft + editorWidth) - adaptiveSize.width - minSpacing)
     );
     finalTop = Math.max(
       Math.max(minSpacing, editorTop), 
-      Math.min(finalTop, Math.min(viewportHeight, editorTop + editorHeight) - tooltipRect.height - minSpacing)
+      Math.min(finalTop, Math.min(viewportHeight, editorTop + editorHeight) - adaptiveSize.maxHeight - minSpacing)
     );
 
     // 🔧 위치 적용
@@ -373,9 +382,10 @@ export class InlineTooltip {
     this.tooltip.style.zIndex = '1000';
     this.tooltip.style.visibility = 'visible';
 
-    Logger.log(`🖥️ 데스크톱 툴팁 위치: ${tooltipRect.width}x${tooltipRect.height} at (${finalLeft}, ${finalTop})`, {
+    Logger.log(`🖥️ 데스크톱 툴팁 위치: ${adaptiveSize.width}x${adaptiveSize.maxHeight} at (${finalLeft}, ${finalTop})`, {
       corners: { isLeftEdge, isRightEdge, isTopEdge, isBottomEdge },
-      editor: editorContainerRect ? `${editorWidth}x${editorHeight} at (${editorLeft}, ${editorTop})` : 'none'
+      editor: editorContainerRect ? `${editorWidth}x${editorHeight} at (${editorLeft}, ${editorTop})` : 'none',
+      adaptive: `${adaptiveSize.width}px (내용 맞춤)`
     });
   }
 
@@ -1079,6 +1089,95 @@ export class InlineTooltip {
       e.stopPropagation();
       this.showHelpDetail(helpText, helpIcon);
     });
+  }
+
+  /**
+   * 툴팁 내용에 따른 적응형 크기 계산
+   */
+  private calculateAdaptiveTooltipSize(
+    viewportWidth: number, 
+    viewportHeight: number,
+    keyboardHeight: number,
+    isPhone: boolean,
+    editorWidth: number,
+    editorHeight: number
+  ): { width: number; maxHeight: number; minWidth: number; fontSize: string } {
+    if (!this.tooltip) {
+      return { width: 250, maxHeight: 200, minWidth: 200, fontSize: '14px' };
+    }
+
+    // 🔧 임시로 툴팁을 보이지 않게 하여 내용 크기 측정
+    const originalDisplay = this.tooltip.style.display;
+    const originalVisibility = this.tooltip.style.visibility;
+    const originalPosition = this.tooltip.style.position;
+    const originalWidth = this.tooltip.style.width;
+    
+    this.tooltip.style.position = 'absolute';
+    this.tooltip.style.visibility = 'hidden';
+    this.tooltip.style.display = 'block';
+    this.tooltip.style.width = 'auto';
+    this.tooltip.style.maxWidth = 'none';
+    this.tooltip.style.minWidth = 'none';
+    
+    // 📏 실제 내용 크기 측정
+    const naturalWidth = this.tooltip.scrollWidth;
+    const naturalHeight = this.tooltip.scrollHeight;
+    
+    Logger.debug(`📏 툴팁 자연 크기: ${naturalWidth}x${naturalHeight}`);
+    
+    // 🔧 플랫폼별 크기 범위 설정
+    let minWidth: number, maxWidth: number, maxHeight: number, fontSize: string;
+    
+    if (Platform.isMobile) {
+      fontSize = isPhone ? '13px' : '14px';
+      minWidth = isPhone ? 200 : 240;
+      maxWidth = Math.min(
+        isPhone ? 320 : 380, 
+        Math.min(viewportWidth, editorWidth) - 32
+      );
+      
+      const availableHeight = Math.min(viewportHeight, editorHeight) - keyboardHeight - 60;
+      maxHeight = Math.min(
+        isPhone ? 180 : 220, 
+        availableHeight * 0.6
+      );
+    } else {
+      fontSize = '14px';
+      minWidth = 180;
+      maxWidth = Math.min(500, Math.min(viewportWidth, editorWidth) - 40);
+      maxHeight = Math.min(300, Math.min(viewportHeight, editorHeight) - 40);
+    }
+    
+    // 🔧 내용에 맞는 최적 너비 계산
+    let optimalWidth = naturalWidth + 24; // 패딩 고려
+    
+    // 내용이 너무 짧으면 최소 너비 보장
+    optimalWidth = Math.max(minWidth, optimalWidth);
+    
+    // 내용이 너무 길면 최대 너비로 제한
+    optimalWidth = Math.min(maxWidth, optimalWidth);
+    
+    // 🔧 원래 스타일 복원
+    this.tooltip.style.display = originalDisplay;
+    this.tooltip.style.visibility = originalVisibility;
+    this.tooltip.style.position = originalPosition;
+    this.tooltip.style.width = originalWidth;
+    
+    const result = {
+      width: optimalWidth,
+      maxHeight,
+      minWidth: optimalWidth, // 계산된 너비로 고정
+      fontSize
+    };
+    
+    Logger.log(`🎯 적응형 툴팁 크기:`, {
+      natural: `${naturalWidth}x${naturalHeight}`,
+      calculated: `${optimalWidth}x${maxHeight}`,
+      range: `${minWidth}-${maxWidth}`,
+      platform: Platform.isMobile ? (isPhone ? 'phone' : 'tablet') : 'desktop'
+    });
+    
+    return result;
   }
 }
 
