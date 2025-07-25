@@ -11398,7 +11398,6 @@ var InlineModeService = class {
           }
           this.moveToError(nextError);
           this.setFocusedError(nextError);
-          new import_obsidian12.Notice(`\uB2E4\uC74C \uC624\uB958: "${nextError.correction.original}"`);
           Logger.log(`\u2705 \uB2E4\uC74C \uC624\uB958\uB85C \uC774\uB3D9: ${nextError.correction.original}`);
         } else {
           new import_obsidian12.Notice("\uB2E4\uC74C \uC624\uB958\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
@@ -11420,7 +11419,6 @@ var InlineModeService = class {
           }
           this.moveToError(previousError);
           this.setFocusedError(previousError);
-          new import_obsidian12.Notice(`\uC774\uC804 \uC624\uB958: "${previousError.correction.original}"`);
           Logger.log(`\u2705 \uC774\uC804 \uC624\uB958\uB85C \uC774\uB3D9: ${previousError.correction.original}`);
         } else {
           new import_obsidian12.Notice("\uC774\uC804 \uC624\uB958\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
@@ -11431,7 +11429,7 @@ var InlineModeService = class {
       id: "inline-next-suggestion",
       name: "\uB2E4\uC74C \uC81C\uC548 \uC120\uD0DD",
       callback: () => {
-        if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
+        if (!this.currentFocusedError || !this.currentFocusedError.correction) {
           new import_obsidian12.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uC624\uB958\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
           return;
         }
@@ -11441,16 +11439,16 @@ var InlineModeService = class {
           return;
         }
         this.currentSuggestionIndex = Math.min(suggestions.length - 1, this.currentSuggestionIndex + 1);
+        this.applyCurrentSuggestionTemporarily();
         this.updateTooltipHighlight();
-        new import_obsidian12.Notice(`\uB2E4\uC74C \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
-        Logger.log(`\u2705 \uB2E4\uC74C \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+        Logger.log(`\u2705 \uB2E4\uC74C \uC81C\uC548 \uC801\uC6A9: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
       }
     });
     plugin.addCommand({
       id: "inline-previous-suggestion",
       name: "\uC774\uC804 \uC81C\uC548 \uC120\uD0DD",
       callback: () => {
-        if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
+        if (!this.currentFocusedError || !this.currentFocusedError.correction) {
           new import_obsidian12.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uC624\uB958\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
           return;
         }
@@ -11460,9 +11458,9 @@ var InlineModeService = class {
           return;
         }
         this.currentSuggestionIndex = Math.max(0, this.currentSuggestionIndex - 1);
+        this.applyCurrentSuggestionTemporarily();
         this.updateTooltipHighlight();
-        new import_obsidian12.Notice(`\uC774\uC804 \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
-        Logger.log(`\u2705 \uC774\uC804 \uC81C\uC548: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+        Logger.log(`\u2705 \uC774\uC804 \uC81C\uC548 \uC801\uC6A9: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
       }
     });
     plugin.addCommand({
@@ -11648,6 +11646,43 @@ var InlineModeService = class {
       editor.focus();
     } catch (error2) {
       Logger.error("\uC624\uB958 \uC704\uCE58\uB85C \uC774\uB3D9 \uC911 \uBB38\uC81C \uBC1C\uC0DD:", error2);
+    }
+  }
+  /**
+   * 🎯 포커스된 오류에 현재 제안을 임시로 반영
+   */
+  static applyCurrentSuggestionTemporarily() {
+    if (!this.currentFocusedError || !this.app) {
+      return;
+    }
+    try {
+      const view = this.app.workspace.getActiveViewOfType(import_obsidian13.MarkdownView);
+      if (!view || !view.editor) {
+        Logger.warn("\uD604\uC7AC \uD65C\uC131 Markdown \uC5D0\uB514\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4");
+        return;
+      }
+      const suggestions = this.currentFocusedError.correction.corrected;
+      if (!suggestions || suggestions.length === 0) {
+        return;
+      }
+      const currentSuggestion = suggestions[this.currentSuggestionIndex];
+      const editor = view.editor;
+      const startPos = editor.offsetToPos(this.currentFocusedError.start);
+      const endPos = editor.offsetToPos(this.currentFocusedError.end);
+      Logger.debug(`\uC784\uC2DC \uC81C\uC548 \uC801\uC6A9: "${this.currentFocusedError.correction.original}" \u2192 "${currentSuggestion}"`);
+      editor.replaceRange(currentSuggestion, startPos, endPos);
+      const newEndPos = editor.offsetToPos(this.currentFocusedError.start + currentSuggestion.length);
+      editor.setCursor(newEndPos);
+      const lengthDiff = currentSuggestion.length - this.currentFocusedError.correction.original.length;
+      this.currentFocusedError.end = this.currentFocusedError.start + currentSuggestion.length;
+      for (const [, error] of this.activeErrors) {
+        if (error.start > this.currentFocusedError.start) {
+          error.start += lengthDiff;
+          error.end += lengthDiff;
+        }
+      }
+    } catch (error) {
+      Logger.error("\uC784\uC2DC \uC81C\uC548 \uC801\uC6A9 \uC911 \uC624\uB958:", error);
     }
   }
 };

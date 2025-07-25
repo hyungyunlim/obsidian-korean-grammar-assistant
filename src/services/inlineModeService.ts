@@ -1589,7 +1589,8 @@ export class InlineModeService {
           this.moveToError(nextError);
           this.setFocusedError(nextError);
           
-          new Notice(`다음 오류: "${nextError.correction.original}"`);
+          // Notice 제거 - 더 깔끔한 UX
+          // new Notice(`다음 오류: "${nextError.correction.original}"`);
           Logger.log(`✅ 다음 오류로 이동: ${nextError.correction.original}`);
         } else {
           new Notice('다음 오류를 찾을 수 없습니다.');
@@ -1620,7 +1621,8 @@ export class InlineModeService {
           this.moveToError(previousError);
           this.setFocusedError(previousError);
           
-          new Notice(`이전 오류: "${previousError.correction.original}"`);
+          // Notice 제거 - 더 깔끔한 UX  
+          // new Notice(`이전 오류: "${previousError.correction.original}"`);
           Logger.log(`✅ 이전 오류로 이동: ${previousError.correction.original}`);
         } else {
           new Notice('이전 오류를 찾을 수 없습니다.');
@@ -1633,7 +1635,7 @@ export class InlineModeService {
       id: 'inline-next-suggestion',
       name: '다음 제안 선택',
       callback: () => {
-        if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
+        if (!this.currentFocusedError || !this.currentFocusedError.correction) {
           new Notice('현재 포커스된 문법 오류가 없습니다. 먼저 오류를 선택해주세요.');
           return;
         }
@@ -1644,10 +1646,16 @@ export class InlineModeService {
           return;
         }
 
+        // 다음 제안으로 인덱스 이동
         this.currentSuggestionIndex = Math.min(suggestions.length - 1, this.currentSuggestionIndex + 1);
+        
+        // 🎯 실제 텍스트에 바로 반영 (Notice 대신)
+        this.applyCurrentSuggestionTemporarily();
         this.updateTooltipHighlight();
-        new Notice(`다음 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
-        Logger.log(`✅ 다음 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+        
+        // Notice 제거 - 텍스트에서 직접 확인 가능
+        // new Notice(`다음 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+        Logger.log(`✅ 다음 제안 적용: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
       }
     });
 
@@ -1656,7 +1664,7 @@ export class InlineModeService {
       id: 'inline-previous-suggestion',
       name: '이전 제안 선택',
       callback: () => {
-        if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
+        if (!this.currentFocusedError || !this.currentFocusedError.correction) {
           new Notice('현재 포커스된 문법 오류가 없습니다. 먼저 오류를 선택해주세요.');
           return;
         }
@@ -1667,10 +1675,16 @@ export class InlineModeService {
           return;
         }
 
+        // 이전 제안으로 인덱스 이동
         this.currentSuggestionIndex = Math.max(0, this.currentSuggestionIndex - 1);
+        
+        // 🎯 실제 텍스트에 바로 반영 (Notice 대신)
+        this.applyCurrentSuggestionTemporarily();
         this.updateTooltipHighlight();
-        new Notice(`이전 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
-        Logger.log(`✅ 이전 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+        
+        // Notice 제거 - 텍스트에서 직접 확인 가능
+        // new Notice(`이전 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+        Logger.log(`✅ 이전 제안 적용: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
       }
     });
 
@@ -1922,6 +1936,59 @@ export class InlineModeService {
       
     } catch (error) {
       Logger.error('오류 위치로 이동 중 문제 발생:', error);
+    }
+  }
+
+  /**
+   * 🎯 포커스된 오류에 현재 제안을 임시로 반영
+   */
+  static applyCurrentSuggestionTemporarily(): void {
+    if (!this.currentFocusedError || !this.app) {
+      return;
+    }
+
+    try {
+      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (!view || !view.editor) {
+        Logger.warn('현재 활성 Markdown 에디터가 없습니다');
+        return;
+      }
+
+      const suggestions = this.currentFocusedError.correction.corrected;
+      if (!suggestions || suggestions.length === 0) {
+        return;
+      }
+
+      const currentSuggestion = suggestions[this.currentSuggestionIndex];
+      const editor = view.editor;
+      
+      // 오류 위치를 EditorPosition으로 변환
+      const startPos = editor.offsetToPos(this.currentFocusedError.start);
+      const endPos = editor.offsetToPos(this.currentFocusedError.end);
+      
+      Logger.debug(`임시 제안 적용: "${this.currentFocusedError.correction.original}" → "${currentSuggestion}"`);
+      
+      // 기존 텍스트를 현재 제안으로 교체
+      editor.replaceRange(currentSuggestion, startPos, endPos);
+      
+      // 커서를 수정된 텍스트 끝으로 이동
+      const newEndPos = editor.offsetToPos(this.currentFocusedError.start + currentSuggestion.length);
+      editor.setCursor(newEndPos);
+      
+      // 하이라이팅 업데이트를 위해 오류 정보의 end 위치 조정
+      const lengthDiff = currentSuggestion.length - this.currentFocusedError.correction.original.length;
+      this.currentFocusedError.end = this.currentFocusedError.start + currentSuggestion.length;
+      
+      // 다른 오류들의 위치도 조정 (현재 오류 이후에 있는 것들)
+      for (const [, error] of this.activeErrors) {
+        if (error.start > this.currentFocusedError.start) {
+          error.start += lengthDiff;
+          error.end += lengthDiff;
+        }
+      }
+      
+    } catch (error) {
+      Logger.error('임시 제안 적용 중 오류:', error);
     }
   }
 }
