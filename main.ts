@@ -16,7 +16,7 @@ import { ModernSettingsTab } from './src/ui/settingsTab';
 import { Logger } from './src/utils/logger';
 
 // Import inline mode components
-import { errorDecorationField, InlineModeService } from './src/services/inlineModeService';
+import { errorDecorationField, temporarySuggestionModeField, InlineModeService } from './src/services/inlineModeService';
 import { SpellCheckApiService } from './src/services/api';
 import { KoreanGrammarSuggest } from './src/ui/koreanGrammarSuggest';
 
@@ -237,7 +237,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       this.registerEditorSuggest(this.grammarSuggest);
 
       // 기존 Widget 기반 시스템도 병행 (향후 단계적 제거 예정)
-      this.registerEditorExtension([errorDecorationField]);
+      this.registerEditorExtension([errorDecorationField, temporarySuggestionModeField]);
 
       // InlineModeService 초기화 (키보드 단축키 지원을 위해 필요)
       const activeLeaf = this.app.workspace.activeLeaf;

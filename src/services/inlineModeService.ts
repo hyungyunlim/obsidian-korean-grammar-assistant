@@ -135,6 +135,31 @@ export const setFocusedErrorDecoration = StateEffect.define<string | null>({
 });
 
 /**
+ * 임시 제안 적용 모드 Effect (decoration 자동 제거 방지용)
+ */
+export const setTemporarySuggestionMode = StateEffect.define<boolean>({
+  map: (val, change) => val
+});
+
+/**
+ * 임시 제안 모드 상태 필드
+ */
+export const temporarySuggestionModeField = StateField.define<boolean>({
+  create() {
+    return false;
+  },
+  
+  update(isTemporary, tr) {
+    for (let effect of tr.effects) {
+      if (effect.is(setTemporarySuggestionMode)) {
+        return effect.value;
+      }
+    }
+    return isTemporary;
+  }
+});
+
+/**
  * 오류 데코레이션 상태 필드
  */
 export const errorDecorationField = StateField.define<DecorationSet>({
@@ -145,8 +170,11 @@ export const errorDecorationField = StateField.define<DecorationSet>({
   update(decorations, tr) {
     decorations = decorations.map(tr.changes);
     
-    // 텍스트 변경이 있으면 해당 위치의 오류 제거
-    if (tr.docChanged) {
+    // 임시 제안 모드 확인
+    const isTemporaryMode = tr.state.field(temporarySuggestionModeField);
+    
+    // 임시 제안 모드가 아닐 때만 텍스트 변경 시 오류 제거
+    if (tr.docChanged && !isTemporaryMode) {
       const changedRanges: { from: number; to: number }[] = [];
       tr.changes.iterChanges((fromA, toA, fromB, toB) => {
         changedRanges.push({ from: fromA, to: toA });
@@ -1074,6 +1102,14 @@ export class InlineModeService {
       Logger.debug('툴팁 유지 모드: 툴팁 숨기기 건너뜀');
     }
 
+    // 최종 적용 시 임시 제안 모드 해제
+    if (this.currentView) {
+      this.currentView.dispatch({
+        effects: [setTemporarySuggestionMode.of(false)]
+      });
+      Logger.debug('🎯 최종 적용: 임시 제안 모드 해제');
+    }
+
     Logger.log(`인라인 모드: 교정 완료 - "${error.correction.original}" → "${suggestion}"`);
   }
 
@@ -1997,32 +2033,22 @@ export class InlineModeService {
         }
       }
       
-      // 🎯 정확한 decoration 업데이트 전략
+      // 🎯 임시 제안 모드로 decoration 자동 제거 방지
       if (this.currentView && this.currentFocusedError) {
-        // 1단계: 모든 decoration 먼저 클리어
+        // 1단계: 임시 제안 모드 활성화 (decoration 자동 제거 방지)
         this.currentView.dispatch({
-          effects: [clearAllErrorDecorations.of(true)]
+          effects: [setTemporarySuggestionMode.of(true)]
         });
         
-        // 2단계: 업데이트된 모든 error로 decoration 재구성
-        const updatedErrors = Array.from(this.activeErrors.values());
+        // 2단계: 텍스트 변경 (이제 decoration이 자동 제거되지 않음)
+        // (이미 위에서 replaceRange가 실행됨)
+        
+        // 3단계: 포커스 decoration 즉시 업데이트
         this.currentView.dispatch({
-          effects: [addErrorDecorations.of({ 
-            errors: updatedErrors, 
-            underlineStyle: 'wavy', 
-            underlineColor: '#ff0000' 
-          })]
+          effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
         });
         
-        // 3단계: 포커스된 error 하이라이팅 복원
-        setTimeout(() => {
-          if (this.currentView && this.currentFocusedError) {
-            this.currentView.dispatch({
-              effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
-            });
-            Logger.debug(`🎯 위치 업데이트 후 포커스 복원: ${this.currentFocusedError.uniqueId} (${this.currentFocusedError.start}-${this.currentFocusedError.end})`);
-          }
-        }, 10); // 최소한의 지연으로 순서 보장
+        Logger.debug(`🎯 임시 제안 모드에서 포커스 유지: ${this.currentFocusedError.uniqueId} (${this.currentFocusedError.start}-${this.currentFocusedError.end})`);
       }
       
     } catch (error) {

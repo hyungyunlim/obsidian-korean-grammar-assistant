@@ -10514,13 +10514,30 @@ var clearAllErrorDecorations = import_state.StateEffect.define({
 var setFocusedErrorDecoration = import_state.StateEffect.define({
   map: (val, change) => val
 });
+var setTemporarySuggestionMode = import_state.StateEffect.define({
+  map: (val, change) => val
+});
+var temporarySuggestionModeField = import_state.StateField.define({
+  create() {
+    return false;
+  },
+  update(isTemporary, tr) {
+    for (let effect of tr.effects) {
+      if (effect.is(setTemporarySuggestionMode)) {
+        return effect.value;
+      }
+    }
+    return isTemporary;
+  }
+});
 var errorDecorationField = import_state.StateField.define({
   create() {
     return import_view.Decoration.none;
   },
   update(decorations, tr) {
     decorations = decorations.map(tr.changes);
-    if (tr.docChanged) {
+    const isTemporaryMode = tr.state.field(temporarySuggestionModeField);
+    if (tr.docChanged && !isTemporaryMode) {
       const changedRanges = [];
       tr.changes.iterChanges((fromA, toA, fromB, toB) => {
         changedRanges.push({ from: fromA, to: toA });
@@ -11190,6 +11207,12 @@ var InlineModeService = class {
     } else {
       Logger.debug("\uD234\uD301 \uC720\uC9C0 \uBAA8\uB4DC: \uD234\uD301 \uC228\uAE30\uAE30 \uAC74\uB108\uB700");
     }
+    if (this.currentView) {
+      this.currentView.dispatch({
+        effects: [setTemporarySuggestionMode.of(false)]
+      });
+      Logger.debug("\u{1F3AF} \uCD5C\uC885 \uC801\uC6A9: \uC784\uC2DC \uC81C\uC548 \uBAA8\uB4DC \uD574\uC81C");
+    }
     Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uAD50\uC815 \uC644\uB8CC - "${error.correction.original}" \u2192 "${suggestion}"`);
   }
   /**
@@ -11683,24 +11706,12 @@ var InlineModeService = class {
       }
       if (this.currentView && this.currentFocusedError) {
         this.currentView.dispatch({
-          effects: [clearAllErrorDecorations.of(true)]
+          effects: [setTemporarySuggestionMode.of(true)]
         });
-        const updatedErrors = Array.from(this.activeErrors.values());
         this.currentView.dispatch({
-          effects: [addErrorDecorations.of({
-            errors: updatedErrors,
-            underlineStyle: "wavy",
-            underlineColor: "#ff0000"
-          })]
+          effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
         });
-        setTimeout(() => {
-          if (this.currentView && this.currentFocusedError) {
-            this.currentView.dispatch({
-              effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
-            });
-            Logger.debug(`\u{1F3AF} \uC704\uCE58 \uC5C5\uB370\uC774\uD2B8 \uD6C4 \uD3EC\uCEE4\uC2A4 \uBCF5\uC6D0: ${this.currentFocusedError.uniqueId} (${this.currentFocusedError.start}-${this.currentFocusedError.end})`);
-          }
-        }, 10);
+        Logger.debug(`\u{1F3AF} \uC784\uC2DC \uC81C\uC548 \uBAA8\uB4DC\uC5D0\uC11C \uD3EC\uCEE4\uC2A4 \uC720\uC9C0: ${this.currentFocusedError.uniqueId} (${this.currentFocusedError.start}-${this.currentFocusedError.end})`);
       }
     } catch (error) {
       Logger.error("\uC784\uC2DC \uC81C\uC548 \uC801\uC6A9 \uC911 \uC624\uB958:", error);
@@ -12183,7 +12194,7 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
     try {
       this.grammarSuggest = new KoreanGrammarSuggest(this.app, this.settings);
       this.registerEditorSuggest(this.grammarSuggest);
-      this.registerEditorExtension([errorDecorationField]);
+      this.registerEditorExtension([errorDecorationField, temporarySuggestionModeField]);
       const activeLeaf = this.app.workspace.activeLeaf;
       if (activeLeaf && activeLeaf.view && activeLeaf.view.editor) {
         const editorView = activeLeaf.view.editor.cm;
