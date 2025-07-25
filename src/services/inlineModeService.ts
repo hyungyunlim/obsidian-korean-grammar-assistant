@@ -2008,21 +2008,25 @@ export class InlineModeService {
       const currentSuggestion = suggestions[this.currentSuggestionIndex];
       const editor = view.editor;
       
+      // 🎯 현재 문서의 실제 텍스트 확인 (정확한 길이 계산을 위해)
+      const actualCurrentText = editor.getRange(
+        editor.offsetToPos(this.currentFocusedError.start),
+        editor.offsetToPos(this.currentFocusedError.end)
+      );
+      
+      Logger.debug(`🔍 실제 텍스트 확인: "${actualCurrentText}" → "${currentSuggestion}"`);
+      
       // 오류 위치를 EditorPosition으로 변환
       const startPos = editor.offsetToPos(this.currentFocusedError.start);
       const endPos = editor.offsetToPos(this.currentFocusedError.end);
       
-      Logger.debug(`임시 제안 적용: "${this.currentFocusedError.correction.original}" → "${currentSuggestion}"`);
-      
       // 기존 텍스트를 현재 제안으로 교체
       editor.replaceRange(currentSuggestion, startPos, endPos);
       
-      // 커서를 수정된 텍스트 끝으로 이동
-      const newEndPos = editor.offsetToPos(this.currentFocusedError.start + currentSuggestion.length);
-      editor.setCursor(newEndPos);
+      // 🎯 정확한 길이 차이 계산 (현재 실제 텍스트 기준)
+      const lengthDiff = currentSuggestion.length - actualCurrentText.length;
       
-      // 하이라이팅 업데이트를 위해 오류 정보의 end 위치 조정
-      const lengthDiff = currentSuggestion.length - this.currentFocusedError.correction.original.length;
+      // 현재 오류의 새로운 end 위치 계산
       this.currentFocusedError.end = this.currentFocusedError.start + currentSuggestion.length;
       
       // 다른 오류들의 위치도 조정 (현재 오류 이후에 있는 것들)
@@ -2032,6 +2036,10 @@ export class InlineModeService {
           error.end += lengthDiff;
         }
       }
+      
+      // 커서를 수정된 텍스트 끝으로 이동
+      const newEndPos = editor.offsetToPos(this.currentFocusedError.start + currentSuggestion.length);
+      editor.setCursor(newEndPos);
       
       // 🎯 임시 제안 모드로 decoration 자동 제거 방지
       if (this.currentView && this.currentFocusedError) {

@@ -11690,13 +11690,15 @@ var InlineModeService = class {
       }
       const currentSuggestion = suggestions[this.currentSuggestionIndex];
       const editor = view.editor;
+      const actualCurrentText = editor.getRange(
+        editor.offsetToPos(this.currentFocusedError.start),
+        editor.offsetToPos(this.currentFocusedError.end)
+      );
+      Logger.debug(`\u{1F50D} \uC2E4\uC81C \uD14D\uC2A4\uD2B8 \uD655\uC778: "${actualCurrentText}" \u2192 "${currentSuggestion}"`);
       const startPos = editor.offsetToPos(this.currentFocusedError.start);
       const endPos = editor.offsetToPos(this.currentFocusedError.end);
-      Logger.debug(`\uC784\uC2DC \uC81C\uC548 \uC801\uC6A9: "${this.currentFocusedError.correction.original}" \u2192 "${currentSuggestion}"`);
       editor.replaceRange(currentSuggestion, startPos, endPos);
-      const newEndPos = editor.offsetToPos(this.currentFocusedError.start + currentSuggestion.length);
-      editor.setCursor(newEndPos);
-      const lengthDiff = currentSuggestion.length - this.currentFocusedError.correction.original.length;
+      const lengthDiff = currentSuggestion.length - actualCurrentText.length;
       this.currentFocusedError.end = this.currentFocusedError.start + currentSuggestion.length;
       for (const [, error] of this.activeErrors) {
         if (error.start > this.currentFocusedError.start) {
@@ -11704,6 +11706,8 @@ var InlineModeService = class {
           error.end += lengthDiff;
         }
       }
+      const newEndPos = editor.offsetToPos(this.currentFocusedError.start + currentSuggestion.length);
+      editor.setCursor(newEndPos);
       if (this.currentView && this.currentFocusedError) {
         this.currentView.dispatch({
           effects: [setTemporarySuggestionMode.of(true)]
