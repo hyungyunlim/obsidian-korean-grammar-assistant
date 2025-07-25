@@ -1222,7 +1222,8 @@ export class InlineModeService {
         return false;
       }
       
-      this.currentSuggestionIndex = Math.max(0, this.currentSuggestionIndex - 1);
+      // 🎯 순환 구조로 이전 제안 인덱스 이동 (처음에서 끝으로)
+      this.currentSuggestionIndex = (this.currentSuggestionIndex - 1 + suggestions.length) % suggestions.length;
       this.updateTooltipHighlight();
       Logger.log(`✅ 이전 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
       evt.preventDefault();
@@ -1243,7 +1244,8 @@ export class InlineModeService {
         return false;
       }
       
-      this.currentSuggestionIndex = Math.min(suggestions.length - 1, this.currentSuggestionIndex + 1);
+      // 🎯 순환 구조로 다음 제안 인덱스 이동 (끝에서 처음으로)
+      this.currentSuggestionIndex = (this.currentSuggestionIndex + 1) % suggestions.length;
       this.updateTooltipHighlight();
       Logger.log(`✅ 다음 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
       evt.preventDefault();
@@ -1646,8 +1648,8 @@ export class InlineModeService {
           return;
         }
 
-        // 다음 제안으로 인덱스 이동
-        this.currentSuggestionIndex = Math.min(suggestions.length - 1, this.currentSuggestionIndex + 1);
+        // 🎯 순환 구조로 다음 제안 인덱스 이동 (끝에서 처음으로)  
+        this.currentSuggestionIndex = (this.currentSuggestionIndex + 1) % suggestions.length;
         
         // 🎯 실제 텍스트에 바로 반영 (Notice 대신)
         this.applyCurrentSuggestionTemporarily();
@@ -1675,8 +1677,8 @@ export class InlineModeService {
           return;
         }
 
-        // 이전 제안으로 인덱스 이동
-        this.currentSuggestionIndex = Math.max(0, this.currentSuggestionIndex - 1);
+        // 🎯 순환 구조로 이전 제안 인덱스 이동 (처음에서 끝으로)
+        this.currentSuggestionIndex = (this.currentSuggestionIndex - 1 + suggestions.length) % suggestions.length;
         
         // 🎯 실제 텍스트에 바로 반영 (Notice 대신)
         this.applyCurrentSuggestionTemporarily();
@@ -1985,6 +1987,37 @@ export class InlineModeService {
           error.start += lengthDiff;
           error.end += lengthDiff;
         }
+      }
+      
+      // 🎯 decoration 다시 적용 (하이라이팅 유지)
+      if (this.currentView) {
+        // 모든 decoration 지우고 다시 적용
+        this.currentView.dispatch({
+          effects: [clearAllErrorDecorations.of(true)]
+        });
+        
+        // 조금 기다린 후 decoration 다시 적용 (CodeMirror 업데이트 대기)
+        setTimeout(() => {
+          if (this.currentView) {
+            const activeErrorsArray = this.getActiveErrors();
+            this.currentView.dispatch({
+              effects: addErrorDecorations.of({ 
+                errors: activeErrorsArray, 
+                underlineStyle: 'wavy', 
+                underlineColor: '#ff0000' 
+              })
+            });
+            
+            // 포커스된 오류 하이라이트 다시 적용
+            if (this.currentFocusedError) {
+              this.currentView.dispatch({
+                effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
+              });
+            }
+            
+            Logger.debug(`🎯 decoration 재적용 완료: ${activeErrorsArray.length}개 오류`);
+          }
+        }, 10); // 10ms 지연
       }
       
     } catch (error) {

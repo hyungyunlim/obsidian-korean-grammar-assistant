@@ -11438,7 +11438,7 @@ var InlineModeService = class {
           new import_obsidian12.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
           return;
         }
-        this.currentSuggestionIndex = Math.min(suggestions.length - 1, this.currentSuggestionIndex + 1);
+        this.currentSuggestionIndex = (this.currentSuggestionIndex + 1) % suggestions.length;
         this.applyCurrentSuggestionTemporarily();
         this.updateTooltipHighlight();
         Logger.log(`\u2705 \uB2E4\uC74C \uC81C\uC548 \uC801\uC6A9: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
@@ -11457,7 +11457,7 @@ var InlineModeService = class {
           new import_obsidian12.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
           return;
         }
-        this.currentSuggestionIndex = Math.max(0, this.currentSuggestionIndex - 1);
+        this.currentSuggestionIndex = (this.currentSuggestionIndex - 1 + suggestions.length) % suggestions.length;
         this.applyCurrentSuggestionTemporarily();
         this.updateTooltipHighlight();
         Logger.log(`\u2705 \uC774\uC804 \uC81C\uC548 \uC801\uC6A9: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
@@ -11680,6 +11680,29 @@ var InlineModeService = class {
           error.start += lengthDiff;
           error.end += lengthDiff;
         }
+      }
+      if (this.currentView) {
+        this.currentView.dispatch({
+          effects: [clearAllErrorDecorations.of(true)]
+        });
+        setTimeout(() => {
+          if (this.currentView) {
+            const activeErrorsArray = this.getActiveErrors();
+            this.currentView.dispatch({
+              effects: addErrorDecorations.of({
+                errors: activeErrorsArray,
+                underlineStyle: "wavy",
+                underlineColor: "#ff0000"
+              })
+            });
+            if (this.currentFocusedError) {
+              this.currentView.dispatch({
+                effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
+              });
+            }
+            Logger.debug(`\u{1F3AF} decoration \uC7AC\uC801\uC6A9 \uC644\uB8CC: ${activeErrorsArray.length}\uAC1C \uC624\uB958`);
+          }
+        }, 10);
       }
     } catch (error) {
       Logger.error("\uC784\uC2DC \uC81C\uC548 \uC801\uC6A9 \uC911 \uC624\uB958:", error);
