@@ -11683,27 +11683,24 @@ var InlineModeService = class {
       }
       if (this.currentView && this.currentFocusedError) {
         this.currentView.dispatch({
-          effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
+          effects: [clearAllErrorDecorations.of(true)]
         });
-        requestAnimationFrame(() => {
-          if (this.currentView && this.currentFocusedError) {
-            this.currentView.dispatch({
-              effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
-            });
-            Logger.debug(`\u{1F525} \uAC15\uD654\uB41C \uD3EC\uCEE4\uC2A4 \uC7AC\uC124\uC815: ${this.currentFocusedError.uniqueId}`);
-          }
+        const updatedErrors = Array.from(this.activeErrors.values());
+        this.currentView.dispatch({
+          effects: [addErrorDecorations.of({
+            errors: updatedErrors,
+            underlineStyle: "wavy",
+            underlineColor: "#ff0000"
+          })]
         });
-      }
-      if (this.app && this.currentFocusedError) {
-        this.app.workspace.updateOptions();
         setTimeout(() => {
           if (this.currentView && this.currentFocusedError) {
             this.currentView.dispatch({
               effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
             });
-            Logger.debug(`\u{1F525} workspace.updateOptions() \uD3EC\uCEE4\uC2A4 \uBCF5\uC6D0: ${this.currentFocusedError.uniqueId}`);
+            Logger.debug(`\u{1F3AF} \uC704\uCE58 \uC5C5\uB370\uC774\uD2B8 \uD6C4 \uD3EC\uCEE4\uC2A4 \uBCF5\uC6D0: ${this.currentFocusedError.uniqueId} (${this.currentFocusedError.start}-${this.currentFocusedError.end})`);
           }
-        }, 50);
+        }, 10);
       }
     } catch (error) {
       Logger.error("\uC784\uC2DC \uC81C\uC548 \uC801\uC6A9 \uC911 \uC624\uB958:", error);

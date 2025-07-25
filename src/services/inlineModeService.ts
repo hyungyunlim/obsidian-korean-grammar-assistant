@@ -1997,38 +1997,32 @@ export class InlineModeService {
         }
       }
       
-      // 🔥 더 강력한 포커스 유지 전략
+      // 🎯 정확한 decoration 업데이트 전략
       if (this.currentView && this.currentFocusedError) {
-        // 즉시 포커스 재설정 시도
+        // 1단계: 모든 decoration 먼저 클리어
         this.currentView.dispatch({
-          effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
+          effects: [clearAllErrorDecorations.of(true)]
         });
         
-        // 추가: 더 강력한 재설정을 위해 한 번 더 시도
-        requestAnimationFrame(() => {
-          if (this.currentView && this.currentFocusedError) {
-            this.currentView.dispatch({
-              effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
-            });
-            Logger.debug(`🔥 강화된 포커스 재설정: ${this.currentFocusedError.uniqueId}`);
-          }
+        // 2단계: 업데이트된 모든 error로 decoration 재구성
+        const updatedErrors = Array.from(this.activeErrors.values());
+        this.currentView.dispatch({
+          effects: [addErrorDecorations.of({ 
+            errors: updatedErrors, 
+            underlineStyle: 'wavy', 
+            underlineColor: '#ff0000' 
+          })]
         });
-      }
-      
-      // 🔥 Obsidian API의 강력한 해결책: workspace.updateOptions()
-      if (this.app && this.currentFocusedError) {
-        // 전체 에디터 확장을 다시 로드하여 decoration 강제 업데이트
-        this.app.workspace.updateOptions();
         
-        // updateOptions 후 포커스 재설정
+        // 3단계: 포커스된 error 하이라이팅 복원
         setTimeout(() => {
           if (this.currentView && this.currentFocusedError) {
             this.currentView.dispatch({
               effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
             });
-            Logger.debug(`🔥 workspace.updateOptions() 포커스 복원: ${this.currentFocusedError.uniqueId}`);
+            Logger.debug(`🎯 위치 업데이트 후 포커스 복원: ${this.currentFocusedError.uniqueId} (${this.currentFocusedError.start}-${this.currentFocusedError.end})`);
           }
-        }, 50); // 50ms 여유를 두고 포커스 복원
+        }, 10); // 최소한의 지연으로 순서 보장
       }
       
     } catch (error) {
