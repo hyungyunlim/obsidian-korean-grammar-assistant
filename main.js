@@ -11801,6 +11801,12 @@ var InlineModeService = class {
         editor.offsetToPos(this.currentFocusedError.end)
       );
       Logger.debug(`\u{1F50D} \uC2E4\uC81C \uD14D\uC2A4\uD2B8 \uD655\uC778: "${actualCurrentText}" \u2192 "${currentSuggestion}"`);
+      if (this.currentView) {
+        this.currentView.dispatch({
+          effects: [setTemporarySuggestionMode.of(true)]
+        });
+        Logger.debug(`\u{1F3AF} \uC784\uC2DC \uC81C\uC548 \uBAA8\uB4DC \uD65C\uC131\uD654\uB428`);
+      }
       const startPos = editor.offsetToPos(this.currentFocusedError.start);
       const endPos = editor.offsetToPos(this.currentFocusedError.end);
       editor.replaceRange(currentSuggestion, startPos, endPos);
@@ -11815,11 +11821,13 @@ var InlineModeService = class {
       const newEndPos = editor.offsetToPos(this.currentFocusedError.start + currentSuggestion.length);
       editor.setCursor(newEndPos);
       if (this.currentView && this.currentFocusedError) {
-        this.currentView.dispatch({
-          effects: [setTemporarySuggestionMode.of(true)]
-        });
-        this.currentView.dispatch({
-          effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
+        requestAnimationFrame(() => {
+          if (this.currentView && this.currentFocusedError) {
+            this.currentView.dispatch({
+              effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
+            });
+            Logger.debug(`\u{1F3AF} \uD3EC\uCEE4\uC2A4 decoration \uC7AC\uC801\uC6A9 \uC644\uB8CC: ${this.currentFocusedError.uniqueId} (${this.currentFocusedError.start}-${this.currentFocusedError.end})`);
+          }
         });
         Logger.debug(`\u{1F3AF} \uC784\uC2DC \uC81C\uC548 \uBAA8\uB4DC\uC5D0\uC11C \uD3EC\uCEE4\uC2A4 \uC720\uC9C0: ${this.currentFocusedError.uniqueId} (${this.currentFocusedError.start}-${this.currentFocusedError.end})`);
       }

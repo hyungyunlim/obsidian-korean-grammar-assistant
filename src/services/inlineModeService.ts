@@ -2127,11 +2127,19 @@ export class InlineModeService {
       
       Logger.debug(`🔍 실제 텍스트 확인: "${actualCurrentText}" → "${currentSuggestion}"`);
       
+      // 🎯 1단계: 임시 제안 모드 먼저 활성화 (decoration 자동 제거 방지)
+      if (this.currentView) {
+        this.currentView.dispatch({
+          effects: [setTemporarySuggestionMode.of(true)]
+        });
+        Logger.debug(`🎯 임시 제안 모드 활성화됨`);
+      }
+      
       // 오류 위치를 EditorPosition으로 변환
       const startPos = editor.offsetToPos(this.currentFocusedError.start);
       const endPos = editor.offsetToPos(this.currentFocusedError.end);
       
-      // 기존 텍스트를 현재 제안으로 교체
+      // 🎯 2단계: 기존 텍스트를 현재 제안으로 교체 (이제 decoration이 제거되지 않음)
       editor.replaceRange(currentSuggestion, startPos, endPos);
       
       // 🎯 정확한 길이 차이 계산 (현재 실제 텍스트 기준)
@@ -2152,19 +2160,16 @@ export class InlineModeService {
       const newEndPos = editor.offsetToPos(this.currentFocusedError.start + currentSuggestion.length);
       editor.setCursor(newEndPos);
       
-      // 🎯 임시 제안 모드로 decoration 자동 제거 방지
+      // 🎯 3단계: 포커스 decoration 강제 재적용 (안정적 하이라이팅 유지)
       if (this.currentView && this.currentFocusedError) {
-        // 1단계: 임시 제안 모드 활성화 (decoration 자동 제거 방지)
-        this.currentView.dispatch({
-          effects: [setTemporarySuggestionMode.of(true)]
-        });
-        
-        // 2단계: 텍스트 변경 (이제 decoration이 자동 제거되지 않음)
-        // (이미 위에서 replaceRange가 실행됨)
-        
-        // 3단계: 포커스 decoration 즉시 업데이트
-        this.currentView.dispatch({
-          effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
+        // 약간의 지연을 두고 decoration 재적용 (DOM 업데이트 완료 후)
+        requestAnimationFrame(() => {
+          if (this.currentView && this.currentFocusedError) {
+            this.currentView.dispatch({
+              effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
+            });
+            Logger.debug(`🎯 포커스 decoration 재적용 완료: ${this.currentFocusedError.uniqueId} (${this.currentFocusedError.start}-${this.currentFocusedError.end})`);
+          }
         });
         
         Logger.debug(`🎯 임시 제안 모드에서 포커스 유지: ${this.currentFocusedError.uniqueId} (${this.currentFocusedError.start}-${this.currentFocusedError.end})`);
