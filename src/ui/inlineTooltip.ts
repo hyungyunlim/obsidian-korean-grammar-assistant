@@ -503,29 +503,32 @@ export class InlineTooltip {
       text-align: center;
     `;
 
-    // 우상단 닫기 버튼 (✕)
+    // 우상단 닫기 버튼 (✕) - 아이폰 최적화
     const headerCloseButton = header.createEl('button', { 
       text: '✕',
       cls: 'header-close-button'
     });
     headerCloseButton.style.cssText = `
       position: absolute;
-      right: ${isMobileDevice ? '8px' : '6px'};
+      right: ${isMobileDevice ? (isPhoneDevice ? '10px' : '8px') : '6px'};
       top: 50%;
       transform: translateY(-50%);
-      background: transparent;
-      border: none;
+      background: rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--background-modifier-border);
+      border-radius: ${isMobileDevice ? '6px' : '4px'};
       cursor: pointer;
-      font-size: ${isMobileDevice ? (isPhoneDevice ? '14px' : '15px') : '16px'};
+      font-size: ${isMobileDevice ? (isPhoneDevice ? '16px' : '15px') : '16px'};
       color: var(--text-muted);
-      padding: ${isMobileDevice ? '4px' : '2px'};
-      border-radius: 3px;
+      padding: ${isMobileDevice ? (isPhoneDevice ? '6px' : '5px') : '4px'};
       transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-width: ${isMobileDevice ? '24px' : '20px'};
-      min-height: ${isMobileDevice ? '24px' : '20px'};
+      min-width: ${isMobileDevice ? (isPhoneDevice ? '28px' : '26px') : '24px'};
+      min-height: ${isMobileDevice ? (isPhoneDevice ? '28px' : '26px') : '24px'};
+      z-index: 10;
+      font-weight: bold;
+      line-height: 1;
       ${isMobileDevice ? 'touch-action: manipulation;' : ''}
     `;
 
@@ -739,44 +742,45 @@ export class InlineTooltip {
       }
     });
 
-    // 하단 액션 영역 - 모바일 최적화
-    const footer = this.tooltip.createEl('div', { cls: 'tooltip-footer' });
-    const isMobile = Platform.isMobile;
-    const isPhone = (Platform as any).isPhone || (window.innerWidth <= 480);
-    
-    footer.style.cssText = `
-      padding: ${isMobile ? (isPhone ? '4px 8px' : '5px 10px') : '6px 12px'};
+    // 하단 액션 컨테이너 (도움말 및 버튼들) - 아이폰 최적화
+    const actionsContainer = this.tooltip.createEl('div', { cls: 'tooltip-actions' });
+    actionsContainer.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: ${isMobileDevice ? (isPhoneDevice ? '8px 12px 10px 12px' : '7px 11px 9px 11px') : '8px 12px'};
       border-top: 1px solid var(--background-modifier-border);
       background: var(--background-secondary);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: ${isMobile ? '6px' : '8px'};
-      min-height: ${isMobile ? (isPhone ? '36px' : '40px') : 'auto'};
+      gap: ${isMobileDevice ? (isPhoneDevice ? '8px' : '7px') : '6px'};
+      min-height: ${isMobileDevice ? (isPhoneDevice ? '48px' : '44px') : 'auto'};
+      border-bottom-left-radius: 12px;
+      border-bottom-right-radius: 12px;
     `;
 
-    // 정보 텍스트 - 모바일에서 더 컴팩트
-    const infoText = footer.createEl('span', {
-      text: isMobile ? '개별 클릭으로 수정' : '개별 클릭으로 하나씩 수정',
+    // 정보 텍스트 - 아이폰 최적화
+    const infoText = actionsContainer.createEl('span', {
+      text: isMobileDevice ? (isPhoneDevice ? '개별 수정' : '개별 클릭 수정') : '개별 클릭으로 하나씩 수정',
       cls: 'info-text'
     });
     infoText.style.cssText = `
-      font-size: ${isMobile ? (isPhone ? '10px' : '11px') : '11px'};
+      font-size: ${isMobileDevice ? (isPhoneDevice ? '11px' : '12px') : '11px'};
       color: var(--text-muted);
       flex: 1;
-      line-height: 1.2;
+      line-height: 1.3;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      padding-right: ${isMobileDevice ? '4px' : '0'};
     `;
 
-    // 액션 버튼들 컨테이너 - 모바일 최적화
-    const actionButtons = footer.createEl('div', { cls: 'action-buttons' });
+    // 액션 버튼들 컨테이너 - 아이폰 최적화
+    const actionButtons = actionsContainer.createEl('div', { cls: 'action-buttons' });
     actionButtons.style.cssText = `
       display: flex;
       align-items: center;
-      gap: ${isMobile ? '4px' : '6px'};
+      gap: ${isMobileDevice ? (isPhoneDevice ? '6px' : '5px') : '6px'};
       flex-shrink: 0;
+      min-height: ${isMobileDevice ? (isPhoneDevice ? '32px' : '30px') : 'auto'};
     `;
 
     // ❌ 병합된 오류 전체 무시 버튼 - 모바일 최적화
@@ -786,19 +790,19 @@ export class InlineTooltip {
     ignoreAllButton.style.cssText = `
       background: var(--interactive-normal);
       border: 1px solid var(--background-modifier-border);
-      border-radius: ${isMobile ? '5px' : '4px'};
-      padding: ${isMobile ? (isPhone ? '6px' : '7px') : '6px'};
+      border-radius: ${isMobileDevice ? '5px' : '4px'};
+      padding: ${isMobileDevice ? (isPhoneDevice ? '6px' : '7px') : '6px'};
       cursor: pointer;
       transition: all 0.2s;
-      font-size: ${isMobile ? (isPhone ? '12px' : '13px') : '12px'};
-      min-height: ${isMobile ? (isPhone ? '28px' : '30px') : 'auto'};
-      min-width: ${isMobile ? (isPhone ? '28px' : '30px') : 'auto'};
-      max-height: ${isMobile ? (isPhone ? '28px' : '30px') : 'none'};
+      font-size: ${isMobileDevice ? (isPhoneDevice ? '12px' : '13px') : '12px'};
+      min-height: ${isMobileDevice ? (isPhoneDevice ? '28px' : '30px') : 'auto'};
+      min-width: ${isMobileDevice ? (isPhoneDevice ? '28px' : '30px') : 'auto'};
+      max-height: ${isMobileDevice ? (isPhoneDevice ? '28px' : '30px') : 'none'};
       display: flex;
       align-items: center;
       justify-content: center;
       line-height: 1;
-      ${isMobile ? 'touch-action: manipulation;' : ''}
+      ${isMobileDevice ? 'touch-action: manipulation;' : ''}
     `;
 
     // 무시 버튼 이벤트
@@ -817,6 +821,7 @@ export class InlineTooltip {
       ignoreAllButton.addEventListener('touchstart', (e) => {
         e.preventDefault();
         ignoreAllButton.style.background = 'var(--interactive-hover)';
+        ignoreAllButton.style.transform = 'translateY(-1px)';
         if ('vibrate' in navigator) {
           navigator.vibrate(10);
         }
@@ -825,6 +830,8 @@ export class InlineTooltip {
       ignoreAllButton.addEventListener('touchend', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        ignoreAllButton.style.background = 'var(--interactive-normal)';
+        ignoreAllButton.style.transform = 'translateY(0)';
         this.ignoreError(mergedError);
       }, { passive: false });
     }
@@ -835,56 +842,68 @@ export class InlineTooltip {
       this.ignoreError(mergedError);
     });
 
-    // 모든 수정 적용 버튼 - 체크 표시로 변경
+    // 모든 수정 적용 버튼 - 녹색 체크로 변경
     const applyAllButton = actionButtons.createEl('button', {
       text: '✓',
       cls: 'apply-all-button'
     });
     applyAllButton.title = '모든 수정 사항 적용';
     applyAllButton.style.cssText = `
-      background: var(--interactive-accent);
-      color: var(--text-on-accent);
-      border: 1px solid var(--interactive-accent);
-      border-radius: ${isMobileDevice ? '5px' : '4px'};
-      padding: ${isMobileDevice ? (isPhoneDevice ? '6px' : '7px') : '6px'};
+      background: #10b981;
+      color: white;
+      border: 1px solid #10b981;
+      border-radius: ${isMobileDevice ? '6px' : '4px'};
+      padding: ${isMobileDevice ? (isPhoneDevice ? '8px' : '7px') : '6px'};
       cursor: pointer;
-      font-size: ${isMobileDevice ? (isPhoneDevice ? '14px' : '15px') : '16px'};
-      font-weight: 600;
+      font-size: ${isMobileDevice ? (isPhoneDevice ? '16px' : '15px') : '16px'};
+      font-weight: 700;
       transition: all 0.2s;
-      min-height: ${isMobileDevice ? (isPhoneDevice ? '28px' : '30px') : 'auto'};
-      min-width: ${isMobileDevice ? (isPhoneDevice ? '28px' : '30px') : 'auto'};
-      max-height: ${isMobileDevice ? (isPhoneDevice ? '28px' : '30px') : 'none'};
+      min-height: ${isMobileDevice ? (isPhoneDevice ? '32px' : '30px') : 'auto'};
+      min-width: ${isMobileDevice ? (isPhoneDevice ? '32px' : '30px') : 'auto'};
+      max-height: ${isMobileDevice ? (isPhoneDevice ? '32px' : '30px') : 'none'};
       display: flex;
       align-items: center;
       justify-content: center;
       line-height: 1;
       white-space: nowrap;
+      box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
       ${isMobileDevice ? 'touch-action: manipulation;' : ''}
     `;
 
     applyAllButton.addEventListener('mouseenter', () => {
-      applyAllButton.style.background = 'var(--interactive-accent-hover)';
+      applyAllButton.style.background = '#059669';
+      applyAllButton.style.borderColor = '#059669';
       applyAllButton.style.transform = 'translateY(-1px)';
+      applyAllButton.style.boxShadow = '0 4px 8px rgba(16, 185, 129, 0.3)';
     });
 
     applyAllButton.addEventListener('mouseleave', () => {
-      applyAllButton.style.background = 'var(--interactive-accent)';
+      applyAllButton.style.background = '#10b981';
+      applyAllButton.style.borderColor = '#10b981';
       applyAllButton.style.transform = 'translateY(0)';
+      applyAllButton.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.2)';
     });
 
     // 모바일 터치 피드백
     if (isMobileDevice) {
       applyAllButton.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        applyAllButton.style.background = 'var(--interactive-accent-hover)';
+        applyAllButton.style.background = '#059669';
+        applyAllButton.style.borderColor = '#059669';
+        applyAllButton.style.transform = 'translateY(-1px)';
+        applyAllButton.style.boxShadow = '0 4px 8px rgba(16, 185, 129, 0.3)';
         if ('vibrate' in navigator) {
-          navigator.vibrate(10);
+          navigator.vibrate(15); // 좀 더 강한 피드백
         }
       }, { passive: false });
       
       applyAllButton.addEventListener('touchend', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        applyAllButton.style.background = '#10b981';
+        applyAllButton.style.borderColor = '#10b981';
+        applyAllButton.style.transform = 'translateY(0)';
+        applyAllButton.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.2)';
         // 모든 오류의 첫 번째 제안 적용
         if (mergedError.originalErrors) {
           mergedError.originalErrors.forEach((originalError) => {
@@ -1157,12 +1176,15 @@ export class InlineTooltip {
       });
     });
 
-    // 액션 영역 (적절한 간격) - 메인 콘텐츠 내부로 이동
+    // 액션 영역 (아이폰 최적화) - 메인 콘텐츠 내부로 이동
     const actionsContainer = mainContent.createEl('div', { cls: 'actions-container' });
     actionsContainer.style.cssText = `
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: ${isMobile ? (isPhone ? '8px' : '7px') : '6px'};
+      margin-left: auto;
+      flex-shrink: 0;
+      min-height: ${isMobile ? (isPhone ? '28px' : '26px') : 'auto'};
     `;
 
     // 📚 예외 단어 추가 버튼 (책 아이콘) - 모바일 최적화
@@ -1584,16 +1606,16 @@ export class InlineTooltip {
     
     if (Platform.isMobile) {
       fontSize = isPhone ? '13px' : '14px';
-      minWidth = isPhone ? 200 : 240;
+      minWidth = isPhone ? 240 : 280; // 최소 너비 증가
       maxWidth = Math.min(
-        isPhone ? 320 : 380, 
-        Math.min(viewportWidth, editorWidth) - 32
+        isPhone ? 340 : 400, // 최대 너비 증가
+        Math.min(viewportWidth, editorWidth) - 24 // 더 안전한 여백
       );
       
-      const availableHeight = Math.min(viewportHeight, editorHeight) - keyboardHeight - 60;
+      const availableHeight = Math.min(viewportHeight, editorHeight) - keyboardHeight - 80; // 더 안전한 여백
       maxHeight = Math.min(
-        isPhone ? 180 : 220, 
-        availableHeight * 0.6
+        isPhone ? 240 : 280, // 최대 높이 증가 
+        Math.max(160, availableHeight * 0.65) // 최소 160px 보장
       );
     } else {
       fontSize = '14px';
@@ -1602,8 +1624,8 @@ export class InlineTooltip {
       maxHeight = Math.min(300, Math.min(viewportHeight, editorHeight) - 40);
     }
     
-    // 🔧 내용에 맞는 최적 너비 계산
-    let optimalWidth = naturalWidth + 24; // 패딩 고려
+    // 🔧 내용에 맞는 최적 너비 계산 (아이폰 최적화)
+    let optimalWidth = naturalWidth + (Platform.isMobile ? (isPhone ? 32 : 28) : 24); // 모바일에서 더 넉넉한 패딩
     
     // 내용이 너무 짧으면 최소 너비 보장
     optimalWidth = Math.max(minWidth, optimalWidth);

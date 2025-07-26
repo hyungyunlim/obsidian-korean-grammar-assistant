@@ -9910,22 +9910,25 @@ var InlineTooltip = class {
     });
     headerCloseButton.style.cssText = `
       position: absolute;
-      right: ${isMobileDevice ? "8px" : "6px"};
+      right: ${isMobileDevice ? isPhoneDevice ? "10px" : "8px" : "6px"};
       top: 50%;
       transform: translateY(-50%);
-      background: transparent;
-      border: none;
+      background: rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--background-modifier-border);
+      border-radius: ${isMobileDevice ? "6px" : "4px"};
       cursor: pointer;
-      font-size: ${isMobileDevice ? isPhoneDevice ? "14px" : "15px" : "16px"};
+      font-size: ${isMobileDevice ? isPhoneDevice ? "16px" : "15px" : "16px"};
       color: var(--text-muted);
-      padding: ${isMobileDevice ? "4px" : "2px"};
-      border-radius: 3px;
+      padding: ${isMobileDevice ? isPhoneDevice ? "6px" : "5px" : "4px"};
       transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-width: ${isMobileDevice ? "24px" : "20px"};
-      min-height: ${isMobileDevice ? "24px" : "20px"};
+      min-width: ${isMobileDevice ? isPhoneDevice ? "28px" : "26px" : "24px"};
+      min-height: ${isMobileDevice ? isPhoneDevice ? "28px" : "26px" : "24px"};
+      z-index: 10;
+      font-weight: bold;
+      line-height: 1;
       ${isMobileDevice ? "touch-action: manipulation;" : ""}
     `;
     headerCloseButton.addEventListener("mouseenter", () => {
@@ -10097,38 +10100,40 @@ var InlineTooltip = class {
         });
       }
     });
-    const footer = this.tooltip.createEl("div", { cls: "tooltip-footer" });
-    const isMobile = import_obsidian10.Platform.isMobile;
-    const isPhone = import_obsidian10.Platform.isPhone || window.innerWidth <= 480;
-    footer.style.cssText = `
-      padding: ${isMobile ? isPhone ? "4px 8px" : "5px 10px" : "6px 12px"};
+    const actionsContainer = this.tooltip.createEl("div", { cls: "tooltip-actions" });
+    actionsContainer.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: ${isMobileDevice ? isPhoneDevice ? "8px 12px 10px 12px" : "7px 11px 9px 11px" : "8px 12px"};
       border-top: 1px solid var(--background-modifier-border);
       background: var(--background-secondary);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: ${isMobile ? "6px" : "8px"};
-      min-height: ${isMobile ? isPhone ? "36px" : "40px" : "auto"};
+      gap: ${isMobileDevice ? isPhoneDevice ? "8px" : "7px" : "6px"};
+      min-height: ${isMobileDevice ? isPhoneDevice ? "48px" : "44px" : "auto"};
+      border-bottom-left-radius: 12px;
+      border-bottom-right-radius: 12px;
     `;
-    const infoText = footer.createEl("span", {
-      text: isMobile ? "\uAC1C\uBCC4 \uD074\uB9AD\uC73C\uB85C \uC218\uC815" : "\uAC1C\uBCC4 \uD074\uB9AD\uC73C\uB85C \uD558\uB098\uC529 \uC218\uC815",
+    const infoText = actionsContainer.createEl("span", {
+      text: isMobileDevice ? isPhoneDevice ? "\uAC1C\uBCC4 \uC218\uC815" : "\uAC1C\uBCC4 \uD074\uB9AD \uC218\uC815" : "\uAC1C\uBCC4 \uD074\uB9AD\uC73C\uB85C \uD558\uB098\uC529 \uC218\uC815",
       cls: "info-text"
     });
     infoText.style.cssText = `
-      font-size: ${isMobile ? isPhone ? "10px" : "11px" : "11px"};
+      font-size: ${isMobileDevice ? isPhoneDevice ? "11px" : "12px" : "11px"};
       color: var(--text-muted);
       flex: 1;
-      line-height: 1.2;
+      line-height: 1.3;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      padding-right: ${isMobileDevice ? "4px" : "0"};
     `;
-    const actionButtons = footer.createEl("div", { cls: "action-buttons" });
+    const actionButtons = actionsContainer.createEl("div", { cls: "action-buttons" });
     actionButtons.style.cssText = `
       display: flex;
       align-items: center;
-      gap: ${isMobile ? "4px" : "6px"};
+      gap: ${isMobileDevice ? isPhoneDevice ? "6px" : "5px" : "6px"};
       flex-shrink: 0;
+      min-height: ${isMobileDevice ? isPhoneDevice ? "32px" : "30px" : "auto"};
     `;
     const ignoreAllButton = actionButtons.createEl("button", { cls: "ignore-all-button" });
     ignoreAllButton.innerHTML = "\u274C";
@@ -10136,19 +10141,19 @@ var InlineTooltip = class {
     ignoreAllButton.style.cssText = `
       background: var(--interactive-normal);
       border: 1px solid var(--background-modifier-border);
-      border-radius: ${isMobile ? "5px" : "4px"};
-      padding: ${isMobile ? isPhone ? "6px" : "7px" : "6px"};
+      border-radius: ${isMobileDevice ? "5px" : "4px"};
+      padding: ${isMobileDevice ? isPhoneDevice ? "6px" : "7px" : "6px"};
       cursor: pointer;
       transition: all 0.2s;
-      font-size: ${isMobile ? isPhone ? "12px" : "13px" : "12px"};
-      min-height: ${isMobile ? isPhone ? "28px" : "30px" : "auto"};
-      min-width: ${isMobile ? isPhone ? "28px" : "30px" : "auto"};
-      max-height: ${isMobile ? isPhone ? "28px" : "30px" : "none"};
+      font-size: ${isMobileDevice ? isPhoneDevice ? "12px" : "13px" : "12px"};
+      min-height: ${isMobileDevice ? isPhoneDevice ? "28px" : "30px" : "auto"};
+      min-width: ${isMobileDevice ? isPhoneDevice ? "28px" : "30px" : "auto"};
+      max-height: ${isMobileDevice ? isPhoneDevice ? "28px" : "30px" : "none"};
       display: flex;
       align-items: center;
       justify-content: center;
       line-height: 1;
-      ${isMobile ? "touch-action: manipulation;" : ""}
+      ${isMobileDevice ? "touch-action: manipulation;" : ""}
     `;
     ignoreAllButton.addEventListener("mouseenter", () => {
       ignoreAllButton.style.background = "var(--interactive-hover)";
@@ -10162,6 +10167,7 @@ var InlineTooltip = class {
       ignoreAllButton.addEventListener("touchstart", (e) => {
         e.preventDefault();
         ignoreAllButton.style.background = "var(--interactive-hover)";
+        ignoreAllButton.style.transform = "translateY(-1px)";
         if ("vibrate" in navigator) {
           navigator.vibrate(10);
         }
@@ -10169,6 +10175,8 @@ var InlineTooltip = class {
       ignoreAllButton.addEventListener("touchend", (e) => {
         e.preventDefault();
         e.stopPropagation();
+        ignoreAllButton.style.background = "var(--interactive-normal)";
+        ignoreAllButton.style.transform = "translateY(0)";
         this.ignoreError(mergedError);
       }, { passive: false });
     }
@@ -10182,44 +10190,56 @@ var InlineTooltip = class {
     });
     applyAllButton.title = "\uBAA8\uB4E0 \uC218\uC815 \uC0AC\uD56D \uC801\uC6A9";
     applyAllButton.style.cssText = `
-      background: var(--interactive-accent);
-      color: var(--text-on-accent);
-      border: 1px solid var(--interactive-accent);
-      border-radius: ${isMobileDevice ? "5px" : "4px"};
-      padding: ${isMobileDevice ? isPhoneDevice ? "6px" : "7px" : "6px"};
+      background: #10b981;
+      color: white;
+      border: 1px solid #10b981;
+      border-radius: ${isMobileDevice ? "6px" : "4px"};
+      padding: ${isMobileDevice ? isPhoneDevice ? "8px" : "7px" : "6px"};
       cursor: pointer;
-      font-size: ${isMobileDevice ? isPhoneDevice ? "14px" : "15px" : "16px"};
-      font-weight: 600;
+      font-size: ${isMobileDevice ? isPhoneDevice ? "16px" : "15px" : "16px"};
+      font-weight: 700;
       transition: all 0.2s;
-      min-height: ${isMobileDevice ? isPhoneDevice ? "28px" : "30px" : "auto"};
-      min-width: ${isMobileDevice ? isPhoneDevice ? "28px" : "30px" : "auto"};
-      max-height: ${isMobileDevice ? isPhoneDevice ? "28px" : "30px" : "none"};
+      min-height: ${isMobileDevice ? isPhoneDevice ? "32px" : "30px" : "auto"};
+      min-width: ${isMobileDevice ? isPhoneDevice ? "32px" : "30px" : "auto"};
+      max-height: ${isMobileDevice ? isPhoneDevice ? "32px" : "30px" : "none"};
       display: flex;
       align-items: center;
       justify-content: center;
       line-height: 1;
       white-space: nowrap;
+      box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
       ${isMobileDevice ? "touch-action: manipulation;" : ""}
     `;
     applyAllButton.addEventListener("mouseenter", () => {
-      applyAllButton.style.background = "var(--interactive-accent-hover)";
+      applyAllButton.style.background = "#059669";
+      applyAllButton.style.borderColor = "#059669";
       applyAllButton.style.transform = "translateY(-1px)";
+      applyAllButton.style.boxShadow = "0 4px 8px rgba(16, 185, 129, 0.3)";
     });
     applyAllButton.addEventListener("mouseleave", () => {
-      applyAllButton.style.background = "var(--interactive-accent)";
+      applyAllButton.style.background = "#10b981";
+      applyAllButton.style.borderColor = "#10b981";
       applyAllButton.style.transform = "translateY(0)";
+      applyAllButton.style.boxShadow = "0 2px 4px rgba(16, 185, 129, 0.2)";
     });
     if (isMobileDevice) {
       applyAllButton.addEventListener("touchstart", (e) => {
         e.preventDefault();
-        applyAllButton.style.background = "var(--interactive-accent-hover)";
+        applyAllButton.style.background = "#059669";
+        applyAllButton.style.borderColor = "#059669";
+        applyAllButton.style.transform = "translateY(-1px)";
+        applyAllButton.style.boxShadow = "0 4px 8px rgba(16, 185, 129, 0.3)";
         if ("vibrate" in navigator) {
-          navigator.vibrate(10);
+          navigator.vibrate(15);
         }
       }, { passive: false });
       applyAllButton.addEventListener("touchend", (e) => {
         e.preventDefault();
         e.stopPropagation();
+        applyAllButton.style.background = "#10b981";
+        applyAllButton.style.borderColor = "#10b981";
+        applyAllButton.style.transform = "translateY(0)";
+        applyAllButton.style.boxShadow = "0 2px 4px rgba(16, 185, 129, 0.2)";
         if (mergedError.originalErrors) {
           mergedError.originalErrors.forEach((originalError) => {
             if (originalError.correction.corrected.length > 0) {
@@ -10433,7 +10453,10 @@ var InlineTooltip = class {
     actionsContainer.style.cssText = `
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: ${isMobile ? isPhone ? "8px" : "7px" : "6px"};
+      margin-left: auto;
+      flex-shrink: 0;
+      min-height: ${isMobile ? isPhone ? "28px" : "26px" : "auto"};
     `;
     const exceptionButton = actionsContainer.createEl("button", { cls: "exception-button" });
     exceptionButton.innerHTML = "\u{1F4DA}";
@@ -10749,15 +10772,19 @@ var InlineTooltip = class {
     let minWidth, maxWidth, maxHeight, fontSize;
     if (import_obsidian10.Platform.isMobile) {
       fontSize = isPhone ? "13px" : "14px";
-      minWidth = isPhone ? 200 : 240;
+      minWidth = isPhone ? 240 : 280;
       maxWidth = Math.min(
-        isPhone ? 320 : 380,
-        Math.min(viewportWidth, editorWidth) - 32
+        isPhone ? 340 : 400,
+        // 최대 너비 증가
+        Math.min(viewportWidth, editorWidth) - 24
+        // 더 안전한 여백
       );
-      const availableHeight = Math.min(viewportHeight, editorHeight) - keyboardHeight - 60;
+      const availableHeight = Math.min(viewportHeight, editorHeight) - keyboardHeight - 80;
       maxHeight = Math.min(
-        isPhone ? 180 : 220,
-        availableHeight * 0.6
+        isPhone ? 240 : 280,
+        // 최대 높이 증가 
+        Math.max(160, availableHeight * 0.65)
+        // 최소 160px 보장
       );
     } else {
       fontSize = "14px";
@@ -10765,7 +10792,7 @@ var InlineTooltip = class {
       maxWidth = Math.min(500, Math.min(viewportWidth, editorWidth) - 40);
       maxHeight = Math.min(300, Math.min(viewportHeight, editorHeight) - 40);
     }
-    let optimalWidth = naturalWidth + 24;
+    let optimalWidth = naturalWidth + (import_obsidian10.Platform.isMobile ? isPhone ? 32 : 28 : 24);
     optimalWidth = Math.max(minWidth, optimalWidth);
     optimalWidth = Math.min(maxWidth, optimalWidth);
     this.tooltip.style.display = originalDisplay;
