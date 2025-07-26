@@ -678,10 +678,78 @@ export class InlineTooltip {
       cls: 'info-text'
     });
     infoText.style.cssText = `
-      font-size: 10px;
+      font-size: 11px;
       color: var(--text-muted);
       flex: 1;
     `;
+
+    // 액션 버튼들 컨테이너
+    const actionButtons = footer.createEl('div', { cls: 'action-buttons' });
+    actionButtons.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    `;
+
+    // ❌ 병합된 오류 전체 무시 버튼
+    const ignoreAllButton = actionButtons.createEl('button', { cls: 'ignore-all-button' });
+    ignoreAllButton.innerHTML = '❌'; // X 표시
+    ignoreAllButton.title = '이 오류들 모두 무시';
+    ignoreAllButton.style.cssText = `
+      background: var(--interactive-normal);
+      border: 1px solid var(--background-modifier-border);
+      border-radius: ${Platform.isMobile ? '6px' : '4px'};
+      padding: ${Platform.isMobile ? '8px' : '6px'};
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: ${Platform.isMobile ? '14px' : '12px'};
+      min-height: ${Platform.isMobile ? '32px' : 'auto'};
+      min-width: ${Platform.isMobile ? '32px' : 'auto'};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      ${Platform.isMobile ? 'touch-action: manipulation;' : ''}
+    `;
+
+    // 무시 버튼 이벤트
+    ignoreAllButton.addEventListener('mouseenter', () => {
+      ignoreAllButton.style.background = 'var(--interactive-hover)';
+      ignoreAllButton.style.transform = 'translateY(-1px)';
+    });
+
+    ignoreAllButton.addEventListener('mouseleave', () => {
+      ignoreAllButton.style.background = 'var(--interactive-normal)';
+      ignoreAllButton.style.transform = 'translateY(0)';
+    });
+
+    // 모바일 터치 피드백
+    if (Platform.isMobile) {
+      ignoreAllButton.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        ignoreAllButton.style.background = 'var(--interactive-hover)';
+        if ('vibrate' in navigator) {
+          navigator.vibrate(10);
+        }
+      }, { passive: false });
+      
+      ignoreAllButton.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.ignoreError(mergedError);
+      }, { passive: false });
+    }
+
+    // 클릭 이벤트
+    ignoreAllButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.ignoreError(mergedError);
+    });
+
+    // 모든 수정 적용 버튼
+    const applyAllButton = actionButtons.createEl('button', {
+      text: '모두 적용',
+      cls: 'apply-all-button'
+    });
 
     // 닫기 버튼
     const closeButton = footer.createEl('button', {
@@ -1010,6 +1078,60 @@ export class InlineTooltip {
       this.addToExceptionWords(error);
     });
 
+    // ❌ 오류 무시 버튼 (일시적 무시)
+    const ignoreButton = actionsContainer.createEl('button', { cls: 'ignore-button' });
+    ignoreButton.innerHTML = '❌'; // X 표시
+    ignoreButton.title = '이 오류 무시 (일시적)';
+    ignoreButton.style.cssText = `
+      background: var(--interactive-normal);
+      border: 1px solid var(--background-modifier-border);
+      border-radius: ${Platform.isMobile ? '6px' : '4px'};
+      padding: ${Platform.isMobile ? '8px' : '6px'};
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: ${Platform.isMobile ? '14px' : '12px'};
+      min-height: ${Platform.isMobile ? '32px' : 'auto'};
+      min-width: ${Platform.isMobile ? '32px' : 'auto'};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      ${Platform.isMobile ? 'touch-action: manipulation;' : ''}
+    `;
+
+    // 무시 버튼 이벤트
+    ignoreButton.addEventListener('mouseenter', () => {
+      ignoreButton.style.background = 'var(--interactive-hover)';
+      ignoreButton.style.transform = 'translateY(-1px)';
+    });
+
+    ignoreButton.addEventListener('mouseleave', () => {
+      ignoreButton.style.background = 'var(--interactive-normal)';
+      ignoreButton.style.transform = 'translateY(0)';
+    });
+
+    // 모바일 터치 피드백
+    if (Platform.isMobile) {
+      ignoreButton.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        ignoreButton.style.background = 'var(--interactive-hover)';
+        if ('vibrate' in navigator) {
+          navigator.vibrate(10);
+        }
+      }, { passive: false });
+      
+      ignoreButton.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.ignoreError(error);
+      }, { passive: false });
+    }
+
+    // 클릭 이벤트
+    ignoreButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.ignoreError(error);
+    });
+
     // 📖 도움말 영역 (하단에 표시될 영역)
     let helpArea: HTMLElement | null = null;
     if (error.correction.help) {
@@ -1093,17 +1215,78 @@ export class InlineTooltip {
   }
 
   /**
-   * 오류 무시
+   * 📚 예외 단어로 추가 (IgnoredWordsService와 연동)
    */
-  private ignoreError(error: InlineError, targetElement: HTMLElement): void {
-    Logger.log(`인라인 모드: 오류 무시 - "${error.correction.original}"`);
+  private addToExceptionWords(error: InlineError): void {
+    const word = error.correction.original;
     
-    // 해당 오류 제거
-    if ((window as any).InlineModeService) {
-      (window as any).InlineModeService.removeError(null, error.uniqueId);
+    try {
+      // IgnoredWordsService를 통해 예외 단어 추가
+      const app = (window as any).app;
+      if (app && app.plugins && app.plugins.plugins['korean-grammar-assistant']) {
+        const plugin = app.plugins.plugins['korean-grammar-assistant'];
+        const settings = plugin.settings;
+        
+        if (!settings.ignoredWords) {
+          settings.ignoredWords = [];
+        }
+        
+        // 이미 예외 단어에 있는지 확인
+        if (settings.ignoredWords.includes(word)) {
+          Logger.warn(`"${word}"는 이미 예외 단어 목록에 있습니다.`);
+          new Notice(`"${word}"는 이미 예외 단어로 등록되어 있습니다.`);
+          return;
+        }
+        
+        // 예외 단어 추가
+        settings.ignoredWords.push(word);
+        plugin.saveSettings();
+        
+        Logger.log(`📚 예외 단어 추가: "${word}"`);
+        new Notice(`"${word}"를 예외 단어로 추가했습니다.`);
+        
+        // 현재 오류 제거 (InlineModeService를 통해)
+        if ((window as any).InlineModeService) {
+          (window as any).InlineModeService.removeError(null, error.uniqueId);
+          Logger.debug(`✅ 예외 단어 등록으로 인한 오류 제거: ${error.uniqueId}`);
+        }
+        
+        // 툴팁 숨김
+        this.hide();
+        
+      } else {
+        Logger.error('Korean Grammar Assistant 플러그인을 찾을 수 없습니다.');
+        new Notice('예외 단어 추가에 실패했습니다.');
+      }
+    } catch (error) {
+      Logger.error('예외 단어 추가 중 오류:', error);
+      new Notice('예외 단어 추가에 실패했습니다.');
     }
-    
-    this.hide();
+  }
+
+  /**
+   * ❌ 오류 일시적 무시 (해당 오류만 숨김, 예외 단어에는 추가되지 않음)
+   */
+  private ignoreError(error: InlineError): void {
+    try {
+      Logger.log(`❌ 오류 무시: "${error.correction.original}"`);
+      
+      // 현재 오류 제거 (InlineModeService를 통해)
+      if ((window as any).InlineModeService) {
+        (window as any).InlineModeService.removeError(null, error.uniqueId);
+        Logger.debug(`✅ 일시적 무시로 인한 오류 제거: ${error.uniqueId}`);
+      }
+      
+      // 툴팁 숨김
+      this.hide();
+      
+      // 사용자 알림
+      new Notice(`"${error.correction.original}" 오류를 무시했습니다.`);
+      
+    } catch (err) {
+      Logger.error('오류 무시 중 문제 발생:', err);
+      new Notice('오류 무시에 실패했습니다.');
+    }
   }
 
   /**
@@ -1278,56 +1461,6 @@ export class InlineTooltip {
     });
     
     return result;
-  }
-
-  /**
-   * 📚 예외 단어로 추가 (IgnoredWordsService와 연동)
-   */
-  private addToExceptionWords(error: InlineError): void {
-    const word = error.correction.original;
-    
-    try {
-      // IgnoredWordsService를 통해 예외 단어 추가
-      const app = (window as any).app;
-      if (app && app.plugins && app.plugins.plugins['korean-grammar-assistant']) {
-        const plugin = app.plugins.plugins['korean-grammar-assistant'];
-        const settings = plugin.settings;
-        
-        if (!settings.ignoredWords) {
-          settings.ignoredWords = [];
-        }
-        
-        // 이미 예외 단어에 있는지 확인
-        if (settings.ignoredWords.includes(word)) {
-          Logger.warn(`"${word}"는 이미 예외 단어 목록에 있습니다.`);
-          new Notice(`"${word}"는 이미 예외 단어로 등록되어 있습니다.`);
-          return;
-        }
-        
-        // 예외 단어 추가
-        settings.ignoredWords.push(word);
-        plugin.saveSettings();
-        
-        Logger.log(`📚 예외 단어 추가: "${word}"`);
-        new Notice(`"${word}"를 예외 단어로 추가했습니다.`);
-        
-        // 현재 오류 제거 (InlineModeService를 통해)
-        if ((window as any).InlineModeService) {
-          (window as any).InlineModeService.removeError(null, error.uniqueId);
-          Logger.debug(`✅ 예외 단어 등록으로 인한 오류 제거: ${error.uniqueId}`);
-        }
-        
-        // 툴팁 숨김
-        this.hide();
-        
-      } else {
-        Logger.error('Korean Grammar Assistant 플러그인을 찾을 수 없습니다.');
-        new Notice('예외 단어 추가에 실패했습니다.');
-      }
-    } catch (error) {
-      Logger.error('예외 단어 추가 중 오류:', error);
-      new Notice('예외 단어 추가에 실패했습니다.');
-    }
   }
 }
 

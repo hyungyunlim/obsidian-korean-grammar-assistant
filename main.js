@@ -10045,10 +10045,64 @@ var InlineTooltip = class {
       cls: "info-text"
     });
     infoText.style.cssText = `
-      font-size: 10px;
+      font-size: 11px;
       color: var(--text-muted);
       flex: 1;
     `;
+    const actionButtons = footer.createEl("div", { cls: "action-buttons" });
+    actionButtons.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    `;
+    const ignoreAllButton = actionButtons.createEl("button", { cls: "ignore-all-button" });
+    ignoreAllButton.innerHTML = "\u274C";
+    ignoreAllButton.title = "\uC774 \uC624\uB958\uB4E4 \uBAA8\uB450 \uBB34\uC2DC";
+    ignoreAllButton.style.cssText = `
+      background: var(--interactive-normal);
+      border: 1px solid var(--background-modifier-border);
+      border-radius: ${import_obsidian10.Platform.isMobile ? "6px" : "4px"};
+      padding: ${import_obsidian10.Platform.isMobile ? "8px" : "6px"};
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: ${import_obsidian10.Platform.isMobile ? "14px" : "12px"};
+      min-height: ${import_obsidian10.Platform.isMobile ? "32px" : "auto"};
+      min-width: ${import_obsidian10.Platform.isMobile ? "32px" : "auto"};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      ${import_obsidian10.Platform.isMobile ? "touch-action: manipulation;" : ""}
+    `;
+    ignoreAllButton.addEventListener("mouseenter", () => {
+      ignoreAllButton.style.background = "var(--interactive-hover)";
+      ignoreAllButton.style.transform = "translateY(-1px)";
+    });
+    ignoreAllButton.addEventListener("mouseleave", () => {
+      ignoreAllButton.style.background = "var(--interactive-normal)";
+      ignoreAllButton.style.transform = "translateY(0)";
+    });
+    if (import_obsidian10.Platform.isMobile) {
+      ignoreAllButton.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        ignoreAllButton.style.background = "var(--interactive-hover)";
+        if ("vibrate" in navigator) {
+          navigator.vibrate(10);
+        }
+      }, { passive: false });
+      ignoreAllButton.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.ignoreError(mergedError);
+      }, { passive: false });
+    }
+    ignoreAllButton.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.ignoreError(mergedError);
+    });
+    const applyAllButton = actionButtons.createEl("button", {
+      text: "\uBAA8\uB450 \uC801\uC6A9",
+      cls: "apply-all-button"
+    });
     const closeButton = footer.createEl("button", {
       text: "\uB2EB\uAE30",
       cls: "close-button"
@@ -10308,6 +10362,50 @@ var InlineTooltip = class {
       e.stopPropagation();
       this.addToExceptionWords(error);
     });
+    const ignoreButton = actionsContainer.createEl("button", { cls: "ignore-button" });
+    ignoreButton.innerHTML = "\u274C";
+    ignoreButton.title = "\uC774 \uC624\uB958 \uBB34\uC2DC (\uC77C\uC2DC\uC801)";
+    ignoreButton.style.cssText = `
+      background: var(--interactive-normal);
+      border: 1px solid var(--background-modifier-border);
+      border-radius: ${import_obsidian10.Platform.isMobile ? "6px" : "4px"};
+      padding: ${import_obsidian10.Platform.isMobile ? "8px" : "6px"};
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: ${import_obsidian10.Platform.isMobile ? "14px" : "12px"};
+      min-height: ${import_obsidian10.Platform.isMobile ? "32px" : "auto"};
+      min-width: ${import_obsidian10.Platform.isMobile ? "32px" : "auto"};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      ${import_obsidian10.Platform.isMobile ? "touch-action: manipulation;" : ""}
+    `;
+    ignoreButton.addEventListener("mouseenter", () => {
+      ignoreButton.style.background = "var(--interactive-hover)";
+      ignoreButton.style.transform = "translateY(-1px)";
+    });
+    ignoreButton.addEventListener("mouseleave", () => {
+      ignoreButton.style.background = "var(--interactive-normal)";
+      ignoreButton.style.transform = "translateY(0)";
+    });
+    if (import_obsidian10.Platform.isMobile) {
+      ignoreButton.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        ignoreButton.style.background = "var(--interactive-hover)";
+        if ("vibrate" in navigator) {
+          navigator.vibrate(10);
+        }
+      }, { passive: false });
+      ignoreButton.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.ignoreError(error);
+      }, { passive: false });
+    }
+    ignoreButton.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.ignoreError(error);
+    });
     let helpArea = null;
     if (error.correction.help) {
       this.createInlineHelpIcon(error.correction.help, actionsContainer, () => {
@@ -10369,14 +10467,57 @@ var InlineTooltip = class {
     }
   }
   /**
-   * 오류 무시
+   * 📚 예외 단어로 추가 (IgnoredWordsService와 연동)
    */
-  ignoreError(error, targetElement) {
-    Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC624\uB958 \uBB34\uC2DC - "${error.correction.original}"`);
-    if (window.InlineModeService) {
-      window.InlineModeService.removeError(null, error.uniqueId);
+  addToExceptionWords(error) {
+    const word = error.correction.original;
+    try {
+      const app = window.app;
+      if (app && app.plugins && app.plugins.plugins["korean-grammar-assistant"]) {
+        const plugin = app.plugins.plugins["korean-grammar-assistant"];
+        const settings = plugin.settings;
+        if (!settings.ignoredWords) {
+          settings.ignoredWords = [];
+        }
+        if (settings.ignoredWords.includes(word)) {
+          Logger.warn(`"${word}"\uB294 \uC774\uBBF8 \uC608\uC678 \uB2E8\uC5B4 \uBAA9\uB85D\uC5D0 \uC788\uC2B5\uB2C8\uB2E4.`);
+          new import_obsidian10.Notice(`"${word}"\uB294 \uC774\uBBF8 \uC608\uC678 \uB2E8\uC5B4\uB85C \uB4F1\uB85D\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.`);
+          return;
+        }
+        settings.ignoredWords.push(word);
+        plugin.saveSettings();
+        Logger.log(`\u{1F4DA} \uC608\uC678 \uB2E8\uC5B4 \uCD94\uAC00: "${word}"`);
+        new import_obsidian10.Notice(`"${word}"\uB97C \uC608\uC678 \uB2E8\uC5B4\uB85C \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.`);
+        if (window.InlineModeService) {
+          window.InlineModeService.removeError(null, error.uniqueId);
+          Logger.debug(`\u2705 \uC608\uC678 \uB2E8\uC5B4 \uB4F1\uB85D\uC73C\uB85C \uC778\uD55C \uC624\uB958 \uC81C\uAC70: ${error.uniqueId}`);
+        }
+        this.hide();
+      } else {
+        Logger.error("Korean Grammar Assistant \uD50C\uB7EC\uADF8\uC778\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+        new import_obsidian10.Notice("\uC608\uC678 \uB2E8\uC5B4 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+      }
+    } catch (error2) {
+      Logger.error("\uC608\uC678 \uB2E8\uC5B4 \uCD94\uAC00 \uC911 \uC624\uB958:", error2);
+      new import_obsidian10.Notice("\uC608\uC678 \uB2E8\uC5B4 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
     }
-    this.hide();
+  }
+  /**
+   * ❌ 오류 일시적 무시 (해당 오류만 숨김, 예외 단어에는 추가되지 않음)
+   */
+  ignoreError(error) {
+    try {
+      Logger.log(`\u274C \uC624\uB958 \uBB34\uC2DC: "${error.correction.original}"`);
+      if (window.InlineModeService) {
+        window.InlineModeService.removeError(null, error.uniqueId);
+        Logger.debug(`\u2705 \uC77C\uC2DC\uC801 \uBB34\uC2DC\uB85C \uC778\uD55C \uC624\uB958 \uC81C\uAC70: ${error.uniqueId}`);
+      }
+      this.hide();
+      new import_obsidian10.Notice(`"${error.correction.original}" \uC624\uB958\uB97C \uBB34\uC2DC\uD588\uC2B5\uB2C8\uB2E4.`);
+    } catch (err) {
+      Logger.error("\uC624\uB958 \uBB34\uC2DC \uC911 \uBB38\uC81C \uBC1C\uC0DD:", err);
+      new import_obsidian10.Notice("\uC624\uB958 \uBB34\uC2DC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+    }
   }
   /**
    * 바깥 클릭 처리
@@ -10505,42 +10646,6 @@ var InlineTooltip = class {
       platform: import_obsidian10.Platform.isMobile ? isPhone ? "phone" : "tablet" : "desktop"
     });
     return result;
-  }
-  /**
-   * 📚 예외 단어로 추가 (IgnoredWordsService와 연동)
-   */
-  addToExceptionWords(error) {
-    const word = error.correction.original;
-    try {
-      const app = window.app;
-      if (app && app.plugins && app.plugins.plugins["korean-grammar-assistant"]) {
-        const plugin = app.plugins.plugins["korean-grammar-assistant"];
-        const settings = plugin.settings;
-        if (!settings.ignoredWords) {
-          settings.ignoredWords = [];
-        }
-        if (settings.ignoredWords.includes(word)) {
-          Logger.warn(`"${word}"\uB294 \uC774\uBBF8 \uC608\uC678 \uB2E8\uC5B4 \uBAA9\uB85D\uC5D0 \uC788\uC2B5\uB2C8\uB2E4.`);
-          new import_obsidian10.Notice(`"${word}"\uB294 \uC774\uBBF8 \uC608\uC678 \uB2E8\uC5B4\uB85C \uB4F1\uB85D\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.`);
-          return;
-        }
-        settings.ignoredWords.push(word);
-        plugin.saveSettings();
-        Logger.log(`\u{1F4DA} \uC608\uC678 \uB2E8\uC5B4 \uCD94\uAC00: "${word}"`);
-        new import_obsidian10.Notice(`"${word}"\uB97C \uC608\uC678 \uB2E8\uC5B4\uB85C \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.`);
-        if (window.InlineModeService) {
-          window.InlineModeService.removeError(null, error.uniqueId);
-          Logger.debug(`\u2705 \uC608\uC678 \uB2E8\uC5B4 \uB4F1\uB85D\uC73C\uB85C \uC778\uD55C \uC624\uB958 \uC81C\uAC70: ${error.uniqueId}`);
-        }
-        this.hide();
-      } else {
-        Logger.error("Korean Grammar Assistant \uD50C\uB7EC\uADF8\uC778\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
-        new import_obsidian10.Notice("\uC608\uC678 \uB2E8\uC5B4 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
-      }
-    } catch (error2) {
-      Logger.error("\uC608\uC678 \uB2E8\uC5B4 \uCD94\uAC00 \uC911 \uC624\uB958:", error2);
-      new import_obsidian10.Notice("\uC608\uC678 \uB2E8\uC5B4 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
-    }
   }
 };
 var globalInlineTooltip = new InlineTooltip();
