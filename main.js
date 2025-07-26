@@ -9523,6 +9523,8 @@ var InlineTooltip = class {
     this.tooltip = null;
     this.currentError = null;
     this.isVisible = false;
+    this.hoverTimeout = null;
+    this.hideTimeout = null;
   }
   /**
    * 툴팁 표시
@@ -9535,33 +9537,30 @@ var InlineTooltip = class {
     }
     this.hide();
     this.currentError = error;
+    this.hideCursorInBackground();
     this.createTooltip(error, targetElement, triggerType);
     this.positionTooltip(targetElement, mousePosition);
     this.isVisible = true;
-    Logger.debug(`\uC778\uB77C\uC778 \uD234\uD301 \uD45C\uC2DC: ${error.correction.original} (${triggerType})`);
+    Logger.log(`\uC778\uB77C\uC778 \uD234\uD301 \uD45C\uC2DC: "${error.correction.original}" (${triggerType})`);
   }
   /**
    * 툴팁 숨김
    */
   hide() {
     if (this.tooltip) {
-      try {
-        if (this.tooltip._cleanup) {
-          this.tooltip._cleanup();
-        }
-        if (this.tooltip.parentNode) {
-          this.tooltip.parentNode.removeChild(this.tooltip);
-        } else {
-          this.tooltip.remove();
-        }
-        Logger.debug("\uC778\uB77C\uC778 \uD234\uD301 \uC228\uAE40 \uC644\uB8CC");
-      } catch (err) {
-        Logger.warn("\uD234\uD301 \uC81C\uAC70 \uC911 \uC624\uB958:", err);
-      } finally {
-        this.tooltip = null;
-        this.currentError = null;
-        this.isVisible = false;
-      }
+      this.tooltip.remove();
+      this.tooltip = null;
+    }
+    this.showCursorInBackground();
+    this.isVisible = false;
+    this.currentError = null;
+    if (this.hoverTimeout) {
+      clearTimeout(this.hoverTimeout);
+      this.hoverTimeout = null;
+    }
+    if (this.hideTimeout) {
+      clearTimeout(this.hideTimeout);
+      this.hideTimeout = null;
     }
   }
   /**
@@ -9910,40 +9909,43 @@ var InlineTooltip = class {
     });
     headerCloseButton.style.cssText = `
       position: absolute;
-      right: ${isMobileDevice ? isPhoneDevice ? "10px" : "8px" : "6px"};
+      right: ${isMobileDevice ? isPhoneDevice ? "12px" : "10px" : "8px"};
       top: 50%;
       transform: translateY(-50%);
-      background: rgba(0, 0, 0, 0.1);
-      border: 1px solid var(--background-modifier-border);
-      border-radius: ${isMobileDevice ? "6px" : "4px"};
+      background: transparent;
+      border: none;
       cursor: pointer;
-      font-size: ${isMobileDevice ? isPhoneDevice ? "16px" : "15px" : "16px"};
+      font-size: ${isMobileDevice ? isPhoneDevice ? "18px" : "16px" : "16px"};
       color: var(--text-muted);
-      padding: ${isMobileDevice ? isPhoneDevice ? "6px" : "5px" : "4px"};
-      transition: all 0.2s;
+      padding: ${isMobileDevice ? "4px" : "2px"};
+      transition: all 0.2s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-width: ${isMobileDevice ? isPhoneDevice ? "28px" : "26px" : "24px"};
-      min-height: ${isMobileDevice ? isPhoneDevice ? "28px" : "26px" : "24px"};
+      min-width: ${isMobileDevice ? "24px" : "20px"};
+      min-height: ${isMobileDevice ? "24px" : "20px"};
       z-index: 10;
-      font-weight: bold;
+      font-weight: 500;
       line-height: 1;
+      opacity: 0.7;
       ${isMobileDevice ? "touch-action: manipulation;" : ""}
     `;
     headerCloseButton.addEventListener("mouseenter", () => {
-      headerCloseButton.style.background = "var(--interactive-hover)";
+      headerCloseButton.style.opacity = "1";
       headerCloseButton.style.color = "var(--text-normal)";
+      headerCloseButton.style.transform = "translateY(-50%) scale(1.1)";
     });
     headerCloseButton.addEventListener("mouseleave", () => {
-      headerCloseButton.style.background = "transparent";
+      headerCloseButton.style.opacity = "0.7";
       headerCloseButton.style.color = "var(--text-muted)";
+      headerCloseButton.style.transform = "translateY(-50%) scale(1)";
     });
     if (isMobileDevice) {
       headerCloseButton.addEventListener("touchstart", (e) => {
         e.preventDefault();
-        headerCloseButton.style.background = "var(--interactive-hover)";
+        headerCloseButton.style.opacity = "1";
         headerCloseButton.style.color = "var(--text-normal)";
+        headerCloseButton.style.transform = "translateY(-50%) scale(1.1)";
         if ("vibrate" in navigator) {
           navigator.vibrate(10);
         }
@@ -9951,6 +9953,9 @@ var InlineTooltip = class {
       headerCloseButton.addEventListener("touchend", (e) => {
         e.preventDefault();
         e.stopPropagation();
+        headerCloseButton.style.opacity = "0.7";
+        headerCloseButton.style.color = "var(--text-muted)";
+        headerCloseButton.style.transform = "translateY(-50%) scale(1)";
         this.hide();
       }, { passive: false });
     }
@@ -10813,6 +10818,37 @@ var InlineTooltip = class {
       platform: import_obsidian10.Platform.isMobile ? isPhone ? "phone" : "tablet" : "desktop"
     });
     return result;
+  }
+  /**
+   * 배경 커서 숨기기
+   */
+  hideCursorInBackground() {
+    const editorElements = document.querySelectorAll(".cm-editor");
+    editorElements.forEach((editor) => {
+      editor.classList.add("korean-tooltip-cursor-hidden");
+    });
+    if (!document.getElementById("korean-tooltip-cursor-style")) {
+      const style = document.createElement("style");
+      style.id = "korean-tooltip-cursor-style";
+      style.textContent = `
+        .korean-tooltip-cursor-hidden .cm-cursor {
+          display: none !important;
+        }
+        .korean-tooltip-cursor-hidden .cm-focused {
+          caret-color: transparent !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+  /**
+   * 배경 커서 다시 보이기
+   */
+  showCursorInBackground() {
+    const editorElements = document.querySelectorAll(".cm-editor");
+    editorElements.forEach((editor) => {
+      editor.classList.remove("korean-tooltip-cursor-hidden");
+    });
   }
 };
 var globalInlineTooltip = new InlineTooltip();

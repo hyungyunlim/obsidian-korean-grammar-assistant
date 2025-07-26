@@ -11,6 +11,8 @@ export class InlineTooltip {
   private tooltip: HTMLElement | null = null;
   private currentError: InlineError | null = null;
   private isVisible: boolean = false;
+  private hoverTimeout: NodeJS.Timeout | null = null;
+  private hideTimeout: NodeJS.Timeout | null = null;
 
   /**
    * 툴팁 표시
@@ -25,11 +27,15 @@ export class InlineTooltip {
     this.hide(); // 기존 툴팁 제거
     
     this.currentError = error;
+    
+    // 배경 커서 숨기기 - CSS로 에디터 영역 커서 제거
+    this.hideCursorInBackground();
+    
     this.createTooltip(error, targetElement, triggerType);
     this.positionTooltip(targetElement, mousePosition);
     this.isVisible = true;
 
-    Logger.debug(`인라인 툴팁 표시: ${error.correction.original} (${triggerType})`);
+    Logger.log(`인라인 툴팁 표시: "${error.correction.original}" (${triggerType})`);
   }
 
   /**
@@ -37,28 +43,25 @@ export class InlineTooltip {
    */
   hide(): void {
     if (this.tooltip) {
-      try {
-        // 정리 함수 호출 (이벤트 리스너 제거)
-        if ((this.tooltip as any)._cleanup) {
-          (this.tooltip as any)._cleanup();
-        }
-        
-        // DOM에서 완전 제거
-        if (this.tooltip.parentNode) {
-          this.tooltip.parentNode.removeChild(this.tooltip);
-        } else {
-          this.tooltip.remove();
-        }
-        
-        Logger.debug('인라인 툴팁 숨김 완료');
-      } catch (err) {
-        Logger.warn('툴팁 제거 중 오류:', err);
-      } finally {
-        // 상태 완전 초기화
-        this.tooltip = null;
-        this.currentError = null;
-        this.isVisible = false;
-      }
+      this.tooltip.remove();
+      this.tooltip = null;
+    }
+    
+    // 배경 커서 다시 보이기
+    this.showCursorInBackground();
+    
+    this.isVisible = false;
+    this.currentError = null;
+    
+    // 호버 타이머 정리
+    if (this.hoverTimeout) {
+      clearTimeout(this.hoverTimeout);
+      this.hoverTimeout = null;
+    }
+    
+    if (this.hideTimeout) {
+      clearTimeout(this.hideTimeout);
+      this.hideTimeout = null;
     }
   }
 
@@ -503,52 +506,55 @@ export class InlineTooltip {
       text-align: center;
     `;
 
-    // 우상단 닫기 버튼 (✕) - 아이폰 최적화
+    // 우상단 닫기 버튼 (✕) - 심플 X 표시만
     const headerCloseButton = header.createEl('button', { 
       text: '✕',
       cls: 'header-close-button'
     });
     headerCloseButton.style.cssText = `
       position: absolute;
-      right: ${isMobileDevice ? (isPhoneDevice ? '10px' : '8px') : '6px'};
+      right: ${isMobileDevice ? (isPhoneDevice ? '12px' : '10px') : '8px'};
       top: 50%;
       transform: translateY(-50%);
-      background: rgba(0, 0, 0, 0.1);
-      border: 1px solid var(--background-modifier-border);
-      border-radius: ${isMobileDevice ? '6px' : '4px'};
+      background: transparent;
+      border: none;
       cursor: pointer;
-      font-size: ${isMobileDevice ? (isPhoneDevice ? '16px' : '15px') : '16px'};
+      font-size: ${isMobileDevice ? (isPhoneDevice ? '18px' : '16px') : '16px'};
       color: var(--text-muted);
-      padding: ${isMobileDevice ? (isPhoneDevice ? '6px' : '5px') : '4px'};
-      transition: all 0.2s;
+      padding: ${isMobileDevice ? '4px' : '2px'};
+      transition: all 0.2s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-width: ${isMobileDevice ? (isPhoneDevice ? '28px' : '26px') : '24px'};
-      min-height: ${isMobileDevice ? (isPhoneDevice ? '28px' : '26px') : '24px'};
+      min-width: ${isMobileDevice ? '24px' : '20px'};
+      min-height: ${isMobileDevice ? '24px' : '20px'};
       z-index: 10;
-      font-weight: bold;
+      font-weight: 500;
       line-height: 1;
+      opacity: 0.7;
       ${isMobileDevice ? 'touch-action: manipulation;' : ''}
     `;
 
-    // 닫기 버튼 이벤트
+    // 닫기 버튼 이벤트 - 심플한 호버 효과
     headerCloseButton.addEventListener('mouseenter', () => {
-      headerCloseButton.style.background = 'var(--interactive-hover)';
+      headerCloseButton.style.opacity = '1';
       headerCloseButton.style.color = 'var(--text-normal)';
+      headerCloseButton.style.transform = 'translateY(-50%) scale(1.1)';
     });
 
     headerCloseButton.addEventListener('mouseleave', () => {
-      headerCloseButton.style.background = 'transparent';
+      headerCloseButton.style.opacity = '0.7';
       headerCloseButton.style.color = 'var(--text-muted)';
+      headerCloseButton.style.transform = 'translateY(-50%) scale(1)';
     });
 
-    // 모바일 터치 피드백
+    // 모바일 터치 피드백 - 심플한 효과
     if (isMobileDevice) {
       headerCloseButton.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        headerCloseButton.style.background = 'var(--interactive-hover)';
+        headerCloseButton.style.opacity = '1';
         headerCloseButton.style.color = 'var(--text-normal)';
+        headerCloseButton.style.transform = 'translateY(-50%) scale(1.1)';
         if ('vibrate' in navigator) {
           navigator.vibrate(10);
         }
@@ -557,6 +563,9 @@ export class InlineTooltip {
       headerCloseButton.addEventListener('touchend', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        headerCloseButton.style.opacity = '0.7';
+        headerCloseButton.style.color = 'var(--text-muted)';
+        headerCloseButton.style.transform = 'translateY(-50%) scale(1)';
         this.hide();
       }, { passive: false });
     }
@@ -1654,6 +1663,43 @@ export class InlineTooltip {
     });
     
     return result;
+  }
+
+  /**
+   * 배경 커서 숨기기
+   */
+  private hideCursorInBackground(): void {
+    // 에디터 영역의 커서를 숨기기 위한 CSS 클래스 추가
+    const editorElements = document.querySelectorAll('.cm-editor');
+    editorElements.forEach(editor => {
+      editor.classList.add('korean-tooltip-cursor-hidden');
+    });
+
+    // 동적 CSS 스타일 추가 (한 번만)
+    if (!document.getElementById('korean-tooltip-cursor-style')) {
+      const style = document.createElement('style');
+      style.id = 'korean-tooltip-cursor-style';
+      style.textContent = `
+        .korean-tooltip-cursor-hidden .cm-cursor {
+          display: none !important;
+        }
+        .korean-tooltip-cursor-hidden .cm-focused {
+          caret-color: transparent !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+
+  /**
+   * 배경 커서 다시 보이기
+   */
+  private showCursorInBackground(): void {
+    // 에디터 영역의 커서 숨김 클래스 제거
+    const editorElements = document.querySelectorAll('.cm-editor');
+    editorElements.forEach(editor => {
+      editor.classList.remove('korean-tooltip-cursor-hidden');
+    });
   }
 }
 
