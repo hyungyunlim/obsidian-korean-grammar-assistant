@@ -965,24 +965,20 @@ export class InlineTooltip {
   }
 
   /**
-   * 호버 이벤트 설정 (개선된 안정성)
+   * 호버 이벤트 설정 (완전히 새로운 안정적 접근법)
    */
   private setupHoverEvents(targetElement: HTMLElement): void {
     let hideTimeout: NodeJS.Timeout | undefined;
-    let isHoveringTarget = false;
-    let isHoveringTooltip = false;
-    let mouseMoveTimeout: NodeJS.Timeout | undefined;
+    let isHovering = false;
     
     const startHideTimer = () => {
-      if (hideTimeout) {
-        clearTimeout(hideTimeout);
-      }
+      if (hideTimeout) clearTimeout(hideTimeout);
       hideTimeout = setTimeout(() => {
-        if (!isHoveringTarget && !isHoveringTooltip) {
-          Logger.debug('🔍 툴팁 자동 숨김 타이머 실행');
+        if (!isHovering) {
+          Logger.debug('🔍 툴팁 자동 숨김');
           this.hide();
         }
-      }, 1000); // 1초로 더 여유 시간 증가
+      }, 2000); // 2초로 매우 여유롭게
     };
 
     const cancelHideTimer = () => {
@@ -992,114 +988,61 @@ export class InlineTooltip {
       }
     };
 
-    const onTargetMouseEnter = () => {
-      Logger.debug('🔍 타겟 요소 마우스 진입');
-      isHoveringTarget = true;
-      cancelHideTimer();
-    };
-
-    const onTargetMouseLeave = () => {
-      Logger.debug('🔍 타겟 요소 마우스 이탈');
-      isHoveringTarget = false;
-      // 🔧 툴팁으로 이동할 시간을 주기 위해 더 긴 지연
-      setTimeout(() => {
-        if (!isHoveringTarget && !isHoveringTooltip) {
-          startHideTimer();
-        }
-      }, 200); // 200ms로 지연 시간 증가
-    };
-
-    const onTooltipMouseEnter = () => {
-      Logger.debug('🔍 툴팁 마우스 진입');
-      isHoveringTooltip = true;
-      cancelHideTimer();
-    };
-
-    const onTooltipMouseLeave = () => {
-      Logger.debug('🔍 툴팁 마우스 이탈');
-      isHoveringTooltip = false;
-      // 🔧 타겟으로 돌아갈 시간을 주기 위해 더 긴 지연
-      setTimeout(() => {
-        if (!isHoveringTarget && !isHoveringTooltip) {
-          startHideTimer();
-        }
-      }, 200); // 200ms로 지연 시간 증가
-    };
-
-    // 🔧 더 안정적인 마우스 이동 감지 (디바운싱 추가)
-    const onDocumentMouseMove = (e: MouseEvent) => {
-      if (!this.tooltip || !targetElement) return;
-      
-      // 디바운싱: 너무 빈번한 체크 방지
-      if (mouseMoveTimeout) {
-        clearTimeout(mouseMoveTimeout);
+    const setHovering = (hovering: boolean) => {
+      isHovering = hovering;
+      if (hovering) {
+        cancelHideTimer();
+        Logger.debug('🔍 호버 시작 - 타이머 취소');
+      } else {
+        Logger.debug('🔍 호버 종료 - 타이머 시작');
+        startHideTimer();
       }
-      
-      mouseMoveTimeout = setTimeout(() => {
-        const tooltipRect = this.tooltip?.getBoundingClientRect();
-        const targetRect = targetElement.getBoundingClientRect();
-        
-        if (!tooltipRect) return;
-        
-        // 🔧 툴팁과 타겟 사이의 "브릿지" 영역 계산 (더욱 넓은 여유 공간)
-        const bridgeMargin = 30; // 30px로 여유 공간 더 확대
-        const combinedRect = {
-          left: Math.min(tooltipRect.left, targetRect.left) - bridgeMargin,
-          right: Math.max(tooltipRect.right, targetRect.right) + bridgeMargin,
-          top: Math.min(tooltipRect.top, targetRect.top) - bridgeMargin,
-          bottom: Math.max(tooltipRect.bottom, targetRect.bottom) + bridgeMargin
-        };
-        
-        const isInCombinedArea = (
-          e.clientX >= combinedRect.left && e.clientX <= combinedRect.right &&
-          e.clientY >= combinedRect.top && e.clientY <= combinedRect.bottom
-        );
-        
-        // 🔧 더욱 관대한 조건: 완전히 벗어나고 일정 시간이 지난 후에만 숨김
-        if (!isInCombinedArea && (isHoveringTarget || isHoveringTooltip)) {
-          Logger.debug('🔍 마우스가 브릿지 영역을 벗어남 - 지연된 상태 초기화');
-          setTimeout(() => {
-            // 다시 한번 체크해서 여전히 벗어나있는지 확인
-            const currentX = e.clientX;
-            const currentY = e.clientY;
-            const stillOutside = !(
-              currentX >= combinedRect.left && currentX <= combinedRect.right &&
-              currentY >= combinedRect.top && currentY <= combinedRect.bottom
-            );
-            
-            if (stillOutside) {
-              isHoveringTarget = false;
-              isHoveringTooltip = false;
-              startHideTimer();
-            }
-          }, 300); // 300ms 추가 지연
-        }
-      }, 50); // 50ms 디바운싱
     };
 
-    // 이벤트 리스너 등록
-    targetElement.addEventListener('mouseenter', onTargetMouseEnter);
-    targetElement.addEventListener('mouseleave', onTargetMouseLeave);
-    
-    // 🔧 툴팁 이벤트는 비동기적으로 등록 (DOM 완전 생성 후)
-    setTimeout(() => {
-      if (this.tooltip) {
-        this.tooltip.addEventListener('mouseenter', onTooltipMouseEnter);
-        this.tooltip.addEventListener('mouseleave', onTooltipMouseLeave);
-      }
-    }, 50);
-    
-    document.addEventListener('mousemove', onDocumentMouseMove);
+    // 🎯 통합된 마우스 이벤트 처리
+    const handleMouseEvent = (e: MouseEvent) => {
+      if (!this.tooltip) return;
+      
+      const target = e.target as HTMLElement;
+      const isOnTarget = targetElement.contains(target) || targetElement === target;
+      const isOnTooltip = this.tooltip.contains(target) || this.tooltip === target;
+      
+      setHovering(isOnTarget || isOnTooltip);
+    };
 
-    // 정리 함수 저장 (나중에 제거용)
+    // 🔧 모든 마우스 이벤트를 document에서 캐치
+    const onMouseMove = (e: MouseEvent) => handleMouseEvent(e);
+    const onMouseOver = (e: MouseEvent) => handleMouseEvent(e);
+    
+    // 🔧 툴팁 외부 클릭 시 즉시 숨김
+    const onMouseClick = (e: MouseEvent) => {
+      if (!this.tooltip) return;
+      
+      const target = e.target as HTMLElement;
+      const isOnTarget = targetElement.contains(target) || targetElement === target;
+      const isOnTooltip = this.tooltip.contains(target) || this.tooltip === target;
+      
+      if (!isOnTarget && !isOnTooltip) {
+        Logger.debug('🔍 외부 클릭 - 즉시 숨김');
+        this.hide();
+      }
+    };
+
+    // 이벤트 리스너 등록 (document 레벨)
+    document.addEventListener('mousemove', onMouseMove, { passive: true });
+    document.addEventListener('mouseover', onMouseOver, { passive: true });
+    document.addEventListener('click', onMouseClick);
+
+    // 초기 타이머 시작
+    startHideTimer();
+
+    // 정리 함수 저장
     (this.tooltip as any)._cleanup = () => {
-      targetElement.removeEventListener('mouseenter', onTargetMouseEnter);
-      targetElement.removeEventListener('mouseleave', onTargetMouseLeave);
-      this.tooltip?.removeEventListener('mouseenter', onTooltipMouseEnter);
-      this.tooltip?.removeEventListener('mouseleave', onTooltipMouseLeave);
-      document.removeEventListener('mousemove', onDocumentMouseMove);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseover', onMouseOver);  
+      document.removeEventListener('click', onMouseClick);
       if (hideTimeout) clearTimeout(hideTimeout);
-      if (mouseMoveTimeout) clearTimeout(mouseMoveTimeout);
+      Logger.debug('🔍 호버 이벤트 정리 완료');
     };
   }
 
