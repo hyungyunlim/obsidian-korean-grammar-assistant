@@ -481,18 +481,18 @@ export class InlineTooltip {
   private createMergedErrorTooltip(mergedError: InlineError, targetElement: HTMLElement, triggerType: 'hover' | 'click'): void {
     if (!this.tooltip || !mergedError.originalErrors) return;
 
-    // 모바일 최적화를 위한 플랫폼 감지 (병합 툴팁용)
-    const isMobileDevice = Platform.isMobile;
-    const isPhoneDevice = (Platform as any).isPhone || (window.innerWidth <= 480);
+    // 모바일 최적화를 위한 플랫폼 감지 (단일 툴팁과 일관성)
+    const isMobile = Platform.isMobile;
+    const isPhone = Platform.isPhone;
 
     // 헤더 영역 - 닫기 버튼 포함
     const header = this.tooltip.createEl('div', { cls: 'tooltip-header' });
     header.style.cssText = `
-      padding: ${isMobileDevice ? (isPhoneDevice ? '10px 12px' : '11px 13px') : '8px 12px'};
+      padding: ${isMobile ? (isPhone ? '10px 12px' : '11px 13px') : '8px 12px'};
       border-bottom: 1px solid var(--background-modifier-border);
       background: var(--background-secondary);
       font-weight: 600;
-      font-size: ${isMobileDevice ? (isPhoneDevice ? '11px' : '12px') : '12px'};
+      font-size: ${isMobile ? (isPhone ? '11px' : '12px') : '12px'};
       color: var(--text-muted);
       text-align: center;
       position: relative;
@@ -518,7 +518,7 @@ export class InlineTooltip {
     });
     headerCloseButton.style.cssText = `
       position: absolute;
-      right: ${isMobileDevice ? (isPhoneDevice ? '12px' : '10px') : '8px'};
+      right: ${isMobile ? (isPhone ? '12px' : '10px') : '8px'};
       top: 50%;
       transform: translateY(-50%);
       background: none;
@@ -526,7 +526,7 @@ export class InlineTooltip {
       outline: none;
       box-shadow: none;
       cursor: pointer;
-      font-size: ${isMobileDevice ? (isPhoneDevice ? '18px' : '16px') : '16px'};
+      font-size: ${isMobile ? (isPhone ? '18px' : '16px') : '16px'};
       color: var(--text-muted);
       padding: 0;
       margin: 0;
@@ -546,7 +546,7 @@ export class InlineTooltip {
       -webkit-appearance: none;
       -moz-appearance: none;
       appearance: none;
-      ${isMobileDevice ? 'touch-action: manipulation;' : ''}
+      ${isMobile ? 'touch-action: manipulation;' : ''}
     `;
 
     // 닫기 버튼 이벤트 - 순수 아이콘 효과
@@ -563,7 +563,7 @@ export class InlineTooltip {
     });
 
     // 모바일 터치 피드백 - 순수 아이콘 효과
-    if (isMobileDevice) {
+    if (isMobile) {
       headerCloseButton.addEventListener('touchstart', (e) => {
         e.preventDefault();
         headerCloseButton.style.opacity = '1';
@@ -594,15 +594,15 @@ export class InlineTooltip {
     scrollContainer.style.cssText = `
       flex: 1;
       overflow-y: auto;
-      max-height: ${isMobileDevice ? (isPhoneDevice ? '280px' : '320px') : '250px'};
-      min-height: ${isMobileDevice ? (isPhoneDevice ? '120px' : '140px') : 'auto'};
+      max-height: ${isMobile ? (isPhone ? '280px' : '320px') : '250px'};
+      min-height: ${isMobile ? (isPhone ? '120px' : '140px') : 'auto'};
     `;
 
     // 각 원본 오류별로 섹션 생성 - 모바일 최적화
     mergedError.originalErrors.forEach((originalError, index) => {
       const errorSection = scrollContainer.createEl('div', { cls: 'error-section' });
       errorSection.style.cssText = `
-        padding: ${isMobileDevice ? (isPhoneDevice ? '10px 12px' : '11px 13px') : '8px 12px'};
+        padding: ${isMobile ? (isPhone ? '10px 12px' : '11px 13px') : '8px 12px'};
         ${index > 0 ? 'border-top: 1px solid var(--background-modifier-border-hover);' : ''}
       `;
 
@@ -611,9 +611,9 @@ export class InlineTooltip {
       errorLine.style.cssText = `
         display: flex;
         align-items: center;
-        gap: ${isMobileDevice ? (isPhoneDevice ? '6px' : '7px') : '8px'};
+        gap: ${isMobile ? (isPhone ? '6px' : '7px') : '8px'};
         flex-wrap: nowrap;
-        min-height: ${isMobileDevice ? (isPhoneDevice ? '32px' : '34px') : '28px'};
+        min-height: ${isMobile ? (isPhone ? '32px' : '34px') : '28px'};
       `;
 
       // 오류 단어 표시 (고정 너비) - 모바일 최적화
@@ -625,16 +625,16 @@ export class InlineTooltip {
         color: var(--text-error);
         font-weight: 600;
         background: rgba(255, 0, 0, 0.1);
-        padding: ${isMobileDevice ? (isPhoneDevice ? '3px 6px' : '4px 7px') : '4px 8px'};
+        padding: ${isMobile ? (isPhone ? '3px 6px' : '4px 7px') : '4px 8px'};
         border-radius: 3px;
-        font-size: ${isMobileDevice ? (isPhoneDevice ? '12px' : '13px') : '13px'};
+        font-size: ${isMobile ? (isPhone ? '12px' : '13px') : '13px'};
         white-space: nowrap;
         flex-shrink: 0;
-        min-width: ${isMobileDevice ? '70px' : '60px'};
-        max-width: ${isMobileDevice ? (isPhoneDevice ? '100px' : '110px') : '120px'};
+        min-width: ${isMobile ? '70px' : '60px'};
+        max-width: ${isMobile ? (isPhone ? '100px' : '110px') : '120px'};
         overflow: hidden;
         text-overflow: ellipsis;
-        line-height: ${isMobileDevice ? '1.3' : '1.2'};
+        line-height: ${isMobile ? '1.3' : '1.2'};
       `;
 
       // 화살표 (고정) - 모바일 최적화
@@ -643,7 +643,7 @@ export class InlineTooltip {
         color: var(--text-muted);
         font-weight: bold;
         flex-shrink: 0;
-        font-size: ${isMobileDevice ? (isPhoneDevice ? '12px' : '13px') : '14px'};
+        font-size: ${isMobile ? (isPhone ? '12px' : '13px') : '14px'};
       `;
 
       // 수정 제안들을 가로로 나열 (남은 공간 활용) - 모바일 최적화
@@ -651,7 +651,7 @@ export class InlineTooltip {
       suggestionsList.style.cssText = `
         display: flex;
         align-items: center;
-        gap: ${isMobileDevice ? (isPhoneDevice ? '3px' : '4px') : '4px'};
+        gap: ${isMobile ? (isPhone ? '3px' : '4px') : '4px'};
         flex: 1;
         flex-wrap: wrap;
         overflow: hidden;
@@ -669,17 +669,17 @@ export class InlineTooltip {
           color: var(--text-normal);
           font-weight: 600;
           background: rgba(59, 130, 246, 0.1);
-          padding: ${isMobileDevice ? (isPhoneDevice ? '3px 6px' : '4px 7px') : '4px 8px'};
+          padding: ${isMobile ? (isPhone ? '3px 6px' : '4px 7px') : '4px 8px'};
           border-radius: 3px;
-          font-size: ${isMobileDevice ? (isPhoneDevice ? '12px' : '13px') : '13px'};
+          font-size: ${isMobile ? (isPhone ? '12px' : '13px') : '13px'};
           cursor: pointer;
-          ${isMobileDevice ? 'touch-action: manipulation;' : ''}
+          ${isMobile ? 'touch-action: manipulation;' : ''}
         `;
 
         // span 요소용 호버/터치 효과 (복합어 툴팁과 일관성)
         const onActivate = () => {
           suggestionButton.style.background = 'rgba(59, 130, 246, 0.15)';
-          if (isMobileDevice && 'vibrate' in navigator) {
+          if (isMobile && 'vibrate' in navigator) {
             navigator.vibrate(10);
           }
         };
@@ -692,7 +692,7 @@ export class InlineTooltip {
         suggestionButton.addEventListener('mouseleave', onDeactivate);
 
         // 모바일 터치 피드백
-        if (isMobileDevice) {
+        if (isMobile) {
           suggestionButton.addEventListener('touchstart', (e) => {
             e.preventDefault();
             onActivate();
@@ -762,29 +762,29 @@ export class InlineTooltip {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: ${isMobileDevice ? (isPhoneDevice ? '8px 12px 10px 12px' : '7px 11px 9px 11px') : '8px 12px'};
+      padding: ${isMobile ? (isPhone ? '8px 12px 10px 12px' : '7px 11px 9px 11px') : '8px 12px'};
       border-top: 1px solid var(--background-modifier-border);
       background: var(--background-secondary);
-      gap: ${isMobileDevice ? (isPhoneDevice ? '8px' : '7px') : '6px'};
-      min-height: ${isMobileDevice ? (isPhoneDevice ? '48px' : '44px') : 'auto'};
+      gap: ${isMobile ? (isPhone ? '8px' : '7px') : '6px'};
+      min-height: ${isMobile ? (isPhone ? '48px' : '44px') : 'auto'};
       border-bottom-left-radius: 12px;
       border-bottom-right-radius: 12px;
     `;
 
     // 정보 텍스트 - 아이폰 최적화
     const infoText = actionsContainer.createEl('span', {
-      text: isMobileDevice ? (isPhoneDevice ? '개별 수정' : '개별 클릭 수정') : '개별 클릭으로 하나씩 수정',
+      text: isMobile ? (isPhone ? '개별 수정' : '개별 클릭 수정') : '개별 클릭으로 하나씩 수정',
       cls: 'info-text'
     });
     infoText.style.cssText = `
-      font-size: ${isMobileDevice ? (isPhoneDevice ? '11px' : '12px') : '11px'};
+      font-size: ${isMobile ? (isPhone ? '11px' : '12px') : '11px'};
       color: var(--text-muted);
       flex: 1;
       line-height: 1.3;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      padding-right: ${isMobileDevice ? '4px' : '0'};
+      padding-right: ${isMobile ? '4px' : '0'};
     `;
 
     // 액션 버튼들 컨테이너 - 아이폰 최적화
@@ -792,9 +792,9 @@ export class InlineTooltip {
     actionButtons.style.cssText = `
       display: flex;
       align-items: center;
-      gap: ${isMobileDevice ? (isPhoneDevice ? '6px' : '5px') : '6px'};
+      gap: ${isMobile ? (isPhone ? '6px' : '5px') : '6px'};
       flex-shrink: 0;
-      min-height: ${isMobileDevice ? (isPhoneDevice ? '32px' : '30px') : 'auto'};
+      min-height: ${isMobile ? (isPhone ? '32px' : '30px') : 'auto'};
     `;
 
     // ❌ 병합된 오류 전체 무시 버튼 - 체크박스와 일관된 스타일
@@ -805,22 +805,22 @@ export class InlineTooltip {
       background: #ef4444;
       color: white;
       border: 1px solid #ef4444;
-      border-radius: ${isMobileDevice ? '6px' : '4px'};
-      padding: ${isMobileDevice ? (isPhoneDevice ? '8px' : '7px') : '6px'};
+      border-radius: ${isMobile ? '6px' : '4px'};
+      padding: ${isMobile ? (isPhone ? '8px' : '7px') : '6px'};
       cursor: pointer;
-      font-size: ${isMobileDevice ? (isPhoneDevice ? '16px' : '15px') : '16px'};
+      font-size: ${isMobile ? (isPhone ? '16px' : '15px') : '16px'};
       font-weight: 700;
       transition: all 0.2s;
-      min-height: ${isMobileDevice ? (isPhoneDevice ? '32px' : '30px') : 'auto'};
-      min-width: ${isMobileDevice ? (isPhoneDevice ? '32px' : '30px') : 'auto'};
-      max-height: ${isMobileDevice ? (isPhoneDevice ? '32px' : '30px') : 'none'};
+      min-height: ${isMobile ? (isPhone ? '32px' : '30px') : 'auto'};
+      min-width: ${isMobile ? (isPhone ? '32px' : '30px') : 'auto'};
+      max-height: ${isMobile ? (isPhone ? '32px' : '30px') : 'none'};
       display: flex;
       align-items: center;
       justify-content: center;
       line-height: 1;
       white-space: nowrap;
       box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
-      ${isMobileDevice ? 'touch-action: manipulation;' : ''}
+      ${isMobile ? 'touch-action: manipulation;' : ''}
     `;
 
     // 무시 버튼 이벤트 - 체크박스와 일관된 효과
@@ -878,22 +878,22 @@ export class InlineTooltip {
       background: #10b981;
       color: white;
       border: 1px solid #10b981;
-      border-radius: ${isMobileDevice ? '6px' : '4px'};
-      padding: ${isMobileDevice ? (isPhoneDevice ? '8px' : '7px') : '6px'};
+      border-radius: ${isMobile ? '6px' : '4px'};
+      padding: ${isMobile ? (isPhone ? '8px' : '7px') : '6px'};
       cursor: pointer;
-      font-size: ${isMobileDevice ? (isPhoneDevice ? '16px' : '15px') : '16px'};
+      font-size: ${isMobile ? (isPhone ? '16px' : '15px') : '16px'};
       font-weight: 700;
       transition: all 0.2s;
-      min-height: ${isMobileDevice ? (isPhoneDevice ? '32px' : '30px') : 'auto'};
-      min-width: ${isMobileDevice ? (isPhoneDevice ? '32px' : '30px') : 'auto'};
-      max-height: ${isMobileDevice ? (isPhoneDevice ? '32px' : '30px') : 'none'};
+      min-height: ${isMobile ? (isPhone ? '32px' : '30px') : 'auto'};
+      min-width: ${isMobile ? (isPhone ? '32px' : '30px') : 'auto'};
+      max-height: ${isMobile ? (isPhone ? '32px' : '30px') : 'none'};
       display: flex;
       align-items: center;
       justify-content: center;
       line-height: 1;
       white-space: nowrap;
       box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
-      ${isMobileDevice ? 'touch-action: manipulation;' : ''}
+      ${isMobile ? 'touch-action: manipulation;' : ''}
     `;
 
     applyAllButton.addEventListener('mouseenter', () => {
@@ -911,7 +911,7 @@ export class InlineTooltip {
     });
 
     // 모바일 터치 피드백
-    if (isMobileDevice) {
+    if (isMobile) {
       applyAllButton.addEventListener('touchstart', (e) => {
         e.preventDefault();
         applyAllButton.style.background = '#059669';
