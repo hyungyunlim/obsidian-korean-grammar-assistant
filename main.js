@@ -10057,19 +10057,19 @@ var InlineTooltip = class {
    * 호버 이벤트 설정 (공통)
    */
   setupHoverEvents(targetElement) {
-    var _a, _b;
     let hideTimeout;
-    let isHovering = false;
+    let isHoveringTarget = false;
+    let isHoveringTooltip = false;
     const startHideTimer = () => {
       if (hideTimeout) {
         clearTimeout(hideTimeout);
       }
       hideTimeout = setTimeout(() => {
-        if (!isHovering) {
+        if (!isHoveringTarget && !isHoveringTooltip) {
           Logger.debug("\u{1F50D} \uD234\uD301 \uC790\uB3D9 \uC228\uAE40 \uD0C0\uC774\uBA38 \uC2E4\uD589");
           this.hide();
         }
-      }, 200);
+      }, 500);
     };
     const cancelHideTimer = () => {
       if (hideTimeout) {
@@ -10079,48 +10079,67 @@ var InlineTooltip = class {
     };
     const onTargetMouseEnter = () => {
       Logger.debug("\u{1F50D} \uD0C0\uAC9F \uC694\uC18C \uB9C8\uC6B0\uC2A4 \uC9C4\uC785");
-      isHovering = true;
+      isHoveringTarget = true;
       cancelHideTimer();
     };
     const onTargetMouseLeave = () => {
       Logger.debug("\u{1F50D} \uD0C0\uAC9F \uC694\uC18C \uB9C8\uC6B0\uC2A4 \uC774\uD0C8");
-      isHovering = false;
-      startHideTimer();
+      isHoveringTarget = false;
+      setTimeout(() => {
+        if (!isHoveringTarget && !isHoveringTooltip) {
+          startHideTimer();
+        }
+      }, 100);
     };
     const onTooltipMouseEnter = () => {
       Logger.debug("\u{1F50D} \uD234\uD301 \uB9C8\uC6B0\uC2A4 \uC9C4\uC785");
-      isHovering = true;
+      isHoveringTooltip = true;
       cancelHideTimer();
     };
     const onTooltipMouseLeave = () => {
       Logger.debug("\u{1F50D} \uD234\uD301 \uB9C8\uC6B0\uC2A4 \uC774\uD0C8");
-      isHovering = false;
-      startHideTimer();
+      isHoveringTooltip = false;
+      setTimeout(() => {
+        if (!isHoveringTarget && !isHoveringTooltip) {
+          startHideTimer();
+        }
+      }, 100);
     };
     const onDocumentMouseMove = (e) => {
       if (!this.tooltip || !targetElement)
         return;
       const tooltipRect = this.tooltip.getBoundingClientRect();
       const targetRect = targetElement.getBoundingClientRect();
-      const isOverTooltip = e.clientX >= tooltipRect.left && e.clientX <= tooltipRect.right && e.clientY >= tooltipRect.top && e.clientY <= tooltipRect.bottom;
-      const isOverTarget = e.clientX >= targetRect.left && e.clientX <= targetRect.right && e.clientY >= targetRect.top && e.clientY <= targetRect.bottom;
-      if (!isOverTooltip && !isOverTarget && isHovering) {
-        Logger.debug("\u{1F50D} \uB9C8\uC6B0\uC2A4\uAC00 \uC644\uC804\uD788 \uBC97\uC5B4\uB0A8 - \uAC15\uC81C \uC228\uAE40");
-        isHovering = false;
+      const bridgeMargin = 10;
+      const combinedRect = {
+        left: Math.min(tooltipRect.left, targetRect.left) - bridgeMargin,
+        right: Math.max(tooltipRect.right, targetRect.right) + bridgeMargin,
+        top: Math.min(tooltipRect.top, targetRect.top) - bridgeMargin,
+        bottom: Math.max(tooltipRect.bottom, targetRect.bottom) + bridgeMargin
+      };
+      const isInCombinedArea = e.clientX >= combinedRect.left && e.clientX <= combinedRect.right && e.clientY >= combinedRect.top && e.clientY <= combinedRect.bottom;
+      if (!isInCombinedArea && (isHoveringTarget || isHoveringTooltip)) {
+        Logger.debug("\u{1F50D} \uB9C8\uC6B0\uC2A4\uAC00 \uBE0C\uB9BF\uC9C0 \uC601\uC5ED\uC744 \uC644\uC804\uD788 \uBC97\uC5B4\uB0A8 - \uC0C1\uD0DC \uCD08\uAE30\uD654");
+        isHoveringTarget = false;
+        isHoveringTooltip = false;
         startHideTimer();
       }
     };
     targetElement.addEventListener("mouseenter", onTargetMouseEnter);
     targetElement.addEventListener("mouseleave", onTargetMouseLeave);
-    (_a = this.tooltip) == null ? void 0 : _a.addEventListener("mouseenter", onTooltipMouseEnter);
-    (_b = this.tooltip) == null ? void 0 : _b.addEventListener("mouseleave", onTooltipMouseLeave);
+    setTimeout(() => {
+      if (this.tooltip) {
+        this.tooltip.addEventListener("mouseenter", onTooltipMouseEnter);
+        this.tooltip.addEventListener("mouseleave", onTooltipMouseLeave);
+      }
+    }, 50);
     document.addEventListener("mousemove", onDocumentMouseMove);
     this.tooltip._cleanup = () => {
-      var _a2, _b2;
+      var _a, _b;
       targetElement.removeEventListener("mouseenter", onTargetMouseEnter);
       targetElement.removeEventListener("mouseleave", onTargetMouseLeave);
-      (_a2 = this.tooltip) == null ? void 0 : _a2.removeEventListener("mouseenter", onTooltipMouseEnter);
-      (_b2 = this.tooltip) == null ? void 0 : _b2.removeEventListener("mouseleave", onTooltipMouseLeave);
+      (_a = this.tooltip) == null ? void 0 : _a.removeEventListener("mouseenter", onTooltipMouseEnter);
+      (_b = this.tooltip) == null ? void 0 : _b.removeEventListener("mouseleave", onTooltipMouseLeave);
       document.removeEventListener("mousemove", onDocumentMouseMove);
       if (hideTimeout)
         clearTimeout(hideTimeout);

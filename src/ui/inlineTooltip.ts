@@ -694,18 +694,19 @@ export class InlineTooltip {
    */
   private setupHoverEvents(targetElement: HTMLElement): void {
     let hideTimeout: NodeJS.Timeout | undefined;
-    let isHovering = false;
+    let isHoveringTarget = false;
+    let isHoveringTooltip = false;
     
     const startHideTimer = () => {
       if (hideTimeout) {
         clearTimeout(hideTimeout);
       }
       hideTimeout = setTimeout(() => {
-        if (!isHovering) {
+        if (!isHoveringTarget && !isHoveringTooltip) {
           Logger.debug('🔍 툴팁 자동 숨김 타이머 실행');
           this.hide();
         }
-      }, 200); // 200ms로 더 빠른 반응
+      }, 500); // 500ms로 여유 시간 증가
     };
 
     const cancelHideTimer = () => {
@@ -717,26 +718,36 @@ export class InlineTooltip {
 
     const onTargetMouseEnter = () => {
       Logger.debug('🔍 타겟 요소 마우스 진입');
-      isHovering = true;
+      isHoveringTarget = true;
       cancelHideTimer();
     };
 
     const onTargetMouseLeave = () => {
       Logger.debug('🔍 타겟 요소 마우스 이탈');
-      isHovering = false;
-      startHideTimer();
+      isHoveringTarget = false;
+      // 🔧 툴팁으로 이동할 시간을 주기 위해 약간의 지연
+      setTimeout(() => {
+        if (!isHoveringTarget && !isHoveringTooltip) {
+          startHideTimer();
+        }
+      }, 100);
     };
 
     const onTooltipMouseEnter = () => {
       Logger.debug('🔍 툴팁 마우스 진입');
-      isHovering = true;
+      isHoveringTooltip = true;
       cancelHideTimer();
     };
 
     const onTooltipMouseLeave = () => {
       Logger.debug('🔍 툴팁 마우스 이탈');
-      isHovering = false;
-      startHideTimer();
+      isHoveringTooltip = false;
+      // 🔧 타겟으로 돌아갈 시간을 주기 위해 약간의 지연
+      setTimeout(() => {
+        if (!isHoveringTarget && !isHoveringTooltip) {
+          startHideTimer();
+        }
+      }, 100);
     };
 
     // 🔧 브라우저 호환성을 위한 추가 이벤트 (마우스가 완전히 벗어났을 때)
@@ -746,19 +757,25 @@ export class InlineTooltip {
       const tooltipRect = this.tooltip.getBoundingClientRect();
       const targetRect = targetElement.getBoundingClientRect();
       
-      const isOverTooltip = (
-        e.clientX >= tooltipRect.left && e.clientX <= tooltipRect.right &&
-        e.clientY >= tooltipRect.top && e.clientY <= tooltipRect.bottom
+      // 🔧 툴팁과 타겟 사이의 "브릿지" 영역 계산 (마우스 이동 경로 허용)
+      const bridgeMargin = 10; // 10px 여유 공간
+      const combinedRect = {
+        left: Math.min(tooltipRect.left, targetRect.left) - bridgeMargin,
+        right: Math.max(tooltipRect.right, targetRect.right) + bridgeMargin,
+        top: Math.min(tooltipRect.top, targetRect.top) - bridgeMargin,
+        bottom: Math.max(tooltipRect.bottom, targetRect.bottom) + bridgeMargin
+      };
+      
+      const isInCombinedArea = (
+        e.clientX >= combinedRect.left && e.clientX <= combinedRect.right &&
+        e.clientY >= combinedRect.top && e.clientY <= combinedRect.bottom
       );
       
-      const isOverTarget = (
-        e.clientX >= targetRect.left && e.clientX <= targetRect.right &&
-        e.clientY >= targetRect.top && e.clientY <= targetRect.bottom
-      );
-      
-      if (!isOverTooltip && !isOverTarget && isHovering) {
-        Logger.debug('🔍 마우스가 완전히 벗어남 - 강제 숨김');
-        isHovering = false;
+      // 🔧 완전히 벗어난 경우에만 강제 숨김 (더 관대한 조건)
+      if (!isInCombinedArea && (isHoveringTarget || isHoveringTooltip)) {
+        Logger.debug('🔍 마우스가 브릿지 영역을 완전히 벗어남 - 상태 초기화');
+        isHoveringTarget = false;
+        isHoveringTooltip = false;
         startHideTimer();
       }
     };
@@ -766,8 +783,15 @@ export class InlineTooltip {
     // 이벤트 리스너 등록
     targetElement.addEventListener('mouseenter', onTargetMouseEnter);
     targetElement.addEventListener('mouseleave', onTargetMouseLeave);
-    this.tooltip?.addEventListener('mouseenter', onTooltipMouseEnter);
-    this.tooltip?.addEventListener('mouseleave', onTooltipMouseLeave);
+    
+    // 🔧 툴팁 이벤트는 비동기적으로 등록 (DOM 완전 생성 후)
+    setTimeout(() => {
+      if (this.tooltip) {
+        this.tooltip.addEventListener('mouseenter', onTooltipMouseEnter);
+        this.tooltip.addEventListener('mouseleave', onTooltipMouseLeave);
+      }
+    }, 50);
+    
     document.addEventListener('mousemove', onDocumentMouseMove);
 
     // 정리 함수 저장 (나중에 제거용)
