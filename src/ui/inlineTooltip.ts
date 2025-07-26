@@ -24,7 +24,7 @@ export class InlineTooltip {
       return;
     }
     
-    this.hide(); // 기존 툴팁 제거
+    this.hide(true); // 기존 툴팁 강제 제거
     
     this.currentError = error;
     
@@ -33,15 +33,13 @@ export class InlineTooltip {
     
     // 모바일에서 키보드 숨기기 및 에디터 포커스 해제 (툴팁 보호)
     if (Platform.isMobile) {
-      // 🔧 툴팁 보호 플래그 설정 (blur 시 툴팁 자동 숨김 방지)
+      // 🔧 툴팁 보호 플래그 설정 (모바일에서는 툴팁 수동 닫기만 허용)
       (window as any).tooltipProtected = true;
       
       setTimeout(() => {
         this.hideKeyboardAndBlurEditor();
-        // 플래그 해제 (지연 후)
-        setTimeout(() => {
-          (window as any).tooltipProtected = false;
-        }, 200);
+        // 🔧 모바일에서는 플래그를 해제하지 않음 (수동 닫기만)
+        Logger.debug('📱 모바일 툴팁 보호 플래그 유지 - 수동 닫기만 허용');
       }, 100);
     }
     
@@ -55,17 +53,17 @@ export class InlineTooltip {
   /**
    * 툴팁 숨김
    */
-  hide(): void {
-    // 🔧 모바일 툴팁 보호: 보호 플래그가 설정된 경우 숨기기 방지
-    if (Platform.isMobile && (window as any).tooltipProtected) {
-      Logger.debug('📱 모바일 툴팁 보호됨: 자동 숨김 무시');
+  hide(forceHide: boolean = false): void {
+    // 🔧 모바일 툴팁 보호: 강제 숨김이 아닌 경우 자동 숨김 방지
+    if (Platform.isMobile && !forceHide) {
+      Logger.debug('📱 모바일 툴팁: 자동 숨김 무시 - 수동 닫기만 허용');
       return;
     }
     
-    // 🔧 모바일 디버깅: 툴팁 숨김 원인 추적
-    if (Platform.isMobile && this.tooltip) {
-      const stack = new Error().stack;
-      Logger.debug(`📱 모바일 툴팁 숨김 호출됨 - 스택: ${stack?.split('\n')[2]?.trim()}`);
+    // 🔧 모바일에서 강제 숨김 시 보호 플래그 해제
+    if (Platform.isMobile && forceHide) {
+      (window as any).tooltipProtected = false;
+      Logger.debug('📱 모바일 툴팁: 수동 닫기로 보호 플래그 해제');
     }
     
     if (this.tooltip) {
@@ -607,13 +605,13 @@ export class InlineTooltip {
         headerCloseButton.style.opacity = '0.7';
         headerCloseButton.style.color = 'var(--text-muted)';
         headerCloseButton.style.transform = 'translateY(-50%) scale(1)';
-        this.hide();
+        this.hide(true); // 강제 닫기
       }, { passive: false });
     }
 
     headerCloseButton.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.hide();
+      this.hide(true); // 강제 닫기
     });
 
     // 스크롤 가능한 내용 영역 - 모바일 최적화
@@ -965,7 +963,7 @@ export class InlineTooltip {
             }
           });
         }
-        this.hide();
+        this.hide(true); // 강제 닫기
       }, { passive: false });
     }
 
@@ -982,7 +980,7 @@ export class InlineTooltip {
         });
       }
       
-      this.hide();
+      this.hide(true); // 강제 닫기
     });
 
 
@@ -992,9 +990,15 @@ export class InlineTooltip {
   }
 
   /**
-   * 호버 이벤트 설정 (완전히 새로운 안정적 접근법)
+   * 호버 이벤트 설정 (데스크톱 전용 - 모바일에서는 수동 닫기만)
    */
   private setupHoverEvents(targetElement: HTMLElement): void {
+    // 🔧 모바일에서는 호버 이벤트 설정하지 않음 (수동 닫기만)
+    if (Platform.isMobile) {
+      Logger.debug('📱 모바일: 호버 이벤트 설정 생략 - 수동 닫기만 허용');
+      return;
+    }
+    
     let hideTimeout: NodeJS.Timeout | undefined;
     let isHovering = false;
     
@@ -1003,7 +1007,7 @@ export class InlineTooltip {
       hideTimeout = setTimeout(() => {
         if (!isHovering) {
           Logger.debug('🔍 툴팁 자동 숨김');
-          this.hide();
+          this.hide(true); // 강제 닫기
         }
       }, 2000); // 2초로 매우 여유롭게
     };
@@ -1051,7 +1055,7 @@ export class InlineTooltip {
       
       if (!isOnTarget && !isOnTooltip) {
         Logger.debug('🔍 외부 클릭 - 즉시 숨김');
-        this.hide();
+        this.hide(true); // 강제 닫기
       }
     };
 
@@ -1418,7 +1422,7 @@ export class InlineTooltip {
       Logger.log(`✅ 일반 오류 수정 적용 성공: "${error.correction.original}" → "${suggestion}"`);
       
       // 툴팁 숨기기
-      this.hide();
+      this.hide(true); // 강제 닫기
     } catch (error) {
       Logger.error('❌ 수정 제안 적용 중 오류:', error);
     }
@@ -1462,7 +1466,7 @@ export class InlineTooltip {
         }
         
         // 툴팁 숨김
-        this.hide();
+        this.hide(true); // 강제 닫기
         
       } else {
         Logger.error('Korean Grammar Assistant 플러그인을 찾을 수 없습니다.');
@@ -1488,7 +1492,7 @@ export class InlineTooltip {
       }
       
       // 툴팁 숨김
-      this.hide();
+      this.hide(true); // 강제 닫기
       
       // 사용자 알림
       new Notice(`"${error.correction.original}" 오류를 무시했습니다.`);
@@ -1504,7 +1508,7 @@ export class InlineTooltip {
    */
   private handleOutsideClick(event: MouseEvent): void {
     if (this.tooltip && !this.tooltip.contains(event.target as Node)) {
-      this.hide();
+      this.hide(true); // 강제 닫기
     }
   }
 

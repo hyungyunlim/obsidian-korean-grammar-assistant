@@ -9535,16 +9535,14 @@ var InlineTooltip = class {
       Logger.debug(`\uC778\uB77C\uC778 \uD234\uD301 \uC774\uBBF8 \uD45C\uC2DC \uC911: ${error.correction.original}`);
       return;
     }
-    this.hide();
+    this.hide(true);
     this.currentError = error;
     this.hideCursorInBackground();
     if (import_obsidian10.Platform.isMobile) {
       window.tooltipProtected = true;
       setTimeout(() => {
         this.hideKeyboardAndBlurEditor();
-        setTimeout(() => {
-          window.tooltipProtected = false;
-        }, 200);
+        Logger.debug("\u{1F4F1} \uBAA8\uBC14\uC77C \uD234\uD301 \uBCF4\uD638 \uD50C\uB798\uADF8 \uC720\uC9C0 - \uC218\uB3D9 \uB2EB\uAE30\uB9CC \uD5C8\uC6A9");
       }, 100);
     }
     this.createTooltip(error, targetElement, triggerType);
@@ -9555,15 +9553,14 @@ var InlineTooltip = class {
   /**
    * 툴팁 숨김
    */
-  hide() {
-    var _a;
-    if (import_obsidian10.Platform.isMobile && window.tooltipProtected) {
-      Logger.debug("\u{1F4F1} \uBAA8\uBC14\uC77C \uD234\uD301 \uBCF4\uD638\uB428: \uC790\uB3D9 \uC228\uAE40 \uBB34\uC2DC");
+  hide(forceHide = false) {
+    if (import_obsidian10.Platform.isMobile && !forceHide) {
+      Logger.debug("\u{1F4F1} \uBAA8\uBC14\uC77C \uD234\uD301: \uC790\uB3D9 \uC228\uAE40 \uBB34\uC2DC - \uC218\uB3D9 \uB2EB\uAE30\uB9CC \uD5C8\uC6A9");
       return;
     }
-    if (import_obsidian10.Platform.isMobile && this.tooltip) {
-      const stack = new Error().stack;
-      Logger.debug(`\u{1F4F1} \uBAA8\uBC14\uC77C \uD234\uD301 \uC228\uAE40 \uD638\uCD9C\uB428 - \uC2A4\uD0DD: ${(_a = stack == null ? void 0 : stack.split("\n")[2]) == null ? void 0 : _a.trim()}`);
+    if (import_obsidian10.Platform.isMobile && forceHide) {
+      window.tooltipProtected = false;
+      Logger.debug("\u{1F4F1} \uBAA8\uBC14\uC77C \uD234\uD301: \uC218\uB3D9 \uB2EB\uAE30\uB85C \uBCF4\uD638 \uD50C\uB798\uADF8 \uD574\uC81C");
     }
     if (this.tooltip) {
       this.tooltip.remove();
@@ -9983,12 +9980,12 @@ var InlineTooltip = class {
         headerCloseButton.style.opacity = "0.7";
         headerCloseButton.style.color = "var(--text-muted)";
         headerCloseButton.style.transform = "translateY(-50%) scale(1)";
-        this.hide();
+        this.hide(true);
       }, { passive: false });
     }
     headerCloseButton.addEventListener("click", (e) => {
       e.stopPropagation();
-      this.hide();
+      this.hide(true);
     });
     const scrollContainer = this.tooltip.createEl("div", { cls: "tooltip-scroll-container" });
     scrollContainer.style.cssText = `
@@ -10281,7 +10278,7 @@ var InlineTooltip = class {
             }
           });
         }
-        this.hide();
+        this.hide(true);
       }, { passive: false });
     }
     applyAllButton.addEventListener("click", (e) => {
@@ -10293,14 +10290,18 @@ var InlineTooltip = class {
           }
         });
       }
-      this.hide();
+      this.hide(true);
     });
     this.setupHoverEvents(targetElement);
   }
   /**
-   * 호버 이벤트 설정 (완전히 새로운 안정적 접근법)
+   * 호버 이벤트 설정 (데스크톱 전용 - 모바일에서는 수동 닫기만)
    */
   setupHoverEvents(targetElement) {
+    if (import_obsidian10.Platform.isMobile) {
+      Logger.debug("\u{1F4F1} \uBAA8\uBC14\uC77C: \uD638\uBC84 \uC774\uBCA4\uD2B8 \uC124\uC815 \uC0DD\uB7B5 - \uC218\uB3D9 \uB2EB\uAE30\uB9CC \uD5C8\uC6A9");
+      return;
+    }
     let hideTimeout;
     let isHovering = false;
     const startHideTimer = () => {
@@ -10309,7 +10310,7 @@ var InlineTooltip = class {
       hideTimeout = setTimeout(() => {
         if (!isHovering) {
           Logger.debug("\u{1F50D} \uD234\uD301 \uC790\uB3D9 \uC228\uAE40");
-          this.hide();
+          this.hide(true);
         }
       }, 2e3);
     };
@@ -10347,7 +10348,7 @@ var InlineTooltip = class {
       const isOnTooltip = this.tooltip.contains(target) || this.tooltip === target;
       if (!isOnTarget && !isOnTooltip) {
         Logger.debug("\u{1F50D} \uC678\uBD80 \uD074\uB9AD - \uC989\uC2DC \uC228\uAE40");
-        this.hide();
+        this.hide(true);
       }
     };
     document.addEventListener("mousemove", onMouseMove, { passive: true });
@@ -10631,7 +10632,7 @@ var InlineTooltip = class {
     try {
       InlineModeService.applySuggestion(error, suggestion);
       Logger.log(`\u2705 \uC77C\uBC18 \uC624\uB958 \uC218\uC815 \uC801\uC6A9 \uC131\uACF5: "${error.correction.original}" \u2192 "${suggestion}"`);
-      this.hide();
+      this.hide(true);
     } catch (error2) {
       Logger.error("\u274C \uC218\uC815 \uC81C\uC548 \uC801\uC6A9 \uC911 \uC624\uB958:", error2);
     }
@@ -10662,7 +10663,7 @@ var InlineTooltip = class {
           window.InlineModeService.removeError(null, error.uniqueId);
           Logger.debug(`\u2705 \uC608\uC678 \uB2E8\uC5B4 \uB4F1\uB85D\uC73C\uB85C \uC778\uD55C \uC624\uB958 \uC81C\uAC70: ${error.uniqueId}`);
         }
-        this.hide();
+        this.hide(true);
       } else {
         Logger.error("Korean Grammar Assistant \uD50C\uB7EC\uADF8\uC778\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
         new import_obsidian10.Notice("\uC608\uC678 \uB2E8\uC5B4 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
@@ -10682,7 +10683,7 @@ var InlineTooltip = class {
         window.InlineModeService.removeError(null, error.uniqueId);
         Logger.debug(`\u2705 \uC77C\uC2DC\uC801 \uBB34\uC2DC\uB85C \uC778\uD55C \uC624\uB958 \uC81C\uAC70: ${error.uniqueId}`);
       }
-      this.hide();
+      this.hide(true);
       new import_obsidian10.Notice(`"${error.correction.original}" \uC624\uB958\uB97C \uBB34\uC2DC\uD588\uC2B5\uB2C8\uB2E4.`);
     } catch (err) {
       Logger.error("\uC624\uB958 \uBB34\uC2DC \uC911 \uBB38\uC81C \uBC1C\uC0DD:", err);
@@ -10694,7 +10695,7 @@ var InlineTooltip = class {
    */
   handleOutsideClick(event) {
     if (this.tooltip && !this.tooltip.contains(event.target)) {
-      this.hide();
+      this.hide(true);
     }
   }
   /**
