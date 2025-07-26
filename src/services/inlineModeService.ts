@@ -630,12 +630,29 @@ export class InlineModeService {
     if (cursorOffset < this.currentFocusedError.start || cursorOffset > this.currentFocusedError.end) {
       Logger.debug(`🎯 커서가 포커스 영역을 벗어남: ${cursorOffset} (범위: ${this.currentFocusedError.start}-${this.currentFocusedError.end})`);
       
+      // 🔧 수정 롤링 후 커서가 벗어나면 해당 오류를 완전히 제거
+      const focusedErrorId = this.currentFocusedError.uniqueId;
+      
       // 포커스 해제
       this.clearFocusedError();
       
       // 툴팁도 숨기기
       if ((window as any).globalInlineTooltip) {
         (window as any).globalInlineTooltip.hide();
+      }
+      
+      // 해당 오류를 activeErrors에서 제거하고 decoration도 제거
+      if (this.activeErrors.has(focusedErrorId)) {
+        this.activeErrors.delete(focusedErrorId);
+        
+        // decoration 제거
+        if (this.currentView) {
+          this.currentView.dispatch({
+            effects: [removeErrorDecorations.of([focusedErrorId])]
+          });
+        }
+        
+        Logger.debug(`🔧 수정 롤링 후 오류 완전 제거: ${focusedErrorId}`);
       }
     }
   }

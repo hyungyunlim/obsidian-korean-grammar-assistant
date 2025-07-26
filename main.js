@@ -10887,9 +10887,19 @@ var InlineModeService = class {
     const cursorOffset = editor.posToOffset(cursor);
     if (cursorOffset < this.currentFocusedError.start || cursorOffset > this.currentFocusedError.end) {
       Logger.debug(`\u{1F3AF} \uCEE4\uC11C\uAC00 \uD3EC\uCEE4\uC2A4 \uC601\uC5ED\uC744 \uBC97\uC5B4\uB0A8: ${cursorOffset} (\uBC94\uC704: ${this.currentFocusedError.start}-${this.currentFocusedError.end})`);
+      const focusedErrorId = this.currentFocusedError.uniqueId;
       this.clearFocusedError();
       if (window.globalInlineTooltip) {
         window.globalInlineTooltip.hide();
+      }
+      if (this.activeErrors.has(focusedErrorId)) {
+        this.activeErrors.delete(focusedErrorId);
+        if (this.currentView) {
+          this.currentView.dispatch({
+            effects: [removeErrorDecorations.of([focusedErrorId])]
+          });
+        }
+        Logger.debug(`\u{1F527} \uC218\uC815 \uB864\uB9C1 \uD6C4 \uC624\uB958 \uC644\uC804 \uC81C\uAC70: ${focusedErrorId}`);
       }
     }
   }
