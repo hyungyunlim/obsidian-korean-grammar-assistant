@@ -652,7 +652,7 @@ export class InlineTooltip {
         overflow: hidden;
       `;
 
-      // 수정 제안 버튼들 (원본 오류 단어와 비슷한 크기로) - 모바일 최적화
+      // 수정 제안 버튼들 (원본 오류 단어와 완전히 동일한 높이) - 모바일 최적화
       originalError.correction.corrected.forEach((suggestion) => {
         const suggestionButton = suggestionsList.createEl('button', {
           text: suggestion,
@@ -674,7 +674,7 @@ export class InlineTooltip {
           overflow: hidden;
           text-overflow: ellipsis;
           line-height: ${isMobileDevice ? '1.3' : '1.2'};
-          min-height: ${isMobileDevice ? (isPhoneDevice ? '26px' : '28px') : 'auto'};
+          font-weight: 600;
           ${isMobileDevice ? 'touch-action: manipulation;' : ''}
         `;
 
@@ -969,7 +969,7 @@ export class InlineTooltip {
   }
 
   /**
-   * 호버 이벤트 설정 (공통)
+   * 호버 이벤트 설정 (개선된 안정성)
    */
   private setupHoverEvents(targetElement: HTMLElement): void {
     let hideTimeout: NodeJS.Timeout | undefined;
@@ -985,7 +985,7 @@ export class InlineTooltip {
           Logger.debug('🔍 툴팁 자동 숨김 타이머 실행');
           this.hide();
         }
-      }, 500); // 500ms로 여유 시간 증가
+      }, 800); // 800ms로 더 여유 시간 증가
     };
 
     const cancelHideTimer = () => {
@@ -1004,12 +1004,12 @@ export class InlineTooltip {
     const onTargetMouseLeave = () => {
       Logger.debug('🔍 타겟 요소 마우스 이탈');
       isHoveringTarget = false;
-      // 🔧 툴팁으로 이동할 시간을 주기 위해 약간의 지연
+      // 🔧 툴팁으로 이동할 시간을 주기 위해 더 긴 지연
       setTimeout(() => {
         if (!isHoveringTarget && !isHoveringTooltip) {
           startHideTimer();
         }
-      }, 100);
+      }, 200); // 200ms로 지연 시간 증가
     };
 
     const onTooltipMouseEnter = () => {
@@ -1021,12 +1021,12 @@ export class InlineTooltip {
     const onTooltipMouseLeave = () => {
       Logger.debug('🔍 툴팁 마우스 이탈');
       isHoveringTooltip = false;
-      // 🔧 타겟으로 돌아갈 시간을 주기 위해 약간의 지연
+      // 🔧 타겟으로 돌아갈 시간을 주기 위해 더 긴 지연
       setTimeout(() => {
         if (!isHoveringTarget && !isHoveringTooltip) {
           startHideTimer();
         }
-      }, 100);
+      }, 200); // 200ms로 지연 시간 증가
     };
 
     // 🔧 브라우저 호환성을 위한 추가 이벤트 (마우스가 완전히 벗어났을 때)
@@ -1036,8 +1036,8 @@ export class InlineTooltip {
       const tooltipRect = this.tooltip.getBoundingClientRect();
       const targetRect = targetElement.getBoundingClientRect();
       
-      // 🔧 툴팁과 타겟 사이의 "브릿지" 영역 계산 (마우스 이동 경로 허용)
-      const bridgeMargin = 10; // 10px 여유 공간
+      // 🔧 툴팁과 타겟 사이의 "브릿지" 영역 계산 (더 넓은 여유 공간)
+      const bridgeMargin = 20; // 20px로 여유 공간 확대
       const combinedRect = {
         left: Math.min(tooltipRect.left, targetRect.left) - bridgeMargin,
         right: Math.max(tooltipRect.right, targetRect.right) + bridgeMargin,

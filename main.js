@@ -10048,7 +10048,7 @@ var InlineTooltip = class {
           overflow: hidden;
           text-overflow: ellipsis;
           line-height: ${isMobileDevice ? "1.3" : "1.2"};
-          min-height: ${isMobileDevice ? isPhoneDevice ? "26px" : "28px" : "auto"};
+          font-weight: 600;
           ${isMobileDevice ? "touch-action: manipulation;" : ""}
         `;
         const onActivate = () => {
@@ -10290,7 +10290,7 @@ var InlineTooltip = class {
     this.setupHoverEvents(targetElement);
   }
   /**
-   * 호버 이벤트 설정 (공통)
+   * 호버 이벤트 설정 (개선된 안정성)
    */
   setupHoverEvents(targetElement) {
     let hideTimeout;
@@ -10305,7 +10305,7 @@ var InlineTooltip = class {
           Logger.debug("\u{1F50D} \uD234\uD301 \uC790\uB3D9 \uC228\uAE40 \uD0C0\uC774\uBA38 \uC2E4\uD589");
           this.hide();
         }
-      }, 500);
+      }, 800);
     };
     const cancelHideTimer = () => {
       if (hideTimeout) {
@@ -10325,7 +10325,7 @@ var InlineTooltip = class {
         if (!isHoveringTarget && !isHoveringTooltip) {
           startHideTimer();
         }
-      }, 100);
+      }, 200);
     };
     const onTooltipMouseEnter = () => {
       Logger.debug("\u{1F50D} \uD234\uD301 \uB9C8\uC6B0\uC2A4 \uC9C4\uC785");
@@ -10339,14 +10339,14 @@ var InlineTooltip = class {
         if (!isHoveringTarget && !isHoveringTooltip) {
           startHideTimer();
         }
-      }, 100);
+      }, 200);
     };
     const onDocumentMouseMove = (e) => {
       if (!this.tooltip || !targetElement)
         return;
       const tooltipRect = this.tooltip.getBoundingClientRect();
       const targetRect = targetElement.getBoundingClientRect();
-      const bridgeMargin = 10;
+      const bridgeMargin = 20;
       const combinedRect = {
         left: Math.min(tooltipRect.left, targetRect.left) - bridgeMargin,
         right: Math.max(tooltipRect.right, targetRect.right) + bridgeMargin,
