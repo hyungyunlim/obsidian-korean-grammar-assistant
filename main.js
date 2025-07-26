@@ -10031,36 +10031,36 @@ var InlineTooltip = class {
         flex-wrap: wrap;
         overflow: hidden;
       `;
-      originalError.correction.corrected.forEach((suggestion) => {
+      originalError.correction.corrected.forEach((suggestion, index2) => {
         const suggestionButton = suggestionsList.createEl("button", {
           text: suggestion,
           cls: "suggestion-button"
         });
         suggestionButton.style.cssText = `
-          color: var(--text-normal);
-          font-weight: 600;
-          background: rgba(59, 130, 246, 0.1);
-          padding: ${isMobileDevice ? isPhoneDevice ? "4px 7px" : "4px 8px" : "3px 6px"};
-          border: none;
-          border-radius: 3px;
-          font-size: ${isMobileDevice ? isPhoneDevice ? "11px" : "12px" : "12px"};
-          white-space: nowrap;
-          flex-shrink: 0;
-          min-width: ${isMobileDevice ? "70px" : "60px"};
-          max-width: ${isMobileDevice ? isPhoneDevice ? "100px" : "110px" : "120px"};
-          overflow: hidden;
-          text-overflow: ellipsis;
-          line-height: ${isMobileDevice ? "1.3" : "1.2"};
-          cursor: pointer;
-          transition: all 0.2s;
-          outline: none;
-          margin: 0;
-          font-family: inherit;
-          -webkit-appearance: none;
-          -moz-appearance: none;
-          appearance: none;
-          ${isMobileDevice ? "touch-action: manipulation;" : ""}
-        `;
+            color: var(--text-normal);
+            font-weight: 600;
+            background: rgba(59, 130, 246, 0.1);
+            padding: ${isMobileDevice ? isPhoneDevice ? "4px 7px" : "4px 8px" : "3px 6px"};
+            border: none;
+            border-radius: 3px;
+            font-size: ${isMobileDevice ? isPhoneDevice ? "11px" : "12px" : "12px"};
+            white-space: nowrap;
+            flex-shrink: 0;
+            min-width: ${isMobileDevice ? "70px" : "60px"};
+            max-width: ${isMobileDevice ? isPhoneDevice ? "100px" : "110px" : "120px"};
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: ${isMobileDevice ? "1.3" : "1.2"};
+            cursor: pointer;
+            transition: all 0.2s;
+            outline: none;
+            margin: 0;
+            font-family: inherit;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            ${isMobileDevice ? "touch-action: manipulation;" : ""}
+          `;
         const onActivate = () => {
           suggestionButton.style.background = "rgba(59, 130, 246, 0.15)";
           suggestionButton.style.transform = "translateY(-0.5px)";
@@ -10439,23 +10439,27 @@ var InlineTooltip = class {
       });
       const isMobile2 = import_obsidian10.Platform.isMobile;
       suggestionButton.style.cssText = `
-        background: var(--interactive-normal);
-        border: 1px solid var(--background-modifier-border);
-        border-radius: ${isMobile2 ? "6px" : "4px"};
-        padding: ${isMobile2 ? "6px 10px" : "4px 8px"};
+        color: var(--text-normal);
+        font-weight: 600;
+        background: rgba(59, 130, 246, 0.1);
+        padding: ${isMobile2 ? isPhone ? "1px 4px" : "2px 5px" : "2px 6px"};
+        border: none;
+        border-radius: 3px;
+        font-size: ${isMobile2 ? isPhone ? "11px" : "12px" : "12px"};
+        white-space: nowrap;
         cursor: pointer;
         transition: all 0.2s;
-        color: var(--text-normal);
-        font-size: ${isMobile2 ? "13px" : "12px"};
-        white-space: nowrap;
-        min-height: ${isMobile2 ? "32px" : "auto"};
+        outline: none;
+        margin: 0;
+        font-family: inherit;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
         ${isMobile2 ? "touch-action: manipulation;" : ""}
       `;
       const onActivate = () => {
-        suggestionButton.style.background = "var(--interactive-hover)";
-        suggestionButton.style.color = "var(--text-normal)";
-        suggestionButton.style.transform = "translateY(-1px)";
-        suggestionButton.style.border = "1px solid var(--background-modifier-border)";
+        suggestionButton.style.background = "rgba(59, 130, 246, 0.15)";
+        suggestionButton.style.transform = "translateY(-0.5px)";
         if (isMobile2 && "vibrate" in navigator) {
           navigator.vibrate(10);
         }

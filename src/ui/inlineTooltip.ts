@@ -657,38 +657,38 @@ export class InlineTooltip {
         overflow: hidden;
       `;
 
-      // 수정 제안 버튼들 (원본 오류 단어와 완전히 동일한 스타일) - 모바일 최적화
-      originalError.correction.corrected.forEach((suggestion) => {
+      // 수정 제안 버튼들 (원본 오류어와 완전히 동일한 스타일) - 모바일 최적화
+      originalError.correction.corrected.forEach((suggestion, index) => {
         const suggestionButton = suggestionsList.createEl('button', {
           text: suggestion,
           cls: 'suggestion-button'
         });
         
-        suggestionButton.style.cssText = `
-          color: var(--text-normal);
-          font-weight: 600;
-          background: rgba(59, 130, 246, 0.1);
-          padding: ${isMobileDevice ? (isPhoneDevice ? '4px 7px' : '4px 8px') : '3px 6px'};
-          border: none;
-          border-radius: 3px;
-          font-size: ${isMobileDevice ? (isPhoneDevice ? '11px' : '12px') : '12px'};
-          white-space: nowrap;
-          flex-shrink: 0;
-          min-width: ${isMobileDevice ? '70px' : '60px'};
-          max-width: ${isMobileDevice ? (isPhoneDevice ? '100px' : '110px') : '120px'};
-          overflow: hidden;
-          text-overflow: ellipsis;
-          line-height: ${isMobileDevice ? '1.3' : '1.2'};
-          cursor: pointer;
-          transition: all 0.2s;
-          outline: none;
-          margin: 0;
-          font-family: inherit;
-          -webkit-appearance: none;
-          -moz-appearance: none;
-          appearance: none;
-          ${isMobileDevice ? 'touch-action: manipulation;' : ''}
-        `;
+                  suggestionButton.style.cssText = `
+            color: var(--text-normal);
+            font-weight: 600;
+            background: rgba(59, 130, 246, 0.1);
+            padding: ${isMobileDevice ? (isPhoneDevice ? '4px 7px' : '4px 8px') : '3px 6px'};
+            border: none;
+            border-radius: 3px;
+            font-size: ${isMobileDevice ? (isPhoneDevice ? '11px' : '12px') : '12px'};
+            white-space: nowrap;
+            flex-shrink: 0;
+            min-width: ${isMobileDevice ? '70px' : '60px'};
+            max-width: ${isMobileDevice ? (isPhoneDevice ? '100px' : '110px') : '120px'};
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: ${isMobileDevice ? '1.3' : '1.2'};
+            cursor: pointer;
+            transition: all 0.2s;
+            outline: none;
+            margin: 0;
+            font-family: inherit;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            ${isMobileDevice ? 'touch-action: manipulation;' : ''}
+          `;
 
         // 호버/터치 효과 - 원본과 일관된 subtle 효과
         const onActivate = () => {
@@ -710,7 +710,7 @@ export class InlineTooltip {
         // 모바일 터치 피드백
         if (isMobileDevice) {
           suggestionButton.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // 더블 탭 방지
+            e.preventDefault();
             onActivate();
           }, { passive: false });
           
@@ -1157,27 +1157,31 @@ export class InlineTooltip {
       
       const isMobile = Platform.isMobile;
       
+      // 원본 오류어와 완전히 동일한 스타일 적용
       suggestionButton.style.cssText = `
-        background: var(--interactive-normal);
-        border: 1px solid var(--background-modifier-border);
-        border-radius: ${isMobile ? '6px' : '4px'};
-        padding: ${isMobile ? '6px 10px' : '4px 8px'};
+        color: var(--text-normal);
+        font-weight: 600;
+        background: rgba(59, 130, 246, 0.1);
+        padding: ${isMobile ? (isPhone ? '1px 4px' : '2px 5px') : '2px 6px'};
+        border: none;
+        border-radius: 3px;
+        font-size: ${isMobile ? (isPhone ? '11px' : '12px') : '12px'};
+        white-space: nowrap;
         cursor: pointer;
         transition: all 0.2s;
-        color: var(--text-normal);
-        font-size: ${isMobile ? '13px' : '12px'};
-        white-space: nowrap;
-        min-height: ${isMobile ? '32px' : 'auto'};
+        outline: none;
+        margin: 0;
+        font-family: inherit;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
         ${isMobile ? 'touch-action: manipulation;' : ''}
       `;
 
-      // 호버/터치 효과 함수
+      // 호버/터치 효과 - 원본과 일관된 subtle 효과
       const onActivate = () => {
-        suggestionButton.style.background = 'var(--interactive-hover)';
-        suggestionButton.style.color = 'var(--text-normal)';
-        suggestionButton.style.transform = 'translateY(-1px)';
-        suggestionButton.style.border = '1px solid var(--background-modifier-border)';
-        
+        suggestionButton.style.background = 'rgba(59, 130, 246, 0.15)';
+        suggestionButton.style.transform = 'translateY(-0.5px)';
         if (isMobile && 'vibrate' in navigator) {
           navigator.vibrate(10);
         }
