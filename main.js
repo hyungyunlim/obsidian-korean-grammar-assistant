@@ -10005,7 +10005,29 @@ var InlineTooltip = class {
           margin-left: 4px;
           flex-shrink: 0;
         `;
-        this.createHelpIcon(originalError.correction.help, helpContainer);
+        this.createInlineHelpIcon(originalError.correction.help, helpContainer, () => {
+          let helpArea = this.tooltip.querySelector(".tooltip-help-area");
+          if (!helpArea) {
+            helpArea = this.tooltip.createEl("div", { cls: "tooltip-help-area" });
+            helpArea.style.cssText = `
+              padding: 8px 12px;
+              border-top: 1px solid var(--background-modifier-border);
+              background: var(--background-secondary);
+              font-size: 11px;
+              color: var(--text-muted);
+              line-height: 1.4;
+              white-space: pre-wrap;
+              word-break: break-word;
+            `;
+            helpArea.textContent = originalError.correction.help;
+          } else {
+            const isHidden = helpArea.style.display === "none";
+            helpArea.style.display = isHidden ? "block" : "none";
+            if (!isHidden) {
+              helpArea.textContent = originalError.correction.help;
+            }
+          }
+        });
       }
     });
     const footer = this.tooltip.createEl("div", { cls: "tooltip-footer" });
@@ -10286,8 +10308,27 @@ var InlineTooltip = class {
       e.stopPropagation();
       this.addToExceptionWords(error);
     });
+    let helpArea = null;
     if (error.correction.help) {
-      this.createHelpIcon(error.correction.help, actionsContainer);
+      this.createInlineHelpIcon(error.correction.help, actionsContainer, () => {
+        if (!helpArea) {
+          helpArea = this.tooltip.createEl("div", { cls: "tooltip-help-area" });
+          helpArea.style.cssText = `
+            padding: 8px 12px;
+            border-top: 1px solid var(--background-modifier-border);
+            background: var(--background-secondary);
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-break: break-word;
+          `;
+          helpArea.textContent = error.correction.help;
+        } else {
+          const isHidden = helpArea.style.display === "none";
+          helpArea.style.display = isHidden ? "block" : "none";
+        }
+      });
     }
     if (triggerType === "hover") {
       this.setupHoverEvents(targetElement);
@@ -10366,121 +10407,9 @@ var InlineTooltip = class {
     return "\uC5B8\uC5B4 \uD45C\uD604 \uAC1C\uC120";
   }
   /**
-   * 도움말 상세 표시
+   * 도움말 아이콘 생성 (Inline 모드용)
    */
-  showHelpDetail(helpText, helpIcon) {
-    const helpTooltip = document.createElement("div");
-    helpTooltip.className = "korean-grammar-help-tooltip";
-    helpTooltip.style.cssText = `
-      position: fixed;
-      background: var(--background-primary);
-      border: 1px solid var(--background-modifier-border);
-      border-radius: 6px;
-      padding: 0;
-      box-shadow: var(--shadow-s);
-      z-index: 1001;
-      font-size: 13px;
-      color: var(--text-normal);
-      display: flex;
-      flex-direction: column;
-      min-width: 250px;
-      max-width: 400px;
-      max-height: 300px;
-    `;
-    const helpHeader = helpTooltip.createEl("div", { cls: "help-header" });
-    helpHeader.style.cssText = `
-      padding: 8px 12px;
-      border-bottom: 1px solid var(--background-modifier-border);
-      background: var(--background-secondary);
-      font-weight: 600;
-      font-size: 12px;
-      color: var(--text-muted);
-      text-align: center;
-    `;
-    helpHeader.textContent = "\u{1F4D6} \uBB38\uBC95 \uB3C4\uC6C0\uB9D0";
-    const helpContent = helpTooltip.createEl("div", { cls: "help-content" });
-    helpContent.style.cssText = `
-      padding: 12px;
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-size: 13px;
-      color: var(--text-normal);
-      line-height: 1.4;
-      overflow-y: auto;
-      flex: 1;
-    `;
-    helpContent.textContent = helpText;
-    const buttonArea = helpTooltip.createEl("div", { cls: "help-buttons" });
-    buttonArea.style.cssText = `
-      padding: 8px 12px;
-      border-top: 1px solid var(--background-modifier-border);
-      background: var(--background-secondary);
-      display: flex;
-      justify-content: center;
-    `;
-    const closeButton = buttonArea.createEl("button", {
-      text: "\uD655\uC778",
-      cls: "help-close-button"
-    });
-    closeButton.style.cssText = `
-      background: var(--interactive-accent);
-      color: var(--text-on-accent);
-      border: none;
-      border-radius: 4px;
-      padding: 6px 16px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 500;
-      transition: all 0.2s;
-    `;
-    closeButton.addEventListener("mouseenter", () => {
-      closeButton.style.background = "var(--interactive-accent-hover)";
-    });
-    closeButton.addEventListener("mouseleave", () => {
-      closeButton.style.background = "var(--interactive-accent)";
-    });
-    closeButton.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (helpTooltip.parentNode) {
-        helpTooltip.parentNode.removeChild(helpTooltip);
-      }
-    });
-    const handleOutsideClick = (event) => {
-      if (helpTooltip && !helpTooltip.contains(event.target)) {
-        if (helpTooltip.parentNode) {
-          helpTooltip.parentNode.removeChild(helpTooltip);
-        }
-        document.removeEventListener("click", handleOutsideClick);
-      }
-    };
-    document.body.appendChild(helpTooltip);
-    const helpIconRect = helpIcon.getBoundingClientRect();
-    const tooltipRect = helpTooltip.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    let left = helpIconRect.left + helpIconRect.width / 2 - tooltipRect.width / 2;
-    let top = helpIconRect.bottom + 8;
-    if (left < 12)
-      left = 12;
-    if (left + tooltipRect.width > viewportWidth - 12) {
-      left = viewportWidth - tooltipRect.width - 12;
-    }
-    if (top + tooltipRect.height > viewportHeight - 12) {
-      top = helpIconRect.top - tooltipRect.height - 8;
-    }
-    helpTooltip.style.left = `${left}px`;
-    helpTooltip.style.top = `${top}px`;
-    setTimeout(() => {
-      document.addEventListener("click", handleOutsideClick);
-    }, 100);
-    Logger.debug(`\uB3C4\uC6C0\uB9D0 \uD45C\uC2DC: "${helpText.substring(0, 50)}..."`);
-  }
-  /**
-   * 도움말 아이콘 생성 (공통)
-   */
-  createHelpIcon(helpText, container) {
-    if (!helpText)
-      return;
+  createInlineHelpIcon(helpText, container, onIconClick) {
     const helpIcon = container.createEl("span", { text: "?" });
     helpIcon.style.cssText = `
       color: var(--text-muted);
@@ -10513,7 +10442,7 @@ var InlineTooltip = class {
     });
     helpIcon.addEventListener("click", (e) => {
       e.stopPropagation();
-      this.showHelpDetail(helpText, helpIcon);
+      onIconClick();
     });
   }
   /**

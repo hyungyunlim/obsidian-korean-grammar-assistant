@@ -629,7 +629,34 @@ export class InlineTooltip {
           margin-left: 4px;
           flex-shrink: 0;
         `;
-        this.createHelpIcon(originalError.correction.help, helpContainer);
+        
+        // 📖 도움말을 하단에 표시하는 인라인 방식 사용
+        this.createInlineHelpIcon(originalError.correction.help, helpContainer, () => {
+          let helpArea = this.tooltip!.querySelector('.tooltip-help-area') as HTMLElement;
+          if (!helpArea) {
+            // 도움말 영역 생성
+            helpArea = this.tooltip!.createEl('div', { cls: 'tooltip-help-area' });
+            helpArea.style.cssText = `
+              padding: 8px 12px;
+              border-top: 1px solid var(--background-modifier-border);
+              background: var(--background-secondary);
+              font-size: 11px;
+              color: var(--text-muted);
+              line-height: 1.4;
+              white-space: pre-wrap;
+              word-break: break-word;
+            `;
+            helpArea.textContent = originalError.correction.help;
+          } else {
+            // 도움말 영역 토글 (숨기기/보이기)
+            const isHidden = helpArea.style.display === 'none';
+            helpArea.style.display = isHidden ? 'block' : 'none';
+            if (!isHidden) {
+              // 새로운 도움말로 내용 업데이트
+              helpArea.textContent = originalError.correction.help;
+            }
+          }
+        });
       }
     });
 
@@ -983,9 +1010,31 @@ export class InlineTooltip {
       this.addToExceptionWords(error);
     });
 
-    // 도움말 아이콘 (간소화)
+    // 📖 도움말 영역 (하단에 표시될 영역)
+    let helpArea: HTMLElement | null = null;
     if (error.correction.help) {
-      this.createHelpIcon(error.correction.help, actionsContainer);
+      // 도움말 아이콘 생성
+      this.createInlineHelpIcon(error.correction.help, actionsContainer, () => {
+        if (!helpArea) {
+          // 도움말 영역 생성
+          helpArea = this.tooltip!.createEl('div', { cls: 'tooltip-help-area' });
+          helpArea.style.cssText = `
+            padding: 8px 12px;
+            border-top: 1px solid var(--background-modifier-border);
+            background: var(--background-secondary);
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-break: break-word;
+          `;
+          helpArea.textContent = error.correction.help;
+        } else {
+          // 도움말 영역 토글 (숨기기/보이기)
+          const isHidden = helpArea.style.display === 'none';
+          helpArea.style.display = isHidden ? 'block' : 'none';
+        }
+      });
     }
 
     // 클릭 모드가 아닌 경우 마우스 떠나면 자동 숨김 (개선된 로직)
@@ -1098,145 +1147,9 @@ export class InlineTooltip {
   }
 
   /**
-   * 도움말 상세 표시
+   * 도움말 아이콘 생성 (Inline 모드용)
    */
-  private showHelpDetail(helpText: string, helpIcon: HTMLElement): void {
-    // 새로운 도움말 툴팁 생성
-    const helpTooltip = document.createElement('div');
-    helpTooltip.className = 'korean-grammar-help-tooltip';
-    helpTooltip.style.cssText = `
-      position: fixed;
-      background: var(--background-primary);
-      border: 1px solid var(--background-modifier-border);
-      border-radius: 6px;
-      padding: 0;
-      box-shadow: var(--shadow-s);
-      z-index: 1001;
-      font-size: 13px;
-      color: var(--text-normal);
-      display: flex;
-      flex-direction: column;
-      min-width: 250px;
-      max-width: 400px;
-      max-height: 300px;
-    `;
-
-    // 도움말 헤더
-    const helpHeader = helpTooltip.createEl('div', { cls: 'help-header' });
-    helpHeader.style.cssText = `
-      padding: 8px 12px;
-      border-bottom: 1px solid var(--background-modifier-border);
-      background: var(--background-secondary);
-      font-weight: 600;
-      font-size: 12px;
-      color: var(--text-muted);
-      text-align: center;
-    `;
-    helpHeader.textContent = '📖 문법 도움말';
-
-    // 도움말 내용
-    const helpContent = helpTooltip.createEl('div', { cls: 'help-content' });
-    helpContent.style.cssText = `
-      padding: 12px;
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-size: 13px;
-      color: var(--text-normal);
-      line-height: 1.4;
-      overflow-y: auto;
-      flex: 1;
-    `;
-    helpContent.textContent = helpText;
-
-    // 하단 버튼 영역
-    const buttonArea = helpTooltip.createEl('div', { cls: 'help-buttons' });
-    buttonArea.style.cssText = `
-      padding: 8px 12px;
-      border-top: 1px solid var(--background-modifier-border);
-      background: var(--background-secondary);
-      display: flex;
-      justify-content: center;
-    `;
-
-    // 닫기 버튼
-    const closeButton = buttonArea.createEl('button', {
-      text: '확인',
-      cls: 'help-close-button'
-    });
-    closeButton.style.cssText = `
-      background: var(--interactive-accent);
-      color: var(--text-on-accent);
-      border: none;
-      border-radius: 4px;
-      padding: 6px 16px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 500;
-      transition: all 0.2s;
-    `;
-
-    closeButton.addEventListener('mouseenter', () => {
-      closeButton.style.background = 'var(--interactive-accent-hover)';
-    });
-
-    closeButton.addEventListener('mouseleave', () => {
-      closeButton.style.background = 'var(--interactive-accent)';
-    });
-
-    closeButton.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (helpTooltip.parentNode) {
-        helpTooltip.parentNode.removeChild(helpTooltip);
-      }
-    });
-
-    // 바깥 클릭으로 닫기
-    const handleOutsideClick = (event: MouseEvent) => {
-      if (helpTooltip && !helpTooltip.contains(event.target as Node)) {
-        if (helpTooltip.parentNode) {
-          helpTooltip.parentNode.removeChild(helpTooltip);
-        }
-        document.removeEventListener('click', handleOutsideClick);
-      }
-    };
-
-    document.body.appendChild(helpTooltip);
-    
-    // 위치 조정
-    const helpIconRect = helpIcon.getBoundingClientRect();
-    const tooltipRect = helpTooltip.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    
-    let left = helpIconRect.left + helpIconRect.width / 2 - tooltipRect.width / 2;
-    let top = helpIconRect.bottom + 8;
-    
-    // 경계 체크
-    if (left < 12) left = 12;
-    if (left + tooltipRect.width > viewportWidth - 12) {
-      left = viewportWidth - tooltipRect.width - 12;
-    }
-    if (top + tooltipRect.height > viewportHeight - 12) {
-      top = helpIconRect.top - tooltipRect.height - 8;
-    }
-    
-    helpTooltip.style.left = `${left}px`;
-    helpTooltip.style.top = `${top}px`;
-
-    // 짧은 지연 후 바깥 클릭 이벤트 등록
-    setTimeout(() => {
-      document.addEventListener('click', handleOutsideClick);
-    }, 100);
-
-    Logger.debug(`도움말 표시: "${helpText.substring(0, 50)}..."`);
-  }
-
-  /**
-   * 도움말 아이콘 생성 (공통)
-   */
-  private createHelpIcon(helpText: string, container: HTMLElement): void {
-    if (!helpText) return;
-
+  private createInlineHelpIcon(helpText: string, container: HTMLElement, onIconClick: () => void): void {
     const helpIcon = container.createEl('span', { text: '?' });
     helpIcon.style.cssText = `
       color: var(--text-muted);
@@ -1274,7 +1187,7 @@ export class InlineTooltip {
     // 클릭 이벤트 - 도움말 상세 표시
     helpIcon.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.showHelpDetail(helpText, helpIcon);
+      onIconClick(); // 클릭 시 도움말 영역을 토글하도록 전달
     });
   }
 
