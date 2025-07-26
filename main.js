@@ -10306,6 +10306,7 @@ var InlineTooltip = class {
     let hideTimeout;
     let isHoveringTarget = false;
     let isHoveringTooltip = false;
+    let mouseMoveTimeout;
     const startHideTimer = () => {
       if (hideTimeout) {
         clearTimeout(hideTimeout);
@@ -10315,7 +10316,7 @@ var InlineTooltip = class {
           Logger.debug("\u{1F50D} \uD234\uD301 \uC790\uB3D9 \uC228\uAE40 \uD0C0\uC774\uBA38 \uC2E4\uD589");
           this.hide();
         }
-      }, 800);
+      }, 1e3);
     };
     const cancelHideTimer = () => {
       if (hideTimeout) {
@@ -10354,22 +10355,37 @@ var InlineTooltip = class {
     const onDocumentMouseMove = (e) => {
       if (!this.tooltip || !targetElement)
         return;
-      const tooltipRect = this.tooltip.getBoundingClientRect();
-      const targetRect = targetElement.getBoundingClientRect();
-      const bridgeMargin = 20;
-      const combinedRect = {
-        left: Math.min(tooltipRect.left, targetRect.left) - bridgeMargin,
-        right: Math.max(tooltipRect.right, targetRect.right) + bridgeMargin,
-        top: Math.min(tooltipRect.top, targetRect.top) - bridgeMargin,
-        bottom: Math.max(tooltipRect.bottom, targetRect.bottom) + bridgeMargin
-      };
-      const isInCombinedArea = e.clientX >= combinedRect.left && e.clientX <= combinedRect.right && e.clientY >= combinedRect.top && e.clientY <= combinedRect.bottom;
-      if (!isInCombinedArea && (isHoveringTarget || isHoveringTooltip)) {
-        Logger.debug("\u{1F50D} \uB9C8\uC6B0\uC2A4\uAC00 \uBE0C\uB9BF\uC9C0 \uC601\uC5ED\uC744 \uC644\uC804\uD788 \uBC97\uC5B4\uB0A8 - \uC0C1\uD0DC \uCD08\uAE30\uD654");
-        isHoveringTarget = false;
-        isHoveringTooltip = false;
-        startHideTimer();
+      if (mouseMoveTimeout) {
+        clearTimeout(mouseMoveTimeout);
       }
+      mouseMoveTimeout = setTimeout(() => {
+        var _a;
+        const tooltipRect = (_a = this.tooltip) == null ? void 0 : _a.getBoundingClientRect();
+        const targetRect = targetElement.getBoundingClientRect();
+        if (!tooltipRect)
+          return;
+        const bridgeMargin = 30;
+        const combinedRect = {
+          left: Math.min(tooltipRect.left, targetRect.left) - bridgeMargin,
+          right: Math.max(tooltipRect.right, targetRect.right) + bridgeMargin,
+          top: Math.min(tooltipRect.top, targetRect.top) - bridgeMargin,
+          bottom: Math.max(tooltipRect.bottom, targetRect.bottom) + bridgeMargin
+        };
+        const isInCombinedArea = e.clientX >= combinedRect.left && e.clientX <= combinedRect.right && e.clientY >= combinedRect.top && e.clientY <= combinedRect.bottom;
+        if (!isInCombinedArea && (isHoveringTarget || isHoveringTooltip)) {
+          Logger.debug("\u{1F50D} \uB9C8\uC6B0\uC2A4\uAC00 \uBE0C\uB9BF\uC9C0 \uC601\uC5ED\uC744 \uBC97\uC5B4\uB0A8 - \uC9C0\uC5F0\uB41C \uC0C1\uD0DC \uCD08\uAE30\uD654");
+          setTimeout(() => {
+            const currentX = e.clientX;
+            const currentY = e.clientY;
+            const stillOutside = !(currentX >= combinedRect.left && currentX <= combinedRect.right && currentY >= combinedRect.top && currentY <= combinedRect.bottom);
+            if (stillOutside) {
+              isHoveringTarget = false;
+              isHoveringTooltip = false;
+              startHideTimer();
+            }
+          }, 300);
+        }
+      }, 50);
     };
     targetElement.addEventListener("mouseenter", onTargetMouseEnter);
     targetElement.addEventListener("mouseleave", onTargetMouseLeave);
@@ -10389,6 +10405,8 @@ var InlineTooltip = class {
       document.removeEventListener("mousemove", onDocumentMouseMove);
       if (hideTimeout)
         clearTimeout(hideTimeout);
+      if (mouseMoveTimeout)
+        clearTimeout(mouseMoveTimeout);
     };
   }
   /**
@@ -10415,9 +10433,9 @@ var InlineTooltip = class {
       color: var(--text-error);
       font-weight: 600;
       background: rgba(255, 0, 0, 0.1);
-      padding: ${isMobile ? isPhone ? "1px 4px" : "2px 5px" : "2px 6px"};
+      padding: ${isMobile ? isPhone ? "3px 6px" : "4px 7px" : "4px 8px"};
       border-radius: 3px;
-      font-size: ${isMobile ? isPhone ? "11px" : "12px" : "12px"};
+      font-size: ${isMobile ? isPhone ? "12px" : "13px" : "13px"};
     `;
     const arrow = mainContent.createEl("span", { text: "\u2192" });
     arrow.style.cssText = `
@@ -10443,9 +10461,9 @@ var InlineTooltip = class {
         color: var(--text-normal);
         font-weight: 600;
         background: rgba(59, 130, 246, 0.1);
-        padding: ${isMobile2 ? isPhone2 ? "1px 4px" : "2px 5px" : "2px 6px"};
+        padding: ${isMobile2 ? isPhone2 ? "3px 6px" : "4px 7px" : "4px 8px"};
         border-radius: 3px;
-        font-size: ${isMobile2 ? isPhone2 ? "11px" : "12px" : "12px"};
+        font-size: ${isMobile2 ? isPhone2 ? "12px" : "13px" : "13px"};
         cursor: pointer;
         ${isMobile2 ? "touch-action: manipulation;" : ""}
       `;

@@ -987,6 +987,7 @@ export class InlineTooltip {
     let hideTimeout: NodeJS.Timeout | undefined;
     let isHoveringTarget = false;
     let isHoveringTooltip = false;
+    let mouseMoveTimeout: NodeJS.Timeout | undefined;
     
     const startHideTimer = () => {
       if (hideTimeout) {
@@ -997,7 +998,7 @@ export class InlineTooltip {
           Logger.debug('🔍 툴팁 자동 숨김 타이머 실행');
           this.hide();
         }
-      }, 800); // 800ms로 더 여유 시간 증가
+      }, 1000); // 1초로 더 여유 시간 증가
     };
 
     const cancelHideTimer = () => {
@@ -1041,34 +1042,55 @@ export class InlineTooltip {
       }, 200); // 200ms로 지연 시간 증가
     };
 
-    // 🔧 브라우저 호환성을 위한 추가 이벤트 (마우스가 완전히 벗어났을 때)
+    // 🔧 더 안정적인 마우스 이동 감지 (디바운싱 추가)
     const onDocumentMouseMove = (e: MouseEvent) => {
       if (!this.tooltip || !targetElement) return;
       
-      const tooltipRect = this.tooltip.getBoundingClientRect();
-      const targetRect = targetElement.getBoundingClientRect();
-      
-      // 🔧 툴팁과 타겟 사이의 "브릿지" 영역 계산 (더 넓은 여유 공간)
-      const bridgeMargin = 20; // 20px로 여유 공간 확대
-      const combinedRect = {
-        left: Math.min(tooltipRect.left, targetRect.left) - bridgeMargin,
-        right: Math.max(tooltipRect.right, targetRect.right) + bridgeMargin,
-        top: Math.min(tooltipRect.top, targetRect.top) - bridgeMargin,
-        bottom: Math.max(tooltipRect.bottom, targetRect.bottom) + bridgeMargin
-      };
-      
-      const isInCombinedArea = (
-        e.clientX >= combinedRect.left && e.clientX <= combinedRect.right &&
-        e.clientY >= combinedRect.top && e.clientY <= combinedRect.bottom
-      );
-      
-      // 🔧 완전히 벗어난 경우에만 강제 숨김 (더 관대한 조건)
-      if (!isInCombinedArea && (isHoveringTarget || isHoveringTooltip)) {
-        Logger.debug('🔍 마우스가 브릿지 영역을 완전히 벗어남 - 상태 초기화');
-        isHoveringTarget = false;
-        isHoveringTooltip = false;
-        startHideTimer();
+      // 디바운싱: 너무 빈번한 체크 방지
+      if (mouseMoveTimeout) {
+        clearTimeout(mouseMoveTimeout);
       }
+      
+      mouseMoveTimeout = setTimeout(() => {
+        const tooltipRect = this.tooltip?.getBoundingClientRect();
+        const targetRect = targetElement.getBoundingClientRect();
+        
+        if (!tooltipRect) return;
+        
+        // 🔧 툴팁과 타겟 사이의 "브릿지" 영역 계산 (더욱 넓은 여유 공간)
+        const bridgeMargin = 30; // 30px로 여유 공간 더 확대
+        const combinedRect = {
+          left: Math.min(tooltipRect.left, targetRect.left) - bridgeMargin,
+          right: Math.max(tooltipRect.right, targetRect.right) + bridgeMargin,
+          top: Math.min(tooltipRect.top, targetRect.top) - bridgeMargin,
+          bottom: Math.max(tooltipRect.bottom, targetRect.bottom) + bridgeMargin
+        };
+        
+        const isInCombinedArea = (
+          e.clientX >= combinedRect.left && e.clientX <= combinedRect.right &&
+          e.clientY >= combinedRect.top && e.clientY <= combinedRect.bottom
+        );
+        
+        // 🔧 더욱 관대한 조건: 완전히 벗어나고 일정 시간이 지난 후에만 숨김
+        if (!isInCombinedArea && (isHoveringTarget || isHoveringTooltip)) {
+          Logger.debug('🔍 마우스가 브릿지 영역을 벗어남 - 지연된 상태 초기화');
+          setTimeout(() => {
+            // 다시 한번 체크해서 여전히 벗어나있는지 확인
+            const currentX = e.clientX;
+            const currentY = e.clientY;
+            const stillOutside = !(
+              currentX >= combinedRect.left && currentX <= combinedRect.right &&
+              currentY >= combinedRect.top && currentY <= combinedRect.bottom
+            );
+            
+            if (stillOutside) {
+              isHoveringTarget = false;
+              isHoveringTooltip = false;
+              startHideTimer();
+            }
+          }, 300); // 300ms 추가 지연
+        }
+      }, 50); // 50ms 디바운싱
     };
 
     // 이벤트 리스너 등록
@@ -1093,6 +1115,7 @@ export class InlineTooltip {
       this.tooltip?.removeEventListener('mouseleave', onTooltipMouseLeave);
       document.removeEventListener('mousemove', onDocumentMouseMove);
       if (hideTimeout) clearTimeout(hideTimeout);
+      if (mouseMoveTimeout) clearTimeout(mouseMoveTimeout);
     };
   }
 
@@ -1126,9 +1149,9 @@ export class InlineTooltip {
       color: var(--text-error);
       font-weight: 600;
       background: rgba(255, 0, 0, 0.1);
-      padding: ${isMobile ? (isPhone ? '1px 4px' : '2px 5px') : '2px 6px'};
+      padding: ${isMobile ? (isPhone ? '3px 6px' : '4px 7px') : '4px 8px'};
       border-radius: 3px;
-      font-size: ${isMobile ? (isPhone ? '11px' : '12px') : '12px'};
+      font-size: ${isMobile ? (isPhone ? '12px' : '13px') : '13px'};
     `;
 
     // 화살표 - 모바일 최적화
@@ -1163,9 +1186,9 @@ export class InlineTooltip {
         color: var(--text-normal);
         font-weight: 600;
         background: rgba(59, 130, 246, 0.1);
-        padding: ${isMobile ? (isPhone ? '1px 4px' : '2px 5px') : '2px 6px'};
+        padding: ${isMobile ? (isPhone ? '3px 6px' : '4px 7px') : '4px 8px'};
         border-radius: 3px;
-        font-size: ${isMobile ? (isPhone ? '11px' : '12px') : '12px'};
+        font-size: ${isMobile ? (isPhone ? '12px' : '13px') : '13px'};
         cursor: pointer;
         ${isMobile ? 'touch-action: manipulation;' : ''}
       `;
