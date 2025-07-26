@@ -9454,8 +9454,16 @@ var ModernSettingsTab = class extends import_obsidian9.PluginSettingTab {
     new import_obsidian9.Setting(section).setName("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654").setDesc("\uC5D0\uB514\uD130 \uB0B4\uC5D0\uC11C \uC2E4\uC2DC\uAC04\uC73C\uB85C \uB9DE\uCDA4\uBC95 \uC624\uB958\uB97C \uD45C\uC2DC\uD569\uB2C8\uB2E4.").addToggle((toggle) => toggle.setValue(this.plugin.settings.inlineMode.enabled).onChange(async (value) => {
       this.plugin.settings.inlineMode.enabled = value;
       await this.plugin.saveSettings();
-      Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 ${value ? "\uD65C\uC131\uD654" : "\uBE44\uD65C\uC131\uD654"}\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
-      new import_obsidian9.Notice(`\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 ${value ? "\uD65C\uC131\uD654" : "\uBE44\uD65C\uC131\uD654"}\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
+      if (value) {
+        this.plugin.enableInlineMode();
+        Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC \uC989\uC2DC \uD65C\uC131\uD654");
+        new import_obsidian9.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uD65C\uC131\uD654\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC5D0\uB514\uD130\uC5D0\uC11C \uD14D\uC2A4\uD2B8\uB97C \uC785\uB825\uD558\uBA74 \uC2E4\uC2DC\uAC04 \uAC80\uC0AC\uAC00 \uC2DC\uC791\uB429\uB2C8\uB2E4.");
+      } else {
+        this.plugin.disableInlineMode();
+        Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC \uC989\uC2DC \uBE44\uD65C\uC131\uD654");
+        new import_obsidian9.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
+      }
+      this.display();
     }));
     if (this.plugin.settings.inlineMode.enabled) {
       new import_obsidian9.Setting(section).setName("\uBC11\uC904 \uC2A4\uD0C0\uC77C").setDesc("\uC624\uB958 \uD45C\uC2DC\uC5D0 \uC0AC\uC6A9\uD560 \uBC11\uC904 \uC2A4\uD0C0\uC77C\uC744 \uC120\uD0DD\uD558\uC138\uC694.").addDropdown((dropdown) => dropdown.addOption("wavy", "\uBB3C\uACB0\uC120 (\uCD94\uCC9C)").addOption("solid", "\uC9C1\uC120").addOption("dotted", "\uC810\uC120").addOption("dashed", "\uD30C\uC120").setValue(this.plugin.settings.inlineMode.underlineStyle).onChange(async (value) => {

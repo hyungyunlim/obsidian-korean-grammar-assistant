@@ -2245,8 +2245,20 @@ export class ModernSettingsTab extends PluginSettingTab {
         .onChange(async (value) => {
           this.plugin.settings.inlineMode.enabled = value;
           await this.plugin.saveSettings();
-          Logger.log(`인라인 모드가 ${value ? '활성화' : '비활성화'}되었습니다.`);
-          new Notice(`인라인 모드가 ${value ? '활성화' : '비활성화'}되었습니다.`);
+          
+          // 🔧 인라인 모드 즉시 적용/해제
+          if (value) {
+            this.plugin.enableInlineMode();
+            Logger.log('인라인 모드 즉시 활성화');
+            new Notice('인라인 모드가 활성화되었습니다. 에디터에서 텍스트를 입력하면 실시간 검사가 시작됩니다.');
+          } else {
+            this.plugin.disableInlineMode();
+            Logger.log('인라인 모드 즉시 비활성화');
+            new Notice('인라인 모드가 비활성화되었습니다.');
+          }
+          
+          // UI 새로고침 (인라인 모드 하위 설정들 표시/숨김)
+          this.display();
         }));
 
     // 밑줄 스타일 설정 (인라인 모드가 활성화된 경우에만)
