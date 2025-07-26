@@ -1148,40 +1148,31 @@ export class InlineTooltip {
       flex-wrap: wrap;
     `;
 
-    // 수정 제안 버튼들 (컴팩트하게)
+    // 수정 제안들 (원본 오류어와 완전히 동일한 span 요소 사용)
     error.correction.corrected.forEach((suggestion, index) => {
-      const suggestionButton = suggestionsList.createEl('button', {
+      const suggestionButton = suggestionsList.createEl('span', {
         text: suggestion,
         cls: 'suggestion-button'
       });
       
       const isMobile = Platform.isMobile;
+      const isPhone = Platform.isPhone;
       
-      // 원본 오류어와 완전히 동일한 스타일 적용
+      // 원본 오류어와 100% 동일한 스타일 (span 요소, 색상만 다름)
       suggestionButton.style.cssText = `
         color: var(--text-normal);
         font-weight: 600;
         background: rgba(59, 130, 246, 0.1);
         padding: ${isMobile ? (isPhone ? '1px 4px' : '2px 5px') : '2px 6px'};
-        border: none;
         border-radius: 3px;
         font-size: ${isMobile ? (isPhone ? '11px' : '12px') : '12px'};
-        white-space: nowrap;
         cursor: pointer;
-        transition: all 0.2s;
-        outline: none;
-        margin: 0;
-        font-family: inherit;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        appearance: none;
         ${isMobile ? 'touch-action: manipulation;' : ''}
       `;
 
-      // 호버/터치 효과 - 원본과 일관된 subtle 효과
+      // span 요소용 호버/터치 효과 (원본과 동일한 subtle 효과)
       const onActivate = () => {
         suggestionButton.style.background = 'rgba(59, 130, 246, 0.15)';
-        suggestionButton.style.transform = 'translateY(-0.5px)';
         if (isMobile && 'vibrate' in navigator) {
           navigator.vibrate(10);
         }
@@ -1189,17 +1180,16 @@ export class InlineTooltip {
 
       const onDeactivate = () => {
         suggestionButton.style.background = 'rgba(59, 130, 246, 0.1)';
-        suggestionButton.style.transform = 'translateY(0)';
       };
 
-      // 호버 효과 (키보드 하이라이트보다 우선)
+      // 호버 효과
       suggestionButton.addEventListener('mouseenter', onActivate);
       suggestionButton.addEventListener('mouseleave', onDeactivate);
 
       // 모바일 터치 피드백
       if (isMobile) {
         suggestionButton.addEventListener('touchstart', (e) => {
-          e.preventDefault(); // 더블 탭 방지
+          e.preventDefault();
           onActivate();
         }, { passive: false });
         

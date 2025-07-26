@@ -10433,40 +10433,30 @@ var InlineTooltip = class {
       flex-wrap: wrap;
     `;
     error.correction.corrected.forEach((suggestion, index) => {
-      const suggestionButton = suggestionsList.createEl("button", {
+      const suggestionButton = suggestionsList.createEl("span", {
         text: suggestion,
         cls: "suggestion-button"
       });
       const isMobile2 = import_obsidian10.Platform.isMobile;
+      const isPhone2 = import_obsidian10.Platform.isPhone;
       suggestionButton.style.cssText = `
         color: var(--text-normal);
         font-weight: 600;
         background: rgba(59, 130, 246, 0.1);
-        padding: ${isMobile2 ? isPhone ? "1px 4px" : "2px 5px" : "2px 6px"};
-        border: none;
+        padding: ${isMobile2 ? isPhone2 ? "1px 4px" : "2px 5px" : "2px 6px"};
         border-radius: 3px;
-        font-size: ${isMobile2 ? isPhone ? "11px" : "12px" : "12px"};
-        white-space: nowrap;
+        font-size: ${isMobile2 ? isPhone2 ? "11px" : "12px" : "12px"};
         cursor: pointer;
-        transition: all 0.2s;
-        outline: none;
-        margin: 0;
-        font-family: inherit;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        appearance: none;
         ${isMobile2 ? "touch-action: manipulation;" : ""}
       `;
       const onActivate = () => {
         suggestionButton.style.background = "rgba(59, 130, 246, 0.15)";
-        suggestionButton.style.transform = "translateY(-0.5px)";
         if (isMobile2 && "vibrate" in navigator) {
           navigator.vibrate(10);
         }
       };
       const onDeactivate = () => {
         suggestionButton.style.background = "rgba(59, 130, 246, 0.1)";
-        suggestionButton.style.transform = "translateY(0)";
       };
       suggestionButton.addEventListener("mouseenter", onActivate);
       suggestionButton.addEventListener("mouseleave", onDeactivate);
