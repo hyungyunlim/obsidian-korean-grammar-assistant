@@ -31,6 +31,11 @@ export class InlineTooltip {
     // 배경 커서 숨기기 - CSS로 에디터 영역 커서 제거
     this.hideCursorInBackground();
     
+    // 모바일에서 키보드 숨기기 및 에디터 포커스 해제
+    if (Platform.isMobile) {
+      this.hideKeyboardAndBlurEditor();
+    }
+    
     this.createTooltip(error, targetElement, triggerType);
     this.positionTooltip(targetElement, mousePosition);
     this.isVisible = true;
@@ -1726,6 +1731,88 @@ export class InlineTooltip {
     editorElements.forEach(editor => {
       editor.classList.remove('korean-tooltip-cursor-hidden');
     });
+  }
+
+  /**
+   * 모바일에서 키보드 숨기기 및 에디터 포커스 해제
+   */
+  private hideKeyboardAndBlurEditor(): void {
+    try {
+      // 1. 옵시디언 API를 통한 에디터 포커스 해제 (window를 통한 접근)
+      const obsidianApp = (window as any).app;
+      if (obsidianApp) {
+        const activeView = obsidianApp.workspace.getActiveViewOfType(MarkdownView);
+        if (activeView?.editor) {
+          // 에디터가 포커스되어 있는지 확인 후 포커스 해제
+          if ((activeView.editor as any).hasFocus?.()) {
+            Logger.log('📱 모바일: 에디터 포커스 해제 시작');
+            (activeView.editor as any).blur?.();
+            
+            // CodeMirror 에디터 직접 접근
+            const cmEditor = (activeView.editor as any).cm;
+            if (cmEditor && cmEditor.dom) {
+              (cmEditor.dom as HTMLElement).blur();
+            }
+          }
+        }
+      }
+
+      // 2. DOM 레벨에서 모든 포커스 가능한 요소 포커스 해제
+      const focusedElement = document.activeElement as HTMLElement;
+      if (focusedElement && focusedElement.blur) {
+        focusedElement.blur();
+        Logger.log('📱 모바일: DOM 포커스 해제 완료');
+      }
+
+      // 3. CodeMirror 에디터 포커스 해제 (추가 안전장치)
+      const cmEditors = document.querySelectorAll('.cm-editor .cm-content');
+      cmEditors.forEach(editor => {
+        if (editor instanceof HTMLElement) {
+          editor.blur();
+        }
+      });
+
+      // 4. 키보드 숨기기를 위한 더미 input 생성 및 포커스/블러
+      const hiddenInput = document.createElement('input');
+      hiddenInput.style.cssText = `
+        position: absolute;
+        left: -9999px;
+        top: -9999px;
+        opacity: 0;
+        pointer-events: none;
+      `;
+      document.body.appendChild(hiddenInput);
+      
+      // 짧은 시간 후 포커스 후 즉시 블러하여 키보드 숨기기
+      setTimeout(() => {
+        hiddenInput.focus();
+        setTimeout(() => {
+          hiddenInput.blur();
+          document.body.removeChild(hiddenInput);
+          Logger.log('📱 모바일: 키보드 숨김 처리 완료');
+        }, 50);
+      }, 100);
+
+      // 5. 뷰포트 변경 시 툴팁 재배치 (키보드 숨김 후)
+      if (window.visualViewport) {
+        const handleViewportChange = () => {
+          if (this.tooltip && this.isVisible) {
+            // 키보드가 사라진 후 툴팁 위치 재조정
+            setTimeout(() => {
+              const targetElement = document.querySelector(`[data-error-id="${this.currentError?.uniqueId}"]`) as HTMLElement;
+              if (targetElement) {
+                this.positionTooltip(targetElement);
+              }
+            }, 300);
+          }
+        };
+        
+        window.visualViewport.addEventListener('resize', handleViewportChange, { once: true });
+      }
+
+    } catch (error) {
+      Logger.warn('📱 모바일 키보드 숨김 중 오류:', error);
+    }
   }
 }
 

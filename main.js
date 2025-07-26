@@ -9538,6 +9538,9 @@ var InlineTooltip = class {
     this.hide();
     this.currentError = error;
     this.hideCursorInBackground();
+    if (import_obsidian10.Platform.isMobile) {
+      this.hideKeyboardAndBlurEditor();
+    }
     this.createTooltip(error, targetElement, triggerType);
     this.positionTooltip(targetElement, mousePosition);
     this.isVisible = true;
@@ -10875,6 +10878,72 @@ var InlineTooltip = class {
     editorElements.forEach((editor) => {
       editor.classList.remove("korean-tooltip-cursor-hidden");
     });
+  }
+  /**
+   * 모바일에서 키보드 숨기기 및 에디터 포커스 해제
+   */
+  hideKeyboardAndBlurEditor() {
+    var _a, _b, _c, _d;
+    try {
+      const obsidianApp = window.app;
+      if (obsidianApp) {
+        const activeView = obsidianApp.workspace.getActiveViewOfType(import_obsidian10.MarkdownView);
+        if (activeView == null ? void 0 : activeView.editor) {
+          if ((_b = (_a = activeView.editor).hasFocus) == null ? void 0 : _b.call(_a)) {
+            Logger.log("\u{1F4F1} \uBAA8\uBC14\uC77C: \uC5D0\uB514\uD130 \uD3EC\uCEE4\uC2A4 \uD574\uC81C \uC2DC\uC791");
+            (_d = (_c = activeView.editor).blur) == null ? void 0 : _d.call(_c);
+            const cmEditor = activeView.editor.cm;
+            if (cmEditor && cmEditor.dom) {
+              cmEditor.dom.blur();
+            }
+          }
+        }
+      }
+      const focusedElement = document.activeElement;
+      if (focusedElement && focusedElement.blur) {
+        focusedElement.blur();
+        Logger.log("\u{1F4F1} \uBAA8\uBC14\uC77C: DOM \uD3EC\uCEE4\uC2A4 \uD574\uC81C \uC644\uB8CC");
+      }
+      const cmEditors = document.querySelectorAll(".cm-editor .cm-content");
+      cmEditors.forEach((editor) => {
+        if (editor instanceof HTMLElement) {
+          editor.blur();
+        }
+      });
+      const hiddenInput = document.createElement("input");
+      hiddenInput.style.cssText = `
+        position: absolute;
+        left: -9999px;
+        top: -9999px;
+        opacity: 0;
+        pointer-events: none;
+      `;
+      document.body.appendChild(hiddenInput);
+      setTimeout(() => {
+        hiddenInput.focus();
+        setTimeout(() => {
+          hiddenInput.blur();
+          document.body.removeChild(hiddenInput);
+          Logger.log("\u{1F4F1} \uBAA8\uBC14\uC77C: \uD0A4\uBCF4\uB4DC \uC228\uAE40 \uCC98\uB9AC \uC644\uB8CC");
+        }, 50);
+      }, 100);
+      if (window.visualViewport) {
+        const handleViewportChange = () => {
+          if (this.tooltip && this.isVisible) {
+            setTimeout(() => {
+              var _a2;
+              const targetElement = document.querySelector(`[data-error-id="${(_a2 = this.currentError) == null ? void 0 : _a2.uniqueId}"]`);
+              if (targetElement) {
+                this.positionTooltip(targetElement);
+              }
+            }, 300);
+          }
+        };
+        window.visualViewport.addEventListener("resize", handleViewportChange, { once: true });
+      }
+    } catch (error) {
+      Logger.warn("\u{1F4F1} \uBAA8\uBC14\uC77C \uD0A4\uBCF4\uB4DC \uC228\uAE40 \uC911 \uC624\uB958:", error);
+    }
   }
 };
 var globalInlineTooltip = new InlineTooltip();
