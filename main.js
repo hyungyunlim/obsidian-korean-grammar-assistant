@@ -9949,28 +9949,28 @@ var InlineTooltip = class {
           text: suggestion,
           cls: "suggestion-button"
         });
-        const isMobile = import_obsidian10.Platform.isMobile;
+        const isMobile2 = import_obsidian10.Platform.isMobile;
         suggestionButton.style.cssText = `
           background: var(--interactive-normal);
           border: 1px solid var(--background-modifier-border);
-          border-radius: ${isMobile ? "6px" : "3px"};
-          padding: ${isMobile ? "4px 8px" : "2px 6px"};
+          border-radius: ${isMobile2 ? "6px" : "3px"};
+          padding: ${isMobile2 ? "4px 8px" : "2px 6px"};
           cursor: pointer;
           transition: all 0.2s;
           color: var(--text-normal);
-          font-size: ${isMobile ? "12px" : "11px"};
+          font-size: ${isMobile2 ? "12px" : "11px"};
           white-space: nowrap;
           flex-shrink: 0;
-          max-width: ${isMobile ? "120px" : "100px"};
+          max-width: ${isMobile2 ? "120px" : "100px"};
           overflow: hidden;
           text-overflow: ellipsis;
-          min-height: ${isMobile ? "28px" : "auto"};
-          ${isMobile ? "touch-action: manipulation;" : ""}
+          min-height: ${isMobile2 ? "28px" : "auto"};
+          ${isMobile2 ? "touch-action: manipulation;" : ""}
         `;
         const onActivate = () => {
           suggestionButton.style.background = "var(--interactive-hover)";
           suggestionButton.style.transform = "translateY(-1px)";
-          if (isMobile && "vibrate" in navigator) {
+          if (isMobile2 && "vibrate" in navigator) {
             navigator.vibrate(10);
           }
         };
@@ -9980,7 +9980,7 @@ var InlineTooltip = class {
         };
         suggestionButton.addEventListener("mouseenter", onActivate);
         suggestionButton.addEventListener("mouseleave", onDeactivate);
-        if (isMobile) {
+        if (isMobile2) {
           suggestionButton.addEventListener("touchstart", (e) => {
             e.preventDefault();
             onActivate();
@@ -10031,29 +10031,37 @@ var InlineTooltip = class {
       }
     });
     const footer = this.tooltip.createEl("div", { cls: "tooltip-footer" });
+    const isMobile = import_obsidian10.Platform.isMobile;
+    const isPhone = import_obsidian10.Platform.isPhone || window.innerWidth <= 480;
     footer.style.cssText = `
-      padding: 6px 12px;
+      padding: ${isMobile ? isPhone ? "4px 8px" : "5px 10px" : "6px 12px"};
       border-top: 1px solid var(--background-modifier-border);
       background: var(--background-secondary);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 8px;
+      gap: ${isMobile ? "6px" : "8px"};
+      min-height: ${isMobile ? isPhone ? "36px" : "40px" : "auto"};
     `;
     const infoText = footer.createEl("span", {
-      text: "\uAC1C\uBCC4 \uD074\uB9AD\uC73C\uB85C \uD558\uB098\uC529 \uC218\uC815",
+      text: isMobile ? "\uAC1C\uBCC4 \uD074\uB9AD\uC73C\uB85C \uC218\uC815" : "\uAC1C\uBCC4 \uD074\uB9AD\uC73C\uB85C \uD558\uB098\uC529 \uC218\uC815",
       cls: "info-text"
     });
     infoText.style.cssText = `
-      font-size: 11px;
+      font-size: ${isMobile ? isPhone ? "10px" : "11px" : "11px"};
       color: var(--text-muted);
       flex: 1;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     `;
     const actionButtons = footer.createEl("div", { cls: "action-buttons" });
     actionButtons.style.cssText = `
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: ${isMobile ? "4px" : "6px"};
+      flex-shrink: 0;
     `;
     const ignoreAllButton = actionButtons.createEl("button", { cls: "ignore-all-button" });
     ignoreAllButton.innerHTML = "\u274C";
@@ -10061,17 +10069,19 @@ var InlineTooltip = class {
     ignoreAllButton.style.cssText = `
       background: var(--interactive-normal);
       border: 1px solid var(--background-modifier-border);
-      border-radius: ${import_obsidian10.Platform.isMobile ? "6px" : "4px"};
-      padding: ${import_obsidian10.Platform.isMobile ? "8px" : "6px"};
+      border-radius: ${isMobile ? "5px" : "4px"};
+      padding: ${isMobile ? isPhone ? "6px" : "7px" : "6px"};
       cursor: pointer;
       transition: all 0.2s;
-      font-size: ${import_obsidian10.Platform.isMobile ? "14px" : "12px"};
-      min-height: ${import_obsidian10.Platform.isMobile ? "32px" : "auto"};
-      min-width: ${import_obsidian10.Platform.isMobile ? "32px" : "auto"};
+      font-size: ${isMobile ? isPhone ? "12px" : "13px" : "12px"};
+      min-height: ${isMobile ? isPhone ? "28px" : "30px" : "auto"};
+      min-width: ${isMobile ? isPhone ? "28px" : "30px" : "auto"};
+      max-height: ${isMobile ? isPhone ? "28px" : "30px" : "none"};
       display: flex;
       align-items: center;
       justify-content: center;
-      ${import_obsidian10.Platform.isMobile ? "touch-action: manipulation;" : ""}
+      line-height: 1;
+      ${isMobile ? "touch-action: manipulation;" : ""}
     `;
     ignoreAllButton.addEventListener("mouseenter", () => {
       ignoreAllButton.style.background = "var(--interactive-hover)";
@@ -10100,29 +10110,83 @@ var InlineTooltip = class {
       this.ignoreError(mergedError);
     });
     const applyAllButton = actionButtons.createEl("button", {
-      text: "\uBAA8\uB450 \uC801\uC6A9",
+      text: isMobile ? "\uBAA8\uB450\uC801\uC6A9" : "\uBAA8\uB450 \uC801\uC6A9",
       cls: "apply-all-button"
     });
-    const closeButton = footer.createEl("button", {
-      text: "\uB2EB\uAE30",
+    applyAllButton.style.cssText = `
+      background: var(--interactive-accent);
+      color: var(--text-on-accent);
+      border: 1px solid var(--interactive-accent);
+      border-radius: ${isMobile ? "5px" : "4px"};
+      padding: ${isMobile ? isPhone ? "6px 10px" : "7px 12px" : "6px 12px"};
+      cursor: pointer;
+      font-size: ${isMobile ? isPhone ? "10px" : "11px" : "12px"};
+      font-weight: 500;
+      transition: all 0.2s;
+      min-height: ${isMobile ? isPhone ? "28px" : "30px" : "auto"};
+      max-height: ${isMobile ? isPhone ? "28px" : "30px" : "none"};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      white-space: nowrap;
+      ${isMobile ? "touch-action: manipulation;" : ""}
+    `;
+    applyAllButton.addEventListener("mouseenter", () => {
+      applyAllButton.style.background = "var(--interactive-accent-hover)";
+      applyAllButton.style.transform = "translateY(-1px)";
+    });
+    applyAllButton.addEventListener("mouseleave", () => {
+      applyAllButton.style.background = "var(--interactive-accent)";
+      applyAllButton.style.transform = "translateY(0)";
+    });
+    const closeButton = actionButtons.createEl("button", {
+      text: "\u2715",
       cls: "close-button"
     });
     closeButton.style.cssText = `
       background: var(--interactive-normal);
-      color: var(--text-normal);
       border: 1px solid var(--background-modifier-border);
-      border-radius: 3px;
-      padding: 4px 8px;
+      border-radius: ${isMobile ? "5px" : "4px"};
+      padding: ${isMobile ? isPhone ? "6px" : "7px" : "6px"};
       cursor: pointer;
-      font-size: 10px;
       transition: all 0.2s;
+      font-size: ${isMobile ? isPhone ? "11px" : "12px" : "12px"};
+      min-height: ${isMobile ? isPhone ? "28px" : "30px" : "auto"};
+      min-width: ${isMobile ? isPhone ? "28px" : "30px" : "auto"};
+      max-height: ${isMobile ? isPhone ? "28px" : "30px" : "none"};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      color: var(--text-muted);
+      ${isMobile ? "touch-action: manipulation;" : ""}
     `;
     closeButton.addEventListener("mouseenter", () => {
       closeButton.style.background = "var(--interactive-hover)";
+      closeButton.style.color = "var(--text-normal)";
+      closeButton.style.transform = "translateY(-1px)";
     });
     closeButton.addEventListener("mouseleave", () => {
       closeButton.style.background = "var(--interactive-normal)";
+      closeButton.style.color = "var(--text-muted)";
+      closeButton.style.transform = "translateY(0)";
     });
+    if (isMobile) {
+      closeButton.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        closeButton.style.background = "var(--interactive-hover)";
+        closeButton.style.color = "var(--text-normal)";
+        if ("vibrate" in navigator) {
+          navigator.vibrate(10);
+        }
+      }, { passive: false });
+      closeButton.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.hide();
+      }, { passive: false });
+    }
     closeButton.addEventListener("click", (e) => {
       e.stopPropagation();
       this.hide();
@@ -10227,12 +10291,14 @@ var InlineTooltip = class {
   createSingleErrorTooltip(error, targetElement, triggerType) {
     if (!this.tooltip)
       return;
+    const isMobile = import_obsidian10.Platform.isMobile;
+    const isPhone = import_obsidian10.Platform.isPhone || window.innerWidth <= 480;
     const mainContent = this.tooltip.createEl("div", { cls: "tooltip-main-content" });
     mainContent.style.cssText = `
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
+      gap: ${isMobile ? isPhone ? "6px" : "7px" : "8px"};
+      padding: ${isMobile ? isPhone ? "6px 10px" : "7px 11px" : "8px 12px"};
       white-space: nowrap;
     `;
     const errorWord = mainContent.createEl("span", {
@@ -10243,20 +10309,21 @@ var InlineTooltip = class {
       color: var(--text-error);
       font-weight: 600;
       background: rgba(255, 0, 0, 0.1);
-      padding: 2px 6px;
+      padding: ${isMobile ? isPhone ? "1px 4px" : "2px 5px" : "2px 6px"};
       border-radius: 3px;
-      font-size: 12px;
+      font-size: ${isMobile ? isPhone ? "11px" : "12px" : "12px"};
     `;
     const arrow = mainContent.createEl("span", { text: "\u2192" });
     arrow.style.cssText = `
       color: var(--text-muted);
       font-weight: bold;
+      font-size: ${isMobile ? isPhone ? "11px" : "12px" : "12px"};
     `;
     const suggestionsList = mainContent.createEl("div", { cls: "suggestions-list" });
     suggestionsList.style.cssText = `
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: ${isMobile ? isPhone ? "4px" : "5px" : "6px"};
       flex-wrap: wrap;
     `;
     error.correction.corrected.forEach((suggestion, index) => {
@@ -10264,26 +10331,26 @@ var InlineTooltip = class {
         text: suggestion,
         cls: "suggestion-button"
       });
-      const isMobile = import_obsidian10.Platform.isMobile;
+      const isMobile2 = import_obsidian10.Platform.isMobile;
       suggestionButton.style.cssText = `
         background: var(--interactive-normal);
         border: 1px solid var(--background-modifier-border);
-        border-radius: ${isMobile ? "6px" : "4px"};
-        padding: ${isMobile ? "6px 10px" : "4px 8px"};
+        border-radius: ${isMobile2 ? "6px" : "4px"};
+        padding: ${isMobile2 ? "6px 10px" : "4px 8px"};
         cursor: pointer;
         transition: all 0.2s;
         color: var(--text-normal);
-        font-size: ${isMobile ? "13px" : "12px"};
+        font-size: ${isMobile2 ? "13px" : "12px"};
         white-space: nowrap;
-        min-height: ${isMobile ? "32px" : "auto"};
-        ${isMobile ? "touch-action: manipulation;" : ""}
+        min-height: ${isMobile2 ? "32px" : "auto"};
+        ${isMobile2 ? "touch-action: manipulation;" : ""}
       `;
       const onActivate = () => {
         suggestionButton.style.background = "var(--interactive-hover)";
         suggestionButton.style.color = "var(--text-normal)";
         suggestionButton.style.transform = "translateY(-1px)";
         suggestionButton.style.border = "1px solid var(--background-modifier-border)";
-        if (isMobile && "vibrate" in navigator) {
+        if (isMobile2 && "vibrate" in navigator) {
           navigator.vibrate(10);
         }
       };
@@ -10295,7 +10362,7 @@ var InlineTooltip = class {
       };
       suggestionButton.addEventListener("mouseenter", onActivate);
       suggestionButton.addEventListener("mouseleave", onDeactivate);
-      if (isMobile) {
+      if (isMobile2) {
         suggestionButton.addEventListener("touchstart", (e) => {
           e.preventDefault();
           onActivate();
@@ -10324,17 +10391,19 @@ var InlineTooltip = class {
     exceptionButton.style.cssText = `
       background: var(--interactive-normal);
       border: 1px solid var(--background-modifier-border);
-      border-radius: ${import_obsidian10.Platform.isMobile ? "6px" : "4px"};
-      padding: ${import_obsidian10.Platform.isMobile ? "8px" : "6px"};
+      border-radius: ${isMobile ? "5px" : "4px"};
+      padding: ${isMobile ? isPhone ? "5px" : "6px" : "6px"};
       cursor: pointer;
       transition: all 0.2s;
-      font-size: ${import_obsidian10.Platform.isMobile ? "16px" : "14px"};
-      min-height: ${import_obsidian10.Platform.isMobile ? "32px" : "auto"};
-      min-width: ${import_obsidian10.Platform.isMobile ? "32px" : "auto"};
+      font-size: ${isMobile ? isPhone ? "13px" : "14px" : "14px"};
+      min-height: ${isMobile ? isPhone ? "26px" : "28px" : "auto"};
+      min-width: ${isMobile ? isPhone ? "26px" : "28px" : "auto"};
+      max-height: ${isMobile ? isPhone ? "26px" : "28px" : "none"};
       display: flex;
       align-items: center;
       justify-content: center;
-      ${import_obsidian10.Platform.isMobile ? "touch-action: manipulation;" : ""}
+      line-height: 1;
+      ${isMobile ? "touch-action: manipulation;" : ""}
     `;
     exceptionButton.addEventListener("mouseenter", () => {
       exceptionButton.style.background = "var(--interactive-hover)";
@@ -10344,7 +10413,7 @@ var InlineTooltip = class {
       exceptionButton.style.background = "var(--interactive-normal)";
       exceptionButton.style.transform = "translateY(0)";
     });
-    if (import_obsidian10.Platform.isMobile) {
+    if (isMobile) {
       exceptionButton.addEventListener("touchstart", (e) => {
         e.preventDefault();
         exceptionButton.style.background = "var(--interactive-hover)";
@@ -10368,17 +10437,19 @@ var InlineTooltip = class {
     ignoreButton.style.cssText = `
       background: var(--interactive-normal);
       border: 1px solid var(--background-modifier-border);
-      border-radius: ${import_obsidian10.Platform.isMobile ? "6px" : "4px"};
-      padding: ${import_obsidian10.Platform.isMobile ? "8px" : "6px"};
+      border-radius: ${isMobile ? "5px" : "4px"};
+      padding: ${isMobile ? isPhone ? "5px" : "6px" : "6px"};
       cursor: pointer;
       transition: all 0.2s;
-      font-size: ${import_obsidian10.Platform.isMobile ? "14px" : "12px"};
-      min-height: ${import_obsidian10.Platform.isMobile ? "32px" : "auto"};
-      min-width: ${import_obsidian10.Platform.isMobile ? "32px" : "auto"};
+      font-size: ${isMobile ? isPhone ? "11px" : "12px" : "12px"};
+      min-height: ${isMobile ? isPhone ? "26px" : "28px" : "auto"};
+      min-width: ${isMobile ? isPhone ? "26px" : "28px" : "auto"};
+      max-height: ${isMobile ? isPhone ? "26px" : "28px" : "none"};
       display: flex;
       align-items: center;
       justify-content: center;
-      ${import_obsidian10.Platform.isMobile ? "touch-action: manipulation;" : ""}
+      line-height: 1;
+      ${isMobile ? "touch-action: manipulation;" : ""}
     `;
     ignoreButton.addEventListener("mouseenter", () => {
       ignoreButton.style.background = "var(--interactive-hover)";
@@ -10388,7 +10459,7 @@ var InlineTooltip = class {
       ignoreButton.style.background = "var(--interactive-normal)";
       ignoreButton.style.transform = "translateY(0)";
     });
-    if (import_obsidian10.Platform.isMobile) {
+    if (isMobile) {
       ignoreButton.addEventListener("touchstart", (e) => {
         e.preventDefault();
         ignoreButton.style.background = "var(--interactive-hover)";
@@ -10548,25 +10619,28 @@ var InlineTooltip = class {
     return "\uC5B8\uC5B4 \uD45C\uD604 \uAC1C\uC120";
   }
   /**
-   * 도움말 아이콘 생성 (Inline 모드용)
+   * 도움말 아이콘 생성 (Inline 모드용) - 모바일 최적화
    */
   createInlineHelpIcon(helpText, container, onIconClick) {
     const helpIcon = container.createEl("span", { text: "?" });
+    const isMobile = import_obsidian10.Platform.isMobile;
+    const isPhone = import_obsidian10.Platform.isPhone || window.innerWidth <= 480;
     helpIcon.style.cssText = `
       color: var(--text-muted);
       cursor: pointer;
-      width: 18px;
-      height: 18px;
+      width: ${isMobile ? isPhone ? "16px" : "18px" : "18px"};
+      height: ${isMobile ? isPhone ? "16px" : "18px" : "18px"};
       display: flex;
       align-items: center;
       justify-content: center;
       border: 1px solid var(--text-muted);
       border-radius: 50%;
-      font-size: 10px;
+      font-size: ${isMobile ? isPhone ? "8px" : "9px" : "10px"};
       font-weight: bold;
       transition: all 0.2s;
       background: var(--background-primary);
       flex-shrink: 0;
+      line-height: 1;
     `;
     helpIcon.title = helpText;
     helpIcon.addEventListener("mouseenter", () => {
@@ -10581,6 +10655,22 @@ var InlineTooltip = class {
       helpIcon.style.color = "var(--text-muted)";
       helpIcon.style.transform = "scale(1)";
     });
+    if (isMobile) {
+      helpIcon.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        helpIcon.style.background = "var(--interactive-hover)";
+        helpIcon.style.borderColor = "var(--text-normal)";
+        helpIcon.style.color = "var(--text-normal)";
+        if ("vibrate" in navigator) {
+          navigator.vibrate(10);
+        }
+      }, { passive: false });
+      helpIcon.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onIconClick();
+      }, { passive: false });
+    }
     helpIcon.addEventListener("click", (e) => {
       e.stopPropagation();
       onIconClick();
