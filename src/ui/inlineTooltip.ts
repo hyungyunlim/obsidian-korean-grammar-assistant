@@ -801,55 +801,67 @@ export class InlineTooltip {
       min-height: ${isMobileDevice ? (isPhoneDevice ? '32px' : '30px') : 'auto'};
     `;
 
-    // ❌ 병합된 오류 전체 무시 버튼 - 모바일 최적화
+    // ❌ 병합된 오류 전체 무시 버튼 - 체크박스와 일관된 스타일
     const ignoreAllButton = actionButtons.createEl('button', { cls: 'ignore-all-button' });
-    ignoreAllButton.innerHTML = '❌'; // X 표시
+    ignoreAllButton.innerHTML = '✕'; // X 표시
     ignoreAllButton.title = '이 오류들 모두 무시';
     ignoreAllButton.style.cssText = `
-      background: var(--interactive-normal);
-      border: 1px solid var(--background-modifier-border);
-      border-radius: ${isMobileDevice ? '5px' : '4px'};
-      padding: ${isMobileDevice ? (isPhoneDevice ? '6px' : '7px') : '6px'};
+      background: #ef4444;
+      color: white;
+      border: 1px solid #ef4444;
+      border-radius: ${isMobileDevice ? '6px' : '4px'};
+      padding: ${isMobileDevice ? (isPhoneDevice ? '8px' : '7px') : '6px'};
       cursor: pointer;
+      font-size: ${isMobileDevice ? (isPhoneDevice ? '16px' : '15px') : '16px'};
+      font-weight: 700;
       transition: all 0.2s;
-      font-size: ${isMobileDevice ? (isPhoneDevice ? '12px' : '13px') : '12px'};
-      min-height: ${isMobileDevice ? (isPhoneDevice ? '28px' : '30px') : 'auto'};
-      min-width: ${isMobileDevice ? (isPhoneDevice ? '28px' : '30px') : 'auto'};
-      max-height: ${isMobileDevice ? (isPhoneDevice ? '28px' : '30px') : 'none'};
+      min-height: ${isMobileDevice ? (isPhoneDevice ? '32px' : '30px') : 'auto'};
+      min-width: ${isMobileDevice ? (isPhoneDevice ? '32px' : '30px') : 'auto'};
+      max-height: ${isMobileDevice ? (isPhoneDevice ? '32px' : '30px') : 'none'};
       display: flex;
       align-items: center;
       justify-content: center;
       line-height: 1;
+      white-space: nowrap;
+      box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
       ${isMobileDevice ? 'touch-action: manipulation;' : ''}
     `;
 
-    // 무시 버튼 이벤트
+    // 무시 버튼 이벤트 - 체크박스와 일관된 효과
     ignoreAllButton.addEventListener('mouseenter', () => {
-      ignoreAllButton.style.background = 'var(--interactive-hover)';
+      ignoreAllButton.style.background = '#dc2626';
+      ignoreAllButton.style.borderColor = '#dc2626';
       ignoreAllButton.style.transform = 'translateY(-1px)';
+      ignoreAllButton.style.boxShadow = '0 4px 8px rgba(239, 68, 68, 0.3)';
     });
 
     ignoreAllButton.addEventListener('mouseleave', () => {
-      ignoreAllButton.style.background = 'var(--interactive-normal)';
+      ignoreAllButton.style.background = '#ef4444';
+      ignoreAllButton.style.borderColor = '#ef4444';
       ignoreAllButton.style.transform = 'translateY(0)';
+      ignoreAllButton.style.boxShadow = '0 2px 4px rgba(239, 68, 68, 0.2)';
     });
 
-    // 모바일 터치 피드백
+    // 모바일 터치 피드백 - 체크박스와 일관된 효과
     if (Platform.isMobile) {
       ignoreAllButton.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        ignoreAllButton.style.background = 'var(--interactive-hover)';
+        ignoreAllButton.style.background = '#dc2626';
+        ignoreAllButton.style.borderColor = '#dc2626';
         ignoreAllButton.style.transform = 'translateY(-1px)';
+        ignoreAllButton.style.boxShadow = '0 4px 8px rgba(239, 68, 68, 0.3)';
         if ('vibrate' in navigator) {
-          navigator.vibrate(10);
+          navigator.vibrate(15); // 체크박스와 동일한 강도
         }
       }, { passive: false });
       
       ignoreAllButton.addEventListener('touchend', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        ignoreAllButton.style.background = 'var(--interactive-normal)';
+        ignoreAllButton.style.background = '#ef4444';
+        ignoreAllButton.style.borderColor = '#ef4444';
         ignoreAllButton.style.transform = 'translateY(0)';
+        ignoreAllButton.style.boxShadow = '0 2px 4px rgba(239, 68, 68, 0.2)';
         this.ignoreError(mergedError);
       }, { passive: false });
     }
