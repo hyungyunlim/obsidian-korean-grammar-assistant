@@ -207,8 +207,8 @@ export default class KoreanGrammarPlugin extends Plugin {
         return;
       }
 
-      // 인라인 모드로 오류 표시
-      InlineModeService.showErrors(
+      // 인라인 모드로 오류 표시 (형태소 API 통합)
+      await InlineModeService.showErrors(
         editorView,
         result.corrections,
         this.settings.inlineMode.underlineStyle,
@@ -216,8 +216,7 @@ export default class KoreanGrammarPlugin extends Plugin {
         this.app
       );
 
-      new Notice(`${result.corrections.length}개의 맞춤법 오류를 발견했습니다.`);
-      Logger.log(`인라인 모드: ${result.corrections.length}개 오류 표시 완료`);
+      Logger.log(`인라인 모드: 맞춤법 검사 완료`);
 
     } catch (error) {
       Logger.error('인라인 모드 맞춤법 검사 오류:', error);

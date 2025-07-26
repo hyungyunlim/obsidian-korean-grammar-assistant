@@ -31,9 +31,18 @@ export class InlineTooltip {
     // 배경 커서 숨기기 - CSS로 에디터 영역 커서 제거
     this.hideCursorInBackground();
     
-    // 모바일에서 키보드 숨기기 및 에디터 포커스 해제
+    // 모바일에서 키보드 숨기기 및 에디터 포커스 해제 (툴팁 보호)
     if (Platform.isMobile) {
-      this.hideKeyboardAndBlurEditor();
+      // 🔧 툴팁 보호 플래그 설정 (blur 시 툴팁 자동 숨김 방지)
+      (window as any).tooltipProtected = true;
+      
+      setTimeout(() => {
+        this.hideKeyboardAndBlurEditor();
+        // 플래그 해제 (지연 후)
+        setTimeout(() => {
+          (window as any).tooltipProtected = false;
+        }, 200);
+      }, 100);
     }
     
     this.createTooltip(error, targetElement, triggerType);
@@ -47,6 +56,18 @@ export class InlineTooltip {
    * 툴팁 숨김
    */
   hide(): void {
+    // 🔧 모바일 툴팁 보호: 보호 플래그가 설정된 경우 숨기기 방지
+    if (Platform.isMobile && (window as any).tooltipProtected) {
+      Logger.debug('📱 모바일 툴팁 보호됨: 자동 숨김 무시');
+      return;
+    }
+    
+    // 🔧 모바일 디버깅: 툴팁 숨김 원인 추적
+    if (Platform.isMobile && this.tooltip) {
+      const stack = new Error().stack;
+      Logger.debug(`📱 모바일 툴팁 숨김 호출됨 - 스택: ${stack?.split('\n')[2]?.trim()}`);
+    }
+    
     if (this.tooltip) {
       this.tooltip.remove();
       this.tooltip = null;
@@ -414,27 +435,24 @@ export class InlineTooltip {
     const smallOffset = mousePosition ? 5 : gap; // 마우스 위치 있으면 최소 오프셋
     const availableSpaceBelow = Math.min(viewportHeight, editorTop + editorHeight) - referenceCenterY;
     const availableSpaceAbove = referenceCenterY - editorTop;
+    
+    // 🔧 디버깅: 하단 감지 조건 확인
+    Logger.debug(`🔍 하단 감지: isBottomEdge=${isBottomEdge}, availableSpaceBelow=${availableSpaceBelow}, 필요공간=${adaptiveSize.maxHeight + smallOffset + minSpacing}, 마우스Y=${mousePosition?.y}, 에디터하단=${editorTop + editorHeight}`);
 
-    if (isBottomEdge) {
-      // 하단 구석: 위쪽 배치
-      finalTop = referenceCenterY - adaptiveSize.maxHeight - smallOffset;
-      Logger.debug(`🖥️ 하단 구석: 위쪽 배치 (오프셋: ${smallOffset}px)`);
-    } else if (availableSpaceBelow >= adaptiveSize.maxHeight + smallOffset + minSpacing) {
-      // 아래쪽에 충분한 공간: 아래쪽 배치
-      finalTop = referenceCenterY + smallOffset;
-      Logger.debug(`🖥️ 아래쪽 배치 (오프셋: ${smallOffset}px)`);
-    } else if (availableSpaceAbove >= adaptiveSize.maxHeight + smallOffset + minSpacing) {
-      // 위쪽에 충분한 공간: 위쪽 배치
-      finalTop = referenceCenterY - adaptiveSize.maxHeight - smallOffset;
-      Logger.debug(`🖥️ 위쪽 배치 (오프셋: ${smallOffset}px)`);
-    } else {
-      // 공간 부족: 가능한 한 마우스에 가깝게
-      if (availableSpaceBelow > availableSpaceAbove) {
-        finalTop = referenceCenterY + 2; // 마우스 바로 아래
+    if (isBottomEdge || availableSpaceBelow < adaptiveSize.maxHeight + smallOffset + minSpacing) {
+      // 하단 구석이거나 아래쪽 공간 부족: 마우스/오류 바로 위쪽에 배치
+      if (mousePosition) {
+        // 마우스 위치 기반: 마우스 위에 적당한 거리로 배치 
+        finalTop = mousePosition.y - 80; // 80px 위쪽으로 적절한 거리
       } else {
-        finalTop = referenceCenterY - adaptiveSize.maxHeight - 2; // 마우스 바로 위
+        // 요소 기반: 요소 바로 위에  
+        finalTop = referenceRect.top - adaptiveSize.maxHeight - smallOffset;
       }
-      Logger.debug(`🖥️ 공간 부족: 마우스 인접 배치`);
+      Logger.debug(`🖥️ 하단/공간부족: 바로 위쪽 배치 (finalTop: ${finalTop}, 마우스: ${mousePosition ? `(${mousePosition.x}, ${mousePosition.y})` : '없음'}, 공간: ${availableSpaceBelow}px)`);
+    } else {
+      // 아래쪽에 충분한 공간: 참조점 바로 아래 배치
+      finalTop = referenceRect.bottom + smallOffset;
+      Logger.debug(`🖥️ 아래쪽 배치 (finalTop: ${finalTop}, 참조bottom: ${referenceRect.bottom}, 공간: ${availableSpaceBelow}px)`);
     }
 
     // 🔧 가로 위치 (마우스 위치 기준 정밀 배치)
@@ -454,10 +472,19 @@ export class InlineTooltip {
       Math.max(minSpacing, editorLeft), 
       Math.min(finalLeft, Math.min(viewportWidth, editorLeft + editorWidth) - adaptiveSize.width - minSpacing)
     );
-    finalTop = Math.max(
-      Math.max(minSpacing, editorTop), 
-      Math.min(finalTop, Math.min(viewportHeight, editorTop + editorHeight) - adaptiveSize.maxHeight - minSpacing)
-    );
+    
+    // 🔧 하단 영역에서는 더 관대한 경계 보정 (마우스 근처 배치 우선)
+    if (isBottomEdge || availableSpaceBelow < adaptiveSize.maxHeight + smallOffset + minSpacing) {
+      // 하단에서는 마우스 위치 우선 (경계 보정 최소화)
+      finalTop = Math.max(50, finalTop); // 최소 50px만 확보하고 마우스 위치 우선
+      Logger.debug(`🖥️ 하단 영역: 마우스 우선 배치 (finalTop: ${finalTop}, 원래계산: ${mousePosition ? mousePosition.y - 150 : 'N/A'})`);
+    } else {
+      // 일반 영역에서는 기존 로직 사용
+      finalTop = Math.max(
+        Math.max(minSpacing, editorTop), 
+        Math.min(finalTop, Math.min(viewportHeight, editorTop + editorHeight) - adaptiveSize.maxHeight - minSpacing)
+      );
+    }
 
     // 🔧 위치 적용
     this.tooltip.style.position = 'fixed';
@@ -1067,8 +1094,16 @@ export class InlineTooltip {
       white-space: nowrap;
     `;
 
-    // 오류 단어 표시 (간소화) - 모바일 최적화
-    const errorWord = mainContent.createEl('span', { 
+    // 오류 단어 표시 (간소화) - 모바일 최적화 + 형태소 정보
+    const errorWordContainer = mainContent.createEl('div', { cls: 'error-word-container' });
+    errorWordContainer.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    `;
+    
+    const errorWord = errorWordContainer.createEl('span', { 
       text: error.correction.original,
       cls: 'error-word'
     });
@@ -1080,6 +1115,23 @@ export class InlineTooltip {
       border-radius: 3px;
       font-size: ${isMobile ? (isPhone ? '12px' : '13px') : '13px'};
     `;
+
+    // 형태소 정보 표시 (중요한 품사만)
+    if (error.morphemeInfo && this.isImportantPos(error.morphemeInfo.mainPos, error.morphemeInfo.tags)) {
+      const posInfo = errorWordContainer.createEl('span', { 
+        text: error.morphemeInfo.mainPos,
+        cls: 'pos-info'
+      });
+      posInfo.style.cssText = `
+        color: var(--text-accent);
+        font-size: ${isMobile ? '9px' : '10px'};
+        font-weight: 500;
+        opacity: 0.9;
+        background: rgba(59, 130, 246, 0.1);
+        padding: 1px 4px;
+        border-radius: 3px;
+      `;
+    }
 
     // 화살표 - 모바일 최적화
     const arrow = mainContent.createEl('span', { text: '→' });
@@ -1315,10 +1367,16 @@ export class InlineTooltip {
     if (triggerType === 'hover') {
       this.setupHoverEvents(targetElement);
     } else {
-      // 클릭 모드에서는 바깥 클릭으로 닫기
-      setTimeout(() => {
-        document.addEventListener('click', this.handleOutsideClick.bind(this), { once: true });
-      }, 0);
+      // 클릭 모드에서는 플랫폼별 닫기 방식
+      if (Platform.isMobile) {
+        // 🔧 모바일: 닫기 버튼이나 수정 제안 클릭으로만 닫기
+        Logger.debug('📱 모바일 툴팁: 수동 닫기 모드 (닫기 버튼 또는 수정 적용으로만 닫힘)');
+      } else {
+        // 데스크톱: 바깥 클릭으로 닫기
+        setTimeout(() => {
+          document.addEventListener('click', this.handleOutsideClick.bind(this), { once: true });
+        }, 0);
+      }
     }
   }
 
@@ -1757,6 +1815,34 @@ export class InlineTooltip {
     } catch (error) {
       Logger.warn('📱 모바일 키보드 숨김 중 오류:', error);
     }
+  }
+
+  /**
+   * 중요한 품사인지 확인합니다.
+   * 일반명사, 동사, 형용사 등은 숨기고 고유명사, 외국어 등만 표시합니다.
+   */
+  private isImportantPos(mainPos: string, tags: string[]): boolean {
+    // 중요한 품사 목록 (사용자에게 유용한 정보)
+    const importantPos = [
+      '고유명사',    // 고유명사 (인명, 지명 등)
+      '외국어',      // 외국어
+      '한자',        // 한자어  
+      '숫자',        // 숫자
+      '의존명사',    // 의존명사 (특별한 용법)
+    ];
+
+    // 메인 품사가 중요한 품사인지 확인
+    if (importantPos.includes(mainPos)) {
+      return true;
+    }
+
+    // 형태소 태그로도 확인
+    if (tags && tags.length > 0) {
+      const importantTags = ['NNP', 'SL', 'SH', 'SN', 'NNB'];
+      return tags.some(tag => importantTags.includes(tag));
+    }
+
+    return false;
   }
 }
 

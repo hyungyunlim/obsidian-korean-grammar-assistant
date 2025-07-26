@@ -214,4 +214,9 @@ export interface InlineError {
   isActive: boolean; // 활성 상태 (수정되면 false)
   originalErrors?: InlineError[]; // 병합된 경우 원본 오류들 (개별 적용용)
   isMerged?: boolean; // 병합된 오류인지 여부
+  morphemeInfo?: { // 형태소 분석 정보
+    mainPos: string; // 주요 품사 (명사, 동사, 형용사 등)
+    tags: string[]; // 세부 형태소 태그들
+    confidence: number; // 분석 신뢰도 (0-1)
+  };
 }

@@ -1410,21 +1410,16 @@ body.spell-popup-open #correctionPopup [contenteditable] {
 }
 
 /* styles/inline-suggest.css */
-.korean-grammar-error-inline,
-.cm-editor .korean-grammar-error-inline,
-.cm-content .korean-grammar-error-inline {
-  display: inline !important;
-  position: relative !important;
-  cursor: pointer !important;
-  border-bottom: 2px wavy #ff0000 !important;
-  text-decoration: none !important;
-  transition: all 0.2s ease !important;
+.korean-grammar-error-inline {
 }
-.korean-grammar-error-inline:hover,
-.cm-editor .korean-grammar-error-inline:hover,
-.cm-content .korean-grammar-error-inline:hover {
-  background-color: rgba(255, 0, 0, 0.1) !important;
-  border-bottom-color: #cc0000 !important;
+.korean-grammar-error-inline {
+  text-decoration: wavy underline var(--color-red) 2px !important;
+  background-color: rgba(var(--color-red-rgb), 0.1) !important;
+  cursor: pointer !important;
+}
+.korean-grammar-error-inline:hover {
+  text-decoration: wavy underline var(--color-red) 2px !important;
+  background-color: rgba(var(--color-red-rgb), 0.2) !important;
 }
 .korean-grammar-focused,
 .cm-editor .korean-grammar-focused,

@@ -6,6 +6,9 @@ import { globalInlineTooltip } from '../ui/inlineTooltip';
 import { Scope, App, Platform } from 'obsidian';
 import { Notice } from 'obsidian';
 import { MarkdownView } from 'obsidian';
+import { MorphemeUtils } from '../utils/morphemeUtils';
+import { NotificationUtils } from '../utils/notificationUtils';
+import { SpellCheckApiService } from './api';
 
 /**
  * 오류 위젯 클래스
@@ -34,7 +37,7 @@ class ErrorWidget extends WidgetType {
       cursor: pointer !important;
       text-decoration-line: underline !important;
       text-decoration-style: wavy !important;
-      text-decoration-color: #ff0000 !important;
+      text-decoration-color: var(--color-red) !important;
       text-decoration-thickness: 2px !important;
       background-color: rgba(255, 0, 0, 0.05) !important;
       user-select: none !important;
@@ -43,7 +46,7 @@ class ErrorWidget extends WidgetType {
     `;
     
     // 설정에 따른 오버라이드
-    if (this.underlineStyle !== 'wavy' || this.underlineColor !== '#ff0000') {
+    if (this.underlineStyle !== 'wavy' || this.underlineColor !== 'var(--color-red)') {
       span.style.textDecorationStyle = this.underlineStyle;
       span.style.textDecorationColor = this.underlineColor;
     }
@@ -215,16 +218,12 @@ export const errorDecorationField = StateField.define<DecorationSet>({
               'data-original': error.correction.original,
               'data-corrected': JSON.stringify(error.correction.corrected),
               'role': 'button',
-              'tabindex': '0',
-              'style': isFocused ? '' : `
-                text-decoration-line: underline !important;
-                text-decoration-style: ${underlineStyle} !important;
-                text-decoration-color: ${underlineColor} !important;
-                text-decoration-thickness: 2px !important;
-                background-color: rgba(255, 0, 0, 0.05) !important;
-                cursor: pointer !important;
-              `
-            }
+              'tabindex': '0'
+            },
+            // CSS에서 오버라이드되지 않도록 inclusive 방식 사용
+            inclusive: false,
+            // 🔧 클래스가 아닌 attributes에 스타일 적용
+            tagName: isFocused ? 'mark' : 'span'
           }).range(error.start, error.end);
         });
         
@@ -272,14 +271,10 @@ export const errorDecorationField = StateField.define<DecorationSet>({
                 'data-corrected': JSON.stringify(error.correction.corrected),
                 'role': 'button',
                 'tabindex': '0',
-                'style': isFocused ? '' : `
-                  text-decoration-line: underline !important;
-                  text-decoration-style: wavy !important;
-                  text-decoration-color: #ff0000 !important;
-                  text-decoration-thickness: 2px !important;
-                  background-color: rgba(255, 0, 0, 0.05) !important;
-                  cursor: pointer !important;
-                `
+                // 인라인 스타일로 강제 적용 (CSS 간섭 방지)
+                'style': isFocused ? 
+                  'outline: 3px solid var(--color-red) !important; outline-offset: 2px !important; border-radius: 4px !important; text-decoration-line: underline !important; text-decoration-style: wavy !important; text-decoration-color: var(--color-red) !important; text-decoration-thickness: 2px !important;' : 
+                  InlineModeService.getErrorStyle('wavy', 'var(--color-red)')
               }
             }).range(error.start, error.end);
           });
@@ -362,10 +357,15 @@ export class InlineModeService {
           // 이전 호버 타이머 취소
           this.clearHoverTimeout();
           
+          // CSS :hover 상태가 처리하므로 별도 스타일 적용 불필요
+          
           Logger.debug(`새로운 오류 호버 시작: "${error.correction.original}" (ID: ${errorId})`);
           
           // 🔧 마우스 위치 정보 수집
           const mousePosition = { x: e.clientX, y: e.clientY };
+          
+          // 🎯 컨텍스트 기반 호버 영역 확장
+          this.expandHoverAreaByMorphemes(target, error);
           
           this.hoverTimeout = setTimeout(() => {
             // 호버 상태 업데이트 (실제 호버된 오류만 정확히 처리)
@@ -384,6 +384,8 @@ export class InlineModeService {
         // 현재 호버 중인 오류에서 벗어날 때만 처리
         if (this.currentHoveredError?.uniqueId === errorId) {
           Logger.debug(`오류 호버 종료: "${this.currentHoveredError.correction.original}" (ID: ${errorId})`);
+          
+          // CSS :hover 상태가 자동으로 해제되므로 별도 스타일 복원 불필요
           
           this.clearHoverTimeout();
           
@@ -692,85 +694,146 @@ export class InlineModeService {
   }
 
   /**
-   * 오류 표시
+   * 오류 표시 (형태소 API 통합)
    */
-  static showErrors(
+  static async showErrors(
     view: EditorView, 
     corrections: Correction[], 
     underlineStyle: string = 'wavy',
-    underlineColor: string = '#ff0000',
-    app?: App
-  ): void {
+    underlineColor: string = 'var(--color-red)',
+    app?: App,
+    morphemeData?: any
+  ): Promise<void> {
     if (!view || !corrections.length) {
       Logger.warn('인라인 모드: 뷰나 교정 데이터가 없습니다.');
       return;
     }
 
-    // 뷰 설정은 setEditorView에서 처리되므로 여기서는 생략
-    // (중복 초기화 방지)
+    // 알림 시작
+    const analysisNotice = NotificationUtils.showAnalysisStartNotice('spelling');
 
-    // 기존 오류 제거
-    this.clearErrors(view);
+    try {
+      // 뷰 설정은 setEditorView에서 처리되므로 여기서는 생략
+      // (중복 초기화 방지)
 
-    // 에디터 텍스트 가져오기
-    const doc = view.state.doc;
-    const fullText = doc.toString();
+      // 기존 오류 제거
+      this.clearErrors(view);
 
-    // 교정 정보를 InlineError로 변환
-    const errors: InlineError[] = [];
-    
-    corrections.forEach((correction, index) => {
-      const searchText = correction.original;
-      let searchIndex = 0;
-      let occurrence = 0;
-      
-      while (true) {
-        const foundIndex = fullText.indexOf(searchText, searchIndex);
-        if (foundIndex === -1) break;
-        
-        // 단어 경계 검사 (정확한 매칭을 위해)
-        const beforeChar = foundIndex > 0 ? fullText[foundIndex - 1] : ' ';
-        const afterChar = foundIndex + searchText.length < fullText.length ? fullText[foundIndex + searchText.length] : ' ';
-        
-        // 한글/영문 단어 경계 확인 (선택적)
-        const isWordBoundary = this.isValidWordBoundary(beforeChar, afterChar, searchText);
-        
-        if (isWordBoundary) {
-          // 🎯 위치 정보를 포함한 더 정확한 uniqueId 생성 (겹치는 오류 구분을 위해)
-          const uniqueId = `${index}_${occurrence}_${foundIndex}`;
-          const lineInfo = doc.lineAt(foundIndex);
+      // 에디터 텍스트 가져오기
+      const doc = view.state.doc;
+      const fullText = doc.toString();
+
+      // 형태소 분석 데이터가 없으면 자동으로 분석 (캐시 활용)
+      let finalMorphemeData = morphemeData;
+      if (!finalMorphemeData && this.settings) {
+        try {
+          // 형태소 분석 알림 업데이트
+          NotificationUtils.updateNoticeMessage(analysisNotice, '📋 형태소 분석 중...');
           
-          const error: InlineError = {
-            correction,
-            start: foundIndex,
-            end: foundIndex + searchText.length,
-            line: lineInfo.number,
-            ch: foundIndex - lineInfo.from,
-            uniqueId,
-            isActive: true
-          };
-          
-          errors.push(error);
-          this.activeErrors.set(uniqueId, error);
-          
-          Logger.debug(`🎯 오류 위치 설정: "${searchText}" (${uniqueId}) at ${foundIndex}-${foundIndex + searchText.length}`);
-          occurrence++;
+          const apiService = new SpellCheckApiService();
+          finalMorphemeData = await apiService.analyzeMorphemes(fullText, this.settings);
+          Logger.debug('인라인 모드: 형태소 분석 완료');
+        } catch (error) {
+          Logger.warn('인라인 모드: 형태소 분석 실패, 기본 로직 사용:', error);
         }
-        
-        searchIndex = foundIndex + 1;
       }
-    });
 
-    // 🔧 겹치는 오류 병합 (분절 하이라이팅 방지)
-    const mergedErrors = this.mergeOverlappingErrors(errors);
-    Logger.debug(`🔧 오류 병합: ${errors.length}개 → ${mergedErrors.length}개`);
+      // 형태소 API 활용한 중복 제거
+      const originalCount = corrections.length;
+      const optimizedCorrections = MorphemeUtils.removeDuplicateCorrections(
+        corrections, 
+        finalMorphemeData, 
+        fullText
+      );
+      
+      // 중복 제거 결과 알림
+      if (originalCount > optimizedCorrections.length) {
+        NotificationUtils.showDuplicateRemovalNotice(
+          originalCount, 
+          optimizedCorrections.length, 
+          !!finalMorphemeData,
+          1500
+        );
+      }
 
-    // 데코레이션 추가
-    view.dispatch({
-      effects: addErrorDecorations.of({ errors: mergedErrors, underlineStyle, underlineColor })
-    });
+      // 교정 정보를 InlineError로 변환
+      const errors: InlineError[] = [];
+      
+      optimizedCorrections.forEach((correction, index) => {
+        const searchText = correction.original;
+        let searchIndex = 0;
+        let occurrence = 0;
+        
+        while (true) {
+          const foundIndex = fullText.indexOf(searchText, searchIndex);
+          if (foundIndex === -1) break;
+          
+          // 단어 경계 검사 (정확한 매칭을 위해)
+          const beforeChar = foundIndex > 0 ? fullText[foundIndex - 1] : ' ';
+          const afterChar = foundIndex + searchText.length < fullText.length ? fullText[foundIndex + searchText.length] : ' ';
+          
+          // 한글/영문 단어 경계 확인 (선택적)
+          const isWordBoundary = this.isValidWordBoundary(beforeChar, afterChar, searchText);
+          
+          if (isWordBoundary) {
+            // 🎯 위치 정보를 포함한 더 정확한 uniqueId 생성 (겹치는 오류 구분을 위해)
+            const uniqueId = `${index}_${occurrence}_${foundIndex}`;
+            const lineInfo = doc.lineAt(foundIndex);
+            
+            // 형태소 정보 추출 (있다면)
+            const posInfo = finalMorphemeData ? 
+              MorphemeUtils.extractPosInfo(searchText, finalMorphemeData) : undefined;
+            
+            const error: InlineError = {
+              correction,
+              start: foundIndex,
+              end: foundIndex + searchText.length,
+              line: lineInfo.number,
+              ch: foundIndex - lineInfo.from,
+              uniqueId,
+              isActive: true,
+              morphemeInfo: posInfo // 형태소 정보 추가
+            };
+            
+            errors.push(error);
+            this.activeErrors.set(uniqueId, error);
+            
+            Logger.debug(`🎯 오류 위치 설정: "${searchText}" (${uniqueId}) at ${foundIndex}-${foundIndex + searchText.length}${posInfo ? ` [${posInfo.mainPos}]` : ''}`);
+            occurrence++;
+          }
+          
+          searchIndex = foundIndex + 1;
+        }
+      });
 
-    Logger.log(`인라인 모드: ${mergedErrors.length}개 오류 표시됨 (병합 후)`);
+      // 🔧 겹치는 오류 병합 (분절 하이라이팅 방지)
+      const mergedErrors = this.mergeOverlappingErrors(errors);
+      Logger.log(`🔧 오류 병합: ${errors.length}개 → ${mergedErrors.length}개`);
+      
+      // 병합된 오류 정보 간단 로그
+      const mergedCount = mergedErrors.filter(err => err.originalErrors && err.originalErrors.length > 1).length;
+      if (mergedCount > 0) {
+        Logger.debug(`🔧 병합된 오류: ${mergedCount}개`);
+      }
+
+      // 데코레이션 추가
+      view.dispatch({
+        effects: addErrorDecorations.of({ errors: mergedErrors, underlineStyle, underlineColor })
+      });
+
+      // 완료 알림
+      NotificationUtils.hideNotice(analysisNotice);
+      NotificationUtils.showAnalysisCompleteNotice('spelling', mergedErrors.length, 2000);
+
+    } catch (error) {
+      Logger.error('인라인 모드 오류 표시 실패:', error);
+      
+      // 오류 알림
+      NotificationUtils.hideNotice(analysisNotice);
+      NotificationUtils.showApiErrorNotice('general', error.message);
+    }
+
+    Logger.log(`인라인 모드: 맞춤법 검사 처리 완료`);
   }
 
   /**
@@ -959,9 +1022,9 @@ export class InlineModeService {
     if (shouldShowTooltip) {
       // 실제 호버된 요소가 전달되면 그것을 사용, 없으면 기존 방식으로 찾기
       const targetElement = hoveredElement || this.findErrorElement(error);
-      if (targetElement) {
-        // 🔧 마우스 위치 정보를 툴팁에 전달
-        globalInlineTooltip.show(error, targetElement, 'hover', mousePosition);
+      if (targetElement && (window as any).globalInlineTooltip) {
+        // 툴팁 표시 (마우스 위치 정보 포함)
+        (window as any).globalInlineTooltip.show(error, targetElement, 'hover', mousePosition);
       }
     }
   }
@@ -1228,14 +1291,28 @@ export class InlineModeService {
     // activeErrors 맵 업데이트
     this.activeErrors.set(mergedError.uniqueId, mergedError);
 
-    // decoration 업데이트를 위해 다시 표시
+    // decoration 업데이트를 위해 다시 표시 (getErrorStyle 메서드 사용)
     const mergedErrors = [mergedError];
+    
+    Logger.debug(`🔧 병합된 오류 decoration 업데이트: "${mergedError.correction.original}"`);
+    
+    // 🔧 기존 병합된 오류의 decoration을 먼저 제거하고 새로 추가
+    // CSS 클래스 기반 스타일링 사용 (하드코딩된 색상 제거)
+    // 🔧 다크모드 디버깅: 강제로 다크모드 감지 및 색상 적용
+    const isDarkMode = document.body.classList.contains('theme-dark');
+    const debugColor = isDarkMode ? '#fb464c' : '#e93147'; // 다크모드에서 강제 색상
+    
+    Logger.debug(`🎨 다크모드 감지: ${isDarkMode}, 적용 색상: ${debugColor}`);
+    
     this.currentView.dispatch({
-      effects: addErrorDecorations.of({ 
-        errors: mergedErrors, 
-        underlineStyle: 'wavy', 
-        underlineColor: '#ff0000' 
-      })
+      effects: [
+        removeErrorDecorations.of([mergedError.uniqueId]), // 기존 제거
+        addErrorDecorations.of({ 
+          errors: mergedErrors, 
+          underlineStyle: 'wavy', 
+          underlineColor: isDarkMode ? debugColor : 'var(--color-red)'  // 다크모드에서만 강제 색상
+        })
+      ]
     });
 
     // 툴팁이 표시 중이면 업데이트된 내용으로 다시 표시
@@ -2159,6 +2236,186 @@ export class InlineModeService {
       
     } catch (error) {
       Logger.error('임시 제안 적용 중 오류:', error);
+    }
+  }
+
+  /**
+   * 다크모드를 고려한 오류 스타일을 생성합니다.
+   */
+  static getErrorStyle(underlineStyle: string, underlineColor: string, isHover: boolean = false): string {
+    // 다크모드 감지
+    const isDarkMode = document.body.classList.contains('theme-dark');
+    
+    // CSS 변수를 사용하여 Obsidian 테마와 호환성 확보
+    let actualColor: string;
+    let actualBgColor: string;
+    
+    // Obsidian 표준 색상 변수 사용
+    if (isDarkMode) {
+      // 다크모드: --color-red (#fb464c)와 투명도 조절
+      actualColor = isHover ? 'var(--color-red)' : 'var(--color-red)';
+      actualBgColor = isHover ? 'rgba(var(--color-red-rgb), 0.2)' : 'rgba(var(--color-red-rgb), 0.1)';
+    } else {
+      // 라이트모드: --color-red (#e93147)와 투명도 조절  
+      actualColor = isHover ? 'var(--color-red)' : 'var(--color-red)';
+      actualBgColor = isHover ? 'rgba(var(--color-red-rgb), 0.15)' : 'rgba(var(--color-red-rgb), 0.08)';
+    }
+    
+    return `text-decoration-line: underline !important; text-decoration-style: ${underlineStyle} !important; text-decoration-color: ${actualColor} !important; text-decoration-thickness: 2px !important; background-color: ${actualBgColor} !important; cursor: pointer !important;`;
+  }
+
+  /**
+   * 🎯 컨텍스트 기반 호버 영역 확장
+   * 주변 형태소 정보를 활용하여 더 넓은 호버 영역 제공
+   */
+  private static expandHoverAreaByMorphemes(element: HTMLElement, error: InlineError): void {
+    if (!error.morphemeInfo || !this.currentView) {
+      Logger.debug(`형태소 정보 없음, 호버 영역 확장 생략: ${error.correction.original}`);
+      return;
+    }
+
+    try {
+      // 현재 오류 위치에서 토큰 경계 찾기
+      const tokenBoundaries = this.getTokenBoundaries(error);
+      if (!tokenBoundaries) return;
+
+      // 확장된 호버 영역 스타일 적용
+      const expandedStyle = this.createExpandedHoverStyle(tokenBoundaries);
+      
+      // 가상의 확장된 호버 영역 생성 (실제 DOM 조작 없이 감지 영역만 확장)
+      this.createExpandedHoverZone(element, expandedStyle, error);
+      
+      Logger.debug(`🎯 호버 영역 확장: ${error.correction.original} (토큰: ${tokenBoundaries.startToken}-${tokenBoundaries.endToken})`);
+      
+    } catch (err) {
+      Logger.warn('호버 영역 확장 실패:', err);
+    }
+  }
+
+  /**
+   * 형태소 정보 기반 토큰 경계 계산
+   */
+  private static getTokenBoundaries(error: InlineError): { startToken: number; endToken: number; contextText: string } | null {
+    if (!error.morphemeInfo || !this.currentView) return null;
+
+    try {
+      const doc = this.currentView.state.doc;
+      const errorStart = error.start;
+      const errorEnd = error.end;
+      
+      // 앞뒤 30자 컨텍스트 윈도우
+      const contextStart = Math.max(0, errorStart - 30);
+      const contextEnd = Math.min(doc.length, errorEnd + 30);
+      const contextText = doc.sliceString(contextStart, contextEnd);
+      
+      // 형태소 정보에서 토큰 경계 찾기
+      const relativeErrorStart = errorStart - contextStart;
+      const relativeErrorEnd = errorEnd - contextStart;
+      
+      // 단어 경계까지 확장 (공백, 구두점 기준)
+      let expandedStart = relativeErrorStart;
+      let expandedEnd = relativeErrorEnd;
+      
+      // 앞쪽으로 확장 (최대 한 토큰)
+      while (expandedStart > 0) {
+        const char = contextText[expandedStart - 1];
+        if (/[\s.,!?;:\-()[\]{}'"'""''…]/.test(char)) break;
+        if (/[가-힣]/.test(char) && expandedStart <= relativeErrorStart - 10) break; // 최대 10자까지만
+        expandedStart--;
+      }
+      
+      // 뒤쪽으로 확장 (최대 한 토큰)
+      while (expandedEnd < contextText.length) {
+        const char = contextText[expandedEnd];
+        if (/[\s.,!?;:\-()[\]{}'"'""''…]/.test(char)) break;
+        if (/[가-힣]/.test(char) && expandedEnd >= relativeErrorEnd + 10) break; // 최대 10자까지만
+        expandedEnd++;
+      }
+      
+      return {
+        startToken: contextStart + expandedStart,
+        endToken: contextStart + expandedEnd,
+        contextText: contextText.slice(expandedStart, expandedEnd)
+      };
+      
+    } catch (err) {
+      Logger.warn('토큰 경계 계산 실패:', err);
+      return null;
+    }
+  }
+
+  /**
+   * 확장된 호버 스타일 생성
+   */
+  private static createExpandedHoverStyle(boundaries: { startToken: number; endToken: number; contextText: string }): string {
+    const isDarkMode = document.body.classList.contains('theme-dark');
+    
+    return `
+      position: relative;
+      z-index: 2;
+      &::before {
+        content: '';
+        position: absolute;
+        left: -5px;
+        right: -5px;
+        top: -2px;
+        bottom: -2px;
+        background: ${isDarkMode ? 'rgba(var(--color-red-rgb), 0.05)' : 'rgba(var(--color-red-rgb), 0.03)'};
+        border-radius: 3px;
+        pointer-events: none;
+        z-index: -1;
+      }
+    `;
+  }
+
+  /**
+   * 확장된 호버 감지 영역 생성
+   */
+  private static createExpandedHoverZone(originalElement: HTMLElement, style: string, error: InlineError): void {
+    // 기존 확장 영역 제거
+    const existingZone = originalElement.parentElement?.querySelector('.korean-grammar-expanded-hover');
+    if (existingZone) {
+      existingZone.remove();
+    }
+
+    // 새로운 확장 감지 영역 생성 (가상)
+    const expandedZone = document.createElement('span');
+    expandedZone.className = 'korean-grammar-expanded-hover';
+    expandedZone.style.cssText = `
+      position: absolute;
+      left: -8px;
+      right: -8px;
+      top: -3px;
+      bottom: -3px;
+      pointer-events: auto;
+      z-index: 1;
+      opacity: 0;
+    `;
+    
+    // 확장 영역에 호버 이벤트 추가
+    expandedZone.addEventListener('mouseenter', () => {
+      Logger.debug(`🎯 확장 호버 영역 진입: ${error.correction.original}`);
+      // 원본 요소와 동일한 호버 효과
+      if (!this.currentHoveredError || this.currentHoveredError.uniqueId !== error.uniqueId) {
+        this.currentHoveredError = error;
+        this.handleErrorHover(error, originalElement);
+      }
+    });
+    
+    expandedZone.addEventListener('mouseleave', () => {
+      Logger.debug(`🎯 확장 호버 영역 이탈: ${error.correction.original}`);
+      // 지연 후 호버 해제 (툴팁으로 이동 시간 확보)
+      setTimeout(() => {
+        if (this.currentHoveredError?.uniqueId === error.uniqueId) {
+          this.currentHoveredError = null;
+        }
+      }, 200);
+    });
+
+    // DOM에 추가 (상대 위치)
+    if (originalElement.parentElement) {
+      originalElement.style.position = 'relative';
+      originalElement.appendChild(expandedZone);
     }
   }
 }

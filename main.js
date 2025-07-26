@@ -1622,7 +1622,7 @@ __export(main_exports, {
   default: () => KoreanGrammarPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian15 = require("obsidian");
+var import_obsidian16 = require("obsidian");
 init_settings();
 
 // src/orchestrator.ts
@@ -9539,7 +9539,13 @@ var InlineTooltip = class {
     this.currentError = error;
     this.hideCursorInBackground();
     if (import_obsidian10.Platform.isMobile) {
-      this.hideKeyboardAndBlurEditor();
+      window.tooltipProtected = true;
+      setTimeout(() => {
+        this.hideKeyboardAndBlurEditor();
+        setTimeout(() => {
+          window.tooltipProtected = false;
+        }, 200);
+      }, 100);
     }
     this.createTooltip(error, targetElement, triggerType);
     this.positionTooltip(targetElement, mousePosition);
@@ -9550,6 +9556,15 @@ var InlineTooltip = class {
    * 툴팁 숨김
    */
   hide() {
+    var _a;
+    if (import_obsidian10.Platform.isMobile && window.tooltipProtected) {
+      Logger.debug("\u{1F4F1} \uBAA8\uBC14\uC77C \uD234\uD301 \uBCF4\uD638\uB428: \uC790\uB3D9 \uC228\uAE40 \uBB34\uC2DC");
+      return;
+    }
+    if (import_obsidian10.Platform.isMobile && this.tooltip) {
+      const stack = new Error().stack;
+      Logger.debug(`\u{1F4F1} \uBAA8\uBC14\uC77C \uD234\uD301 \uC228\uAE40 \uD638\uCD9C\uB428 - \uC2A4\uD0DD: ${(_a = stack == null ? void 0 : stack.split("\n")[2]) == null ? void 0 : _a.trim()}`);
+    }
     if (this.tooltip) {
       this.tooltip.remove();
       this.tooltip = null;
@@ -9829,22 +9844,17 @@ var InlineTooltip = class {
     const smallOffset = mousePosition ? 5 : gap;
     const availableSpaceBelow = Math.min(viewportHeight, editorTop + editorHeight) - referenceCenterY;
     const availableSpaceAbove = referenceCenterY - editorTop;
-    if (isBottomEdge) {
-      finalTop = referenceCenterY - adaptiveSize.maxHeight - smallOffset;
-      Logger.debug(`\u{1F5A5}\uFE0F \uD558\uB2E8 \uAD6C\uC11D: \uC704\uCABD \uBC30\uCE58 (\uC624\uD504\uC14B: ${smallOffset}px)`);
-    } else if (availableSpaceBelow >= adaptiveSize.maxHeight + smallOffset + minSpacing) {
-      finalTop = referenceCenterY + smallOffset;
-      Logger.debug(`\u{1F5A5}\uFE0F \uC544\uB798\uCABD \uBC30\uCE58 (\uC624\uD504\uC14B: ${smallOffset}px)`);
-    } else if (availableSpaceAbove >= adaptiveSize.maxHeight + smallOffset + minSpacing) {
-      finalTop = referenceCenterY - adaptiveSize.maxHeight - smallOffset;
-      Logger.debug(`\u{1F5A5}\uFE0F \uC704\uCABD \uBC30\uCE58 (\uC624\uD504\uC14B: ${smallOffset}px)`);
-    } else {
-      if (availableSpaceBelow > availableSpaceAbove) {
-        finalTop = referenceCenterY + 2;
+    Logger.debug(`\u{1F50D} \uD558\uB2E8 \uAC10\uC9C0: isBottomEdge=${isBottomEdge}, availableSpaceBelow=${availableSpaceBelow}, \uD544\uC694\uACF5\uAC04=${adaptiveSize.maxHeight + smallOffset + minSpacing}, \uB9C8\uC6B0\uC2A4Y=${mousePosition == null ? void 0 : mousePosition.y}, \uC5D0\uB514\uD130\uD558\uB2E8=${editorTop + editorHeight}`);
+    if (isBottomEdge || availableSpaceBelow < adaptiveSize.maxHeight + smallOffset + minSpacing) {
+      if (mousePosition) {
+        finalTop = mousePosition.y - 80;
       } else {
-        finalTop = referenceCenterY - adaptiveSize.maxHeight - 2;
+        finalTop = referenceRect.top - adaptiveSize.maxHeight - smallOffset;
       }
-      Logger.debug(`\u{1F5A5}\uFE0F \uACF5\uAC04 \uBD80\uC871: \uB9C8\uC6B0\uC2A4 \uC778\uC811 \uBC30\uCE58`);
+      Logger.debug(`\u{1F5A5}\uFE0F \uD558\uB2E8/\uACF5\uAC04\uBD80\uC871: \uBC14\uB85C \uC704\uCABD \uBC30\uCE58 (finalTop: ${finalTop}, \uB9C8\uC6B0\uC2A4: ${mousePosition ? `(${mousePosition.x}, ${mousePosition.y})` : "\uC5C6\uC74C"}, \uACF5\uAC04: ${availableSpaceBelow}px)`);
+    } else {
+      finalTop = referenceRect.bottom + smallOffset;
+      Logger.debug(`\u{1F5A5}\uFE0F \uC544\uB798\uCABD \uBC30\uCE58 (finalTop: ${finalTop}, \uCC38\uC870bottom: ${referenceRect.bottom}, \uACF5\uAC04: ${availableSpaceBelow}px)`);
     }
     if (isLeftEdge) {
       finalLeft = Math.max(referenceCenterX + 5, editorLeft);
@@ -9859,10 +9869,15 @@ var InlineTooltip = class {
       Math.max(minSpacing, editorLeft),
       Math.min(finalLeft, Math.min(viewportWidth, editorLeft + editorWidth) - adaptiveSize.width - minSpacing)
     );
-    finalTop = Math.max(
-      Math.max(minSpacing, editorTop),
-      Math.min(finalTop, Math.min(viewportHeight, editorTop + editorHeight) - adaptiveSize.maxHeight - minSpacing)
-    );
+    if (isBottomEdge || availableSpaceBelow < adaptiveSize.maxHeight + smallOffset + minSpacing) {
+      finalTop = Math.max(50, finalTop);
+      Logger.debug(`\u{1F5A5}\uFE0F \uD558\uB2E8 \uC601\uC5ED: \uB9C8\uC6B0\uC2A4 \uC6B0\uC120 \uBC30\uCE58 (finalTop: ${finalTop}, \uC6D0\uB798\uACC4\uC0B0: ${mousePosition ? mousePosition.y - 150 : "N/A"})`);
+    } else {
+      finalTop = Math.max(
+        Math.max(minSpacing, editorTop),
+        Math.min(finalTop, Math.min(viewportHeight, editorTop + editorHeight) - adaptiveSize.maxHeight - minSpacing)
+      );
+    }
     this.tooltip.style.position = "fixed";
     this.tooltip.style.left = `${finalLeft}px`;
     this.tooltip.style.top = `${finalTop}px`;
@@ -10364,7 +10379,14 @@ var InlineTooltip = class {
       padding: ${isMobile ? isPhone ? "6px 10px" : "7px 11px" : "8px 12px"};
       white-space: nowrap;
     `;
-    const errorWord = mainContent.createEl("span", {
+    const errorWordContainer = mainContent.createEl("div", { cls: "error-word-container" });
+    errorWordContainer.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    `;
+    const errorWord = errorWordContainer.createEl("span", {
       text: error.correction.original,
       cls: "error-word"
     });
@@ -10376,6 +10398,21 @@ var InlineTooltip = class {
       border-radius: 3px;
       font-size: ${isMobile ? isPhone ? "12px" : "13px" : "13px"};
     `;
+    if (error.morphemeInfo && this.isImportantPos(error.morphemeInfo.mainPos, error.morphemeInfo.tags)) {
+      const posInfo = errorWordContainer.createEl("span", {
+        text: error.morphemeInfo.mainPos,
+        cls: "pos-info"
+      });
+      posInfo.style.cssText = `
+        color: var(--text-accent);
+        font-size: ${isMobile ? "9px" : "10px"};
+        font-weight: 500;
+        opacity: 0.9;
+        background: rgba(59, 130, 246, 0.1);
+        padding: 1px 4px;
+        border-radius: 3px;
+      `;
+    }
     const arrow = mainContent.createEl("span", { text: "\u2192" });
     arrow.style.cssText = `
       color: var(--text-muted);
@@ -10560,9 +10597,13 @@ var InlineTooltip = class {
     if (triggerType === "hover") {
       this.setupHoverEvents(targetElement);
     } else {
-      setTimeout(() => {
-        document.addEventListener("click", this.handleOutsideClick.bind(this), { once: true });
-      }, 0);
+      if (import_obsidian10.Platform.isMobile) {
+        Logger.debug("\u{1F4F1} \uBAA8\uBC14\uC77C \uD234\uD301: \uC218\uB3D9 \uB2EB\uAE30 \uBAA8\uB4DC (\uB2EB\uAE30 \uBC84\uD2BC \uB610\uB294 \uC218\uC815 \uC801\uC6A9\uC73C\uB85C\uB9CC \uB2EB\uD798)");
+      } else {
+        setTimeout(() => {
+          document.addEventListener("click", this.handleOutsideClick.bind(this), { once: true });
+        }, 0);
+      }
     }
   }
   /**
@@ -10896,14 +10937,377 @@ var InlineTooltip = class {
       Logger.warn("\u{1F4F1} \uBAA8\uBC14\uC77C \uD0A4\uBCF4\uB4DC \uC228\uAE40 \uC911 \uC624\uB958:", error);
     }
   }
+  /**
+   * 중요한 품사인지 확인합니다.
+   * 일반명사, 동사, 형용사 등은 숨기고 고유명사, 외국어 등만 표시합니다.
+   */
+  isImportantPos(mainPos, tags) {
+    const importantPos = [
+      "\uACE0\uC720\uBA85\uC0AC",
+      // 고유명사 (인명, 지명 등)
+      "\uC678\uAD6D\uC5B4",
+      // 외국어
+      "\uD55C\uC790",
+      // 한자어  
+      "\uC22B\uC790",
+      // 숫자
+      "\uC758\uC874\uBA85\uC0AC"
+      // 의존명사 (특별한 용법)
+    ];
+    if (importantPos.includes(mainPos)) {
+      return true;
+    }
+    if (tags && tags.length > 0) {
+      const importantTags = ["NNP", "SL", "SH", "SN", "NNB"];
+      return tags.some((tag) => importantTags.includes(tag));
+    }
+    return false;
+  }
 };
 var globalInlineTooltip = new InlineTooltip();
 window.globalInlineTooltip = globalInlineTooltip;
 
 // src/services/inlineModeService.ts
-var import_obsidian11 = require("obsidian");
 var import_obsidian12 = require("obsidian");
 var import_obsidian13 = require("obsidian");
+var import_obsidian14 = require("obsidian");
+
+// src/utils/morphemeUtils.ts
+init_logger();
+var MorphemeUtils = class {
+  /**
+   * 교정 배열에서 중복된 오류를 제거하고 그룹화합니다.
+   * 
+   * @param corrections 원본 교정 배열
+   * @param morphemeData 형태소 분석 결과 (선택사항)
+   * @param originalText 원본 텍스트
+   * @returns 중복 제거된 교정 배열
+   */
+  static removeDuplicateCorrections(corrections, morphemeData, originalText) {
+    if (corrections.length <= 1) {
+      return corrections;
+    }
+    Logger.debug(`\uC911\uBCF5 \uC81C\uAC70 \uC2DC\uC791: ${corrections.length}\uAC1C \uAD50\uC815`);
+    if (morphemeData && originalText) {
+      return this.groupCorrectionsByMorphemes(corrections, morphemeData, originalText);
+    }
+    return this.basicDuplicateRemoval(corrections);
+  }
+  /**
+   * 형태소 정보를 기반으로 교정을 그룹화합니다.
+   */
+  static groupCorrectionsByMorphemes(corrections, morphemeData, originalText) {
+    const tokenMap = /* @__PURE__ */ new Map();
+    if (morphemeData.sentences) {
+      morphemeData.sentences.forEach((sentence) => {
+        var _a;
+        (_a = sentence.tokens) == null ? void 0 : _a.forEach((token) => {
+          tokenMap.set(token.text.content, token);
+        });
+      });
+    }
+    Logger.debug("\uD615\uD0DC\uC18C \uD1A0\uD070 \uB9F5:", Array.from(tokenMap.keys()));
+    const groupedCorrections = [];
+    const processedRanges = /* @__PURE__ */ new Set();
+    corrections.forEach((correction) => {
+      const correctionPositions = this.findAllPositions(originalText, correction.original);
+      correctionPositions.forEach((position) => {
+        const rangeKey = `${position}_${position + correction.original.length}`;
+        if (!processedRanges.has(rangeKey)) {
+          const overlappingCorrections = this.findOverlappingCorrections(
+            corrections,
+            originalText,
+            position,
+            correction.original.length
+          );
+          if (overlappingCorrections.length > 1) {
+            Logger.debug(`\uC704\uCE58 ${position}\uC5D0\uC11C \uACB9\uCE58\uB294 \uAD50\uC815\uB4E4:`, overlappingCorrections.map((c) => c.original));
+            const bestCorrection = this.selectBestCorrectionWithTokens(
+              overlappingCorrections,
+              tokenMap,
+              originalText,
+              position
+            );
+            if (bestCorrection) {
+              groupedCorrections.push(bestCorrection);
+            }
+          } else {
+            groupedCorrections.push(correction);
+          }
+          overlappingCorrections.forEach((oc) => {
+            const ocPositions = this.findAllPositions(originalText, oc.original);
+            ocPositions.forEach((pos) => {
+              const key = `${pos}_${pos + oc.original.length}`;
+              processedRanges.add(key);
+            });
+          });
+        }
+      });
+    });
+    Logger.debug(`\uD615\uD0DC\uC18C \uAE30\uBC18 \uAD50\uC815 \uADF8\uB8F9\uD654 \uC644\uB8CC: ${corrections.length}\uAC1C \u2192 ${groupedCorrections.length}\uAC1C`);
+    return groupedCorrections;
+  }
+  /**
+   * 기본 중복 제거 로직 (형태소 데이터 없을 때)
+   */
+  static basicDuplicateRemoval(corrections) {
+    const seen = /* @__PURE__ */ new Set();
+    const unique = [];
+    for (const correction of corrections) {
+      const key = `${correction.original}:${JSON.stringify(correction.corrected)}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(correction);
+      }
+    }
+    Logger.debug(`\uAE30\uBCF8 \uC911\uBCF5 \uC81C\uAC70 \uC644\uB8CC: ${corrections.length}\uAC1C \u2192 ${unique.length}\uAC1C`);
+    return unique;
+  }
+  /**
+   * 텍스트에서 특정 문자열의 모든 위치를 찾습니다.
+   */
+  static findAllPositions(text, searchText) {
+    const positions = [];
+    let pos = text.indexOf(searchText);
+    while (pos !== -1) {
+      positions.push(pos);
+      pos = text.indexOf(searchText, pos + 1);
+    }
+    return positions;
+  }
+  /**
+   * 특정 위치에서 겹치는 교정들을 찾습니다.
+   */
+  static findOverlappingCorrections(corrections, originalText, position, length) {
+    const overlapping = [];
+    corrections.forEach((correction) => {
+      const positions = this.findAllPositions(originalText, correction.original);
+      positions.forEach((pos) => {
+        if (pos >= position && pos < position + length || pos + correction.original.length > position && pos + correction.original.length <= position + length || pos <= position && pos + correction.original.length >= position + length) {
+          if (!overlapping.find((oc) => oc.original === correction.original)) {
+            overlapping.push(correction);
+          }
+        }
+      });
+    });
+    return overlapping;
+  }
+  /**
+   * 형태소 토큰 정보를 기반으로 최적의 교정을 선택합니다.
+   */
+  static selectBestCorrectionWithTokens(corrections, tokenMap, originalText, position) {
+    var _a, _b;
+    if (corrections.length === 0)
+      return null;
+    if (corrections.length === 1)
+      return corrections[0];
+    for (const correction of corrections) {
+      if (tokenMap.has(correction.original)) {
+        const token = tokenMap.get(correction.original);
+        Logger.debug(`\uD1A0\uD070 \uAE30\uBC18 \uC120\uD0DD: "${correction.original}" (\uD488\uC0AC: ${((_b = (_a = token.morphemes) == null ? void 0 : _a[0]) == null ? void 0 : _b.tag) || "unknown"})`);
+        return correction;
+      }
+    }
+    const longest = corrections.reduce(
+      (prev, current) => current.original.length > prev.original.length ? current : prev
+    );
+    Logger.debug(`\uAE38\uC774 \uAE30\uBC18 \uC120\uD0DD: "${longest.original}"`);
+    return longest;
+  }
+  /**
+   * 형태소 분석 결과에서 고유명사/외국어를 감지합니다.
+   */
+  static isProperNounFromMorphemes(text, morphemeInfo) {
+    if (!morphemeInfo || !morphemeInfo.sentences)
+      return false;
+    for (const sentence of morphemeInfo.sentences) {
+      for (const token of sentence.tokens || []) {
+        if (token.text.content === text) {
+          for (const morpheme of token.morphemes || []) {
+            const tag = morpheme.tag;
+            if (["NNP", "SL", "SH", "SN"].includes(tag)) {
+              Logger.debug(`\uD615\uD0DC\uC18C \uACE0\uC720\uBA85\uC0AC \uAC10\uC9C0: "${text}" - \uD488\uC0AC: ${tag}`);
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+  /**
+   * 형태소 분석 결과에서 품사 정보를 추출합니다.
+   */
+  static extractPosInfo(text, morphemeInfo) {
+    if (!morphemeInfo || !morphemeInfo.sentences)
+      return void 0;
+    for (const sentence of morphemeInfo.sentences) {
+      for (const token of sentence.tokens || []) {
+        if (token.text.content === text) {
+          const morphemes = token.morphemes || [];
+          if (morphemes.length > 0) {
+            const mainMorpheme = morphemes[0];
+            return {
+              mainPos: this.tagToKorean(mainMorpheme.tag),
+              tags: morphemes.map((m) => m.tag),
+              confidence: token.confidence || 1
+            };
+          }
+        }
+      }
+    }
+    return void 0;
+  }
+  /**
+   * 형태소 태그를 한국어로 변환합니다.
+   */
+  static tagToKorean(tag) {
+    const tagMap = {
+      "NNG": "\uC77C\uBC18\uBA85\uC0AC",
+      "NNP": "\uACE0\uC720\uBA85\uC0AC",
+      "NNB": "\uC758\uC874\uBA85\uC0AC",
+      "VV": "\uB3D9\uC0AC",
+      "VA": "\uD615\uC6A9\uC0AC",
+      "VX": "\uBCF4\uC870\uC6A9\uC5B8",
+      "MM": "\uAD00\uD615\uC0AC",
+      "MAG": "\uC77C\uBC18\uBD80\uC0AC",
+      "SL": "\uC678\uAD6D\uC5B4",
+      "SH": "\uD55C\uC790",
+      "SN": "\uC22B\uC790"
+    };
+    return tagMap[tag] || tag;
+  }
+};
+
+// src/utils/notificationUtils.ts
+var import_obsidian11 = require("obsidian");
+init_logger();
+var NotificationUtils = class {
+  /**
+   * API 분석 시작 알림을 표시합니다.
+   */
+  static showAnalysisStartNotice(analysisType = "spelling") {
+    const messages = {
+      spelling: "\u{1F50D} \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911...",
+      morpheme: "\u{1F4CB} \uD615\uD0DC\uC18C \uBD84\uC11D \uC911...",
+      ai: "\u{1F916} AI \uBD84\uC11D \uC911..."
+    };
+    const message = messages[analysisType];
+    Logger.log(`\uC54C\uB9BC \uD45C\uC2DC: ${message}`);
+    return new import_obsidian11.Notice(message, 0);
+  }
+  /**
+   * API 분석 완료 알림을 표시합니다.
+   */
+  static showAnalysisCompleteNotice(analysisType, resultCount, duration = 3e3) {
+    let message;
+    switch (analysisType) {
+      case "spelling":
+        message = resultCount > 0 ? `\u2705 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC644\uB8CC: ${resultCount}\uAC1C \uC624\uB958 \uBC1C\uACAC` : "\u2705 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC644\uB8CC: \uC624\uB958 \uC5C6\uC74C";
+        break;
+      case "morpheme":
+        message = `\u{1F4CB} \uD615\uD0DC\uC18C \uBD84\uC11D \uC644\uB8CC: ${resultCount}\uAC1C \uD1A0\uD070 \uBD84\uC11D`;
+        break;
+      case "ai":
+        message = `\u{1F916} AI \uBD84\uC11D \uC644\uB8CC: ${resultCount}\uAC1C \uC81C\uC548 \uBD84\uC11D`;
+        break;
+    }
+    Logger.log(`\uC54C\uB9BC \uD45C\uC2DC: ${message}`);
+    return new import_obsidian11.Notice(message, duration);
+  }
+  /**
+   * API 오류 알림을 표시합니다.
+   */
+  static showApiErrorNotice(errorType, errorMessage, duration = 5e3) {
+    let message;
+    switch (errorType) {
+      case "api_key":
+        message = "\u274C API \uD0A4\uAC00 \uC124\uC815\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uD50C\uB7EC\uADF8\uC778 \uC124\uC815\uC5D0\uC11C Bareun.ai API \uD0A4\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.";
+        break;
+      case "network":
+        message = "\u274C \uB124\uD2B8\uC6CC\uD06C \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uC778\uD130\uB137 \uC5F0\uACB0\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.";
+        break;
+      case "timeout":
+        message = "\u274C API \uC694\uCCAD \uC2DC\uAC04\uC774 \uCD08\uACFC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.";
+        break;
+      case "parse":
+        message = "\u274C API \uC751\uB2F5 \uD30C\uC2F1\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.";
+        break;
+      case "general":
+      default:
+        message = errorMessage ? `\u274C API \uC694\uCCAD\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4: ${errorMessage}` : "\u274C \uC54C \uC218 \uC5C6\uB294 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.";
+        break;
+    }
+    Logger.error(`\uC624\uB958 \uC54C\uB9BC \uD45C\uC2DC: ${message}`);
+    return new import_obsidian11.Notice(message, duration);
+  }
+  /**
+   * 중복 제거 결과 알림을 표시합니다.
+   */
+  static showDuplicateRemovalNotice(originalCount, finalCount, usedMorpheme = false, duration = 2e3) {
+    const removedCount = originalCount - finalCount;
+    if (removedCount <= 0) {
+      return new import_obsidian11.Notice("\u2139\uFE0F \uC911\uBCF5 \uC624\uB958 \uC5C6\uC74C", duration);
+    }
+    const morphemeText = usedMorpheme ? " (\uD615\uD0DC\uC18C \uBD84\uC11D \uD65C\uC6A9)" : "";
+    const message = `\u{1F504} \uC911\uBCF5 \uC624\uB958 ${removedCount}\uAC1C \uC81C\uAC70\uB428${morphemeText}`;
+    Logger.log(`\uC911\uBCF5 \uC81C\uAC70 \uC54C\uB9BC: ${originalCount}\uAC1C \u2192 ${finalCount}\uAC1C${morphemeText}`);
+    return new import_obsidian11.Notice(message, duration);
+  }
+  /**
+   * 캐시 사용 알림을 표시합니다.
+   */
+  static showCacheUsedNotice(cacheType, duration = 2e3) {
+    const messages = {
+      spelling: "\u26A1 \uCE90\uC2DC\uB41C \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uACB0\uACFC \uC0AC\uC6A9",
+      morpheme: "\u26A1 \uCE90\uC2DC\uB41C \uD615\uD0DC\uC18C \uBD84\uC11D \uACB0\uACFC \uC0AC\uC6A9"
+    };
+    const message = messages[cacheType];
+    Logger.debug(`\uCE90\uC2DC \uC0AC\uC6A9 \uC54C\uB9BC: ${message}`);
+    return new import_obsidian11.Notice(message, duration);
+  }
+  /**
+   * 인라인 모드 전용: 오류 적용 알림을 표시합니다.
+   */
+  static showInlineErrorAppliedNotice(errorText, correctedText, duration = 2e3) {
+    const message = `\u2705 "${errorText}" \u2192 "${correctedText}" \uC801\uC6A9\uB428`;
+    Logger.log(`\uC778\uB77C\uC778 \uC624\uB958 \uC801\uC6A9: ${message}`);
+    return new import_obsidian11.Notice(message, duration);
+  }
+  /**
+   * 인라인 모드 전용: 예외 처리 알림을 표시합니다.
+   */
+  static showInlineExceptionNotice(errorText, duration = 2e3) {
+    const message = `\u{1F535} "${errorText}" \uC608\uC678 \uCC98\uB9AC\uB428`;
+    Logger.log(`\uC778\uB77C\uC778 \uC608\uC678 \uCC98\uB9AC: ${message}`);
+    return new import_obsidian11.Notice(message, duration);
+  }
+  /**
+   * 기존 Notice를 업데이트합니다 (진행률 표시용).
+   */
+  static updateNoticeMessage(notice, newMessage) {
+    if (notice && notice.noticeEl) {
+      const messageEl = notice.noticeEl.querySelector(".notice-message");
+      if (messageEl) {
+        messageEl.textContent = newMessage;
+      }
+    }
+  }
+  /**
+   * Notice를 안전하게 숨깁니다.
+   */
+  static hideNotice(notice) {
+    if (notice && notice.hide) {
+      try {
+        notice.hide();
+      } catch (error) {
+        Logger.debug("Notice \uC228\uAE40 \uC2E4\uD328 (\uC774\uBBF8 \uC81C\uAC70\uB428):", error);
+      }
+    }
+  }
+};
+
+// src/services/inlineModeService.ts
 var addErrorDecorations = import_state.StateEffect.define({
   map: (val, change) => val
 });
@@ -10968,16 +11372,12 @@ var errorDecorationField = import_state.StateField.define({
               "data-original": error.correction.original,
               "data-corrected": JSON.stringify(error.correction.corrected),
               "role": "button",
-              "tabindex": "0",
-              "style": isFocused ? "" : `
-                text-decoration-line: underline !important;
-                text-decoration-style: ${underlineStyle} !important;
-                text-decoration-color: ${underlineColor} !important;
-                text-decoration-thickness: 2px !important;
-                background-color: rgba(255, 0, 0, 0.05) !important;
-                cursor: pointer !important;
-              `
-            }
+              "tabindex": "0"
+            },
+            // CSS에서 오버라이드되지 않도록 inclusive 방식 사용
+            inclusive: false,
+            // 🔧 클래스가 아닌 attributes에 스타일 적용
+            tagName: isFocused ? "mark" : "span"
           }).range(error.start, error.end);
         });
         newDecorations.sort((a, b) => a.from - b.from);
@@ -11015,14 +11415,8 @@ var errorDecorationField = import_state.StateField.define({
                 "data-corrected": JSON.stringify(error.correction.corrected),
                 "role": "button",
                 "tabindex": "0",
-                "style": isFocused ? "" : `
-                  text-decoration-line: underline !important;
-                  text-decoration-style: wavy !important;
-                  text-decoration-color: #ff0000 !important;
-                  text-decoration-thickness: 2px !important;
-                  background-color: rgba(255, 0, 0, 0.05) !important;
-                  cursor: pointer !important;
-                `
+                // 인라인 스타일로 강제 적용 (CSS 간섭 방지)
+                "style": isFocused ? "outline: 3px solid var(--color-red) !important; outline-offset: 2px !important; border-radius: 4px !important; text-decoration-line: underline !important; text-decoration-style: wavy !important; text-decoration-color: var(--color-red) !important; text-decoration-thickness: 2px !important;" : InlineModeService.getErrorStyle("wavy", "var(--color-red)")
               }
             }).range(error.start, error.end);
           });
@@ -11071,6 +11465,7 @@ var InlineModeService = class {
           this.clearHoverTimeout();
           Logger.debug(`\uC0C8\uB85C\uC6B4 \uC624\uB958 \uD638\uBC84 \uC2DC\uC791: "${error.correction.original}" (ID: ${errorId})`);
           const mousePosition = { x: e.clientX, y: e.clientY };
+          this.expandHoverAreaByMorphemes(target, error);
           this.hoverTimeout = setTimeout(() => {
             this.currentHoveredError = error;
             this.handleErrorHover(error, target, mousePosition);
@@ -11097,7 +11492,7 @@ var InlineModeService = class {
     }, true);
     editorDOM.addEventListener("click", (e) => {
       try {
-        if (import_obsidian11.Platform.isMobile) {
+        if (import_obsidian12.Platform.isMobile) {
           Logger.debug("\uBAA8\uBC14\uC77C\uC5D0\uC11C \uD074\uB9AD \uC774\uBCA4\uD2B8 \uBB34\uC2DC (\uD130\uCE58 \uC774\uBCA4\uD2B8 \uC0AC\uC6A9)");
           return;
         }
@@ -11139,7 +11534,7 @@ var InlineModeService = class {
    * 모바일 터치 이벤트 설정
    */
   static setupMobileTouchEvents(editorDOM) {
-    if (!import_obsidian11.Platform.isMobile) {
+    if (!import_obsidian12.Platform.isMobile) {
       Logger.debug("\uB370\uC2A4\uD06C\uD1B1 \uD658\uACBD: \uD130\uCE58 \uC774\uBCA4\uD2B8 \uB4F1\uB85D\uD558\uC9C0 \uC54A\uC74C");
       return;
     }
@@ -11258,7 +11653,7 @@ var InlineModeService = class {
   static checkCursorPosition() {
     if (!this.currentFocusedError || !this.app)
       return;
-    const view = this.app.workspace.getActiveViewOfType(import_obsidian13.MarkdownView);
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian14.MarkdownView);
     if (!view)
       return;
     const editor = view.editor;
@@ -11288,7 +11683,7 @@ var InlineModeService = class {
   static findErrorAtCursor() {
     if (!this.app)
       return null;
-    const view = this.app.workspace.getActiveViewOfType(import_obsidian13.MarkdownView);
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian14.MarkdownView);
     if (!view)
       return null;
     const editor = view.editor;
@@ -11311,54 +11706,95 @@ var InlineModeService = class {
     Logger.debug("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC124\uC815 \uC5C5\uB370\uC774\uD2B8\uB428");
   }
   /**
-   * 오류 표시
+   * 오류 표시 (형태소 API 통합)
    */
-  static showErrors(view, corrections, underlineStyle = "wavy", underlineColor = "#ff0000", app) {
+  static async showErrors(view, corrections, underlineStyle = "wavy", underlineColor = "var(--color-red)", app, morphemeData) {
     if (!view || !corrections.length) {
       Logger.warn("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uBDF0\uB098 \uAD50\uC815 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
-    this.clearErrors(view);
-    const doc = view.state.doc;
-    const fullText = doc.toString();
-    const errors = [];
-    corrections.forEach((correction, index) => {
-      const searchText = correction.original;
-      let searchIndex = 0;
-      let occurrence = 0;
-      while (true) {
-        const foundIndex = fullText.indexOf(searchText, searchIndex);
-        if (foundIndex === -1)
-          break;
-        const beforeChar = foundIndex > 0 ? fullText[foundIndex - 1] : " ";
-        const afterChar = foundIndex + searchText.length < fullText.length ? fullText[foundIndex + searchText.length] : " ";
-        const isWordBoundary = this.isValidWordBoundary(beforeChar, afterChar, searchText);
-        if (isWordBoundary) {
-          const uniqueId = `${index}_${occurrence}_${foundIndex}`;
-          const lineInfo = doc.lineAt(foundIndex);
-          const error = {
-            correction,
-            start: foundIndex,
-            end: foundIndex + searchText.length,
-            line: lineInfo.number,
-            ch: foundIndex - lineInfo.from,
-            uniqueId,
-            isActive: true
-          };
-          errors.push(error);
-          this.activeErrors.set(uniqueId, error);
-          Logger.debug(`\u{1F3AF} \uC624\uB958 \uC704\uCE58 \uC124\uC815: "${searchText}" (${uniqueId}) at ${foundIndex}-${foundIndex + searchText.length}`);
-          occurrence++;
+    const analysisNotice = NotificationUtils.showAnalysisStartNotice("spelling");
+    try {
+      this.clearErrors(view);
+      const doc = view.state.doc;
+      const fullText = doc.toString();
+      let finalMorphemeData = morphemeData;
+      if (!finalMorphemeData && this.settings) {
+        try {
+          NotificationUtils.updateNoticeMessage(analysisNotice, "\u{1F4CB} \uD615\uD0DC\uC18C \uBD84\uC11D \uC911...");
+          const apiService = new SpellCheckApiService();
+          finalMorphemeData = await apiService.analyzeMorphemes(fullText, this.settings);
+          Logger.debug("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uD615\uD0DC\uC18C \uBD84\uC11D \uC644\uB8CC");
+        } catch (error) {
+          Logger.warn("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uD615\uD0DC\uC18C \uBD84\uC11D \uC2E4\uD328, \uAE30\uBCF8 \uB85C\uC9C1 \uC0AC\uC6A9:", error);
         }
-        searchIndex = foundIndex + 1;
       }
-    });
-    const mergedErrors = this.mergeOverlappingErrors(errors);
-    Logger.debug(`\u{1F527} \uC624\uB958 \uBCD1\uD569: ${errors.length}\uAC1C \u2192 ${mergedErrors.length}\uAC1C`);
-    view.dispatch({
-      effects: addErrorDecorations.of({ errors: mergedErrors, underlineStyle, underlineColor })
-    });
-    Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: ${mergedErrors.length}\uAC1C \uC624\uB958 \uD45C\uC2DC\uB428 (\uBCD1\uD569 \uD6C4)`);
+      const originalCount = corrections.length;
+      const optimizedCorrections = MorphemeUtils.removeDuplicateCorrections(
+        corrections,
+        finalMorphemeData,
+        fullText
+      );
+      if (originalCount > optimizedCorrections.length) {
+        NotificationUtils.showDuplicateRemovalNotice(
+          originalCount,
+          optimizedCorrections.length,
+          !!finalMorphemeData,
+          1500
+        );
+      }
+      const errors = [];
+      optimizedCorrections.forEach((correction, index) => {
+        const searchText = correction.original;
+        let searchIndex = 0;
+        let occurrence = 0;
+        while (true) {
+          const foundIndex = fullText.indexOf(searchText, searchIndex);
+          if (foundIndex === -1)
+            break;
+          const beforeChar = foundIndex > 0 ? fullText[foundIndex - 1] : " ";
+          const afterChar = foundIndex + searchText.length < fullText.length ? fullText[foundIndex + searchText.length] : " ";
+          const isWordBoundary = this.isValidWordBoundary(beforeChar, afterChar, searchText);
+          if (isWordBoundary) {
+            const uniqueId = `${index}_${occurrence}_${foundIndex}`;
+            const lineInfo = doc.lineAt(foundIndex);
+            const posInfo = finalMorphemeData ? MorphemeUtils.extractPosInfo(searchText, finalMorphemeData) : void 0;
+            const error = {
+              correction,
+              start: foundIndex,
+              end: foundIndex + searchText.length,
+              line: lineInfo.number,
+              ch: foundIndex - lineInfo.from,
+              uniqueId,
+              isActive: true,
+              morphemeInfo: posInfo
+              // 형태소 정보 추가
+            };
+            errors.push(error);
+            this.activeErrors.set(uniqueId, error);
+            Logger.debug(`\u{1F3AF} \uC624\uB958 \uC704\uCE58 \uC124\uC815: "${searchText}" (${uniqueId}) at ${foundIndex}-${foundIndex + searchText.length}${posInfo ? ` [${posInfo.mainPos}]` : ""}`);
+            occurrence++;
+          }
+          searchIndex = foundIndex + 1;
+        }
+      });
+      const mergedErrors = this.mergeOverlappingErrors(errors);
+      Logger.log(`\u{1F527} \uC624\uB958 \uBCD1\uD569: ${errors.length}\uAC1C \u2192 ${mergedErrors.length}\uAC1C`);
+      const mergedCount = mergedErrors.filter((err) => err.originalErrors && err.originalErrors.length > 1).length;
+      if (mergedCount > 0) {
+        Logger.debug(`\u{1F527} \uBCD1\uD569\uB41C \uC624\uB958: ${mergedCount}\uAC1C`);
+      }
+      view.dispatch({
+        effects: addErrorDecorations.of({ errors: mergedErrors, underlineStyle, underlineColor })
+      });
+      NotificationUtils.hideNotice(analysisNotice);
+      NotificationUtils.showAnalysisCompleteNotice("spelling", mergedErrors.length, 2e3);
+    } catch (error) {
+      Logger.error("\uC778\uB77C\uC778 \uBAA8\uB4DC \uC624\uB958 \uD45C\uC2DC \uC2E4\uD328:", error);
+      NotificationUtils.hideNotice(analysisNotice);
+      NotificationUtils.showApiErrorNotice("general", error.message);
+    }
+    Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uCC98\uB9AC \uC644\uB8CC`);
   }
   /**
    * 겹치는 오류들을 병합하여 분절된 하이라이팅 방지
@@ -11502,8 +11938,8 @@ var InlineModeService = class {
     const shouldShowTooltip = this.shouldShowTooltipOnInteraction("hover");
     if (shouldShowTooltip) {
       const targetElement = hoveredElement || this.findErrorElement(error);
-      if (targetElement) {
-        globalInlineTooltip.show(error, targetElement, "hover", mousePosition);
+      if (targetElement && window.globalInlineTooltip) {
+        window.globalInlineTooltip.show(error, targetElement, "hover", mousePosition);
       }
     }
   }
@@ -11700,12 +12136,21 @@ var InlineModeService = class {
     mergedError.correction.corrected = remainingCorrected;
     this.activeErrors.set(mergedError.uniqueId, mergedError);
     const mergedErrors = [mergedError];
+    Logger.debug(`\u{1F527} \uBCD1\uD569\uB41C \uC624\uB958 decoration \uC5C5\uB370\uC774\uD2B8: "${mergedError.correction.original}"`);
+    const isDarkMode = document.body.classList.contains("theme-dark");
+    const debugColor = isDarkMode ? "#fb464c" : "#e93147";
+    Logger.debug(`\u{1F3A8} \uB2E4\uD06C\uBAA8\uB4DC \uAC10\uC9C0: ${isDarkMode}, \uC801\uC6A9 \uC0C9\uC0C1: ${debugColor}`);
     this.currentView.dispatch({
-      effects: addErrorDecorations.of({
-        errors: mergedErrors,
-        underlineStyle: "wavy",
-        underlineColor: "#ff0000"
-      })
+      effects: [
+        removeErrorDecorations.of([mergedError.uniqueId]),
+        // 기존 제거
+        addErrorDecorations.of({
+          errors: mergedErrors,
+          underlineStyle: "wavy",
+          underlineColor: isDarkMode ? debugColor : "var(--color-red)"
+          // 다크모드에서만 강제 색상
+        })
+      ]
     });
     if (window.globalInlineTooltip && window.globalInlineTooltip.visible) {
       setTimeout(() => {
@@ -11856,7 +12301,7 @@ var InlineModeService = class {
       name: "\uB2E4\uC74C \uBB38\uBC95 \uC624\uB958\uB85C \uC774\uB3D9",
       callback: () => {
         if (this.activeErrors.size === 0) {
-          new import_obsidian12.Notice("\uD604\uC7AC \uAC10\uC9C0\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uC778\uB77C\uC778 \uBAA8\uB4DC\uB97C \uD65C\uC131\uD654\uD558\uACE0 \uBB38\uBC95 \uAC80\uC0AC\uB97C \uC2E4\uD589\uD574\uC8FC\uC138\uC694.");
+          new import_obsidian13.Notice("\uD604\uC7AC \uAC10\uC9C0\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uC778\uB77C\uC778 \uBAA8\uB4DC\uB97C \uD65C\uC131\uD654\uD558\uACE0 \uBB38\uBC95 \uAC80\uC0AC\uB97C \uC2E4\uD589\uD574\uC8FC\uC138\uC694.");
           return;
         }
         const nextError = this.findNextErrorFromCursor();
@@ -11868,7 +12313,7 @@ var InlineModeService = class {
           this.setFocusedError(nextError);
           Logger.log(`\u2705 \uB2E4\uC74C \uC624\uB958\uB85C \uC774\uB3D9: ${nextError.correction.original}`);
         } else {
-          new import_obsidian12.Notice("\uB2E4\uC74C \uC624\uB958\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+          new import_obsidian13.Notice("\uB2E4\uC74C \uC624\uB958\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
         }
       }
     });
@@ -11877,7 +12322,7 @@ var InlineModeService = class {
       name: "\uC774\uC804 \uBB38\uBC95 \uC624\uB958\uB85C \uC774\uB3D9",
       callback: () => {
         if (this.activeErrors.size === 0) {
-          new import_obsidian12.Notice("\uD604\uC7AC \uAC10\uC9C0\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uC778\uB77C\uC778 \uBAA8\uB4DC\uB97C \uD65C\uC131\uD654\uD558\uACE0 \uBB38\uBC95 \uAC80\uC0AC\uB97C \uC2E4\uD589\uD574\uC8FC\uC138\uC694.");
+          new import_obsidian13.Notice("\uD604\uC7AC \uAC10\uC9C0\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uC778\uB77C\uC778 \uBAA8\uB4DC\uB97C \uD65C\uC131\uD654\uD558\uACE0 \uBB38\uBC95 \uAC80\uC0AC\uB97C \uC2E4\uD589\uD574\uC8FC\uC138\uC694.");
           return;
         }
         const previousError = this.findPreviousErrorFromCursor();
@@ -11889,7 +12334,7 @@ var InlineModeService = class {
           this.setFocusedError(previousError);
           Logger.log(`\u2705 \uC774\uC804 \uC624\uB958\uB85C \uC774\uB3D9: ${previousError.correction.original}`);
         } else {
-          new import_obsidian12.Notice("\uC774\uC804 \uC624\uB958\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+          new import_obsidian13.Notice("\uC774\uC804 \uC624\uB958\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
         }
       }
     });
@@ -11903,17 +12348,17 @@ var InlineModeService = class {
             this.setFocusedError(errorAtCursor);
             Logger.log(`\u{1F3AF} \uCEE4\uC11C \uC704\uCE58\uC5D0\uC11C \uC790\uB3D9 \uD3EC\uCEE4\uC2A4: ${errorAtCursor.correction.original}`);
           } else {
-            new import_obsidian12.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uCEE4\uC11C\uB97C \uC624\uB958 \uB2E8\uC5B4\uC5D0 \uC704\uCE58\uC2DC\uD0A4\uAC70\uB098 \uBA3C\uC800 \uC624\uB958\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
+            new import_obsidian13.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uCEE4\uC11C\uB97C \uC624\uB958 \uB2E8\uC5B4\uC5D0 \uC704\uCE58\uC2DC\uD0A4\uAC70\uB098 \uBA3C\uC800 \uC624\uB958\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
             return;
           }
         }
         if (!this.currentFocusedError || !this.currentFocusedError.correction) {
-          new import_obsidian12.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
+          new import_obsidian13.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
           return;
         }
         const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
         if (!suggestions || suggestions.length === 0) {
-          new import_obsidian12.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
+          new import_obsidian13.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
           return;
         }
         this.currentSuggestionIndex = (this.currentSuggestionIndex + 1) % suggestions.length;
@@ -11931,17 +12376,17 @@ var InlineModeService = class {
             this.setFocusedError(errorAtCursor);
             Logger.log(`\u{1F3AF} \uCEE4\uC11C \uC704\uCE58\uC5D0\uC11C \uC790\uB3D9 \uD3EC\uCEE4\uC2A4: ${errorAtCursor.correction.original}`);
           } else {
-            new import_obsidian12.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uCEE4\uC11C\uB97C \uC624\uB958 \uB2E8\uC5B4\uC5D0 \uC704\uCE58\uC2DC\uD0A4\uAC70\uB098 \uBA3C\uC800 \uC624\uB958\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
+            new import_obsidian13.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uCEE4\uC11C\uB97C \uC624\uB958 \uB2E8\uC5B4\uC5D0 \uC704\uCE58\uC2DC\uD0A4\uAC70\uB098 \uBA3C\uC800 \uC624\uB958\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
             return;
           }
         }
         if (!this.currentFocusedError || !this.currentFocusedError.correction) {
-          new import_obsidian12.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
+          new import_obsidian13.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
           return;
         }
         const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
         if (!suggestions || suggestions.length === 0) {
-          new import_obsidian12.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
+          new import_obsidian13.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
           return;
         }
         this.currentSuggestionIndex = (this.currentSuggestionIndex - 1 + suggestions.length) % suggestions.length;
@@ -11954,19 +12399,19 @@ var InlineModeService = class {
       name: "\uC120\uD0DD\uB41C \uC81C\uC548 \uC801\uC6A9",
       callback: () => {
         if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
-          new import_obsidian12.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uC624\uB958\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
+          new import_obsidian13.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uC624\uB958\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
           return;
         }
         const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
         if (!suggestions || suggestions.length === 0) {
-          new import_obsidian12.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
+          new import_obsidian13.Notice("\uD604\uC7AC \uC624\uB958\uC5D0 \uB300\uD55C \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
           return;
         }
         const selectedSuggestion = suggestions[this.currentSuggestionIndex];
         const originalText = this.currentFocusedError.correction.original;
         this.applySuggestion(this.currentFocusedError, selectedSuggestion);
         this.clearFocusedError();
-        new import_obsidian12.Notice(`\uC81C\uC548 \uC801\uC6A9: "${originalText}" \u2192 "${selectedSuggestion}"`);
+        new import_obsidian13.Notice(`\uC81C\uC548 \uC801\uC6A9: "${originalText}" \u2192 "${selectedSuggestion}"`);
         Logger.log(`\u2705 \uC81C\uC548 \uC801\uC6A9: "${originalText}" \u2192 "${selectedSuggestion}"`);
       }
     });
@@ -11975,11 +12420,11 @@ var InlineModeService = class {
       name: "\uBB38\uBC95 \uC624\uB958 \uD3EC\uCEE4\uC2A4 \uD574\uC81C",
       callback: () => {
         if (!this.currentFocusedError || !this.currentView) {
-          new import_obsidian12.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+          new import_obsidian13.Notice("\uD604\uC7AC \uD3EC\uCEE4\uC2A4\uB41C \uBB38\uBC95 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
           return;
         }
         this.clearFocusedError();
-        new import_obsidian12.Notice("\uBB38\uBC95 \uC624\uB958 \uD3EC\uCEE4\uC2A4\uB97C \uD574\uC81C\uD588\uC2B5\uB2C8\uB2E4.");
+        new import_obsidian13.Notice("\uBB38\uBC95 \uC624\uB958 \uD3EC\uCEE4\uC2A4\uB97C \uD574\uC81C\uD588\uC2B5\uB2C8\uB2E4.");
         Logger.log("\u2705 \uD0A4\uBCF4\uB4DC \uB124\uBE44\uAC8C\uC774\uC158 \uD574\uC81C");
       }
     });
@@ -12028,12 +12473,12 @@ var InlineModeService = class {
       case "disabled":
         return false;
       case "hover":
-        return interactionType === "hover" && !import_obsidian11.Platform.isMobile;
+        return interactionType === "hover" && !import_obsidian12.Platform.isMobile;
       case "click":
         return interactionType === "click";
       case "auto":
       default:
-        if (import_obsidian11.Platform.isMobile) {
+        if (import_obsidian12.Platform.isMobile) {
           return interactionType === "click";
         } else {
           return true;
@@ -12048,7 +12493,7 @@ var InlineModeService = class {
       return null;
     }
     try {
-      const view = this.app.workspace.getActiveViewOfType(import_obsidian13.MarkdownView);
+      const view = this.app.workspace.getActiveViewOfType(import_obsidian14.MarkdownView);
       if (!view || !view.editor) {
         Logger.warn("\uD604\uC7AC \uD65C\uC131 Markdown \uC5D0\uB514\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4");
         return null;
@@ -12082,7 +12527,7 @@ var InlineModeService = class {
       return null;
     }
     try {
-      const view = this.app.workspace.getActiveViewOfType(import_obsidian13.MarkdownView);
+      const view = this.app.workspace.getActiveViewOfType(import_obsidian14.MarkdownView);
       if (!view || !view.editor) {
         Logger.warn("\uD604\uC7AC \uD65C\uC131 Markdown \uC5D0\uB514\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4");
         return null;
@@ -12117,7 +12562,7 @@ var InlineModeService = class {
       return;
     }
     try {
-      const view = this.app.workspace.getActiveViewOfType(import_obsidian13.MarkdownView);
+      const view = this.app.workspace.getActiveViewOfType(import_obsidian14.MarkdownView);
       if (!view || !view.editor) {
         Logger.warn("\uD604\uC7AC \uD65C\uC131 Markdown \uC5D0\uB514\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4");
         return;
@@ -12142,7 +12587,7 @@ var InlineModeService = class {
       return;
     }
     try {
-      const view = this.app.workspace.getActiveViewOfType(import_obsidian13.MarkdownView);
+      const view = this.app.workspace.getActiveViewOfType(import_obsidian14.MarkdownView);
       if (!view || !view.editor) {
         Logger.warn("\uD604\uC7AC \uD65C\uC131 Markdown \uC5D0\uB514\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4");
         return;
@@ -12192,6 +12637,149 @@ var InlineModeService = class {
       Logger.error("\uC784\uC2DC \uC81C\uC548 \uC801\uC6A9 \uC911 \uC624\uB958:", error);
     }
   }
+  /**
+   * 다크모드를 고려한 오류 스타일을 생성합니다.
+   */
+  static getErrorStyle(underlineStyle, underlineColor, isHover = false) {
+    const isDarkMode = document.body.classList.contains("theme-dark");
+    let actualColor;
+    let actualBgColor;
+    if (isDarkMode) {
+      actualColor = isHover ? "var(--color-red)" : "var(--color-red)";
+      actualBgColor = isHover ? "rgba(var(--color-red-rgb), 0.2)" : "rgba(var(--color-red-rgb), 0.1)";
+    } else {
+      actualColor = isHover ? "var(--color-red)" : "var(--color-red)";
+      actualBgColor = isHover ? "rgba(var(--color-red-rgb), 0.15)" : "rgba(var(--color-red-rgb), 0.08)";
+    }
+    return `text-decoration-line: underline !important; text-decoration-style: ${underlineStyle} !important; text-decoration-color: ${actualColor} !important; text-decoration-thickness: 2px !important; background-color: ${actualBgColor} !important; cursor: pointer !important;`;
+  }
+  /**
+   * 🎯 컨텍스트 기반 호버 영역 확장
+   * 주변 형태소 정보를 활용하여 더 넓은 호버 영역 제공
+   */
+  static expandHoverAreaByMorphemes(element, error) {
+    if (!error.morphemeInfo || !this.currentView) {
+      Logger.debug(`\uD615\uD0DC\uC18C \uC815\uBCF4 \uC5C6\uC74C, \uD638\uBC84 \uC601\uC5ED \uD655\uC7A5 \uC0DD\uB7B5: ${error.correction.original}`);
+      return;
+    }
+    try {
+      const tokenBoundaries = this.getTokenBoundaries(error);
+      if (!tokenBoundaries)
+        return;
+      const expandedStyle = this.createExpandedHoverStyle(tokenBoundaries);
+      this.createExpandedHoverZone(element, expandedStyle, error);
+      Logger.debug(`\u{1F3AF} \uD638\uBC84 \uC601\uC5ED \uD655\uC7A5: ${error.correction.original} (\uD1A0\uD070: ${tokenBoundaries.startToken}-${tokenBoundaries.endToken})`);
+    } catch (err) {
+      Logger.warn("\uD638\uBC84 \uC601\uC5ED \uD655\uC7A5 \uC2E4\uD328:", err);
+    }
+  }
+  /**
+   * 형태소 정보 기반 토큰 경계 계산
+   */
+  static getTokenBoundaries(error) {
+    if (!error.morphemeInfo || !this.currentView)
+      return null;
+    try {
+      const doc = this.currentView.state.doc;
+      const errorStart = error.start;
+      const errorEnd = error.end;
+      const contextStart = Math.max(0, errorStart - 30);
+      const contextEnd = Math.min(doc.length, errorEnd + 30);
+      const contextText = doc.sliceString(contextStart, contextEnd);
+      const relativeErrorStart = errorStart - contextStart;
+      const relativeErrorEnd = errorEnd - contextStart;
+      let expandedStart = relativeErrorStart;
+      let expandedEnd = relativeErrorEnd;
+      while (expandedStart > 0) {
+        const char = contextText[expandedStart - 1];
+        if (/[\s.,!?;:\-()[\]{}'"'""''…]/.test(char))
+          break;
+        if (/[가-힣]/.test(char) && expandedStart <= relativeErrorStart - 10)
+          break;
+        expandedStart--;
+      }
+      while (expandedEnd < contextText.length) {
+        const char = contextText[expandedEnd];
+        if (/[\s.,!?;:\-()[\]{}'"'""''…]/.test(char))
+          break;
+        if (/[가-힣]/.test(char) && expandedEnd >= relativeErrorEnd + 10)
+          break;
+        expandedEnd++;
+      }
+      return {
+        startToken: contextStart + expandedStart,
+        endToken: contextStart + expandedEnd,
+        contextText: contextText.slice(expandedStart, expandedEnd)
+      };
+    } catch (err) {
+      Logger.warn("\uD1A0\uD070 \uACBD\uACC4 \uACC4\uC0B0 \uC2E4\uD328:", err);
+      return null;
+    }
+  }
+  /**
+   * 확장된 호버 스타일 생성
+   */
+  static createExpandedHoverStyle(boundaries) {
+    const isDarkMode = document.body.classList.contains("theme-dark");
+    return `
+      position: relative;
+      z-index: 2;
+      &::before {
+        content: '';
+        position: absolute;
+        left: -5px;
+        right: -5px;
+        top: -2px;
+        bottom: -2px;
+        background: ${isDarkMode ? "rgba(var(--color-red-rgb), 0.05)" : "rgba(var(--color-red-rgb), 0.03)"};
+        border-radius: 3px;
+        pointer-events: none;
+        z-index: -1;
+      }
+    `;
+  }
+  /**
+   * 확장된 호버 감지 영역 생성
+   */
+  static createExpandedHoverZone(originalElement, style, error) {
+    var _a;
+    const existingZone = (_a = originalElement.parentElement) == null ? void 0 : _a.querySelector(".korean-grammar-expanded-hover");
+    if (existingZone) {
+      existingZone.remove();
+    }
+    const expandedZone = document.createElement("span");
+    expandedZone.className = "korean-grammar-expanded-hover";
+    expandedZone.style.cssText = `
+      position: absolute;
+      left: -8px;
+      right: -8px;
+      top: -3px;
+      bottom: -3px;
+      pointer-events: auto;
+      z-index: 1;
+      opacity: 0;
+    `;
+    expandedZone.addEventListener("mouseenter", () => {
+      Logger.debug(`\u{1F3AF} \uD655\uC7A5 \uD638\uBC84 \uC601\uC5ED \uC9C4\uC785: ${error.correction.original}`);
+      if (!this.currentHoveredError || this.currentHoveredError.uniqueId !== error.uniqueId) {
+        this.currentHoveredError = error;
+        this.handleErrorHover(error, originalElement);
+      }
+    });
+    expandedZone.addEventListener("mouseleave", () => {
+      Logger.debug(`\u{1F3AF} \uD655\uC7A5 \uD638\uBC84 \uC601\uC5ED \uC774\uD0C8: ${error.correction.original}`);
+      setTimeout(() => {
+        var _a2;
+        if (((_a2 = this.currentHoveredError) == null ? void 0 : _a2.uniqueId) === error.uniqueId) {
+          this.currentHoveredError = null;
+        }
+      }, 200);
+    });
+    if (originalElement.parentElement) {
+      originalElement.style.position = "relative";
+      originalElement.appendChild(expandedZone);
+    }
+  }
 };
 InlineModeService.activeErrors = /* @__PURE__ */ new Map();
 InlineModeService.currentView = null;
@@ -12205,9 +12793,9 @@ InlineModeService.currentHoveredError = null;
 InlineModeService.hoverTimeout = null;
 
 // src/ui/koreanGrammarSuggest.ts
-var import_obsidian14 = require("obsidian");
+var import_obsidian15 = require("obsidian");
 init_logger();
-var KoreanGrammarSuggest = class extends import_obsidian14.EditorSuggest {
+var KoreanGrammarSuggest = class extends import_obsidian15.EditorSuggest {
   constructor(app, settings) {
     var _a, _b;
     super(app);
@@ -12344,7 +12932,7 @@ var KoreanGrammarSuggest = class extends import_obsidian14.EditorSuggest {
    * 상세 옵션 메뉴 표시
    */
   showDetailedOptions(suggestion, editor, evt) {
-    const menu = new import_obsidian14.Menu();
+    const menu = new import_obsidian15.Menu();
     suggestion.corrections.forEach((correction, index) => {
       menu.addItem((item) => {
         item.setTitle(correction).setIcon(index === 0 ? "star" : "edit").onClick(() => {
@@ -12385,7 +12973,7 @@ var KoreanGrammarSuggest = class extends import_obsidian14.EditorSuggest {
     );
     this.corrections.delete(suggestion.original);
     Logger.log(`\uB9DE\uCDA4\uBC95 \uC218\uC815 \uC801\uC6A9: "${suggestion.original}" \u2192 "${selectedCorrection}"`);
-    new import_obsidian14.Notice(`"${suggestion.original}"\uC774(\uAC00) "${selectedCorrection}"\uB85C \uC218\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
+    new import_obsidian15.Notice(`"${suggestion.original}"\uC774(\uAC00) "${selectedCorrection}"\uB85C \uC218\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
   }
   /**
    * 오류 무시
@@ -12393,13 +12981,13 @@ var KoreanGrammarSuggest = class extends import_obsidian14.EditorSuggest {
   ignoreError(original) {
     this.corrections.delete(original);
     Logger.log(`\uB9DE\uCDA4\uBC95 \uC624\uB958 \uBB34\uC2DC: "${original}"`);
-    new import_obsidian14.Notice(`"${original}" \uC624\uB958\uB97C \uBB34\uC2DC\uD588\uC2B5\uB2C8\uB2E4.`);
+    new import_obsidian15.Notice(`"${original}" \uC624\uB958\uB97C \uBB34\uC2DC\uD588\uC2B5\uB2C8\uB2E4.`);
   }
   /**
    * 도움말 모달 표시
    */
   showHelpModal(helpText) {
-    const modal = new import_obsidian14.Modal(this.app);
+    const modal = new import_obsidian15.Modal(this.app);
     modal.titleEl.setText("\uB9DE\uCDA4\uBC95 \uB3C4\uC6C0\uB9D0");
     const content = modal.contentEl;
     content.createEl("p", { text: helpText });
@@ -12512,11 +13100,11 @@ var KoreanGrammarSuggest = class extends import_obsidian14.EditorSuggest {
 };
 
 // main.ts
-(0, import_obsidian15.addIcon)(
+(0, import_obsidian16.addIcon)(
   "han-spellchecker",
   `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 18 18" fill="currentColor"><path d="M3.6,3.9c1.3,0,2.9,0,4.2,0,.7,0,2.3-.5,2.3.7,0,.3-.3.5-.6.5-2.2,0-4.6.2-6.8,0-.4,0-.7-.4-.8-.8-.2-.7,1.2-.7,1.5-.4h0ZM6.1,11c-4.2,0-3.7-5.8.7-5.2,3.7.2,3.1,5.6-.5,5.2h-.2ZM3.6,1.6c.7,0,1.5.4,2.3.4.8.1,1.6,0,2.4,0,.8,1.2-1.4,1.5-2.9,1.3-.9,0-2.7-.8-1.9-1.7h0ZM6.3,9.7c2.5,0,1.9-3.4-.6-2.8-1.2.2-1.4,1.8-.5,2.4.2.2.9.2,1,.3h0ZM4.9,13.2c-.1-1.2,1.5-.9,1.6.1.4,1.5-.2,2.3,2,2.1,1,0,6.7-.6,5,1.1-2.3.5-5.4.7-7.6-.3-.6-.8-.3-2.2-.9-3h0ZM11.3,1.1c2.6-.3,1.5,3.8,2,5,.6.4,2.6-.5,2.8.7,0,.4-.3.6-.6.7-.7.1-1.6,0-2.3.1-.2.1,0,.5-.1,1.1,0,1,0,4.2-.8,4.2-.2,0-.5-.3-.6-.6-.3-1.4,0-3.4,0-5,0-1.9,0-3.8-.2-4.6-.1-.4-.5-1.2-.1-1.5h.1Z"/></svg>`
 );
-var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
+var KoreanGrammarPlugin = class extends import_obsidian16.Plugin {
   constructor() {
     super(...arguments);
     this.grammarSuggest = null;
@@ -12574,7 +13162,7 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       name: "\uC778\uB77C\uC778 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC (\uBCA0\uD0C0)",
       callback: async () => {
         if (!this.settings.inlineMode.enabled) {
-          new import_obsidian15.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
+          new import_obsidian16.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
           return;
         }
         await this.executeInlineSpellCheck();
@@ -12585,7 +13173,7 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       name: "\uC778\uB77C\uC778 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC (EditorSuggest)",
       callback: async () => {
         if (!this.settings.inlineMode.enabled) {
-          new import_obsidian15.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
+          new import_obsidian16.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
           return;
         }
         await this.executeInlineSpellCheckWithSuggest();
@@ -12619,17 +13207,17 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
   async executeInlineSpellCheck() {
     const activeLeaf = this.app.workspace.activeLeaf;
     if (!activeLeaf) {
-      new import_obsidian15.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     const editor = activeLeaf.view.editor;
     if (!editor) {
-      new import_obsidian15.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     const editorView = editor.cm;
     if (!editorView) {
-      new import_obsidian15.Notice("CodeMirror \uC5D0\uB514\uD130 \uBDF0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("CodeMirror \uC5D0\uB514\uD130 \uBDF0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791");
@@ -12637,27 +13225,26 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       InlineModeService.setEditorView(editorView, this.settings, this.app);
       const fullText = editorView.state.doc.toString();
       if (!fullText.trim()) {
-        new import_obsidian15.Notice("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+        new import_obsidian16.Notice("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
         return;
       }
       const apiService = new SpellCheckApiService();
       const result = await apiService.checkSpelling(fullText, this.settings);
       if (!result.corrections || result.corrections.length === 0) {
-        new import_obsidian15.Notice("\uB9DE\uCDA4\uBC95 \uC624\uB958\uAC00 \uBC1C\uACAC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+        new import_obsidian16.Notice("\uB9DE\uCDA4\uBC95 \uC624\uB958\uAC00 \uBC1C\uACAC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
         return;
       }
-      InlineModeService.showErrors(
+      await InlineModeService.showErrors(
         editorView,
         result.corrections,
         this.settings.inlineMode.underlineStyle,
         this.settings.inlineMode.underlineColor,
         this.app
       );
-      new import_obsidian15.Notice(`${result.corrections.length}\uAC1C\uC758 \uB9DE\uCDA4\uBC95 \uC624\uB958\uB97C \uBC1C\uACAC\uD588\uC2B5\uB2C8\uB2E4.`);
-      Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: ${result.corrections.length}\uAC1C \uC624\uB958 \uD45C\uC2DC \uC644\uB8CC`);
+      Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC644\uB8CC`);
     } catch (error) {
       Logger.error("\uC778\uB77C\uC778 \uBAA8\uB4DC \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC624\uB958:", error);
-      new import_obsidian15.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
     }
   }
   /**
@@ -12682,7 +13269,7 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654\uB428 (EditorSuggest + \uD0A4\uBCF4\uB4DC \uB2E8\uCD95\uD0A4)");
     } catch (error) {
       Logger.error("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654 \uC2E4\uD328:", error);
-      new import_obsidian15.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
     }
   }
   /**
@@ -12703,31 +13290,31 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
    */
   async executeInlineSpellCheckWithSuggest() {
     if (!this.grammarSuggest) {
-      new import_obsidian15.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uD65C\uC131\uD654\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uD65C\uC131\uD654\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
       return;
     }
     const activeLeaf = this.app.workspace.activeLeaf;
     if (!activeLeaf) {
-      new import_obsidian15.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     const editor = activeLeaf.view.editor;
     if (!editor) {
-      new import_obsidian15.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     try {
       const fullText = editor.getValue();
       if (!fullText.trim()) {
-        new import_obsidian15.Notice("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+        new import_obsidian16.Notice("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
         return;
       }
       Logger.log("EditorSuggest \uAE30\uBC18 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791");
       await this.grammarSuggest.updateCorrections(fullText);
-      new import_obsidian15.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC\uAC00 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC624\uD0C0\uC5D0 \uCEE4\uC11C\uB97C \uB193\uC73C\uBA74 \uC218\uC815 \uC81C\uC548\uC774 \uD45C\uC2DC\uB429\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC\uAC00 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC624\uD0C0\uC5D0 \uCEE4\uC11C\uB97C \uB193\uC73C\uBA74 \uC218\uC815 \uC81C\uC548\uC774 \uD45C\uC2DC\uB429\uB2C8\uB2E4.");
     } catch (error) {
       Logger.error("EditorSuggest \uAE30\uBC18 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC624\uB958:", error);
-      new import_obsidian15.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
     }
   }
 };
