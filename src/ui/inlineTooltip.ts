@@ -118,7 +118,7 @@ export class InlineTooltip {
 
     // 병합된 오류인 경우 원본 오류별로 구분해서 표시
     if (error.isMerged && error.originalErrors && error.originalErrors.length > 0) {
-      this.createMergedErrorTooltip(error, targetElement);
+      this.createMergedErrorTooltip(error, targetElement, triggerType);
     } else {
       this.createSingleErrorTooltip(error, targetElement, triggerType);
     }
@@ -478,7 +478,7 @@ export class InlineTooltip {
   /**
    * 병합된 오류용 툴팁 생성
    */
-  private createMergedErrorTooltip(mergedError: InlineError, targetElement: HTMLElement): void {
+  private createMergedErrorTooltip(mergedError: InlineError, targetElement: HTMLElement, triggerType: 'hover' | 'click'): void {
     if (!this.tooltip || !mergedError.originalErrors) return;
 
     // 모바일 최적화를 위한 플랫폼 감지 (병합 툴팁용)

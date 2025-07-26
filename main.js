@@ -9604,7 +9604,7 @@ var InlineTooltip = class {
       }, { passive: true });
     }
     if (error.isMerged && error.originalErrors && error.originalErrors.length > 0) {
-      this.createMergedErrorTooltip(error, targetElement);
+      this.createMergedErrorTooltip(error, targetElement, triggerType);
     } else {
       this.createSingleErrorTooltip(error, targetElement, triggerType);
     }
@@ -9879,7 +9879,7 @@ var InlineTooltip = class {
   /**
    * 병합된 오류용 툴팁 생성
    */
-  createMergedErrorTooltip(mergedError, targetElement) {
+  createMergedErrorTooltip(mergedError, targetElement, triggerType) {
     if (!this.tooltip || !mergedError.originalErrors)
       return;
     const isMobileDevice = import_obsidian10.Platform.isMobile;
