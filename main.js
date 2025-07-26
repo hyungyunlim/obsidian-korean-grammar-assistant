@@ -9912,28 +9912,37 @@ var InlineTooltip = class {
       right: ${isMobileDevice ? isPhoneDevice ? "12px" : "10px" : "8px"};
       top: 50%;
       transform: translateY(-50%);
-      background: transparent;
+      background: none;
       border: none;
+      outline: none;
+      box-shadow: none;
       cursor: pointer;
       font-size: ${isMobileDevice ? isPhoneDevice ? "18px" : "16px" : "16px"};
       color: var(--text-muted);
-      padding: ${isMobileDevice ? "4px" : "2px"};
+      padding: 0;
+      margin: 0;
       transition: all 0.2s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-width: ${isMobileDevice ? "24px" : "20px"};
-      min-height: ${isMobileDevice ? "24px" : "20px"};
+      min-width: auto;
+      min-height: auto;
+      width: auto;
+      height: auto;
       z-index: 10;
       font-weight: 500;
       line-height: 1;
       opacity: 0.7;
+      font-family: inherit;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
       ${isMobileDevice ? "touch-action: manipulation;" : ""}
     `;
     headerCloseButton.addEventListener("mouseenter", () => {
       headerCloseButton.style.opacity = "1";
       headerCloseButton.style.color = "var(--text-normal)";
-      headerCloseButton.style.transform = "translateY(-50%) scale(1.1)";
+      headerCloseButton.style.transform = "translateY(-50%) scale(1.2)";
     });
     headerCloseButton.addEventListener("mouseleave", () => {
       headerCloseButton.style.opacity = "0.7";
@@ -9945,7 +9954,7 @@ var InlineTooltip = class {
         e.preventDefault();
         headerCloseButton.style.opacity = "1";
         headerCloseButton.style.color = "var(--text-normal)";
-        headerCloseButton.style.transform = "translateY(-50%) scale(1.1)";
+        headerCloseButton.style.transform = "translateY(-50%) scale(1.2)";
         if ("vibrate" in navigator) {
           navigator.vibrate(10);
         }
