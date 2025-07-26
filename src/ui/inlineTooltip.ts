@@ -473,46 +473,124 @@ export class InlineTooltip {
   private createMergedErrorTooltip(mergedError: InlineError, targetElement: HTMLElement): void {
     if (!this.tooltip || !mergedError.originalErrors) return;
 
-    // 헤더 영역
+    // 모바일 최적화를 위한 플랫폼 감지 (병합 툴팁용)
+    const isMobileDevice = Platform.isMobile;
+    const isPhoneDevice = (Platform as any).isPhone || (window.innerWidth <= 480);
+
+    // 헤더 영역 - 닫기 버튼 포함
     const header = this.tooltip.createEl('div', { cls: 'tooltip-header' });
     header.style.cssText = `
-      padding: 8px 12px;
+      padding: ${isMobileDevice ? (isPhoneDevice ? '10px 12px' : '11px 13px') : '8px 12px'};
       border-bottom: 1px solid var(--background-modifier-border);
       background: var(--background-secondary);
       font-weight: 600;
-      font-size: 12px;
+      font-size: ${isMobileDevice ? (isPhoneDevice ? '11px' : '12px') : '12px'};
       color: var(--text-muted);
       text-align: center;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     `;
-    header.textContent = `${mergedError.originalErrors.length}개의 오류가 병합됨`;
 
-    // 스크롤 가능한 내용 영역
+    // 헤더 텍스트
+    const headerText = header.createEl('span', { 
+      text: `${mergedError.originalErrors.length}개 오류 병합됨`,
+      cls: 'header-text'
+    });
+    headerText.style.cssText = `
+      flex: 1;
+      text-align: center;
+    `;
+
+    // 우상단 닫기 버튼 (✕)
+    const headerCloseButton = header.createEl('button', { 
+      text: '✕',
+      cls: 'header-close-button'
+    });
+    headerCloseButton.style.cssText = `
+      position: absolute;
+      right: ${isMobileDevice ? '8px' : '6px'};
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: ${isMobileDevice ? (isPhoneDevice ? '14px' : '15px') : '16px'};
+      color: var(--text-muted);
+      padding: ${isMobileDevice ? '4px' : '2px'};
+      border-radius: 3px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: ${isMobileDevice ? '24px' : '20px'};
+      min-height: ${isMobileDevice ? '24px' : '20px'};
+      ${isMobileDevice ? 'touch-action: manipulation;' : ''}
+    `;
+
+    // 닫기 버튼 이벤트
+    headerCloseButton.addEventListener('mouseenter', () => {
+      headerCloseButton.style.background = 'var(--interactive-hover)';
+      headerCloseButton.style.color = 'var(--text-normal)';
+    });
+
+    headerCloseButton.addEventListener('mouseleave', () => {
+      headerCloseButton.style.background = 'transparent';
+      headerCloseButton.style.color = 'var(--text-muted)';
+    });
+
+    // 모바일 터치 피드백
+    if (isMobileDevice) {
+      headerCloseButton.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        headerCloseButton.style.background = 'var(--interactive-hover)';
+        headerCloseButton.style.color = 'var(--text-normal)';
+        if ('vibrate' in navigator) {
+          navigator.vibrate(10);
+        }
+      }, { passive: false });
+      
+      headerCloseButton.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.hide();
+      }, { passive: false });
+    }
+
+    headerCloseButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.hide();
+    });
+
+    // 스크롤 가능한 내용 영역 - 모바일 최적화
     const scrollContainer = this.tooltip.createEl('div', { cls: 'tooltip-scroll-container' });
     scrollContainer.style.cssText = `
       flex: 1;
       overflow-y: auto;
-      max-height: 250px;
+      max-height: ${isMobileDevice ? (isPhoneDevice ? '280px' : '320px') : '250px'};
+      min-height: ${isMobileDevice ? (isPhoneDevice ? '120px' : '140px') : 'auto'};
     `;
 
-    // 각 원본 오류별로 섹션 생성
+    // 각 원본 오류별로 섹션 생성 - 모바일 최적화
     mergedError.originalErrors.forEach((originalError, index) => {
       const errorSection = scrollContainer.createEl('div', { cls: 'error-section' });
       errorSection.style.cssText = `
-        padding: 8px 12px;
+        padding: ${isMobileDevice ? (isPhoneDevice ? '10px 12px' : '11px 13px') : '8px 12px'};
         ${index > 0 ? 'border-top: 1px solid var(--background-modifier-border-hover);' : ''}
       `;
 
-      // 한 줄 레이아웃 (오류 → 제안들)
+      // 한 줄 레이아웃 (오류 → 제안들) - 모바일 최적화
       const errorLine = errorSection.createEl('div', { cls: 'error-line' });
       errorLine.style.cssText = `
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: ${isMobileDevice ? (isPhoneDevice ? '6px' : '7px') : '8px'};
         flex-wrap: nowrap;
-        min-height: 28px;
+        min-height: ${isMobileDevice ? (isPhoneDevice ? '32px' : '34px') : '28px'};
       `;
 
-      // 오류 단어 표시 (고정 너비)
+      // 오류 단어 표시 (고정 너비) - 모바일 최적화
       const errorWord = errorLine.createEl('span', { 
         text: originalError.correction.original,
         cls: 'error-word'
@@ -521,68 +599,69 @@ export class InlineTooltip {
         color: var(--text-error);
         font-weight: 600;
         background: rgba(255, 0, 0, 0.1);
-        padding: 3px 6px;
+        padding: ${isMobileDevice ? (isPhoneDevice ? '4px 7px' : '4px 8px') : '3px 6px'};
         border-radius: 3px;
-        font-size: 12px;
+        font-size: ${isMobileDevice ? (isPhoneDevice ? '11px' : '12px') : '12px'};
         white-space: nowrap;
         flex-shrink: 0;
-        min-width: 60px;
-        max-width: 120px;
+        min-width: ${isMobileDevice ? '70px' : '60px'};
+        max-width: ${isMobileDevice ? (isPhoneDevice ? '100px' : '110px') : '120px'};
         overflow: hidden;
         text-overflow: ellipsis;
+        line-height: ${isMobileDevice ? '1.3' : '1.2'};
       `;
 
-      // 화살표 (고정)
+      // 화살표 (고정) - 모바일 최적화
       const arrow = errorLine.createEl('span', { text: '→' });
       arrow.style.cssText = `
         color: var(--text-muted);
         font-weight: bold;
         flex-shrink: 0;
+        font-size: ${isMobileDevice ? (isPhoneDevice ? '12px' : '13px') : '14px'};
       `;
 
-      // 수정 제안들을 가로로 나열 (남은 공간 활용)
+      // 수정 제안들을 가로로 나열 (남은 공간 활용) - 모바일 최적화
       const suggestionsList = errorLine.createEl('div', { cls: 'suggestions-list' });
       suggestionsList.style.cssText = `
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: ${isMobileDevice ? (isPhoneDevice ? '3px' : '4px') : '4px'};
         flex: 1;
         flex-wrap: wrap;
         overflow: hidden;
       `;
 
-      // 수정 제안 버튼들 (컴팩트하게)
+      // 수정 제안 버튼들 (원본 오류 단어와 비슷한 크기로) - 모바일 최적화
       originalError.correction.corrected.forEach((suggestion) => {
         const suggestionButton = suggestionsList.createEl('button', {
           text: suggestion,
           cls: 'suggestion-button'
         });
         
-        const isMobile = Platform.isMobile;
-        
         suggestionButton.style.cssText = `
           background: var(--interactive-normal);
           border: 1px solid var(--background-modifier-border);
-          border-radius: ${isMobile ? '6px' : '3px'};
-          padding: ${isMobile ? '4px 8px' : '2px 6px'};
+          border-radius: 3px;
+          padding: ${isMobileDevice ? (isPhoneDevice ? '4px 7px' : '4px 8px') : '3px 6px'};
           cursor: pointer;
           transition: all 0.2s;
           color: var(--text-normal);
-          font-size: ${isMobile ? '12px' : '11px'};
+          font-size: ${isMobileDevice ? (isPhoneDevice ? '11px' : '12px') : '12px'};
           white-space: nowrap;
           flex-shrink: 0;
-          max-width: ${isMobile ? '120px' : '100px'};
+          max-width: ${isMobileDevice ? (isPhoneDevice ? '100px' : '110px') : '120px'};
           overflow: hidden;
           text-overflow: ellipsis;
-          min-height: ${isMobile ? '28px' : 'auto'};
-          ${isMobile ? 'touch-action: manipulation;' : ''}
+          line-height: ${isMobileDevice ? '1.3' : '1.2'};
+          min-height: ${isMobileDevice ? (isPhoneDevice ? '26px' : '28px') : 'auto'};
+          ${isMobileDevice ? 'touch-action: manipulation;' : ''}
         `;
 
         // 호버/터치 효과
         const onActivate = () => {
           suggestionButton.style.background = 'var(--interactive-hover)';
           suggestionButton.style.transform = 'translateY(-1px)';
-          if (isMobile && 'vibrate' in navigator) {
+          if (isMobileDevice && 'vibrate' in navigator) {
             navigator.vibrate(10);
           }
         };
@@ -596,7 +675,7 @@ export class InlineTooltip {
         suggestionButton.addEventListener('mouseleave', onDeactivate);
 
         // 모바일 터치 피드백
-        if (isMobile) {
+        if (isMobileDevice) {
           suggestionButton.addEventListener('touchstart', (e) => {
             e.preventDefault(); // 더블 탭 방지
             onActivate();
@@ -756,29 +835,31 @@ export class InlineTooltip {
       this.ignoreError(mergedError);
     });
 
-    // 모든 수정 적용 버튼 - 모바일 최적화
+    // 모든 수정 적용 버튼 - 체크 표시로 변경
     const applyAllButton = actionButtons.createEl('button', {
-      text: isMobile ? '모두적용' : '모두 적용',
+      text: '✓',
       cls: 'apply-all-button'
     });
+    applyAllButton.title = '모든 수정 사항 적용';
     applyAllButton.style.cssText = `
       background: var(--interactive-accent);
       color: var(--text-on-accent);
       border: 1px solid var(--interactive-accent);
-      border-radius: ${isMobile ? '5px' : '4px'};
-      padding: ${isMobile ? (isPhone ? '6px 10px' : '7px 12px') : '6px 12px'};
+      border-radius: ${isMobileDevice ? '5px' : '4px'};
+      padding: ${isMobileDevice ? (isPhoneDevice ? '6px' : '7px') : '6px'};
       cursor: pointer;
-      font-size: ${isMobile ? (isPhone ? '10px' : '11px') : '12px'};
-      font-weight: 500;
+      font-size: ${isMobileDevice ? (isPhoneDevice ? '14px' : '15px') : '16px'};
+      font-weight: 600;
       transition: all 0.2s;
-      min-height: ${isMobile ? (isPhone ? '28px' : '30px') : 'auto'};
-      max-height: ${isMobile ? (isPhone ? '28px' : '30px') : 'none'};
+      min-height: ${isMobileDevice ? (isPhoneDevice ? '28px' : '30px') : 'auto'};
+      min-width: ${isMobileDevice ? (isPhoneDevice ? '28px' : '30px') : 'auto'};
+      max-height: ${isMobileDevice ? (isPhoneDevice ? '28px' : '30px') : 'none'};
       display: flex;
       align-items: center;
       justify-content: center;
       line-height: 1;
       white-space: nowrap;
-      ${isMobile ? 'touch-action: manipulation;' : ''}
+      ${isMobileDevice ? 'touch-action: manipulation;' : ''}
     `;
 
     applyAllButton.addEventListener('mouseenter', () => {
@@ -791,64 +872,48 @@ export class InlineTooltip {
       applyAllButton.style.transform = 'translateY(0)';
     });
 
-    // 닫기 버튼 - 모바일 최적화
-    const closeButton = actionButtons.createEl('button', {
-      text: '✕',
-      cls: 'close-button'
-    });
-    closeButton.style.cssText = `
-      background: var(--interactive-normal);
-      border: 1px solid var(--background-modifier-border);
-      border-radius: ${isMobile ? '5px' : '4px'};
-      padding: ${isMobile ? (isPhone ? '6px' : '7px') : '6px'};
-      cursor: pointer;
-      transition: all 0.2s;
-      font-size: ${isMobile ? (isPhone ? '11px' : '12px') : '12px'};
-      min-height: ${isMobile ? (isPhone ? '28px' : '30px') : 'auto'};
-      min-width: ${isMobile ? (isPhone ? '28px' : '30px') : 'auto'};
-      max-height: ${isMobile ? (isPhone ? '28px' : '30px') : 'none'};
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-      color: var(--text-muted);
-      ${isMobile ? 'touch-action: manipulation;' : ''}
-    `;
-
-    closeButton.addEventListener('mouseenter', () => {
-      closeButton.style.background = 'var(--interactive-hover)';
-      closeButton.style.color = 'var(--text-normal)';
-      closeButton.style.transform = 'translateY(-1px)';
-    });
-
-    closeButton.addEventListener('mouseleave', () => {
-      closeButton.style.background = 'var(--interactive-normal)';
-      closeButton.style.color = 'var(--text-muted)';
-      closeButton.style.transform = 'translateY(0)';
-    });
-
     // 모바일 터치 피드백
-    if (isMobile) {
-      closeButton.addEventListener('touchstart', (e) => {
+    if (isMobileDevice) {
+      applyAllButton.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        closeButton.style.background = 'var(--interactive-hover)';
-        closeButton.style.color = 'var(--text-normal)';
+        applyAllButton.style.background = 'var(--interactive-accent-hover)';
         if ('vibrate' in navigator) {
           navigator.vibrate(10);
         }
       }, { passive: false });
       
-      closeButton.addEventListener('touchend', (e) => {
+      applyAllButton.addEventListener('touchend', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        // 모든 오류의 첫 번째 제안 적용
+        if (mergedError.originalErrors) {
+          mergedError.originalErrors.forEach((originalError) => {
+            if (originalError.correction.corrected.length > 0) {
+              InlineModeService.applySuggestion(originalError, originalError.correction.corrected[0]);
+            }
+          });
+        }
         this.hide();
       }, { passive: false });
     }
 
-    closeButton.addEventListener('click', (e) => {
+    // 클릭 이벤트 - 모든 수정 적용
+    applyAllButton.addEventListener('click', (e) => {
       e.stopPropagation();
+      
+      // 모든 오류의 첫 번째 제안 적용
+      if (mergedError.originalErrors) {
+        mergedError.originalErrors.forEach((originalError) => {
+          if (originalError.correction.corrected.length > 0) {
+            InlineModeService.applySuggestion(originalError, originalError.correction.corrected[0]);
+          }
+        });
+      }
+      
       this.hide();
     });
+
+
 
     // 호버 상태 관리 (병합된 오류용)
     this.setupHoverEvents(targetElement);
