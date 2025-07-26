@@ -625,9 +625,9 @@ export class InlineTooltip {
         color: var(--text-error);
         font-weight: 600;
         background: rgba(255, 0, 0, 0.1);
-        padding: ${isMobileDevice ? (isPhoneDevice ? '4px 7px' : '4px 8px') : '3px 6px'};
+        padding: ${isMobileDevice ? (isPhoneDevice ? '3px 6px' : '4px 7px') : '4px 8px'};
         border-radius: 3px;
-        font-size: ${isMobileDevice ? (isPhoneDevice ? '11px' : '12px') : '12px'};
+        font-size: ${isMobileDevice ? (isPhoneDevice ? '12px' : '13px') : '13px'};
         white-space: nowrap;
         flex-shrink: 0;
         min-width: ${isMobileDevice ? '70px' : '60px'};
@@ -657,43 +657,28 @@ export class InlineTooltip {
         overflow: hidden;
       `;
 
-      // 수정 제안 버튼들 (원본 오류어와 완전히 동일한 스타일) - 모바일 최적화
+      // 수정 제안들 (원본 오류어와 완전히 동일한 span 요소) - 모바일 최적화
       originalError.correction.corrected.forEach((suggestion, index) => {
-        const suggestionButton = suggestionsList.createEl('button', {
+        const suggestionButton = suggestionsList.createEl('span', {
           text: suggestion,
           cls: 'suggestion-button'
         });
         
-                  suggestionButton.style.cssText = `
-            color: var(--text-normal);
-            font-weight: 600;
-            background: rgba(59, 130, 246, 0.1);
-            padding: ${isMobileDevice ? (isPhoneDevice ? '4px 7px' : '4px 8px') : '3px 6px'};
-            border: none;
-            border-radius: 3px;
-            font-size: ${isMobileDevice ? (isPhoneDevice ? '11px' : '12px') : '12px'};
-            white-space: nowrap;
-            flex-shrink: 0;
-            min-width: ${isMobileDevice ? '70px' : '60px'};
-            max-width: ${isMobileDevice ? (isPhoneDevice ? '100px' : '110px') : '120px'};
-            overflow: hidden;
-            text-overflow: ellipsis;
-            line-height: ${isMobileDevice ? '1.3' : '1.2'};
-            cursor: pointer;
-            transition: all 0.2s;
-            outline: none;
-            margin: 0;
-            font-family: inherit;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            ${isMobileDevice ? 'touch-action: manipulation;' : ''}
-          `;
+                          // 원본 오류어와 100% 동일한 span 스타일 (복합어 툴팁과 일관성)
+        suggestionButton.style.cssText = `
+          color: var(--text-normal);
+          font-weight: 600;
+          background: rgba(59, 130, 246, 0.1);
+          padding: ${isMobileDevice ? (isPhoneDevice ? '3px 6px' : '4px 7px') : '4px 8px'};
+          border-radius: 3px;
+          font-size: ${isMobileDevice ? (isPhoneDevice ? '12px' : '13px') : '13px'};
+          cursor: pointer;
+          ${isMobileDevice ? 'touch-action: manipulation;' : ''}
+        `;
 
-        // 호버/터치 효과 - 원본과 일관된 subtle 효과
+        // span 요소용 호버/터치 효과 (복합어 툴팁과 일관성)
         const onActivate = () => {
           suggestionButton.style.background = 'rgba(59, 130, 246, 0.15)';
-          suggestionButton.style.transform = 'translateY(-0.5px)';
           if (isMobileDevice && 'vibrate' in navigator) {
             navigator.vibrate(10);
           }
@@ -701,7 +686,6 @@ export class InlineTooltip {
 
         const onDeactivate = () => {
           suggestionButton.style.background = 'rgba(59, 130, 246, 0.1)';
-          suggestionButton.style.transform = 'translateY(0)';
         };
 
         suggestionButton.addEventListener('mouseenter', onActivate);
