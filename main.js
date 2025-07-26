@@ -10034,32 +10034,39 @@ var InlineTooltip = class {
           cls: "suggestion-button"
         });
         suggestionButton.style.cssText = `
-          background: var(--interactive-normal);
-          border: 1px solid var(--background-modifier-border);
-          border-radius: 3px;
-          padding: ${isMobileDevice ? isPhoneDevice ? "4px 7px" : "4px 8px" : "3px 6px"};
-          cursor: pointer;
-          transition: all 0.2s;
           color: var(--text-normal);
+          font-weight: 600;
+          background: rgba(59, 130, 246, 0.1);
+          padding: ${isMobileDevice ? isPhoneDevice ? "4px 7px" : "4px 8px" : "3px 6px"};
+          border: none;
+          border-radius: 3px;
           font-size: ${isMobileDevice ? isPhoneDevice ? "11px" : "12px" : "12px"};
           white-space: nowrap;
           flex-shrink: 0;
+          min-width: ${isMobileDevice ? "70px" : "60px"};
           max-width: ${isMobileDevice ? isPhoneDevice ? "100px" : "110px" : "120px"};
           overflow: hidden;
           text-overflow: ellipsis;
           line-height: ${isMobileDevice ? "1.3" : "1.2"};
-          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          outline: none;
+          margin: 0;
+          font-family: inherit;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          appearance: none;
           ${isMobileDevice ? "touch-action: manipulation;" : ""}
         `;
         const onActivate = () => {
-          suggestionButton.style.background = "var(--interactive-hover)";
-          suggestionButton.style.transform = "translateY(-1px)";
+          suggestionButton.style.background = "rgba(59, 130, 246, 0.15)";
+          suggestionButton.style.transform = "translateY(-0.5px)";
           if (isMobileDevice && "vibrate" in navigator) {
             navigator.vibrate(10);
           }
         };
         const onDeactivate = () => {
-          suggestionButton.style.background = "var(--interactive-normal)";
+          suggestionButton.style.background = "rgba(59, 130, 246, 0.1)";
           suggestionButton.style.transform = "translateY(0)";
         };
         suggestionButton.addEventListener("mouseenter", onActivate);
@@ -10451,10 +10458,8 @@ var InlineTooltip = class {
         }
       };
       const onDeactivate = () => {
-        suggestionButton.style.background = "var(--interactive-normal)";
-        suggestionButton.style.color = "var(--text-normal)";
+        suggestionButton.style.background = "rgba(59, 130, 246, 0.1)";
         suggestionButton.style.transform = "translateY(0)";
-        suggestionButton.style.border = "1px solid var(--background-modifier-border)";
       };
       suggestionButton.addEventListener("mouseenter", onActivate);
       suggestionButton.addEventListener("mouseleave", onDeactivate);
