@@ -1,6 +1,6 @@
 import { InlineError } from '../types/interfaces';
 import { Logger } from '../utils/logger';
-import { Platform, MarkdownView } from 'obsidian';
+import { Platform, MarkdownView, Notice } from 'obsidian';
 import { InlineModeService } from '../services/inlineModeService';
 
 /**
@@ -79,6 +79,7 @@ export class InlineTooltip {
     const isMobile = Platform.isMobile;
     
     // 툴팁 전체 컨테이너 (세로 레이아웃) - 모바일 최적화
+    // 🔧 고정 크기 제거하고 내용 기반 사이징만 사용
     this.tooltip.style.cssText = `
       position: absolute;
       background: var(--background-primary);
@@ -91,7 +92,6 @@ export class InlineTooltip {
       color: var(--text-normal);
       display: flex;
       flex-direction: column;
-      ${isMobile ? 'width: 320px;' : 'min-width: 250px; max-width: 450px;'}
       ${isMobile ? 'max-height: 200px;' : 'max-height: 300px;'}
       overflow-y: auto;
       ${isMobile ? 'touch-action: manipulation;' : ''}
@@ -908,6 +908,60 @@ export class InlineTooltip {
       gap: 6px;
     `;
 
+    // 📚 예외 단어 추가 버튼 (책 아이콘)
+    const exceptionButton = actionsContainer.createEl('button', { cls: 'exception-button' });
+    exceptionButton.innerHTML = '📚'; // 책 아이콘
+    exceptionButton.title = '예외 단어로 추가';
+    exceptionButton.style.cssText = `
+      background: var(--interactive-normal);
+      border: 1px solid var(--background-modifier-border);
+      border-radius: ${Platform.isMobile ? '6px' : '4px'};
+      padding: ${Platform.isMobile ? '8px' : '6px'};
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: ${Platform.isMobile ? '16px' : '14px'};
+      min-height: ${Platform.isMobile ? '32px' : 'auto'};
+      min-width: ${Platform.isMobile ? '32px' : 'auto'};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      ${Platform.isMobile ? 'touch-action: manipulation;' : ''}
+    `;
+
+    // 예외 단어 버튼 이벤트
+    exceptionButton.addEventListener('mouseenter', () => {
+      exceptionButton.style.background = 'var(--interactive-hover)';
+      exceptionButton.style.transform = 'translateY(-1px)';
+    });
+
+    exceptionButton.addEventListener('mouseleave', () => {
+      exceptionButton.style.background = 'var(--interactive-normal)';
+      exceptionButton.style.transform = 'translateY(0)';
+    });
+
+    // 모바일 터치 피드백
+    if (Platform.isMobile) {
+      exceptionButton.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        exceptionButton.style.background = 'var(--interactive-hover)';
+        if ('vibrate' in navigator) {
+          navigator.vibrate(10);
+        }
+      }, { passive: false });
+      
+      exceptionButton.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.addToExceptionWords(error);
+      }, { passive: false });
+    }
+
+    // 클릭 이벤트
+    exceptionButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.addToExceptionWords(error);
+    });
+
     // 도움말 아이콘 (간소화)
     if (error.correction.help) {
       this.createHelpIcon(error.correction.help, actionsContainer);
@@ -1290,6 +1344,56 @@ export class InlineTooltip {
     });
     
     return result;
+  }
+
+  /**
+   * 📚 예외 단어로 추가 (IgnoredWordsService와 연동)
+   */
+  private addToExceptionWords(error: InlineError): void {
+    const word = error.correction.original;
+    
+    try {
+      // IgnoredWordsService를 통해 예외 단어 추가
+      const app = (window as any).app;
+      if (app && app.plugins && app.plugins.plugins['korean-grammar-assistant']) {
+        const plugin = app.plugins.plugins['korean-grammar-assistant'];
+        const settings = plugin.settings;
+        
+        if (!settings.ignoredWords) {
+          settings.ignoredWords = [];
+        }
+        
+        // 이미 예외 단어에 있는지 확인
+        if (settings.ignoredWords.includes(word)) {
+          Logger.warn(`"${word}"는 이미 예외 단어 목록에 있습니다.`);
+          new Notice(`"${word}"는 이미 예외 단어로 등록되어 있습니다.`);
+          return;
+        }
+        
+        // 예외 단어 추가
+        settings.ignoredWords.push(word);
+        plugin.saveSettings();
+        
+        Logger.log(`📚 예외 단어 추가: "${word}"`);
+        new Notice(`"${word}"를 예외 단어로 추가했습니다.`);
+        
+        // 현재 오류 제거 (InlineModeService를 통해)
+        if ((window as any).InlineModeService) {
+          (window as any).InlineModeService.removeError(null, error.uniqueId);
+          Logger.debug(`✅ 예외 단어 등록으로 인한 오류 제거: ${error.uniqueId}`);
+        }
+        
+        // 툴팁 숨김
+        this.hide();
+        
+      } else {
+        Logger.error('Korean Grammar Assistant 플러그인을 찾을 수 없습니다.');
+        new Notice('예외 단어 추가에 실패했습니다.');
+      }
+    } catch (error) {
+      Logger.error('예외 단어 추가 중 오류:', error);
+      new Notice('예외 단어 추가에 실패했습니다.');
+    }
   }
 }
 

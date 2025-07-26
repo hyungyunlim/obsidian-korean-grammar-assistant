@@ -9589,7 +9589,6 @@ var InlineTooltip = class {
       color: var(--text-normal);
       display: flex;
       flex-direction: column;
-      ${isMobile ? "width: 320px;" : "min-width: 250px; max-width: 450px;"}
       ${isMobile ? "max-height: 200px;" : "max-height: 300px;"}
       overflow-y: auto;
       ${isMobile ? "touch-action: manipulation;" : ""}
@@ -10226,6 +10225,50 @@ var InlineTooltip = class {
       align-items: center;
       gap: 6px;
     `;
+    const exceptionButton = actionsContainer.createEl("button", { cls: "exception-button" });
+    exceptionButton.innerHTML = "\u{1F4DA}";
+    exceptionButton.title = "\uC608\uC678 \uB2E8\uC5B4\uB85C \uCD94\uAC00";
+    exceptionButton.style.cssText = `
+      background: var(--interactive-normal);
+      border: 1px solid var(--background-modifier-border);
+      border-radius: ${import_obsidian10.Platform.isMobile ? "6px" : "4px"};
+      padding: ${import_obsidian10.Platform.isMobile ? "8px" : "6px"};
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: ${import_obsidian10.Platform.isMobile ? "16px" : "14px"};
+      min-height: ${import_obsidian10.Platform.isMobile ? "32px" : "auto"};
+      min-width: ${import_obsidian10.Platform.isMobile ? "32px" : "auto"};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      ${import_obsidian10.Platform.isMobile ? "touch-action: manipulation;" : ""}
+    `;
+    exceptionButton.addEventListener("mouseenter", () => {
+      exceptionButton.style.background = "var(--interactive-hover)";
+      exceptionButton.style.transform = "translateY(-1px)";
+    });
+    exceptionButton.addEventListener("mouseleave", () => {
+      exceptionButton.style.background = "var(--interactive-normal)";
+      exceptionButton.style.transform = "translateY(0)";
+    });
+    if (import_obsidian10.Platform.isMobile) {
+      exceptionButton.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        exceptionButton.style.background = "var(--interactive-hover)";
+        if ("vibrate" in navigator) {
+          navigator.vibrate(10);
+        }
+      }, { passive: false });
+      exceptionButton.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.addToExceptionWords(error);
+      }, { passive: false });
+    }
+    exceptionButton.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.addToExceptionWords(error);
+    });
     if (error.correction.help) {
       this.createHelpIcon(error.correction.help, actionsContainer);
     }
@@ -10516,6 +10559,42 @@ var InlineTooltip = class {
       platform: import_obsidian10.Platform.isMobile ? isPhone ? "phone" : "tablet" : "desktop"
     });
     return result;
+  }
+  /**
+   * 📚 예외 단어로 추가 (IgnoredWordsService와 연동)
+   */
+  addToExceptionWords(error) {
+    const word = error.correction.original;
+    try {
+      const app = window.app;
+      if (app && app.plugins && app.plugins.plugins["korean-grammar-assistant"]) {
+        const plugin = app.plugins.plugins["korean-grammar-assistant"];
+        const settings = plugin.settings;
+        if (!settings.ignoredWords) {
+          settings.ignoredWords = [];
+        }
+        if (settings.ignoredWords.includes(word)) {
+          Logger.warn(`"${word}"\uB294 \uC774\uBBF8 \uC608\uC678 \uB2E8\uC5B4 \uBAA9\uB85D\uC5D0 \uC788\uC2B5\uB2C8\uB2E4.`);
+          new import_obsidian10.Notice(`"${word}"\uB294 \uC774\uBBF8 \uC608\uC678 \uB2E8\uC5B4\uB85C \uB4F1\uB85D\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.`);
+          return;
+        }
+        settings.ignoredWords.push(word);
+        plugin.saveSettings();
+        Logger.log(`\u{1F4DA} \uC608\uC678 \uB2E8\uC5B4 \uCD94\uAC00: "${word}"`);
+        new import_obsidian10.Notice(`"${word}"\uB97C \uC608\uC678 \uB2E8\uC5B4\uB85C \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.`);
+        if (window.InlineModeService) {
+          window.InlineModeService.removeError(null, error.uniqueId);
+          Logger.debug(`\u2705 \uC608\uC678 \uB2E8\uC5B4 \uB4F1\uB85D\uC73C\uB85C \uC778\uD55C \uC624\uB958 \uC81C\uAC70: ${error.uniqueId}`);
+        }
+        this.hide();
+      } else {
+        Logger.error("Korean Grammar Assistant \uD50C\uB7EC\uADF8\uC778\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+        new import_obsidian10.Notice("\uC608\uC678 \uB2E8\uC5B4 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+      }
+    } catch (error2) {
+      Logger.error("\uC608\uC678 \uB2E8\uC5B4 \uCD94\uAC00 \uC911 \uC624\uB958:", error2);
+      new import_obsidian10.Notice("\uC608\uC678 \uB2E8\uC5B4 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+    }
   }
 };
 var globalInlineTooltip = new InlineTooltip();
