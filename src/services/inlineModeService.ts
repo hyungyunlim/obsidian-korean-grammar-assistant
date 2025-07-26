@@ -1371,8 +1371,13 @@ export class InlineModeService {
       
       // 🎯 순환 구조로 다음 제안 인덱스 이동 (끝에서 처음으로)
       this.currentSuggestionIndex = (this.currentSuggestionIndex + 1) % suggestions.length;
-      this.updateTooltipHighlight();
-      Logger.log(`✅ 다음 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+      
+      // 🎯 실제 텍스트에 바로 반영 (Notice 대신)
+      this.applyCurrentSuggestionTemporarily();
+      
+      // Notice 제거 - 텍스트에서 직접 확인 가능
+      // new Notice(`다음 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+      Logger.log(`✅ 다음 제안 적용: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
       evt.preventDefault();
       return false;
     });
@@ -1632,33 +1637,12 @@ export class InlineModeService {
   }
 
   /**
-   * 툴팁의 수정 제안 하이라이트 업데이트
+   * 툴팁의 수정 제안 하이라이트 업데이트 - 제거됨 (사용자 요청)
    */
   static updateTooltipHighlight(): void {
-    const tooltip = document.querySelector('.korean-grammar-inline-tooltip');
-    if (!tooltip) return;
-
-    const suggestionButtons = tooltip.querySelectorAll('.suggestion-button');
-    suggestionButtons.forEach((button, index) => {
-      const htmlButton = button as HTMLElement;
-      
-      // 현재 호버 중인 버튼은 키보드 하이라이트를 적용하지 않음
-      if (htmlButton.getAttribute('data-hovered') === 'true') {
-        return;
-      }
-      
-      if (index === this.currentSuggestionIndex) {
-        htmlButton.style.background = 'var(--interactive-accent)';
-        htmlButton.style.color = 'var(--text-on-accent)';
-        htmlButton.style.fontWeight = '600';
-        htmlButton.style.border = '1px solid var(--interactive-accent)';
-      } else {
-        htmlButton.style.background = 'var(--interactive-normal)';
-        htmlButton.style.color = 'var(--text-normal)';
-        htmlButton.style.fontWeight = 'normal';
-        htmlButton.style.border = '1px solid var(--background-modifier-border)';
-      }
-    });
+    // 키보드 네비게이션 하이라이트 기능 비활성화
+    // 모든 제안 버튼이 동일한 색깔로 표시됨
+    return;
   }
 
   /**
@@ -1793,7 +1777,6 @@ export class InlineModeService {
         
         // 🎯 실제 텍스트에 바로 반영 (Notice 대신)
         this.applyCurrentSuggestionTemporarily();
-        this.updateTooltipHighlight();
         
         // Notice 제거 - 텍스트에서 직접 확인 가능
         // new Notice(`다음 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
@@ -1835,7 +1818,6 @@ export class InlineModeService {
         
         // 🎯 실제 텍스트에 바로 반영 (Notice 대신)
         this.applyCurrentSuggestionTemporarily();
-        this.updateTooltipHighlight();
         
         // Notice 제거 - 텍스트에서 직접 확인 가능
         // new Notice(`이전 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);

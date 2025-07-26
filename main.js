@@ -10203,21 +10203,19 @@ var InlineTooltip = class {
         ${isMobile ? "touch-action: manipulation;" : ""}
       `;
       const onActivate = () => {
-        suggestionButton.style.background = "var(--interactive-hover) !important";
-        suggestionButton.style.color = "var(--text-normal) !important";
+        suggestionButton.style.background = "var(--interactive-hover)";
+        suggestionButton.style.color = "var(--text-normal)";
         suggestionButton.style.transform = "translateY(-1px)";
-        suggestionButton.style.border = "1px solid var(--background-modifier-border) !important";
-        suggestionButton.setAttribute("data-hovered", "true");
+        suggestionButton.style.border = "1px solid var(--background-modifier-border)";
         if (isMobile && "vibrate" in navigator) {
           navigator.vibrate(10);
         }
       };
       const onDeactivate = () => {
-        suggestionButton.removeAttribute("data-hovered");
+        suggestionButton.style.background = "var(--interactive-normal)";
+        suggestionButton.style.color = "var(--text-normal)";
         suggestionButton.style.transform = "translateY(0)";
-        if (window.InlineModeService) {
-          window.InlineModeService.updateTooltipHighlight();
-        }
+        suggestionButton.style.border = "1px solid var(--background-modifier-border)";
       };
       suggestionButton.addEventListener("mouseenter", onActivate);
       suggestionButton.addEventListener("mouseleave", onDeactivate);
@@ -11543,30 +11541,10 @@ var InlineModeService = class {
     return true;
   }
   /**
-   * 툴팁의 수정 제안 하이라이트 업데이트
+   * 툴팁의 수정 제안 하이라이트 업데이트 - 제거됨 (사용자 요청)
    */
   static updateTooltipHighlight() {
-    const tooltip = document.querySelector(".korean-grammar-inline-tooltip");
-    if (!tooltip)
-      return;
-    const suggestionButtons = tooltip.querySelectorAll(".suggestion-button");
-    suggestionButtons.forEach((button, index) => {
-      const htmlButton = button;
-      if (htmlButton.getAttribute("data-hovered") === "true") {
-        return;
-      }
-      if (index === this.currentSuggestionIndex) {
-        htmlButton.style.background = "var(--interactive-accent)";
-        htmlButton.style.color = "var(--text-on-accent)";
-        htmlButton.style.fontWeight = "600";
-        htmlButton.style.border = "1px solid var(--interactive-accent)";
-      } else {
-        htmlButton.style.background = "var(--interactive-normal)";
-        htmlButton.style.color = "var(--text-normal)";
-        htmlButton.style.fontWeight = "normal";
-        htmlButton.style.border = "1px solid var(--background-modifier-border)";
-      }
-    });
+    return;
   }
   /**
    * 서비스 정리 (메모리 누수 방지)
@@ -11657,7 +11635,6 @@ var InlineModeService = class {
         }
         this.currentSuggestionIndex = (this.currentSuggestionIndex + 1) % suggestions.length;
         this.applyCurrentSuggestionTemporarily();
-        this.updateTooltipHighlight();
         Logger.log(`\u2705 \uB2E4\uC74C \uC81C\uC548 \uC801\uC6A9: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
       }
     });
@@ -11686,7 +11663,6 @@ var InlineModeService = class {
         }
         this.currentSuggestionIndex = (this.currentSuggestionIndex - 1 + suggestions.length) % suggestions.length;
         this.applyCurrentSuggestionTemporarily();
-        this.updateTooltipHighlight();
         Logger.log(`\u2705 \uC774\uC804 \uC81C\uC548 \uC801\uC6A9: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
       }
     });

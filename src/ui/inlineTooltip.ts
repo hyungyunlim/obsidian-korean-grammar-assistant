@@ -876,11 +876,10 @@ export class InlineTooltip {
 
       // 호버/터치 효과 함수
       const onActivate = () => {
-        suggestionButton.style.background = 'var(--interactive-hover) !important';
-        suggestionButton.style.color = 'var(--text-normal) !important';
+        suggestionButton.style.background = 'var(--interactive-hover)';
+        suggestionButton.style.color = 'var(--text-normal)';
         suggestionButton.style.transform = 'translateY(-1px)';
-        suggestionButton.style.border = '1px solid var(--background-modifier-border) !important';
-        suggestionButton.setAttribute('data-hovered', 'true');
+        suggestionButton.style.border = '1px solid var(--background-modifier-border)';
         
         if (isMobile && 'vibrate' in navigator) {
           navigator.vibrate(10);
@@ -888,12 +887,10 @@ export class InlineTooltip {
       };
 
       const onDeactivate = () => {
-        suggestionButton.removeAttribute('data-hovered');
+        suggestionButton.style.background = 'var(--interactive-normal)';
+        suggestionButton.style.color = 'var(--text-normal)';
         suggestionButton.style.transform = 'translateY(0)';
-        // 키보드 하이라이트 상태 복원
-        if ((window as any).InlineModeService) {
-          (window as any).InlineModeService.updateTooltipHighlight();
-        }
+        suggestionButton.style.border = '1px solid var(--background-modifier-border)';
       };
 
       // 호버 효과 (키보드 하이라이트보다 우선)
