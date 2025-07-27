@@ -96,6 +96,33 @@ class AITextWidget extends WidgetType {
       }, 500); // 150ms → 500ms로 증가
     });
     
+    // 🖱️ 클릭 이벤트 추가 (AI 선택값 그대로 적용)
+    span.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      Logger.log(`🟢 AI Widget 클릭: "${this.originalText}" → "${this.aiText}" (확정 적용)`);
+      
+      // AI 선택값을 실제 에디터에 적용
+      InlineModeService.applyAIWidgetToEditor(this.errorId, this.aiText, this.originalText);
+      
+      // 툴팁 숨기기
+      if ((window as any).globalInlineTooltip) {
+        (window as any).globalInlineTooltip.hide();
+      }
+    });
+    
+    // 🖱️ 더블클릭 이벤트 추가 (편집 모드)
+    span.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      Logger.log(`🟢 AI Widget 더블클릭: "${this.originalText}" 편집 모드 진입`);
+      
+      // 편집 가능한 input 요소로 변환
+      this.enterEditMode(span);
+    });
+    
     Logger.debug(`🤖 AI Widget 생성: "${this.originalText}" → "${this.aiText}"`);
     
     return span;
@@ -103,6 +130,88 @@ class AITextWidget extends WidgetType {
 
   eq(other: AITextWidget): boolean {
     return this.aiText === other.aiText && this.errorId === other.errorId;
+  }
+  
+  /**
+   * 🖥️ 편집 모드 진입 (더블클릭 시)
+   */
+  private enterEditMode(span: HTMLElement): void {
+    // 기존 span을 input으로 교체
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = this.aiText;
+    input.style.cssText = `
+      color: #10b981 !important;
+      background-color: rgba(16, 185, 129, 0.1) !important;
+      border: 2px solid #10b981 !important;
+      border-radius: 3px !important;
+      padding: 2px 4px !important;
+      font-family: inherit !important;
+      font-size: inherit !important;
+      line-height: inherit !important;
+      margin: 0 !important;
+      outline: none !important;
+    `;
+    
+    // span과 input 교체
+    span.parentNode?.replaceChild(input, span);
+    
+    // 즉시 포커스 및 전체 선택
+    input.focus();
+    input.select();
+    
+    // Enter 키로 확정
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const newValue = input.value.trim();
+        if (newValue) {
+          Logger.log(`🟢 AI Widget 편집 완료: "${this.originalText}" → "${newValue}"`);
+          InlineModeService.applyAIWidgetToEditor(this.errorId, newValue, this.originalText);
+        } else {
+          Logger.log(`🟢 AI Widget 편집 취소: 빈 값`);
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        Logger.log(`🟢 AI Widget 편집 취소: Escape`);
+        // 원래 span으로 되돌림
+        const newSpan = this.createSpanElement();
+        input.parentNode?.replaceChild(newSpan, input);
+      }
+    });
+    
+    // 포커스 잃으면 취소
+    input.addEventListener('blur', () => {
+      Logger.log(`🟢 AI Widget 편집 취소: blur`);
+      // 원래 span으로 되돌림
+      const newSpan = this.createSpanElement();
+      input.parentNode?.replaceChild(newSpan, input);
+    });
+  }
+  
+  /**
+   * 🔧 span 요소 재생성 헬퍼
+   */
+  private createSpanElement(): HTMLElement {
+    // toDOM() 메서드와 동일한 로직으로 span 재생성
+    const span = document.createElement('span');
+    span.textContent = this.aiText;
+    span.className = 'korean-grammar-ai-widget';
+    span.style.cssText = `
+      color: #10b981 !important;
+      text-decoration: wavy underline #10b981 2px !important;
+      background-color: rgba(16, 185, 129, 0.1) !important;
+      cursor: pointer !important;
+      display: inline !important;
+      font-family: inherit !important;
+      font-size: inherit !important;
+      line-height: inherit !important;
+    `;
+    
+    // 이벤트 리스너들도 다시 등록해야 함
+    // (간단화를 위해 생략 - 실제로는 toDOM()에서 복사해야 함)
+    
+    return span;
   }
 }
 
@@ -208,6 +317,7 @@ export const addErrorDecorations = StateEffect.define<{
   errors: InlineError[];
   underlineStyle: string;
   underlineColor: string;
+  preserveAIColors?: boolean; // 🎨 AI 색상 보존 여부
 }>({
   map: (val, change) => val
 });
@@ -300,7 +410,7 @@ export const errorDecorationField = StateField.define<DecorationSet>({
     
     for (let effect of tr.effects) {
       if (effect.is(addErrorDecorations)) {
-        const { errors, underlineStyle, underlineColor } = effect.value;
+        const { errors, underlineStyle, underlineColor, preserveAIColors = false } = effect.value;
         
         const newDecorations = errors.map(error => {
           // 포커스된 오류인지 확인 (현재는 항상 false이지만 나중에 상태 확인)
@@ -309,6 +419,10 @@ export const errorDecorationField = StateField.define<DecorationSet>({
           // 🤖 AI 분석 상태가 'corrected'인 경우 Replace Decoration + Widget 사용
           if (error.aiStatus === 'corrected' && error.aiSelectedValue) {
             Logger.debug(`🔄 Replace Decoration 사용: "${error.correction.original}" → "${error.aiSelectedValue}"`);
+            
+            // 🔍 범위 검증 로깅 추가
+            const actualText = this.currentView?.state.doc.sliceString(error.start, error.end) || '';
+            Logger.debug(`🔄 Replace 범위 검증: 예상="${error.correction.original}" (${error.correction.original.length}자), 실제="${actualText}" (${actualText.length}자), 범위=${error.start}-${error.end}`);
             
             return Decoration.replace({
               widget: new AITextWidget(
@@ -1149,6 +1263,56 @@ export class InlineModeService {
   }
 
   /**
+   * 텍스트 변경 후 모든 오류 위치 재계산
+   * @param changeStart 변경이 시작된 위치
+   * @param originalLength 원본 텍스트 길이
+   * @param lengthDiff 길이 변화량 (양수: 증가, 음수: 감소)
+   */
+  static updateErrorPositionsAfterChange(changeStart: number, originalLength: number, lengthDiff: number): void {
+    const changeEnd = changeStart + originalLength;
+    const updatedErrors: [string, InlineError][] = [];
+    
+    Logger.debug(`📍 위치 재계산 시작: ${changeStart}-${changeEnd} 범위, ${lengthDiff > 0 ? '+' : ''}${lengthDiff}자 변화`);
+    
+    this.activeErrors.forEach((error, errorId) => {
+      // 변경 지점 이후의 오류들만 위치 조정
+      if (error.start >= changeEnd) {
+        const updatedError = {
+          ...error,
+          start: error.start + lengthDiff,
+          end: error.end + lengthDiff
+        };
+        updatedErrors.push([errorId, updatedError]);
+        Logger.debug(`  📍 "${error.correction.original}": ${error.start}-${error.end} → ${updatedError.start}-${updatedError.end}`);
+      }
+    });
+    
+    // 위치가 업데이트된 오류들 반영
+    updatedErrors.forEach(([errorId, updatedError]) => {
+      this.activeErrors.set(errorId, updatedError);
+    });
+    
+    // CodeMirror decoration도 다시 생성
+    if (this.currentView && updatedErrors.length > 0) {
+      const allErrors = Array.from(this.activeErrors.values());
+      this.currentView.dispatch({
+        effects: [
+          clearAllErrorDecorations.of(true), // 기존 모든 decoration 제거
+          addErrorDecorations.of({
+            errors: allErrors,
+            underlineStyle: this.settings?.inlineMode?.underlineStyle || 'wavy',
+            underlineColor: this.settings?.inlineMode?.underlineColor || 'var(--color-red)',
+            preserveAIColors: true // AI 색상 보존
+          })
+        ]
+      });
+      Logger.debug(`📍 decoration 재생성: ${allErrors.length}개 오류`);
+    }
+    
+    Logger.debug(`📍 위치 재계산 완료: ${updatedErrors.length}개 오류 업데이트됨`);
+  }
+
+  /**
    * 오류 호버 핸들러
    */
   static handleErrorHover(error: InlineError, hoveredElement?: HTMLElement, mousePosition?: { x: number; y: number }): void {
@@ -1168,10 +1332,10 @@ export class InlineModeService {
   }
 
   /**
-   * 오류 클릭 핸들러
+   * 오류 클릭 핸들러 (AI 상태에 따른 처리)
    */
   static handleErrorClick(error: InlineError, clickedElement?: HTMLElement, mousePosition?: { x: number; y: number }): void {
-    Logger.log(`인라인 모드: 오류 클릭 - ${error.correction.original}`);
+    Logger.log(`인라인 모드: 오류 클릭 - ${error.correction.original} (AI 상태: ${error.aiStatus || 'none'})`);
     
     try {
       // 기존 툴팁 먼저 숨기기
@@ -1179,13 +1343,46 @@ export class InlineModeService {
         (window as any).globalInlineTooltip.hide();
       }
       
-      // 첫 번째 수정 제안으로 바로 적용
-      if (error.correction.corrected && error.correction.corrected.length > 0) {
-        const firstSuggestion = error.correction.corrected[0];
-        this.applySuggestion(error, firstSuggestion);
-        Logger.log(`인라인 모드: 첫 번째 제안 자동 적용 - "${error.correction.original}" → "${firstSuggestion}"`);
-      } else {
-        Logger.warn(`인라인 모드: 수정 제안이 없습니다 - ${error.correction.original}`);
+      // 🎨 AI 상태에 따른 클릭 동작 분기
+      const aiStatus = error.aiStatus;
+      
+      switch (aiStatus) {
+        case 'corrected': // 🟢 녹색: AI 선택값 적용
+          if (error.aiSelectedValue) {
+            this.applySuggestion(error, error.aiSelectedValue);
+            Logger.log(`🟢 AI 선택값 적용: "${error.correction.original}" → "${error.aiSelectedValue}"`);
+          } else {
+            Logger.warn('AI 선택값이 없습니다.');
+          }
+          break;
+          
+        case 'exception': // 🔵 파란색: 예외 처리 사전에 등록
+          this.addWordToIgnoreListAndRemoveErrors(error.correction.original)
+            .then(removedCount => {
+              if (removedCount > 0) {
+                Logger.log(`🔵 예외 단어 추가: "${error.correction.original}" (${removedCount}개 오류 제거)`);
+              }
+            })
+            .catch(err => {
+              Logger.error('예외 단어 추가 실패:', err);
+            });
+          break;
+          
+        case 'keep-original': // 🟠 주황색: 원본 유지 (변경 없음)
+          Logger.log(`🟠 원본 유지: "${error.correction.original}"`);
+          // 아무것도 하지 않고 오류만 제거
+          this.removeError(null, error.uniqueId);
+          break;
+          
+        default: // 🔴 빨간색: 첫 번째 수정 제안 적용 (기존 동작)
+          if (error.correction.corrected && error.correction.corrected.length > 0) {
+            const firstSuggestion = error.correction.corrected[0];
+            this.applySuggestion(error, firstSuggestion);
+            Logger.log(`🔴 첫 번째 제안 자동 적용: "${error.correction.original}" → "${firstSuggestion}"`);
+          } else {
+            Logger.warn(`인라인 모드: 수정 제안이 없습니다 - ${error.correction.original}`);
+          }
+          break;
       }
     } catch (err) {
       Logger.error('오류 클릭 처리 중 문제 발생:', err);
@@ -1273,6 +1470,102 @@ export class InlineModeService {
     
     Logger.warn(`오류 요소를 찾을 수 없음: ${error.correction.original} (ID: ${error.uniqueId})`);
     return null;
+  }
+
+  /**
+   * 🤖 AI Widget을 실제 에디터에 적용
+   */
+  static applyAIWidgetToEditor(errorId: string, newText: string, originalText: string): void {
+    if (!this.app) {
+      Logger.error('앱 인스턴스를 찾을 수 없습니다.');
+      return;
+    }
+    
+    try {
+      // Obsidian 에디터 접근
+      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (!view || !view.editor) {
+        Logger.error('활성 마크다운 뷰를 찾을 수 없습니다.');
+        return;
+      }
+      
+      // 오류 정보 찾기
+      const error = this.activeErrors.get(errorId);
+      if (!error) {
+        Logger.error(`오류 ID를 찾을 수 없습니다: ${errorId}`);
+        return;
+      }
+      
+      Logger.log(`🤖 AI Widget 에디터 적용: "${originalText}" → "${newText}" (위치: ${error.start}-${error.end})`);
+      
+      // 🔧 연속 클릭 방지: CodeMirror view와 Obsidian editor 동기화 처리
+      if (this.currentView) {
+        // 1. CodeMirror decoration 즉시 제거
+        this.currentView.dispatch({
+          effects: removeErrorDecorations.of([errorId])
+        });
+        
+        // 2. activeErrors에서도 제거 (중요: decoration 제거와 동시에)
+        this.activeErrors.delete(errorId);
+        
+        Logger.debug(`🔧 연속 클릭 대응: decoration과 activeErrors 동시 제거 (${errorId})`);
+        
+        // 🔍 현재 남은 AI 오류들 상태 확인
+        const remainingAIErrors = Array.from(this.activeErrors.values()).filter(e => e.aiStatus === 'corrected');
+        Logger.log(`🤖 남은 AI corrected 오류들: ${remainingAIErrors.length}개 (${remainingAIErrors.map(e => e.correction.original).join(', ')})`);
+        
+        // 3. 강제 DOM 업데이트를 위한 즉시 플러시
+        this.currentView.requestMeasure();
+        
+        // 4. 약간의 지연 후 텍스트 교체 (decoration 제거가 DOM에 반영되도록)
+        requestAnimationFrame(() => {
+          try {
+            const startPos = view.editor.offsetToPos(error.start);
+            const endPos = view.editor.offsetToPos(error.end);
+            
+            // 텍스트 교체
+            view.editor.replaceRange(newText, startPos, endPos);
+            
+            Logger.debug(`✅ AI Widget 적용 완료 (비동기): "${originalText}" → "${newText}"`);
+            
+            // 🔧 텍스트 변경 후 모든 오류 위치 재계산 (중요!)
+            const lengthDiff = newText.length - originalText.length;
+            if (lengthDiff !== 0) {
+              this.updateErrorPositionsAfterChange(error.start, originalText.length, lengthDiff);
+              Logger.debug(`📍 위치 재계산: ${lengthDiff > 0 ? '+' : ''}${lengthDiff}자 변화, ${error.start} 이후 오류들 업데이트`);
+            }
+            
+            // 성공 알림
+            if ((window as any).Notice) {
+              new (window as any).Notice(`✅ "${newText}" 적용 완료`);
+            }
+          } catch (replaceError) {
+            Logger.error('텍스트 교체 실패:', replaceError);
+            if ((window as any).Notice) {
+              new (window as any).Notice('❌ 텍스트 교체에 실패했습니다.');
+            }
+          }
+        });
+      } else {
+        // 폴백: 기존 방식 사용
+        this.removeError(null, errorId);
+        
+        const startPos = view.editor.offsetToPos(error.start);
+        const endPos = view.editor.offsetToPos(error.end);
+        
+        view.editor.replaceRange(newText, startPos, endPos);
+        
+        if ((window as any).Notice) {
+          new (window as any).Notice(`✅ "${newText}" 적용 완료`);
+        }
+      }
+      
+    } catch (err) {
+      Logger.error('AI Widget 에디터 적용 실패:', err);
+      if ((window as any).Notice) {
+        new (window as any).Notice('❌ 텍스트 적용에 실패했습니다.');
+      }
+    }
   }
 
   /**
@@ -1364,6 +1657,9 @@ export class InlineModeService {
       }
     }
 
+    // 🔧 해당 오류 제거 먼저 실행 (중복 방지)
+    this.removeError(this.currentView, error.uniqueId);
+
     // 텍스트 교체 (확실한 범위로)
     this.currentView.dispatch({
       changes: {
@@ -1372,9 +1668,6 @@ export class InlineModeService {
         insert: suggestion
       }
     });
-
-    // 해당 오류 제거 (교체 후)
-    this.removeError(this.currentView, error.uniqueId);
 
     // 툴팁 유지 모드가 아닐 때만 툴팁 숨기기
     const isKeepOpenMode = (window as any).tooltipKeepOpenMode;
@@ -2682,6 +2975,14 @@ export class InlineModeService {
 
       // UI 업데이트 (기존 오류 위젯들에 AI 결과 반영)
       if (this.currentView) {
+        // 🔍 AI 상태별 오류 개수 로깅
+        const correctedErrors = Array.from(this.activeErrors.values()).filter(e => e.aiStatus === 'corrected');
+        const exceptionErrors = Array.from(this.activeErrors.values()).filter(e => e.aiStatus === 'exception');
+        const keepOriginalErrors = Array.from(this.activeErrors.values()).filter(e => e.aiStatus === 'keep-original');
+        
+        Logger.debug(`🎨 AI 결과 적용 후 오류 상태: 녹색(corrected)=${correctedErrors.length}개, 파란색(exception)=${exceptionErrors.length}개, 주황색(keep-original)=${keepOriginalErrors.length}개`);
+        Logger.debug(`🟢 녹색 오류들: ${correctedErrors.map(e => `"${e.correction.original}" → "${e.aiSelectedValue}"`).join(', ')}`);
+        
         this.refreshErrorWidgets();
       }
 
@@ -2755,13 +3056,20 @@ export class InlineModeService {
         effects: [clearAllErrorDecorations.of(true)]
       });
 
-      // AI 색상이 반영된 오류들을 다시 추가 (CSS 클래스 기반)
+      // AI 색상이 반영된 오류들을 다시 추가 (AI 상태별 색상 유지)
       if (this.activeErrors.size > 0) {
+        const allErrors = Array.from(this.activeErrors.values());
+        const correctedErrors = allErrors.filter(e => e.aiStatus === 'corrected');
+        
+        Logger.debug(`🔄 refreshErrorWidgets: 전체 ${allErrors.length}개 오류 중 녹색(corrected) ${correctedErrors.length}개`);
+        Logger.debug(`🔄 녹색 오류 상세: ${correctedErrors.map(e => `"${e.correction.original}" → "${e.aiSelectedValue}" (${e.start}-${e.end})`).join(', ')}`);
+        
         this.currentView.dispatch({
           effects: addErrorDecorations.of({
-            errors: Array.from(this.activeErrors.values()),
+            errors: allErrors,
             underlineStyle: this.settings?.inlineMode?.underlineStyle || 'wavy',
-            underlineColor: this.settings?.inlineMode?.underlineColor || 'var(--color-red)'
+            underlineColor: this.settings?.inlineMode?.underlineColor || 'var(--color-red)',
+            preserveAIColors: true // 🎨 AI 색상 보존 플래그 추가
           })
         });
       }

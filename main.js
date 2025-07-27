@@ -235,10 +235,112 @@ ${correctionContexts.map((ctx, index) => {
 });
 
 // src/constants/aiModels.ts
-var API_ENDPOINTS, MODEL_PREFIXES, MODEL_TOKEN_LIMITS, DEFAULT_AI_SETTINGS;
+var aiModels_exports = {};
+__export(aiModels_exports, {
+  AI_PROMPTS: () => AI_PROMPTS,
+  AI_PROVIDER_DEFAULTS: () => AI_PROVIDER_DEFAULTS,
+  ANTHROPIC_MODELS: () => ANTHROPIC_MODELS,
+  API_ENDPOINTS: () => API_ENDPOINTS,
+  DEFAULT_AI_SETTINGS: () => DEFAULT_AI_SETTINGS,
+  GOOGLE_MODELS: () => GOOGLE_MODELS,
+  MODEL_PREFIXES: () => MODEL_PREFIXES,
+  MODEL_TOKEN_LIMITS: () => MODEL_TOKEN_LIMITS,
+  OLLAMA_MODELS: () => OLLAMA_MODELS,
+  OPENAI_MODELS: () => OPENAI_MODELS,
+  RECOMMENDED_MODELS_FOR_KOREAN: () => RECOMMENDED_MODELS_FOR_KOREAN,
+  getCurrentModelInfo: () => getCurrentModelInfo
+});
+function getCurrentModelInfo(aiSettings) {
+  if (!aiSettings || !aiSettings.enabled) {
+    return {
+      provider: "N/A",
+      model: "N/A",
+      displayName: "AI \uAE30\uB2A5 \uBE44\uD65C\uC131\uD654"
+    };
+  }
+  const provider = aiSettings.provider || "openai";
+  const model = aiSettings[`${provider}Model`] || AI_PROVIDER_DEFAULTS[provider];
+  const providerDisplayNames = {
+    openai: "OpenAI",
+    anthropic: "Anthropic",
+    google: "Google",
+    ollama: "Ollama (\uB85C\uCEEC)"
+  };
+  const modelDisplayNames = {
+    // OpenAI
+    "gpt-4o": "GPT-4o",
+    "gpt-4o-mini": "GPT-4o Mini",
+    "gpt-4-turbo": "GPT-4 Turbo",
+    "gpt-4": "GPT-4",
+    "gpt-3.5-turbo": "GPT-3.5 Turbo",
+    "o1-preview": "o1 Preview",
+    "o1-mini": "o1 Mini",
+    // Anthropic
+    "claude-3-5-sonnet-20241022": "Claude 3.5 Sonnet",
+    "claude-3-5-haiku-20241022": "Claude 3.5 Haiku",
+    "claude-3-opus-20240229": "Claude 3 Opus",
+    "claude-3-sonnet-20240229": "Claude 3 Sonnet",
+    "claude-3-haiku-20240307": "Claude 3 Haiku",
+    // Google
+    "gemini-1.5-pro": "Gemini 1.5 Pro",
+    "gemini-1.5-flash": "Gemini 1.5 Flash",
+    "gemini-1.5-flash-8b": "Gemini 1.5 Flash 8B",
+    "gemini-1.0-pro": "Gemini 1.0 Pro",
+    // Ollama (일반적인 패턴으로 표시)
+    "llama3.2:3b": "Llama 3.2 (3B)",
+    "llama3.2:1b": "Llama 3.2 (1B)",
+    "llama3.1:8b": "Llama 3.1 (8B)",
+    "mistral:7b": "Mistral (7B)",
+    "qwen2:7b": "Qwen 2 (7B)"
+  };
+  const providerName = providerDisplayNames[provider] || provider.toUpperCase();
+  const modelName = modelDisplayNames[model] || model;
+  return {
+    provider: providerName,
+    model: modelName,
+    displayName: `${providerName} ${modelName}`
+  };
+}
+var AI_PROVIDER_DEFAULTS, OPENAI_MODELS, ANTHROPIC_MODELS, GOOGLE_MODELS, OLLAMA_MODELS, API_ENDPOINTS, MODEL_PREFIXES, RECOMMENDED_MODELS_FOR_KOREAN, MODEL_TOKEN_LIMITS, DEFAULT_AI_SETTINGS;
 var init_aiModels = __esm({
   "src/constants/aiModels.ts"() {
     init_aiPrompts();
+    AI_PROVIDER_DEFAULTS = {
+      openai: "gpt-4o-mini",
+      anthropic: "claude-3-haiku-20240307",
+      google: "gemini-1.5-flash",
+      ollama: "llama3.2:3b"
+    };
+    OPENAI_MODELS = [
+      "gpt-4o",
+      "gpt-4o-mini",
+      "gpt-4-turbo",
+      "gpt-4",
+      "gpt-3.5-turbo",
+      "gpt-3.5-turbo-16k",
+      "o1-preview",
+      "o1-mini"
+    ];
+    ANTHROPIC_MODELS = [
+      "claude-3-5-sonnet-20241022",
+      "claude-3-5-haiku-20241022",
+      "claude-3-opus-20240229",
+      "claude-3-sonnet-20240229",
+      "claude-3-haiku-20240307"
+    ];
+    GOOGLE_MODELS = [
+      "gemini-1.5-pro",
+      "gemini-1.5-flash",
+      "gemini-1.5-flash-8b",
+      "gemini-1.0-pro"
+    ];
+    OLLAMA_MODELS = [
+      "llama3.2:3b",
+      "llama3.2:1b",
+      "llama3.1:8b",
+      "mistral:7b",
+      "qwen2:7b"
+    ];
     API_ENDPOINTS = {
       openai: {
         base: "https://api.openai.com/v1",
@@ -259,6 +361,14 @@ var init_aiModels = __esm({
       anthropic: ["claude-"],
       google: ["gemini-", "palm-", "chat-bison", "text-bison"]
     };
+    RECOMMENDED_MODELS_FOR_KOREAN = [
+      "gpt-4o",
+      "gpt-4o-mini",
+      "claude-3-5-sonnet-20241022",
+      "claude-3-5-haiku-20241022",
+      "gemini-1.5-pro",
+      "gemini-1.5-flash"
+    ];
     MODEL_TOKEN_LIMITS = {
       // OpenAI 모델들
       "gpt-4o": 4096,
@@ -10437,13 +10547,16 @@ var InlineTooltip = class {
       text: error.correction.original,
       cls: "error-word"
     });
+    const { color, backgroundColor, cursor } = this.getErrorWordStyle(error);
     errorWord.style.cssText = `
-      color: var(--text-error);
+      color: ${color};
       font-weight: 600;
-      background: rgba(255, 0, 0, 0.1);
+      background: ${backgroundColor};
       padding: ${isMobile ? isPhone ? "3px 6px" : "4px 7px" : "4px 8px"};
       border-radius: 3px;
       font-size: ${isMobile ? isPhone ? "12px" : "13px" : "13px"};
+      cursor: ${cursor};
+      transition: opacity 0.2s ease;
     `;
     if (error.morphemeInfo && this.isImportantPos(error.morphemeInfo.mainPos, error.morphemeInfo.tags)) {
       const posInfo = errorWordContainer.createEl("span", {
@@ -11037,6 +11150,110 @@ var InlineTooltip = class {
     }
     return false;
   }
+  /**
+   * 🎨 AI 상태에 따른 오류 단어 스타일 반환
+   */
+  getErrorWordStyle(error) {
+    const aiStatus = error.aiStatus;
+    switch (aiStatus) {
+      case "corrected":
+        return {
+          color: "#10b981",
+          // 녹색
+          backgroundColor: "rgba(16, 185, 129, 0.1)",
+          cursor: "pointer"
+        };
+      case "exception":
+        return {
+          color: "#3b82f6",
+          // 파란색
+          backgroundColor: "rgba(59, 130, 246, 0.1)",
+          cursor: "pointer"
+        };
+      case "keep-original":
+        return {
+          color: "#f59e0b",
+          // 주황색
+          backgroundColor: "rgba(245, 158, 11, 0.1)",
+          cursor: "pointer"
+        };
+      default:
+        return {
+          color: "var(--text-error)",
+          // 빨간색
+          backgroundColor: "rgba(255, 0, 0, 0.1)",
+          cursor: "pointer"
+        };
+    }
+  }
+  /**
+   * 🖱️ 오류 단어 클릭 이벤트 처리
+   */
+  handleErrorWordClick(error, targetElement) {
+    const aiStatus = error.aiStatus;
+    Logger.log(`\u{1F5B1}\uFE0F \uC624\uB958 \uB2E8\uC5B4 \uD074\uB9AD: "${error.correction.original}" (AI \uC0C1\uD0DC: ${aiStatus || "none"})`);
+    switch (aiStatus) {
+      case "corrected":
+        this.applyAISelectedValue(error, targetElement);
+        break;
+      case "exception":
+        this.addToExceptionWords(error);
+        break;
+      case "keep-original":
+        this.keepOriginalValue(error, targetElement);
+        break;
+      default:
+        this.applyFirstSuggestion(error, targetElement);
+        break;
+    }
+  }
+  /**
+   * 🟢 AI 선택값 적용
+   */
+  applyAISelectedValue(error, targetElement) {
+    if (!error.aiSelectedValue) {
+      Logger.warn("AI \uC120\uD0DD\uAC12\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian10.Notice("AI \uC120\uD0DD\uAC12\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
+    Logger.log(`\u{1F7E2} AI \uC120\uD0DD\uAC12 \uC801\uC6A9: "${error.correction.original}" \u2192 "${error.aiSelectedValue}"`);
+    try {
+      InlineModeService.applySuggestion(error, error.aiSelectedValue);
+      new import_obsidian10.Notice(`\u2705 AI \uAD50\uC815 \uC801\uC6A9: "${error.aiSelectedValue}"`);
+      this.hide();
+    } catch (error2) {
+      Logger.error("AI \uC120\uD0DD\uAC12 \uC801\uC6A9 \uC2E4\uD328:", error2);
+      new import_obsidian10.Notice("\u274C AI \uAD50\uC815 \uC801\uC6A9\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+    }
+  }
+  /**
+   * 🟠 원본 유지 (변경 없음)
+   */
+  keepOriginalValue(error, targetElement) {
+    Logger.log(`\u{1F7E0} \uC6D0\uBCF8 \uC720\uC9C0: "${error.correction.original}"`);
+    new import_obsidian10.Notice(`\u{1F7E0} \uC6D0\uBCF8 \uC720\uC9C0: "${error.correction.original}"`);
+    this.hide();
+  }
+  /**
+   * 🔴 첫 번째 수정 제안 적용 (기존 동작)
+   */
+  applyFirstSuggestion(error, targetElement) {
+    if (!error.correction.corrected || error.correction.corrected.length === 0) {
+      Logger.warn("\uC218\uC815 \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian10.Notice("\uC218\uC815 \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
+    const firstSuggestion = error.correction.corrected[0];
+    Logger.log(`\u{1F534} \uCCAB \uBC88\uC9F8 \uC218\uC815 \uC81C\uC548 \uC801\uC6A9: "${error.correction.original}" \u2192 "${firstSuggestion}"`);
+    try {
+      InlineModeService.applySuggestion(error, firstSuggestion);
+      new import_obsidian10.Notice(`\u2705 \uC218\uC815 \uC801\uC6A9: "${firstSuggestion}"`);
+      this.hide();
+    } catch (error2) {
+      Logger.error("\uC218\uC815 \uC81C\uC548 \uC801\uC6A9 \uC2E4\uD328:", error2);
+      new import_obsidian10.Notice("\u274C \uC218\uC815 \uC801\uC6A9\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+    }
+  }
 };
 var globalInlineTooltip = new InlineTooltip();
 window.globalInlineTooltip = globalInlineTooltip;
@@ -11454,11 +11671,93 @@ var AITextWidget = class extends import_view.WidgetType {
         }
       }, 500);
     });
+    span.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      Logger.log(`\u{1F7E2} AI Widget \uD074\uB9AD: "${this.originalText}" \u2192 "${this.aiText}" (\uD655\uC815 \uC801\uC6A9)`);
+      InlineModeService.applyAIWidgetToEditor(this.errorId, this.aiText, this.originalText);
+      if (window.globalInlineTooltip) {
+        window.globalInlineTooltip.hide();
+      }
+    });
+    span.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      Logger.log(`\u{1F7E2} AI Widget \uB354\uBE14\uD074\uB9AD: "${this.originalText}" \uD3B8\uC9D1 \uBAA8\uB4DC \uC9C4\uC785`);
+      this.enterEditMode(span);
+    });
     Logger.debug(`\u{1F916} AI Widget \uC0DD\uC131: "${this.originalText}" \u2192 "${this.aiText}"`);
     return span;
   }
   eq(other) {
     return this.aiText === other.aiText && this.errorId === other.errorId;
+  }
+  /**
+   * 🖥️ 편집 모드 진입 (더블클릭 시)
+   */
+  enterEditMode(span) {
+    var _a;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = this.aiText;
+    input.style.cssText = `
+      color: #10b981 !important;
+      background-color: rgba(16, 185, 129, 0.1) !important;
+      border: 2px solid #10b981 !important;
+      border-radius: 3px !important;
+      padding: 2px 4px !important;
+      font-family: inherit !important;
+      font-size: inherit !important;
+      line-height: inherit !important;
+      margin: 0 !important;
+      outline: none !important;
+    `;
+    (_a = span.parentNode) == null ? void 0 : _a.replaceChild(input, span);
+    input.focus();
+    input.select();
+    input.addEventListener("keydown", (e) => {
+      var _a2;
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const newValue = input.value.trim();
+        if (newValue) {
+          Logger.log(`\u{1F7E2} AI Widget \uD3B8\uC9D1 \uC644\uB8CC: "${this.originalText}" \u2192 "${newValue}"`);
+          InlineModeService.applyAIWidgetToEditor(this.errorId, newValue, this.originalText);
+        } else {
+          Logger.log(`\u{1F7E2} AI Widget \uD3B8\uC9D1 \uCDE8\uC18C: \uBE48 \uAC12`);
+        }
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        Logger.log(`\u{1F7E2} AI Widget \uD3B8\uC9D1 \uCDE8\uC18C: Escape`);
+        const newSpan = this.createSpanElement();
+        (_a2 = input.parentNode) == null ? void 0 : _a2.replaceChild(newSpan, input);
+      }
+    });
+    input.addEventListener("blur", () => {
+      var _a2;
+      Logger.log(`\u{1F7E2} AI Widget \uD3B8\uC9D1 \uCDE8\uC18C: blur`);
+      const newSpan = this.createSpanElement();
+      (_a2 = input.parentNode) == null ? void 0 : _a2.replaceChild(newSpan, input);
+    });
+  }
+  /**
+   * 🔧 span 요소 재생성 헬퍼
+   */
+  createSpanElement() {
+    const span = document.createElement("span");
+    span.textContent = this.aiText;
+    span.className = "korean-grammar-ai-widget";
+    span.style.cssText = `
+      color: #10b981 !important;
+      text-decoration: wavy underline #10b981 2px !important;
+      background-color: rgba(16, 185, 129, 0.1) !important;
+      cursor: pointer !important;
+      display: inline !important;
+      font-family: inherit !important;
+      font-size: inherit !important;
+      line-height: inherit !important;
+    `;
+    return span;
   }
 };
 var addErrorDecorations = import_state.StateEffect.define({
@@ -11515,11 +11814,14 @@ var errorDecorationField = import_state.StateField.define({
     }
     for (let effect of tr.effects) {
       if (effect.is(addErrorDecorations)) {
-        const { errors, underlineStyle, underlineColor } = effect.value;
+        const { errors, underlineStyle, underlineColor, preserveAIColors = false } = effect.value;
         const newDecorations = errors.map((error) => {
+          var _a;
           const isFocused = false;
           if (error.aiStatus === "corrected" && error.aiSelectedValue) {
             Logger.debug(`\u{1F504} Replace Decoration \uC0AC\uC6A9: "${error.correction.original}" \u2192 "${error.aiSelectedValue}"`);
+            const actualText = ((_a = this.currentView) == null ? void 0 : _a.state.doc.sliceString(error.start, error.end)) || "";
+            Logger.debug(`\u{1F504} Replace \uBC94\uC704 \uAC80\uC99D: \uC608\uC0C1="${error.correction.original}" (${error.correction.original.length}\uC790), \uC2E4\uC81C="${actualText}" (${actualText.length}\uC790), \uBC94\uC704=${error.start}-${error.end}`);
             return import_view.Decoration.replace({
               widget: new AITextWidget(
                 error.aiSelectedValue,
@@ -12122,6 +12424,50 @@ var InlineModeService = class {
     }
   }
   /**
+   * 텍스트 변경 후 모든 오류 위치 재계산
+   * @param changeStart 변경이 시작된 위치
+   * @param originalLength 원본 텍스트 길이
+   * @param lengthDiff 길이 변화량 (양수: 증가, 음수: 감소)
+   */
+  static updateErrorPositionsAfterChange(changeStart, originalLength, lengthDiff) {
+    var _a, _b, _c, _d;
+    const changeEnd = changeStart + originalLength;
+    const updatedErrors = [];
+    Logger.debug(`\u{1F4CD} \uC704\uCE58 \uC7AC\uACC4\uC0B0 \uC2DC\uC791: ${changeStart}-${changeEnd} \uBC94\uC704, ${lengthDiff > 0 ? "+" : ""}${lengthDiff}\uC790 \uBCC0\uD654`);
+    this.activeErrors.forEach((error, errorId) => {
+      if (error.start >= changeEnd) {
+        const updatedError = {
+          ...error,
+          start: error.start + lengthDiff,
+          end: error.end + lengthDiff
+        };
+        updatedErrors.push([errorId, updatedError]);
+        Logger.debug(`  \u{1F4CD} "${error.correction.original}": ${error.start}-${error.end} \u2192 ${updatedError.start}-${updatedError.end}`);
+      }
+    });
+    updatedErrors.forEach(([errorId, updatedError]) => {
+      this.activeErrors.set(errorId, updatedError);
+    });
+    if (this.currentView && updatedErrors.length > 0) {
+      const allErrors = Array.from(this.activeErrors.values());
+      this.currentView.dispatch({
+        effects: [
+          clearAllErrorDecorations.of(true),
+          // 기존 모든 decoration 제거
+          addErrorDecorations.of({
+            errors: allErrors,
+            underlineStyle: ((_b = (_a = this.settings) == null ? void 0 : _a.inlineMode) == null ? void 0 : _b.underlineStyle) || "wavy",
+            underlineColor: ((_d = (_c = this.settings) == null ? void 0 : _c.inlineMode) == null ? void 0 : _d.underlineColor) || "var(--color-red)",
+            preserveAIColors: true
+            // AI 색상 보존
+          })
+        ]
+      });
+      Logger.debug(`\u{1F4CD} decoration \uC7AC\uC0DD\uC131: ${allErrors.length}\uAC1C \uC624\uB958`);
+    }
+    Logger.debug(`\u{1F4CD} \uC704\uCE58 \uC7AC\uACC4\uC0B0 \uC644\uB8CC: ${updatedErrors.length}\uAC1C \uC624\uB958 \uC5C5\uB370\uC774\uD2B8\uB428`);
+  }
+  /**
    * 오류 호버 핸들러
    */
   static handleErrorHover(error, hoveredElement, mousePosition) {
@@ -12135,20 +12481,46 @@ var InlineModeService = class {
     }
   }
   /**
-   * 오류 클릭 핸들러
+   * 오류 클릭 핸들러 (AI 상태에 따른 처리)
    */
   static handleErrorClick(error, clickedElement, mousePosition) {
-    Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC624\uB958 \uD074\uB9AD - ${error.correction.original}`);
+    Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC624\uB958 \uD074\uB9AD - ${error.correction.original} (AI \uC0C1\uD0DC: ${error.aiStatus || "none"})`);
     try {
       if (window.globalInlineTooltip) {
         window.globalInlineTooltip.hide();
       }
-      if (error.correction.corrected && error.correction.corrected.length > 0) {
-        const firstSuggestion = error.correction.corrected[0];
-        this.applySuggestion(error, firstSuggestion);
-        Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uCCAB \uBC88\uC9F8 \uC81C\uC548 \uC790\uB3D9 \uC801\uC6A9 - "${error.correction.original}" \u2192 "${firstSuggestion}"`);
-      } else {
-        Logger.warn(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC218\uC815 \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4 - ${error.correction.original}`);
+      const aiStatus = error.aiStatus;
+      switch (aiStatus) {
+        case "corrected":
+          if (error.aiSelectedValue) {
+            this.applySuggestion(error, error.aiSelectedValue);
+            Logger.log(`\u{1F7E2} AI \uC120\uD0DD\uAC12 \uC801\uC6A9: "${error.correction.original}" \u2192 "${error.aiSelectedValue}"`);
+          } else {
+            Logger.warn("AI \uC120\uD0DD\uAC12\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
+          }
+          break;
+        case "exception":
+          this.addWordToIgnoreListAndRemoveErrors(error.correction.original).then((removedCount) => {
+            if (removedCount > 0) {
+              Logger.log(`\u{1F535} \uC608\uC678 \uB2E8\uC5B4 \uCD94\uAC00: "${error.correction.original}" (${removedCount}\uAC1C \uC624\uB958 \uC81C\uAC70)`);
+            }
+          }).catch((err) => {
+            Logger.error("\uC608\uC678 \uB2E8\uC5B4 \uCD94\uAC00 \uC2E4\uD328:", err);
+          });
+          break;
+        case "keep-original":
+          Logger.log(`\u{1F7E0} \uC6D0\uBCF8 \uC720\uC9C0: "${error.correction.original}"`);
+          this.removeError(null, error.uniqueId);
+          break;
+        default:
+          if (error.correction.corrected && error.correction.corrected.length > 0) {
+            const firstSuggestion = error.correction.corrected[0];
+            this.applySuggestion(error, firstSuggestion);
+            Logger.log(`\u{1F534} \uCCAB \uBC88\uC9F8 \uC81C\uC548 \uC790\uB3D9 \uC801\uC6A9: "${error.correction.original}" \u2192 "${firstSuggestion}"`);
+          } else {
+            Logger.warn(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC218\uC815 \uC81C\uC548\uC774 \uC5C6\uC2B5\uB2C8\uB2E4 - ${error.correction.original}`);
+          }
+          break;
       }
     } catch (err) {
       Logger.error("\uC624\uB958 \uD074\uB9AD \uCC98\uB9AC \uC911 \uBB38\uC81C \uBC1C\uC0DD:", err);
@@ -12219,6 +12591,72 @@ var InlineModeService = class {
     return null;
   }
   /**
+   * 🤖 AI Widget을 실제 에디터에 적용
+   */
+  static applyAIWidgetToEditor(errorId, newText, originalText) {
+    if (!this.app) {
+      Logger.error("\uC571 \uC778\uC2A4\uD134\uC2A4\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
+    try {
+      const view = this.app.workspace.getActiveViewOfType(import_obsidian14.MarkdownView);
+      if (!view || !view.editor) {
+        Logger.error("\uD65C\uC131 \uB9C8\uD06C\uB2E4\uC6B4 \uBDF0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+        return;
+      }
+      const error = this.activeErrors.get(errorId);
+      if (!error) {
+        Logger.error(`\uC624\uB958 ID\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4: ${errorId}`);
+        return;
+      }
+      Logger.log(`\u{1F916} AI Widget \uC5D0\uB514\uD130 \uC801\uC6A9: "${originalText}" \u2192 "${newText}" (\uC704\uCE58: ${error.start}-${error.end})`);
+      if (this.currentView) {
+        this.currentView.dispatch({
+          effects: removeErrorDecorations.of([errorId])
+        });
+        this.activeErrors.delete(errorId);
+        Logger.debug(`\u{1F527} \uC5F0\uC18D \uD074\uB9AD \uB300\uC751: decoration\uACFC activeErrors \uB3D9\uC2DC \uC81C\uAC70 (${errorId})`);
+        const remainingAIErrors = Array.from(this.activeErrors.values()).filter((e) => e.aiStatus === "corrected");
+        Logger.log(`\u{1F916} \uB0A8\uC740 AI corrected \uC624\uB958\uB4E4: ${remainingAIErrors.length}\uAC1C (${remainingAIErrors.map((e) => e.correction.original).join(", ")})`);
+        this.currentView.requestMeasure();
+        requestAnimationFrame(() => {
+          try {
+            const startPos = view.editor.offsetToPos(error.start);
+            const endPos = view.editor.offsetToPos(error.end);
+            view.editor.replaceRange(newText, startPos, endPos);
+            Logger.debug(`\u2705 AI Widget \uC801\uC6A9 \uC644\uB8CC (\uBE44\uB3D9\uAE30): "${originalText}" \u2192 "${newText}"`);
+            const lengthDiff = newText.length - originalText.length;
+            if (lengthDiff !== 0) {
+              this.updateErrorPositionsAfterChange(error.start, originalText.length, lengthDiff);
+              Logger.debug(`\u{1F4CD} \uC704\uCE58 \uC7AC\uACC4\uC0B0: ${lengthDiff > 0 ? "+" : ""}${lengthDiff}\uC790 \uBCC0\uD654, ${error.start} \uC774\uD6C4 \uC624\uB958\uB4E4 \uC5C5\uB370\uC774\uD2B8`);
+            }
+            if (window.Notice) {
+              new window.Notice(`\u2705 "${newText}" \uC801\uC6A9 \uC644\uB8CC`);
+            }
+          } catch (replaceError) {
+            Logger.error("\uD14D\uC2A4\uD2B8 \uAD50\uCCB4 \uC2E4\uD328:", replaceError);
+            if (window.Notice) {
+              new window.Notice("\u274C \uD14D\uC2A4\uD2B8 \uAD50\uCCB4\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+            }
+          }
+        });
+      } else {
+        this.removeError(null, errorId);
+        const startPos = view.editor.offsetToPos(error.start);
+        const endPos = view.editor.offsetToPos(error.end);
+        view.editor.replaceRange(newText, startPos, endPos);
+        if (window.Notice) {
+          new window.Notice(`\u2705 "${newText}" \uC801\uC6A9 \uC644\uB8CC`);
+        }
+      }
+    } catch (err) {
+      Logger.error("AI Widget \uC5D0\uB514\uD130 \uC801\uC6A9 \uC2E4\uD328:", err);
+      if (window.Notice) {
+        new window.Notice("\u274C \uD14D\uC2A4\uD2B8 \uC801\uC6A9\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+      }
+    }
+  }
+  /**
    * 수정 제안 적용
    */
   static applySuggestion(error, suggestion) {
@@ -12282,6 +12720,7 @@ var InlineModeService = class {
         return;
       }
     }
+    this.removeError(this.currentView, error.uniqueId);
     this.currentView.dispatch({
       changes: {
         from: fromPos,
@@ -12289,7 +12728,6 @@ var InlineModeService = class {
         insert: suggestion
       }
     });
-    this.removeError(this.currentView, error.uniqueId);
     const isKeepOpenMode = window.tooltipKeepOpenMode;
     if (!isKeepOpenMode) {
       if (window.globalInlineTooltip) {
@@ -13070,6 +13508,11 @@ var InlineModeService = class {
         }
       }
       if (this.currentView) {
+        const correctedErrors = Array.from(this.activeErrors.values()).filter((e) => e.aiStatus === "corrected");
+        const exceptionErrors = Array.from(this.activeErrors.values()).filter((e) => e.aiStatus === "exception");
+        const keepOriginalErrors = Array.from(this.activeErrors.values()).filter((e) => e.aiStatus === "keep-original");
+        Logger.debug(`\u{1F3A8} AI \uACB0\uACFC \uC801\uC6A9 \uD6C4 \uC624\uB958 \uC0C1\uD0DC: \uB179\uC0C9(corrected)=${correctedErrors.length}\uAC1C, \uD30C\uB780\uC0C9(exception)=${exceptionErrors.length}\uAC1C, \uC8FC\uD669\uC0C9(keep-original)=${keepOriginalErrors.length}\uAC1C`);
+        Logger.debug(`\u{1F7E2} \uB179\uC0C9 \uC624\uB958\uB4E4: ${correctedErrors.map((e) => `"${e.correction.original}" \u2192 "${e.aiSelectedValue}"`).join(", ")}`);
         this.refreshErrorWidgets();
       }
       Logger.log("\u{1F916} AI \uBD84\uC11D \uACB0\uACFC\uAC00 \uC778\uB77C\uC778 \uC624\uB958\uC5D0 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
@@ -13127,11 +13570,17 @@ var InlineModeService = class {
         effects: [clearAllErrorDecorations.of(true)]
       });
       if (this.activeErrors.size > 0) {
+        const allErrors = Array.from(this.activeErrors.values());
+        const correctedErrors = allErrors.filter((e) => e.aiStatus === "corrected");
+        Logger.debug(`\u{1F504} refreshErrorWidgets: \uC804\uCCB4 ${allErrors.length}\uAC1C \uC624\uB958 \uC911 \uB179\uC0C9(corrected) ${correctedErrors.length}\uAC1C`);
+        Logger.debug(`\u{1F504} \uB179\uC0C9 \uC624\uB958 \uC0C1\uC138: ${correctedErrors.map((e) => `"${e.correction.original}" \u2192 "${e.aiSelectedValue}" (${e.start}-${e.end})`).join(", ")}`);
         this.currentView.dispatch({
           effects: addErrorDecorations.of({
-            errors: Array.from(this.activeErrors.values()),
+            errors: allErrors,
             underlineStyle: ((_b = (_a = this.settings) == null ? void 0 : _a.inlineMode) == null ? void 0 : _b.underlineStyle) || "wavy",
-            underlineColor: ((_d = (_c = this.settings) == null ? void 0 : _c.inlineMode) == null ? void 0 : _d.underlineColor) || "var(--color-red)"
+            underlineColor: ((_d = (_c = this.settings) == null ? void 0 : _c.inlineMode) == null ? void 0 : _d.underlineColor) || "var(--color-red)",
+            preserveAIColors: true
+            // 🎨 AI 색상 보존 플래그 추가
           })
         });
       }
@@ -13753,7 +14202,9 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
    * 선택 영역 내 기존 인라인 오류에 대한 AI 분석
    */
   async analyzeExistingInlineErrorsInSelection(selectedText) {
-    const analysisNotice = new import_obsidian15.Notice("\u{1F916} \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D\uC744 \uC2DC\uC791\uD569\uB2C8\uB2E4...", 0);
+    const { getCurrentModelInfo: getCurrentModelInfo2 } = await Promise.resolve().then(() => (init_aiModels(), aiModels_exports));
+    const modelInfo = getCurrentModelInfo2(this.settings.ai);
+    const analysisNotice = new import_obsidian15.Notice(`\u{1F916} \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC2DC\uC791 (${modelInfo.displayName})...`, 0);
     try {
       const selectionErrorCount = InlineModeService.getErrorCountInSelection(selectedText);
       if (selectionErrorCount === 0) {
@@ -13763,9 +14214,9 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       }
       analysisNotice.setMessage(`\u{1F522} \uC120\uD0DD \uC601\uC5ED \uB0B4 ${selectionErrorCount}\uAC1C \uC624\uB958 \uBD84\uC11D \uC900\uBE44 \uC911...`);
       await new Promise((resolve) => setTimeout(resolve, 500));
-      analysisNotice.setMessage("\u{1F9E0} \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC911... (\uC218\uC2ED \uCD08 \uC18C\uC694\uB420 \uC218 \uC788\uC2B5\uB2C8\uB2E4)");
+      analysisNotice.setMessage(`\u{1F9E0} \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC911 (${modelInfo.model})... \uC218\uC2ED \uCD08 \uC18C\uC694\uB420 \uC218 \uC788\uC2B5\uB2C8\uB2E4`);
       await InlineModeService.runAIAnalysisOnErrorsInSelection(selectedText, (current, total) => {
-        analysisNotice.setMessage(`\u{1F9E0} \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC911... (${current}/${total})`);
+        analysisNotice.setMessage(`\u{1F9E0} ${modelInfo.model} \uBD84\uC11D \uC911... (${current}/${total})`);
       });
       InlineModeService.refreshErrorWidgets();
       Logger.debug("\uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC644\uB8CC \uD6C4 UI \uC0C8\uB85C\uACE0\uCE68 \uC2E4\uD589");
@@ -13782,14 +14233,16 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
    * 기존 인라인 오류에 대한 AI 분석
    */
   async analyzeExistingInlineErrors() {
-    const analysisNotice = new import_obsidian15.Notice("\u{1F916} AI \uBD84\uC11D\uC744 \uC2DC\uC791\uD569\uB2C8\uB2E4...", 0);
+    const { getCurrentModelInfo: getCurrentModelInfo2 } = await Promise.resolve().then(() => (init_aiModels(), aiModels_exports));
+    const modelInfo = getCurrentModelInfo2(this.settings.ai);
+    const analysisNotice = new import_obsidian15.Notice(`\u{1F916} AI \uBD84\uC11D \uC2DC\uC791 (${modelInfo.displayName})...`, 0);
     try {
       const errorCount = InlineModeService.getErrorCount();
       analysisNotice.setMessage(`\u{1F522} ${errorCount}\uAC1C \uC624\uB958 \uBD84\uC11D \uC900\uBE44 \uC911...`);
       await new Promise((resolve) => setTimeout(resolve, 500));
-      analysisNotice.setMessage("\u{1F9E0} AI \uBD84\uC11D \uC911... (\uC218\uC2ED \uCD08 \uC18C\uC694\uB420 \uC218 \uC788\uC2B5\uB2C8\uB2E4)");
+      analysisNotice.setMessage(`\u{1F9E0} AI \uBD84\uC11D \uC911 (${modelInfo.model})... \uC218\uC2ED \uCD08 \uC18C\uC694\uB420 \uC218 \uC788\uC2B5\uB2C8\uB2E4`);
       await InlineModeService.runAIAnalysisOnExistingErrors((current, total) => {
-        analysisNotice.setMessage(`\u{1F9E0} AI \uBD84\uC11D \uC911... (${current}/${total})`);
+        analysisNotice.setMessage(`\u{1F9E0} ${modelInfo.model} \uBD84\uC11D \uC911... (${current}/${total})`);
       });
       InlineModeService.refreshErrorWidgets();
       Logger.debug("AI \uBD84\uC11D \uC644\uB8CC \uD6C4 UI \uC0C8\uB85C\uACE0\uCE68 \uC2E4\uD589");
@@ -13832,11 +14285,13 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       }
       processNotice.setMessage(`\u2705 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC644\uB8CC! ${errorCount}\uAC1C \uC624\uB958 \uBC1C\uACAC (\uBE68\uAC04\uC0C9 \uD45C\uC2DC)`);
       await new Promise((resolve) => setTimeout(resolve, 3e3));
-      processNotice.setMessage(`\u{1F916} ${errorCount}\uAC1C \uC624\uB958\uC5D0 \uB300\uD55C AI \uBD84\uC11D \uC2DC\uC791...`);
+      const { getCurrentModelInfo: getCurrentModelInfo2 } = await Promise.resolve().then(() => (init_aiModels(), aiModels_exports));
+      const modelInfo = getCurrentModelInfo2(this.settings.ai);
+      processNotice.setMessage(`\u{1F916} ${errorCount}\uAC1C \uC624\uB958 AI \uBD84\uC11D \uC2DC\uC791 (${modelInfo.displayName})...`);
       await new Promise((resolve) => setTimeout(resolve, 500));
-      processNotice.setMessage("\u{1F9E0} AI \uBD84\uC11D \uC911... (\uC218\uC2ED \uCD08 \uC18C\uC694\uB420 \uC218 \uC788\uC2B5\uB2C8\uB2E4)");
+      processNotice.setMessage(`\u{1F9E0} AI \uBD84\uC11D \uC911 (${modelInfo.model})... \uC218\uC2ED \uCD08 \uC18C\uC694\uB420 \uC218 \uC788\uC2B5\uB2C8\uB2E4`);
       await InlineModeService.runAIAnalysisOnExistingErrors((current, total) => {
-        processNotice.setMessage(`\u{1F9E0} AI \uBD84\uC11D \uC911... (${current}/${total})`);
+        processNotice.setMessage(`\u{1F9E0} ${modelInfo.model} \uBD84\uC11D \uC911... (${current}/${total})`);
       });
       InlineModeService.refreshErrorWidgets();
       Logger.debug("AI \uBD84\uC11D \uC644\uB8CC \uD6C4 UI \uC0C8\uB85C\uACE0\uCE68 \uC2E4\uD589");

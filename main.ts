@@ -384,8 +384,12 @@ export default class KoreanGrammarPlugin extends Plugin {
    * 선택 영역 내 기존 인라인 오류에 대한 AI 분석
    */
   private async analyzeExistingInlineErrorsInSelection(selectedText: string): Promise<void> {
+    // 모델 정보 가져오기
+    const { getCurrentModelInfo } = await import('./src/constants/aiModels');
+    const modelInfo = getCurrentModelInfo(this.settings.ai);
+    
     // 1단계: 분석 시작 알림
-    const analysisNotice = new Notice('🤖 선택 영역 AI 분석을 시작합니다...', 0);
+    const analysisNotice = new Notice(`🤖 선택 영역 AI 분석 시작 (${modelInfo.displayName})...`, 0);
     
     try {
       // 2단계: 선택 영역 내 오류 필터링
@@ -402,11 +406,11 @@ export default class KoreanGrammarPlugin extends Plugin {
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // 3단계: AI API 호출 알림
-      analysisNotice.setMessage('🧠 선택 영역 AI 분석 중... (수십 초 소요될 수 있습니다)');
+      analysisNotice.setMessage(`🧠 선택 영역 AI 분석 중 (${modelInfo.model})... 수십 초 소요될 수 있습니다`);
       
       // 진행률 콜백을 통한 실시간 업데이트
       await InlineModeService.runAIAnalysisOnErrorsInSelection(selectedText, (current: number, total: number) => {
-        analysisNotice.setMessage(`🧠 선택 영역 AI 분석 중... (${current}/${total})`);
+        analysisNotice.setMessage(`🧠 ${modelInfo.model} 분석 중... (${current}/${total})`);
       });
       
       // 3.5단계: UI 새로고침 강제 실행
@@ -429,8 +433,12 @@ export default class KoreanGrammarPlugin extends Plugin {
    * 기존 인라인 오류에 대한 AI 분석
    */
   private async analyzeExistingInlineErrors(): Promise<void> {
+    // 모델 정보 가져오기
+    const { getCurrentModelInfo } = await import('./src/constants/aiModels');
+    const modelInfo = getCurrentModelInfo(this.settings.ai);
+    
     // 1단계: 분석 시작 알림
-    const analysisNotice = new Notice('🤖 AI 분석을 시작합니다...', 0); // 지속적으로 표시
+    const analysisNotice = new Notice(`🤖 AI 분석 시작 (${modelInfo.displayName})...`, 0); // 지속적으로 표시
     
     try {
       // 2단계: 토큰 사용량 추정 알림
@@ -441,11 +449,11 @@ export default class KoreanGrammarPlugin extends Plugin {
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // 3단계: AI API 호출 알림
-      analysisNotice.setMessage('🧠 AI 분석 중... (수십 초 소요될 수 있습니다)');
+      analysisNotice.setMessage(`🧠 AI 분석 중 (${modelInfo.model})... 수십 초 소요될 수 있습니다`);
       
       // 진행률 콜백을 통한 실시간 업데이트
       await InlineModeService.runAIAnalysisOnExistingErrors((current: number, total: number) => {
-        analysisNotice.setMessage(`🧠 AI 분석 중... (${current}/${total})`);
+        analysisNotice.setMessage(`🧠 ${modelInfo.model} 분석 중... (${current}/${total})`);
       });
       
       // 3.5단계: UI 새로고침 강제 실행
@@ -513,17 +521,19 @@ export default class KoreanGrammarPlugin extends Plugin {
       await new Promise(resolve => setTimeout(resolve, 3000));
 
       // 3단계: AI 분석 시작 알림
-      processNotice.setMessage(`🤖 ${errorCount}개 오류에 대한 AI 분석 시작...`);
+      const { getCurrentModelInfo } = await import('./src/constants/aiModels');
+      const modelInfo = getCurrentModelInfo(this.settings.ai);
+      processNotice.setMessage(`🤖 ${errorCount}개 오류 AI 분석 시작 (${modelInfo.displayName})...`);
       
       // 잠시 대기 (UI 업데이트 시간 확보)
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // 3단계: AI API 호출
-      processNotice.setMessage('🧠 AI 분석 중... (수십 초 소요될 수 있습니다)');
+      processNotice.setMessage(`🧠 AI 분석 중 (${modelInfo.model})... 수십 초 소요될 수 있습니다`);
       
       // 진행률 콜백을 통한 실시간 업데이트
       await InlineModeService.runAIAnalysisOnExistingErrors((current: number, total: number) => {
-        processNotice.setMessage(`🧠 AI 분석 중... (${current}/${total})`);
+        processNotice.setMessage(`🧠 ${modelInfo.model} 분석 중... (${current}/${total})`);
       });
       
       // 3.5단계: UI 새로고침 강제 실행
