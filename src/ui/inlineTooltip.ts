@@ -1300,17 +1300,17 @@ export class InlineTooltip {
         }
       }, { passive: false });
       
-      exceptionButton.addEventListener('touchend', (e) => {
+      exceptionButton.addEventListener('touchend', async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        this.addToExceptionWords(error);
+        await this.addToExceptionWords(error);
       }, { passive: false });
     }
 
     // 클릭 이벤트
-    exceptionButton.addEventListener('click', (e) => {
+    exceptionButton.addEventListener('click', async (e) => {
       e.stopPropagation();
-      this.addToExceptionWords(error);
+      await this.addToExceptionWords(error);
     });
 
     // ❌ 오류 무시 버튼 (일시적 무시) - 모바일 최적화
@@ -1507,47 +1507,28 @@ export class InlineTooltip {
   }
 
   /**
-   * 📚 예외 단어로 추가 (IgnoredWordsService와 연동)
+   * 📚 예외 단어로 추가 (동일한 단어의 모든 오류 제거)
    */
-  private addToExceptionWords(error: InlineError): void {
+  private async addToExceptionWords(error: InlineError): Promise<void> {
     const word = error.correction.original;
     
     try {
-      // IgnoredWordsService를 통해 예외 단어 추가
-      const app = (window as any).app;
-      if (app && app.plugins && app.plugins.plugins['korean-grammar-assistant']) {
-        const plugin = app.plugins.plugins['korean-grammar-assistant'];
-        const settings = plugin.settings;
+      // InlineModeService의 새로운 메서드로 동일 단어 모든 오류 제거
+      if ((window as any).InlineModeService) {
+        const removedCount = await (window as any).InlineModeService.addWordToIgnoreListAndRemoveErrors(word);
         
-        if (!settings.ignoredWords) {
-          settings.ignoredWords = [];
-        }
-        
-        // 이미 예외 단어에 있는지 확인
-        if (settings.ignoredWords.includes(word)) {
-          Logger.warn(`"${word}"는 이미 예외 단어 목록에 있습니다.`);
+        if (removedCount > 0) {
+          Logger.log(`📚 예외 단어 추가 및 ${removedCount}개 오류 제거: "${word}"`);
+          new Notice(`"${word}"를 예외 단어로 추가했습니다. (${removedCount}개 오류 제거)`);
+        } else {
           new Notice(`"${word}"는 이미 예외 단어로 등록되어 있습니다.`);
-          return;
-        }
-        
-        // 예외 단어 추가
-        settings.ignoredWords.push(word);
-        plugin.saveSettings();
-        
-        Logger.log(`📚 예외 단어 추가: "${word}"`);
-        new Notice(`"${word}"를 예외 단어로 추가했습니다.`);
-        
-        // 현재 오류 제거 (InlineModeService를 통해)
-        if ((window as any).InlineModeService) {
-          (window as any).InlineModeService.removeError(null, error.uniqueId);
-          Logger.debug(`✅ 예외 단어 등록으로 인한 오류 제거: ${error.uniqueId}`);
         }
         
         // 툴팁 숨김
         this.hide(true); // 강제 닫기
         
       } else {
-        Logger.error('Korean Grammar Assistant 플러그인을 찾을 수 없습니다.');
+        Logger.error('InlineModeService를 찾을 수 없습니다.');
         new Notice('예외 단어 추가에 실패했습니다.');
       }
     } catch (error) {

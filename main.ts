@@ -18,7 +18,6 @@ import { Logger } from './src/utils/logger';
 // Import inline mode components
 import { errorDecorationField, temporarySuggestionModeField, InlineModeService } from './src/services/inlineModeService';
 import { SpellCheckApiService } from './src/services/api';
-import { KoreanGrammarSuggest } from './src/ui/koreanGrammarSuggest';
 
 // 한글 맞춤법 검사 아이콘 등록
 addIcon(
@@ -32,7 +31,6 @@ addIcon(
 export default class KoreanGrammarPlugin extends Plugin {
   settings: PluginSettings;
   orchestrator: SpellCheckOrchestrator;
-  grammarSuggest: KoreanGrammarSuggest | null = null;
   // 🤖 InlineModeService는 정적 클래스로 설계되어 인스턴스 불필요
 
   async onload() {
@@ -115,18 +113,6 @@ export default class KoreanGrammarPlugin extends Plugin {
       },
     });
 
-    // EditorSuggest 기반 인라인 모드 명령어 추가
-    this.addCommand({
-      id: "inline-spell-check-suggest",
-      name: "인라인 맞춤법 검사 (EditorSuggest)",
-      callback: async () => {
-        if (!this.settings.inlineMode.enabled) {
-          new Notice("인라인 모드가 비활성화되어 있습니다. 설정에서 베타 기능을 활성화하세요.");
-          return;
-        }
-        await this.executeInlineSpellCheckWithSuggest();
-      },
-    });
 
     // 🤖 인라인 모드 AI 분석 명령어 추가
     this.addCommand({
@@ -145,7 +131,20 @@ export default class KoreanGrammarPlugin extends Plugin {
       },
     });
 
-    // 인라인 모드가 활성화된 경우 EditorSuggest 등록
+    // 📝 인라인 모드 일괄 적용 명령어 추가
+    this.addCommand({
+      id: "inline-apply-all",
+      name: "📝 인라인 오류 일괄 적용",
+      callback: async () => {
+        if (!this.settings.inlineMode.enabled) {
+          new Notice("인라인 모드가 비활성화되어 있습니다. 설정에서 베타 기능을 활성화하세요.");
+          return;
+        }
+        await this.executeInlineApplyAll();
+      },
+    });
+
+    // 인라인 모드가 활성화된 경우 확장 기능 등록
     if (this.settings.inlineMode.enabled) {
       this.enableInlineMode();
     }
@@ -252,14 +251,8 @@ export default class KoreanGrammarPlugin extends Plugin {
    * 인라인 모드 활성화
    */
   enableInlineMode(): void {
-    if (this.grammarSuggest) return; // 이미 활성화됨
-
     try {
-      // EditorSuggest 인스턴스 생성
-      this.grammarSuggest = new KoreanGrammarSuggest(this.app, this.settings);
-      this.registerEditorSuggest(this.grammarSuggest);
-
-      // 기존 Widget 기반 시스템도 병행 (향후 단계적 제거 예정)
+      // CodeMirror 확장 기능 등록
       this.registerEditorExtension([errorDecorationField, temporarySuggestionModeField]);
 
       // InlineModeService 초기화 (키보드 단축키 지원을 위해 필요)
@@ -276,7 +269,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       // 전역 접근을 위한 참조 설정
       (window as any).InlineModeService = InlineModeService;
 
-      Logger.log('인라인 모드 활성화됨 (EditorSuggest + 키보드 단축키)');
+      Logger.log('인라인 모드 활성화됨 (InlineModeService + 키보드 단축키)');
 
     } catch (error) {
       Logger.error('인라인 모드 활성화 실패:', error);
@@ -288,12 +281,6 @@ export default class KoreanGrammarPlugin extends Plugin {
    * 인라인 모드 비활성화
    */
   disableInlineMode(): void {
-    if (this.grammarSuggest) {
-      this.grammarSuggest.cleanup();
-      // EditorSuggest는 별도 해제 메서드가 없으므로 참조만 제거
-      this.grammarSuggest = null;
-    }
-
     // 전역 객체 정리
     if ((window as any).InlineModeService) {
       delete (window as any).InlineModeService;
@@ -302,48 +289,6 @@ export default class KoreanGrammarPlugin extends Plugin {
     Logger.log('인라인 모드 비활성화됨');
   }
 
-  /**
-   * EditorSuggest 기반 인라인 맞춤법 검사 실행
-   */
-  async executeInlineSpellCheckWithSuggest(): Promise<void> {
-    if (!this.grammarSuggest) {
-      new Notice('인라인 모드가 활성화되지 않았습니다.');
-      return;
-    }
-
-    const activeLeaf = this.app.workspace.activeLeaf;
-    if (!activeLeaf) {
-      new Notice('활성화된 편집기가 없습니다.');
-      return;
-    }
-
-    // @ts-ignore - Obsidian 내부 API 사용
-    const editor = activeLeaf.view.editor;
-    if (!editor) {
-      new Notice('편집기를 찾을 수 없습니다.');
-      return;
-    }
-
-    try {
-      // 전체 텍스트 가져오기
-      const fullText = editor.getValue();
-      if (!fullText.trim()) {
-        new Notice('검사할 텍스트가 없습니다.');
-        return;
-      }
-
-      Logger.log('EditorSuggest 기반 맞춤법 검사 시작');
-
-      // 맞춤법 검사 실행 및 결과를 EditorSuggest에 업데이트
-      await this.grammarSuggest.updateCorrections(fullText);
-
-      new Notice('맞춤법 검사가 완료되었습니다. 오타에 커서를 놓으면 수정 제안이 표시됩니다.');
-
-    } catch (error) {
-      Logger.error('EditorSuggest 기반 맞춤법 검사 오류:', error);
-      new Notice('맞춤법 검사 중 오류가 발생했습니다.');
-    }
-  }
 
   /**
    * 🤖 인라인 모드 AI 분석 실행
@@ -456,21 +401,17 @@ export default class KoreanGrammarPlugin extends Plugin {
       // 1단계: 맞춤법 검사 실행
       processNotice.setMessage(`📝 ${targetText.length}자 텍스트 맞춤법 검사 중...`);
       
-      if (this.grammarSuggest) {
-        await this.grammarSuggest.updateCorrections(targetText);
-      } else {
-        // InlineModeService를 통해 맞춤법 검사 실행
-        // 1. 에디터 뷰 설정 (중요!)
-        // @ts-ignore - Obsidian 내부 API 사용  
-        const editorView = (activeLeaf.view as any).editor?.cm;
-        if (editorView) {
-          InlineModeService.setEditorView(editorView, this.app);
-          Logger.debug('에디터 뷰 설정 완료 for checkText');
-        }
-        
-        // 2. 맞춤법 검사 실행
-        await InlineModeService.checkText(targetText);
+      // 🔧 단일 InlineModeService 시스템 사용
+      // @ts-ignore - Obsidian 내부 API 사용  
+      const editorView = (activeLeaf.view as any).editor?.cm;
+      if (editorView) {
+        InlineModeService.setEditorView(editorView, this.settings, this.app);
+        Logger.debug('에디터 뷰 및 설정 완료 for checkText');
       }
+      
+      // InlineModeService를 통한 맞춤법 검사 실행
+      await InlineModeService.checkText(targetText);
+      Logger.debug('InlineModeService 맞춤법 검사 완료');
 
       // 잠시 대기 (맞춤법 검사 완료 대기)
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -517,6 +458,52 @@ export default class KoreanGrammarPlugin extends Plugin {
       processNotice.hide();
       Logger.error('맞춤법 검사 및 AI 분석 실패:', error);
       new Notice('❌ 분석 중 오류가 발생했습니다.', 4000);
+    }
+  }
+
+  /**
+   * 📝 인라인 모드 일괄 적용 실행
+   */
+  async executeInlineApplyAll(): Promise<void> {
+    const activeLeaf = this.app.workspace.activeLeaf;
+    if (!activeLeaf || !activeLeaf.view || !(activeLeaf.view as any).editor) {
+      new Notice('활성화된 편집기가 없습니다.');
+      return;
+    }
+
+    // 현재 오류가 있는지 확인
+    const errorCount = InlineModeService.getErrorCount();
+    if (errorCount === 0) {
+      new Notice('적용할 인라인 오류가 없습니다. 먼저 맞춤법 검사를 실행하세요.');
+      return;
+    }
+
+    const processNotice = new Notice(`📝 ${errorCount}개 오류 일괄 적용 중...`, 0);
+
+    try {
+      // 에디터 뷰 설정
+      // @ts-ignore - Obsidian 내부 API 사용  
+      const editorView = (activeLeaf.view as any).editor?.cm;
+      if (editorView) {
+        InlineModeService.setEditorView(editorView, this.settings, this.app);
+      }
+
+      // 일괄 적용 실행
+      const appliedCount = await InlineModeService.applyAllCorrections();
+
+      // 완료 알림
+      processNotice.hide();
+      new Notice(`✅ ${appliedCount}개 오류가 에디터에 적용되었습니다!`, 4000);
+      
+      if (appliedCount < errorCount) {
+        const skippedCount = errorCount - appliedCount;
+        new Notice(`💡 ${skippedCount}개 오류는 건너뛰거나 예외처리 사전에 등록되었습니다.`, 3000);
+      }
+
+    } catch (error) {
+      processNotice.hide();
+      Logger.error('인라인 오류 일괄 적용 실패:', error);
+      new Notice('❌ 일괄 적용 중 오류가 발생했습니다.', 4000);
     }
   }
 }

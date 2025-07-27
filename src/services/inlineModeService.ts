@@ -9,6 +9,7 @@ import { MarkdownView } from 'obsidian';
 import { MorphemeUtils } from '../utils/morphemeUtils';
 import { NotificationUtils } from '../utils/notificationUtils';
 import { SpellCheckApiService } from './api';
+import { IgnoredWordsService } from './ignoredWords';
 
 /**
  * 🤖 AI 교정 텍스트 Widget - Replace Decoration용
@@ -826,7 +827,9 @@ export class InlineModeService {
       // (중복 초기화 방지)
 
       // 기존 오류 제거
+      Logger.debug(`showErrors: clearErrors 호출 전 activeErrors: ${this.activeErrors.size}개`);
       this.clearErrors(view);
+      Logger.debug(`showErrors: clearErrors 호출 후 activeErrors: ${this.activeErrors.size}개`);
 
       // 에디터 텍스트 가져오기
       const doc = view.state.doc;
@@ -865,10 +868,26 @@ export class InlineModeService {
         );
       }
 
+      // 🔵 예외처리 사전 필터링
+      const beforeIgnoreCount = optimizedCorrections.length;
+      const filteredCorrections = optimizedCorrections.filter(correction => {
+        const isIgnored = IgnoredWordsService.isWordIgnored(correction.original, this.settings);
+        if (isIgnored) {
+          Logger.debug(`🔵 예외처리 사전으로 필터링: "${correction.original}"`);
+        }
+        return !isIgnored;
+      });
+      
+      // 예외처리 필터링 결과 로그
+      if (beforeIgnoreCount > filteredCorrections.length) {
+        const ignoredCount = beforeIgnoreCount - filteredCorrections.length;
+        Logger.log(`🔵 예외처리 사전 필터링: ${ignoredCount}개 단어 제외됨`);
+      }
+
       // 교정 정보를 InlineError로 변환
       const errors: InlineError[] = [];
       
-      optimizedCorrections.forEach((correction, index) => {
+      filteredCorrections.forEach((correction, index) => {
         const searchText = correction.original;
         let searchIndex = 0;
         let occurrence = 0;
@@ -908,6 +927,7 @@ export class InlineModeService {
             this.activeErrors.set(uniqueId, error);
             
             Logger.debug(`🎯 오류 위치 설정: "${searchText}" (${uniqueId}) at ${foundIndex}-${foundIndex + searchText.length}${posInfo ? ` [${posInfo.mainPos}]` : ''}`);
+            Logger.debug(`activeErrors 현재 크기: ${this.activeErrors.size}개`);
             occurrence++;
           }
           
@@ -2600,28 +2620,22 @@ export class InlineModeService {
         morphemeData: null,
         userEdits: [], // 인라인 모드에서는 사용자 편집 없음
         currentStates,
-        originalText: corrections.map(c => c.original).join(' ') // 원본 텍스트 추가
+        originalText: corrections.map(c => c.original).join(' '), // 원본 텍스트 추가
+        onProgress: progressCallback ? (current: number, total: number, message: string) => {
+          // AI 분석 서비스의 실제 배치 진행률을 그대로 전달
+          progressCallback(current, total);
+        } : undefined
       };
 
-      // AI 분석 실행
+      // AI 분석 실행 (배치 기반 진행률 자동 업데이트)
       const analysisResults = await aiService.analyzeCorrections(aiRequest);
 
       Logger.log(`🤖 AI 분석 완료: ${analysisResults.length}개 결과`);
 
-      // 결과를 기존 오류에 적용 (배치 처리 진행률 표시)
+      // 결과를 기존 오류에 적용 (배치 처리)
       const totalResults = analysisResults.length;
       for (let i = 0; i < analysisResults.length; i++) {
         const result = analysisResults[i];
-        
-        // 진행률 콜백 호출
-        if (progressCallback) {
-          progressCallback(i + 1, totalResults);
-        }
-        
-        // 각 결과 적용 시 약간의 딜레이 (UI 업데이트 시간 확보)
-        if (i > 0 && i % 3 === 0) { // 3개마다 짧은 딜레이
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
         const errorArray = Array.from(this.activeErrors.values());
         const targetError = errorArray[result.correctionIndex];
         
@@ -2691,10 +2705,12 @@ export class InlineModeService {
 
       if (!result.corrections || result.corrections.length === 0) {
         Logger.log('맞춤법 오류가 발견되지 않았습니다.');
-        throw new Error('맞춤법 오류가 발견되지 않았습니다.');
+        // throw 대신 정상 반환 (main.ts에서 getErrorCount()로 확인하도록)
+        return;
       }
 
       // 인라인 모드로 오류 표시
+      Logger.debug(`checkText: showErrors 호출 전 - corrections: ${result.corrections.length}개`);
       await this.showErrors(
         this.currentView,
         result.corrections,
@@ -2702,8 +2718,10 @@ export class InlineModeService {
         this.settings?.inlineMode?.underlineColor || 'var(--color-red)',
         this.app || undefined
       );
-
-      Logger.log(`📝 인라인 모드 맞춤법 검사 완료: ${result.corrections.length}개 오류 발견`);
+      
+      // showErrors 완료 후 activeErrors 상태 확인
+      Logger.debug(`checkText: showErrors 호출 후 - activeErrors: ${this.activeErrors.size}개`);
+      Logger.log(`📝 인라인 모드 맞춤법 검사 완료: ${result.corrections.length}개 오류 발견, ${this.activeErrors.size}개 activeErrors`);
 
     } catch (error) {
       Logger.error('인라인 모드 맞춤법 검사 오류:', error);
@@ -2744,6 +2762,213 @@ export class InlineModeService {
     } catch (error) {
       Logger.error('오류 위젯 새로고침 실패:', error);
     }
+  }
+
+  /**
+   * 📝 모든 인라인 오류에 대해 현재 상태값을 에디터에 일괄 적용
+   * 사용자가 변경한 상태값들을 모두 반영하여 적용 + 예외처리 사전 등록
+   */
+  static async applyAllCorrections(): Promise<number> {
+    if (!this.currentView) {
+      throw new Error('에디터 뷰가 설정되지 않았습니다.');
+    }
+
+    if (this.activeErrors.size === 0) {
+      throw new Error('적용할 오류가 없습니다.');
+    }
+
+    if (!this.settings) {
+      throw new Error('플러그인 설정이 없습니다.');
+    }
+
+    Logger.log(`📝 ${this.activeErrors.size}개 오류 일괄 적용 시작`);
+
+    const doc = this.currentView.state.doc;
+    const changes: { from: number; to: number; insert: string }[] = [];
+    const wordsToIgnore: string[] = []; // 예외처리 사전에 추가할 단어들
+    let appliedCount = 0;
+    let skippedCount = 0;
+    let ignoredCount = 0;
+
+    // 오류들을 위치 역순으로 정렬 (뒤에서부터 적용하여 위치 충돌 방지)
+    const errors = Array.from(this.activeErrors.values()).sort((a, b) => b.start - a.start);
+
+    for (const error of errors) {
+      try {
+        // 🔵 파란색 (예외처리) 오류 수집
+        if (error.aiStatus === 'exception') {
+          const wordToIgnore = error.correction.original.trim();
+          if (wordToIgnore && !wordsToIgnore.includes(wordToIgnore)) {
+            wordsToIgnore.push(wordToIgnore);
+            ignoredCount++;
+            Logger.debug(`🔵 예외처리 단어 수집: "${wordToIgnore}"`);
+          }
+        }
+
+        const replacement = this.determineReplacementText(error);
+        
+        if (replacement === null) {
+          // 예외처리된 오류는 건너뛰기
+          skippedCount++;
+          Logger.debug(`⏭️ 예외처리된 오류 건너뛰기: "${error.correction.original}"`);
+          continue;
+        }
+
+        // 문서 범위 유효성 검사
+        if (error.start < 0 || error.end > doc.length || error.start >= error.end) {
+          Logger.warn(`⚠️ 유효하지 않은 범위: ${error.start}-${error.end} (문서 길이: ${doc.length})`);
+          skippedCount++;
+          continue;
+        }
+
+        // 현재 텍스트가 예상된 오류 텍스트와 일치하는지 확인
+        const currentText = doc.sliceString(error.start, error.end);
+        if (currentText !== error.correction.original) {
+          Logger.warn(`⚠️ 텍스트 불일치: 예상 "${error.correction.original}", 실제 "${currentText}"`);
+          skippedCount++;
+          continue;
+        }
+
+        changes.push({
+          from: error.start,
+          to: error.end,
+          insert: replacement
+        });
+
+        appliedCount++;
+        Logger.debug(`✅ 적용 예정: "${error.correction.original}" → "${replacement}"`);
+
+      } catch (error_inner) {
+        Logger.error(`❌ 오류 적용 실패:`, error_inner);
+        skippedCount++;
+      }
+    }
+
+    // 🔵 예외처리 단어들을 사전에 등록
+    if (wordsToIgnore.length > 0) {
+      let updatedSettings = this.settings;
+      for (const word of wordsToIgnore) {
+        updatedSettings = IgnoredWordsService.addIgnoredWord(word, updatedSettings);
+      }
+      
+      // 설정 업데이트 (플러그인 인스턴스를 통해)
+      if ((window as any).koreanGrammarPlugin?.instance) {
+        const plugin = (window as any).koreanGrammarPlugin.instance;
+        plugin.settings = updatedSettings;
+        await plugin.saveSettings();
+        Logger.log(`🔵 예외처리 사전 등록: ${wordsToIgnore.join(', ')}`);
+      }
+    }
+
+    // 변경사항이 있으면 에디터에 적용
+    if (changes.length > 0) {
+      this.currentView.dispatch({
+        changes: changes,
+        userEvent: 'korean-grammar.apply-all'
+      });
+
+      Logger.log(`📝 일괄 적용 완료: ${appliedCount}개 적용, ${skippedCount}개 건너뛰기, ${ignoredCount}개 예외처리 등록`);
+    }
+
+    // 적용 후 모든 오류 제거
+    this.clearErrors(this.currentView);
+
+    return appliedCount;
+  }
+
+  /**
+   * 🎯 개별 오류에 대해 현재 상태에 따른 교체 텍스트 결정
+   * AI 분석 후 색상 기반 처리 + 사용자 선택 우선
+   */
+  private static determineReplacementText(error: InlineError): string | null {
+    // 🔵 파란색: AI 예외처리 → 예외처리 사전에 등록 (적용하지 않음)
+    if (error.aiStatus === 'exception') {
+      Logger.debug(`🔵 AI 예외처리 (파란색): "${error.correction.original}" → 예외처리 사전 등록`);
+      return null; // 적용하지 않음 (예외처리는 applyAllCorrections에서 처리)
+    }
+
+    // 🟠 주황색: 원본 유지 → 건드리지 않음
+    if (error.aiStatus === 'keep-original') {
+      Logger.debug(`🟠 원본 유지 (주황색): "${error.correction.original}" → 건드리지 않음`);
+      return null; // 적용하지 않음
+    }
+
+    // 🟢 녹색: AI 교정 선택 → 그대로 적용
+    if (error.aiStatus === 'corrected' && error.aiAnalysis?.selectedValue) {
+      Logger.debug(`🟢 AI 교정 선택 (녹색): "${error.correction.original}" → "${error.aiAnalysis.selectedValue}"`);
+      return error.aiAnalysis.selectedValue;
+    }
+
+    // ✏️ 사용자가 개별적으로 조정한 경우 (최우선)
+    if (error.aiSelectedValue && !error.aiStatus) {
+      Logger.debug(`✏️ 사용자 개별 선택: "${error.correction.original}" → "${error.aiSelectedValue}"`);
+      return error.aiSelectedValue;
+    }
+
+    // 🔴 빨간색 (미처리) 또는 기본 상태: 첫 번째 수정 제안 적용
+    if (error.correction.corrected && error.correction.corrected.length > 0) {
+      const firstCorrection = error.correction.corrected[0];
+      Logger.debug(`🔴 기본 수정 제안 적용 (빨간색): "${error.correction.original}" → "${firstCorrection}"`);
+      return firstCorrection;
+    }
+
+    // 수정 제안이 없는 경우 원본 유지
+    Logger.debug(`⏭️ 수정 제안 없음, 원본 유지: "${error.correction.original}"`);
+    return null;
+  }
+
+  /**
+   * 🔵 특정 단어를 예외처리 사전에 추가하고 동일한 단어의 모든 오류 제거
+   * @param word 예외처리할 단어
+   * @returns 제거된 오류 개수
+   */
+  static async addWordToIgnoreListAndRemoveErrors(word: string): Promise<number> {
+    if (!this.settings || !this.currentView) {
+      throw new Error('설정 또는 에디터 뷰가 없습니다.');
+    }
+
+    const trimmedWord = word.trim();
+    if (!trimmedWord) {
+      return 0;
+    }
+
+    Logger.log(`🔵 예외처리 사전 추가 및 동일 단어 오류 제거: "${trimmedWord}"`);
+
+    // 1. 예외처리 사전에 단어 추가
+    const updatedSettings = IgnoredWordsService.addIgnoredWord(trimmedWord, this.settings);
+    
+    // 2. 설정 저장
+    if ((window as any).koreanGrammarPlugin?.instance) {
+      const plugin = (window as any).koreanGrammarPlugin.instance;
+      plugin.settings = updatedSettings;
+      await plugin.saveSettings();
+      this.settings = updatedSettings; // 로컬 설정도 업데이트
+      Logger.debug(`🔵 예외처리 사전에 저장됨: "${trimmedWord}"`);
+    }
+
+    // 3. 동일한 단어의 모든 오류 찾기
+    const errorsToRemove: string[] = [];
+    this.activeErrors.forEach((error, errorId) => {
+      if (error.correction.original.trim() === trimmedWord) {
+        errorsToRemove.push(errorId);
+      }
+    });
+
+    if (errorsToRemove.length === 0) {
+      Logger.debug(`🔵 제거할 "${trimmedWord}" 오류가 없습니다.`);
+      return 0;
+    }
+
+    // 4. activeErrors에서 제거
+    errorsToRemove.forEach(errorId => {
+      this.activeErrors.delete(errorId);
+    });
+
+    // 5. 화면에서 시각적으로 제거 (UI 새로고침)
+    this.refreshErrorWidgets();
+
+    Logger.log(`🔵 "${trimmedWord}" 관련 ${errorsToRemove.length}개 오류가 제거되었습니다.`);
+    return errorsToRemove.length;
   }
 
   // 🚧 구현 중인 기능들 - 향후 완성 예정
