@@ -230,4 +230,6 @@ export interface InlineError {
   aiBackgroundColor?: string; // AI 분석 결과에 따른 배경색
   aiStatus?: 'exception' | 'keep-original' | 'corrected'; // AI 분석 상태
   aiSelectedValue?: string; // AI가 선택한 수정값
+  aiConfidence?: number; // AI 신뢰도 (0-100)
+  aiReasoning?: string; // AI 추론 이유
 }

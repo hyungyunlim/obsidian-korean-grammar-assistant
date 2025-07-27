@@ -208,38 +208,69 @@ export default class KoreanGrammarPlugin extends Plugin {
       return;
     }
 
-    Logger.log('인라인 모드: 맞춤법 검사 시작');
-
     try {
       // 에디터 뷰 및 설정 초기화
       InlineModeService.setEditorView(editorView, this.settings, this.app);
 
-      // 전체 텍스트 가져오기
-      const fullText = editorView.state.doc.toString();
-      if (!fullText.trim()) {
+      // 선택된 텍스트 확인
+      const selectedText = editor.getSelection();
+      let targetText: string;
+      let isSelection = false;
+
+      if (selectedText.trim()) {
+        // 선택 텍스트가 있으면 선택 영역만 검사
+        targetText = selectedText;
+        isSelection = true;
+        Logger.log(`인라인 모드: 선택 영역 맞춤법 검사 시작 (${targetText.length}자)`);
+      } else {
+        // 선택 텍스트가 없으면 전체 문서 검사
+        targetText = editorView.state.doc.toString();
+        Logger.log(`인라인 모드: 전체 문서 맞춤법 검사 시작 (${targetText.length}자)`);
+      }
+
+      if (!targetText.trim()) {
         new Notice("검사할 텍스트가 없습니다.");
         return;
       }
 
       // API 서비스를 통해 맞춤법 검사 실행
       const apiService = new SpellCheckApiService();
-      const result = await apiService.checkSpelling(fullText, this.settings);
+      const result = await apiService.checkSpelling(targetText, this.settings);
 
       if (!result.corrections || result.corrections.length === 0) {
-        new Notice("맞춤법 오류가 발견되지 않았습니다.");
+        new Notice(`${isSelection ? '선택 영역에서 ' : ''}맞춤법 오류가 발견되지 않았습니다.`);
+        // 선택 영역 검사 시 기존 전체 오류는 유지하고 알림만 표시
+        if (isSelection) {
+          return;
+        }
+        // 전체 문서 검사 시에는 기존 오류 초기화
+        InlineModeService.clearErrors(editorView);
         return;
       }
 
-      // 인라인 모드로 오류 표시 (형태소 API 통합)
-      await InlineModeService.showErrors(
-        editorView,
-        result.corrections,
-        this.settings.inlineMode.underlineStyle,
-        this.settings.inlineMode.underlineColor,
-        this.app
-      );
-
-      Logger.log(`인라인 모드: 맞춤법 검사 완료`);
+      // 인라인 모드로 오류 표시 (선택 영역 vs 전체 문서)
+      if (isSelection) {
+        // 선택 영역: 기존 오류 유지하고 선택 범위 오류만 업데이트
+        await InlineModeService.showErrorsInSelection(
+          editorView,
+          result.corrections,
+          selectedText,
+          this.settings.inlineMode.underlineStyle,
+          this.settings.inlineMode.underlineColor,
+          this.app
+        );
+        Logger.log(`인라인 모드: 선택 영역 맞춤법 검사 완료 (${result.corrections.length}개 오류)`);
+      } else {
+        // 전체 문서: 기존 오류 초기화 후 새로운 오류 표시
+        await InlineModeService.showErrors(
+          editorView,
+          result.corrections,
+          this.settings.inlineMode.underlineStyle,
+          this.settings.inlineMode.underlineColor,
+          this.app
+        );
+        Logger.log(`인라인 모드: 전체 문서 맞춤법 검사 완료 (${result.corrections.length}개 오류)`);
+      }
 
     } catch (error) {
       Logger.error('인라인 모드 맞춤법 검사 오류:', error);
@@ -331,7 +362,13 @@ export default class KoreanGrammarPlugin extends Plugin {
 
       if (hasExistingErrors) {
         // 케이스 1: 기존 오류가 있는 경우 - AI 분석 실행
-        await this.analyzeExistingInlineErrors();
+        if (isSelection) {
+          // 선택 영역이 있으면 해당 영역의 오류만 AI 분석
+          await this.analyzeExistingInlineErrorsInSelection(selectedText);
+        } else {
+          // 선택 영역이 없으면 전체 오류 AI 분석
+          await this.analyzeExistingInlineErrors();
+        }
       } else {
         // 케이스 2: 기존 오류가 없는 경우 - 맞춤법 검사 먼저 실행 후 AI 분석
         await this.analyzeTextWithSpellCheckAndAI(targetText, isSelection);
@@ -340,6 +377,51 @@ export default class KoreanGrammarPlugin extends Plugin {
     } catch (error) {
       Logger.error('인라인 AI 분석 오류:', error);
       new Notice('AI 분석 중 오류가 발생했습니다.');
+    }
+  }
+
+  /**
+   * 선택 영역 내 기존 인라인 오류에 대한 AI 분석
+   */
+  private async analyzeExistingInlineErrorsInSelection(selectedText: string): Promise<void> {
+    // 1단계: 분석 시작 알림
+    const analysisNotice = new Notice('🤖 선택 영역 AI 분석을 시작합니다...', 0);
+    
+    try {
+      // 2단계: 선택 영역 내 오류 필터링
+      const selectionErrorCount = InlineModeService.getErrorCountInSelection(selectedText);
+      if (selectionErrorCount === 0) {
+        analysisNotice.hide();
+        new Notice('⚠️ 선택 영역에 분석할 오류가 없습니다.', 3000);
+        return;
+      }
+      
+      analysisNotice.setMessage(`🔢 선택 영역 내 ${selectionErrorCount}개 오류 분석 준비 중...`);
+      
+      // 잠시 대기 (UI 업데이트 시간 확보)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // 3단계: AI API 호출 알림
+      analysisNotice.setMessage('🧠 선택 영역 AI 분석 중... (수십 초 소요될 수 있습니다)');
+      
+      // 진행률 콜백을 통한 실시간 업데이트
+      await InlineModeService.runAIAnalysisOnErrorsInSelection(selectedText, (current: number, total: number) => {
+        analysisNotice.setMessage(`🧠 선택 영역 AI 분석 중... (${current}/${total})`);
+      });
+      
+      // 3.5단계: UI 새로고침 강제 실행
+      InlineModeService.refreshErrorWidgets();
+      Logger.debug('선택 영역 AI 분석 완료 후 UI 새로고침 실행');
+      
+      // 4단계: 완료 알림
+      analysisNotice.hide();
+      new Notice(`✅ 선택 영역 AI 분석 완료! ${selectionErrorCount}개 오류에 색상이 적용되었습니다.`, 4000);
+      new Notice('💡 오류를 클릭하여 AI 추천 이유를 확인하세요.', 3000);
+      
+    } catch (error) {
+      analysisNotice.hide();
+      Logger.error('선택 영역 AI 분석 실패:', error);
+      new Notice('❌ 선택 영역 AI 분석 중 오류가 발생했습니다.', 4000);
     }
   }
 

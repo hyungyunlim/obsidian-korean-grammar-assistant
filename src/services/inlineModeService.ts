@@ -837,17 +837,26 @@ export class InlineModeService {
 
       // 형태소 분석 데이터가 없으면 자동으로 분석 (캐시 활용)
       let finalMorphemeData = morphemeData;
+      Logger.log(`🔍 형태소 분석 조건 확인: morphemeData=${!!morphemeData}, settings=${!!this.settings}`);
+      
       if (!finalMorphemeData && this.settings) {
         try {
           // 형태소 분석 알림 업데이트
           NotificationUtils.updateNoticeMessage(analysisNotice, '📋 형태소 분석 중...');
+          Logger.log('📋 형태소 분석 시작...');
           
           const apiService = new SpellCheckApiService();
           finalMorphemeData = await apiService.analyzeMorphemes(fullText, this.settings);
-          Logger.debug('인라인 모드: 형태소 분석 완료');
+          Logger.log(`📋 형태소 분석 완료: ${!!finalMorphemeData ? '성공' : '실패'}`);
+          
+          if (finalMorphemeData) {
+            Logger.debug('형태소 분석 결과:', finalMorphemeData);
+          }
         } catch (error) {
-          Logger.warn('인라인 모드: 형태소 분석 실패, 기본 로직 사용:', error);
+          Logger.error('인라인 모드: 형태소 분석 실패, 기본 로직 사용:', error);
         }
+      } else {
+        Logger.log(`📋 형태소 분석 건너뛰기: 이미 있음=${!!finalMorphemeData}, 설정 없음=${!this.settings}`);
       }
 
       // 형태소 API 활용한 중복 제거
@@ -2969,6 +2978,243 @@ export class InlineModeService {
 
     Logger.log(`🔵 "${trimmedWord}" 관련 ${errorsToRemove.length}개 오류가 제거되었습니다.`);
     return errorsToRemove.length;
+  }
+
+  /**
+   * 📍 선택 영역 내 오류 개수 반환
+   */
+  static getErrorCountInSelection(selectedText: string): number {
+    if (!selectedText.trim() || this.activeErrors.size === 0) {
+      return 0;
+    }
+
+    // 선택된 텍스트에 포함된 오류 개수 계산
+    let count = 0;
+    this.activeErrors.forEach((error) => {
+      if (selectedText.includes(error.correction.original)) {
+        count++;
+      }
+    });
+
+    Logger.debug(`선택 영역 내 오류 개수: ${count}개 (전체: ${this.activeErrors.size}개)`);
+    return count;
+  }
+
+  /**
+   * 📍 선택 영역 내 오류들에 대한 AI 분석 실행
+   */
+  static async runAIAnalysisOnErrorsInSelection(selectedText: string, progressCallback?: (current: number, total: number) => void): Promise<void> {
+    if (!selectedText.trim() || this.activeErrors.size === 0) {
+      throw new Error('선택 영역이나 분석할 오류가 없습니다.');
+    }
+
+    if (!this.settings?.ai?.enabled) {
+      throw new Error('AI 기능이 비활성화되어 있습니다.');
+    }
+
+    // 선택 영역에 포함된 오류들만 필터링
+    const selectionErrors: any[] = [];
+    const selectionErrorIds: string[] = [];
+    
+    this.activeErrors.forEach((error, errorId) => {
+      if (selectedText.includes(error.correction.original)) {
+        selectionErrors.push({
+          original: error.correction.original,
+          corrected: error.correction.corrected || [],
+          morphemeInfo: error.morphemeInfo
+        });
+        selectionErrorIds.push(errorId);
+      }
+    });
+
+    if (selectionErrors.length === 0) {
+      throw new Error('선택 영역에 분석할 오류가 없습니다.');
+    }
+
+    Logger.log(`🤖 선택 영역 내 ${selectionErrors.length}개 오류에 대한 AI 분석 시작`);
+
+    try {
+      // AI 분석 서비스 실행
+      const aiService = new (await import('./aiAnalysisService')).AIAnalysisService(this.settings.ai);
+      
+      const aiRequest = {
+        originalText: selectedText,
+        corrections: selectionErrors,
+        contextWindow: 50,
+        currentStates: {},
+        enhancedContext: true
+      };
+      
+      const analysisResults = await aiService.analyzeCorrections(aiRequest);
+
+      // 분석 결과를 해당 오류들에 적용
+      for (let i = 0; i < analysisResults.length; i++) {
+        const result = analysisResults[i];
+        const errorId = selectionErrorIds[i];
+        const targetError = this.activeErrors.get(errorId);
+        
+        if (targetError) {
+          // AI 분석 결과 적용
+          targetError.aiStatus = result.isExceptionProcessed ? 'exception' : 
+                                 result.selectedValue === targetError.correction.original ? 'keep-original' : 'corrected';
+          targetError.aiConfidence = result.confidence || 0;
+          targetError.aiReasoning = result.reasoning || '';
+          targetError.aiSelectedValue = result.selectedValue;
+          
+          // activeErrors 맵에 업데이트
+          this.activeErrors.set(errorId, targetError);
+          
+          Logger.debug(`🎨 선택 영역 오류 "${targetError.correction.original}"에 AI 결과 적용: ${result.selectedValue} (신뢰도: ${result.confidence}%)`);
+        }
+      }
+
+      Logger.log(`🤖 선택 영역 AI 분석 완료: ${selectionErrors.length}개 오류 처리됨`);
+
+    } catch (error) {
+      Logger.error('선택 영역 AI 분석 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 📍 선택 영역에만 오류 표시 (기존 오류 유지)
+   */
+  static async showErrorsInSelection(
+    view: EditorView,
+    corrections: Correction[],
+    selectedText: string,
+    underlineStyle: string = 'wavy',
+    underlineColor: string = 'var(--color-red)',
+    app?: App,
+    morphemeData?: any
+  ): Promise<void> {
+    if (!view || !corrections.length || !selectedText.trim()) {
+      Logger.warn('인라인 모드: 선택 영역 오류 표시 - 필수 데이터가 없습니다.');
+      return;
+    }
+
+    const analysisNotice = NotificationUtils.showAnalysisStartNotice('spelling');
+
+    try {
+      // 선택 영역의 시작/끝 위치 계산
+      const doc = view.state.doc;
+      const fullText = doc.toString();
+      const selectionStart = fullText.indexOf(selectedText);
+      const selectionEnd = selectionStart + selectedText.length;
+
+      if (selectionStart === -1) {
+        throw new Error('선택된 텍스트를 문서에서 찾을 수 없습니다.');
+      }
+
+      Logger.debug(`선택 영역 위치: ${selectionStart}-${selectionEnd} (${selectedText.length}자)`);
+
+      // 1. 선택 영역 내 기존 오류들 제거
+      const errorsToRemove: string[] = [];
+      this.activeErrors.forEach((error, errorId) => {
+        if (error.start >= selectionStart && error.end <= selectionEnd) {
+          errorsToRemove.push(errorId);
+        }
+      });
+
+      errorsToRemove.forEach(errorId => {
+        this.activeErrors.delete(errorId);
+      });
+
+      if (errorsToRemove.length > 0) {
+        view.dispatch({
+          effects: removeErrorDecorations.of(errorsToRemove)
+        });
+        Logger.debug(`선택 영역 내 기존 오류 ${errorsToRemove.length}개 제거됨`);
+      }
+
+      // 2. 형태소 분석 (필요시)
+      let finalMorphemeData = morphemeData;
+      if (!finalMorphemeData && this.settings) {
+        try {
+          NotificationUtils.updateNoticeMessage(analysisNotice, '📋 형태소 분석 중...');
+          const apiService = new SpellCheckApiService();
+          finalMorphemeData = await apiService.analyzeMorphemes(selectedText, this.settings);
+        } catch (error) {
+          Logger.warn('선택 영역 형태소 분석 실패, 기본 로직 사용:', error);
+        }
+      }
+
+      // 3. 중복 제거 및 그룹화
+      NotificationUtils.updateNoticeMessage(analysisNotice, '🔧 오류 중복 제거 중...');
+      const optimizedCorrections = MorphemeUtils.removeDuplicateCorrections(
+        corrections,
+        finalMorphemeData,
+        selectedText
+      );
+
+      // 4. 예외 단어 필터링
+      const filteredCorrections = optimizedCorrections.filter(correction => {
+        const isIgnored = IgnoredWordsService.isWordIgnored(correction.original, this.settings);
+        if (isIgnored) {
+          Logger.debug(`예외 단어로 필터링됨: "${correction.original}"`);
+        }
+        return !isIgnored;
+      });
+
+      Logger.debug(`선택 영역 오류 처리: ${corrections.length} → ${optimizedCorrections.length} → ${filteredCorrections.length}개`);
+
+      // 5. 새로운 오류들을 선택 영역 기준으로 위치 계산하여 추가
+      const errors: InlineError[] = [];
+      filteredCorrections.forEach((correction, index) => {
+        const searchText = correction.original;
+        let searchStart = 0;
+        let occurrence = 1;
+
+        while (searchStart < selectedText.length) {
+          const foundIndex = selectedText.indexOf(searchText, searchStart);
+          if (foundIndex === -1) break;
+
+          // 전체 문서 기준 위치로 변환
+          const absoluteStart = selectionStart + foundIndex;
+          const absoluteEnd = absoluteStart + searchText.length;
+
+          const uniqueId = `${searchText}_${foundIndex}_${occurrence}`;
+          const posInfo = finalMorphemeData ? MorphemeUtils.extractPosInfo(correction.original, finalMorphemeData) : null;
+
+          const error: InlineError = {
+            uniqueId,
+            start: absoluteStart,
+            end: absoluteEnd,
+            line: 0, // 선택 영역에서는 정확한 라인 계산 생략
+            ch: 0,   // 선택 영역에서는 정확한 문자 위치 계산 생략
+            isActive: true,
+            correction,
+            morphemeInfo: posInfo || undefined
+          };
+
+          errors.push(error);
+          this.activeErrors.set(uniqueId, error);
+
+          Logger.debug(`선택 영역 오류 위치: "${searchText}" at ${absoluteStart}-${absoluteEnd}`);
+          searchStart = foundIndex + 1;
+          occurrence++;
+        }
+      });
+
+      // 6. decoration 추가
+      if (errors.length > 0) {
+        view.dispatch({
+          effects: addErrorDecorations.of({
+            errors,
+            underlineStyle,
+            underlineColor
+          })
+        });
+      }
+
+      NotificationUtils.hideNotice(analysisNotice);
+      Logger.log(`선택 영역 오류 표시 완료: ${errors.length}개 오류 추가됨`);
+
+    } catch (error) {
+      NotificationUtils.hideNotice(analysisNotice);
+      Logger.error('선택 영역 오류 표시 실패:', error);
+      throw error;
+    }
   }
 
   // 🚧 구현 중인 기능들 - 향후 완성 예정

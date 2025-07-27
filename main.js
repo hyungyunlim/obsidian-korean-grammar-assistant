@@ -896,6 +896,74 @@ var init_errorHandler = __esm({
   }
 });
 
+// src/utils/tokenEstimator.ts
+function estimateTokenCount(text) {
+  if (!text)
+    return 0;
+  const koreanChars = (text.match(/[\u3131-\u3163\uac00-\ud7a3]/g) || []).length;
+  const englishChars = (text.match(/[a-zA-Z]/g) || []).length;
+  const otherChars = text.length - koreanChars - englishChars;
+  const estimatedTokens = Math.ceil(
+    koreanChars * 1.8 + // 한국어 문자
+    englishChars * 0.25 + // 영어 문자 (4글자당 1토큰)
+    otherChars * 0.5
+    // 기타 문자 (공백, 구두점 등)
+  );
+  return estimatedTokens;
+}
+function estimateAnalysisTokenUsage(correctionContexts) {
+  const systemPromptTokens = 150;
+  let userPromptTokens = 50;
+  userPromptTokens += correctionContexts.length * 20;
+  correctionContexts.forEach((ctx) => {
+    userPromptTokens += estimateTokenCount(ctx.fullContext);
+    userPromptTokens += estimateTokenCount(ctx.original);
+    userPromptTokens += estimateTokenCount(ctx.corrected.join(", "));
+    userPromptTokens += estimateTokenCount(ctx.help);
+  });
+  const inputTokens = systemPromptTokens + userPromptTokens;
+  const estimatedOutputTokens = correctionContexts.length * 75;
+  return {
+    inputTokens,
+    estimatedOutputTokens,
+    totalEstimated: inputTokens + estimatedOutputTokens
+  };
+}
+function estimateCost(tokens, provider) {
+  const costs = {
+    openai: {
+      "gpt-4o": { input: 2.5, output: 10 },
+      // per 1M tokens (USD)
+      "gpt-4o-mini": { input: 0.15, output: 0.6 },
+      "gpt-4-turbo": { input: 10, output: 30 },
+      "gpt-4": { input: 30, output: 60 }
+    },
+    anthropic: {
+      "claude-3-5-sonnet-20241022": { input: 3, output: 15 },
+      "claude-3-5-haiku-20241022": { input: 0.25, output: 1.25 }
+    },
+    google: {
+      "gemini-1.5-pro": { input: 1.25, output: 5 },
+      "gemini-1.5-flash": { input: 0.075, output: 0.3 }
+    }
+  };
+  const avgCostPer1M = 2;
+  const estimatedCostUSD = tokens / 1e6 * avgCostPer1M;
+  const exchangeRate = 1350;
+  const estimatedCostKRW = estimatedCostUSD * exchangeRate;
+  if (estimatedCostUSD < 1e-3) {
+    return "< $0.001 (< \u20A91)";
+  } else if (estimatedCostUSD < 0.01) {
+    return `~$${estimatedCostUSD.toFixed(4)} (~\u20A9${estimatedCostKRW.toFixed(0)})`;
+  } else {
+    return `~$${estimatedCostUSD.toFixed(3)} (~\u20A9${estimatedCostKRW.toFixed(0)})`;
+  }
+}
+var init_tokenEstimator = __esm({
+  "src/utils/tokenEstimator.ts"() {
+  }
+});
+
 // src/api/openai-client.ts
 var import_obsidian3, OpenAIClient;
 var init_openai_client = __esm({
@@ -1229,6 +1297,745 @@ var init_clientFactory = __esm({
           return !!settings.ollamaEndpoint;
         }
         return !!this.getApiKey(settings);
+      }
+    };
+  }
+});
+
+// src/services/aiAnalysisService.ts
+var aiAnalysisService_exports = {};
+__export(aiAnalysisService_exports, {
+  AIAnalysisService: () => AIAnalysisService
+});
+var AIAnalysisService;
+var init_aiAnalysisService = __esm({
+  "src/services/aiAnalysisService.ts"() {
+    init_aiModels();
+    init_tokenEstimator();
+    init_logger();
+    AIAnalysisService = class {
+      constructor(settings) {
+        this.settings = settings;
+      }
+      /**
+       * AI 클라이언트 팩토리를 지연 로딩합니다 (성능 최적화)
+       * @private
+       */
+      async getClientFactory() {
+        const { AIClientFactory: AIClientFactory2 } = await Promise.resolve().then(() => (init_clientFactory(), clientFactory_exports));
+        return AIClientFactory2;
+      }
+      /**
+       * API 키 유효성을 확인합니다 (lazy loading 팩토리 사용)
+       * @private
+       */
+      async hasValidApiKey(settings) {
+        const ClientFactory = await this.getClientFactory();
+        return ClientFactory.hasValidApiKey(settings);
+      }
+      /**
+       * 각 오류에 대한 컨텍스트를 추출합니다.
+       */
+      extractCorrectionContexts(request, morphemeInfo) {
+        const { originalText, corrections, contextWindow = 50, currentStates, editor, file, enhancedContext = true } = request;
+        const contexts = [];
+        corrections.forEach((correction, index) => {
+          const errorIndex = originalText.indexOf(correction.original);
+          if (errorIndex === -1) {
+            Logger.warn(`\uC624\uB958 \uD14D\uC2A4\uD2B8\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC74C: "${correction.original}"`);
+            contexts.push({
+              correctionIndex: index,
+              original: correction.original,
+              corrected: correction.corrected,
+              help: correction.help,
+              contextBefore: "",
+              contextAfter: "",
+              fullContext: correction.original
+            });
+            return;
+          }
+          const startIndex = Math.max(0, errorIndex - contextWindow);
+          const endIndex = Math.min(originalText.length, errorIndex + correction.original.length + contextWindow);
+          const contextBefore = originalText.slice(startIndex, errorIndex);
+          const contextAfter = originalText.slice(errorIndex + correction.original.length, endIndex);
+          const fullContext = originalText.slice(startIndex, endIndex);
+          const stateInfo = currentStates ? currentStates[index] : void 0;
+          const context = {
+            correctionIndex: index,
+            original: correction.original,
+            corrected: correction.corrected,
+            help: correction.help,
+            contextBefore: contextBefore.trim(),
+            contextAfter: contextAfter.trim(),
+            fullContext: fullContext.trim(),
+            currentState: stateInfo == null ? void 0 : stateInfo.state,
+            currentValue: stateInfo == null ? void 0 : stateInfo.value
+          };
+          if (enhancedContext && editor) {
+            try {
+              const enhancedInfo = this.extractEnhancedContext(
+                editor,
+                file,
+                originalText,
+                correction,
+                errorIndex,
+                morphemeInfo
+              );
+              if (enhancedInfo.isLikelyProperNoun) {
+                context.sentenceContext = enhancedInfo.sentenceContext;
+                context.isLikelyProperNoun = true;
+                context.documentType = enhancedInfo.documentType;
+                Logger.debug(`\u{1F50D} \uACE0\uC720\uBA85\uC0AC \uAC10\uC9C0: "${correction.original}" - \uAC10\uC9C0 \uBC29\uBC95: ${enhancedInfo.detectionMethod} - \uBB38\uC7A5 \uCEE8\uD14D\uC2A4\uD2B8 \uCD94\uAC00`);
+              }
+            } catch (error) {
+              Logger.warn("\uD5A5\uC0C1\uB41C \uCEE8\uD14D\uC2A4\uD2B8 \uCD94\uCD9C \uC2E4\uD328:", error);
+            }
+          }
+          contexts.push(context);
+        });
+        return contexts;
+      }
+      /**
+       * 형태소 분석 결과 전체를 로깅합니다.
+       */
+      logMorphemeAnalysis(morphemeInfo, corrections) {
+        Logger.debug("\u{1F4CB} \uD615\uD0DC\uC18C \uBD84\uC11D \uACB0\uACFC \uC694\uC57D:");
+        if (!morphemeInfo || !morphemeInfo.sentences) {
+          Logger.warn("\uD615\uD0DC\uC18C \uBD84\uC11D \uB370\uC774\uD130\uAC00 \uC720\uD6A8\uD558\uC9C0 \uC54A\uC74C");
+          return;
+        }
+        const totalSentences = morphemeInfo.sentences.length;
+        const totalTokens = morphemeInfo.sentences.reduce((sum, sentence) => sum + (sentence.tokens ? sentence.tokens.length : 0), 0);
+        Logger.debug(`  \uCD1D ${totalSentences}\uAC1C \uBB38\uC7A5, ${totalTokens}\uAC1C \uD1A0\uD070 \uBD84\uC11D\uB428`);
+        const properNouns = [];
+        const foreignWords = [];
+        const allTokens = [];
+        morphemeInfo.sentences.forEach((sentence, sentenceIdx) => {
+          if (!sentence.tokens)
+            return;
+          sentence.tokens.forEach((token) => {
+            var _a, _b;
+            const tokenText = ((_a = token.text) == null ? void 0 : _a.content) || "";
+            const tags = ((_b = token.morphemes) == null ? void 0 : _b.map((m) => m.tag)) || [];
+            allTokens.push({ text: tokenText, tags });
+            if (tags.some((tag) => ["NNP"].includes(tag))) {
+              if (!properNouns.includes(tokenText)) {
+                properNouns.push(tokenText);
+              }
+            }
+            if (tags.some((tag) => ["SL", "SH", "SN"].includes(tag))) {
+              if (!foreignWords.includes(tokenText)) {
+                foreignWords.push(tokenText);
+              }
+            }
+          });
+        });
+        if (properNouns.length > 0) {
+          Logger.debug(`  \u{1F3F7}\uFE0F  \uACE0\uC720\uBA85\uC0AC (NNP): [${properNouns.map((noun) => `"${noun}"`).join(", ")}]`);
+        }
+        if (foreignWords.length > 0) {
+          Logger.debug(`  \u{1F310} \uC678\uAD6D\uC5B4/\uD2B9\uC218\uC5B4 (SL/SH/SN): [${foreignWords.map((word) => `"${word}"`).join(", ")}]`);
+        }
+        const errorWords = corrections.map((c) => c.original);
+        const matchedErrors = errorWords.filter(
+          (word) => properNouns.includes(word) || foreignWords.includes(word)
+        );
+        if (matchedErrors.length > 0) {
+          Logger.debug(`  \u2728 \uB9DE\uCDA4\uBC95 \uC624\uB958 \uC911 \uD615\uD0DC\uC18C \uBD84\uC11D\uC73C\uB85C \uAC10\uC9C0\uB41C \uACE0\uC720\uBA85\uC0AC/\uC678\uAD6D\uC5B4: [${matchedErrors.map((word) => `"${word}"`).join(", ")}]`);
+        } else {
+          Logger.debug("  \u2753 \uB9DE\uCDA4\uBC95 \uC624\uB958 \uC911 \uD615\uD0DC\uC18C \uBD84\uC11D\uC73C\uB85C \uACE0\uC720\uBA85\uC0AC/\uC678\uAD6D\uC5B4\uB85C \uBD84\uB958\uB41C \uB2E8\uC5B4 \uC5C6\uC74C");
+        }
+        Logger.debug("\uC0C1\uC138 \uD1A0\uD070 \uC815\uBCF4 (\uCC98\uC74C 10\uAC1C):");
+        allTokens.slice(0, 10).forEach((token, idx) => {
+          Logger.debug(`  ${idx + 1}. "${token.text}" \u2192 [${token.tags.join(", ")}]`);
+        });
+        if (allTokens.length > 10) {
+          Logger.debug(`  ... \uBC0F ${allTokens.length - 10}\uAC1C \uD1A0\uD070 \uB354 \uC788\uC74C`);
+        }
+      }
+      /**
+       * 형태소 분석 결과에서 고유명사를 감지합니다.
+       */
+      isProperNounFromMorphemes(text, morphemeInfo) {
+        if (!morphemeInfo || !morphemeInfo.sentences)
+          return false;
+        for (const sentence of morphemeInfo.sentences) {
+          for (const token of sentence.tokens) {
+            if (token.text.content === text) {
+              for (const morpheme of token.morphemes) {
+                const tag = morpheme.tag;
+                if (["NNP", "SL", "SH", "SN"].includes(tag)) {
+                  const tagDescriptions = {
+                    "NNP": "\uACE0\uC720\uBA85\uC0AC",
+                    "SL": "\uC678\uAD6D\uC5B4",
+                    "SH": "\uD55C\uC790",
+                    "SN": "\uC22B\uC790"
+                  };
+                  const tagDescription = tagDescriptions[tag] || tag;
+                  Logger.debug(`\u{1F3F7}\uFE0F \uD615\uD0DC\uC18C \uACE0\uC720\uBA85\uC0AC \uAC10\uC9C0: "${text}" - \uD488\uC0AC: ${tag}(${tagDescription})`);
+                  return true;
+                }
+              }
+            }
+          }
+        }
+        return false;
+      }
+      /**
+       * Obsidian Editor를 활용한 향상된 컨텍스트 추출
+       */
+      extractEnhancedContext(editor, file, originalText, correction, errorIndex, morphemeInfo) {
+        const errorPosition = editor.offsetToPos(errorIndex);
+        const sentenceContext = this.extractCurrentSentence(editor, errorPosition);
+        const documentType = (file == null ? void 0 : file.extension) || "unknown";
+        let isLikelyProperNoun = false;
+        let detectionMethod = "";
+        if (morphemeInfo) {
+          const morphemeDetected = this.isProperNounFromMorphemes(correction.original, morphemeInfo);
+          const patternDetected = this.detectProperNounPatterns(correction.original, sentenceContext);
+          if (morphemeDetected) {
+            isLikelyProperNoun = true;
+            detectionMethod = "\uD615\uD0DC\uC18C \uBD84\uC11D";
+          } else if (patternDetected) {
+            isLikelyProperNoun = true;
+            detectionMethod = "\uD328\uD134 \uB9E4\uCE6D";
+          }
+        } else {
+          const patternDetected = this.detectProperNounPatterns(correction.original, sentenceContext);
+          if (patternDetected) {
+            isLikelyProperNoun = true;
+            detectionMethod = "\uD328\uD134 \uB9E4\uCE6D (\uD615\uD0DC\uC18C \uBD84\uC11D \uC5C6\uC74C)";
+          }
+        }
+        return {
+          sentenceContext,
+          isLikelyProperNoun,
+          documentType,
+          detectionMethod
+        };
+      }
+      /**
+       * 현재 문장을 추출합니다.
+       */
+      extractCurrentSentence(editor, position) {
+        const currentLine = editor.getLine(position.line);
+        const sentenceEndPattern = /[.!?。！？]/g;
+        let sentenceStart = 0;
+        for (let i = position.ch - 1; i >= 0; i--) {
+          if (sentenceEndPattern.test(currentLine[i])) {
+            sentenceStart = i + 1;
+            break;
+          }
+        }
+        let sentenceEnd = currentLine.length;
+        for (let i = position.ch; i < currentLine.length; i++) {
+          if (sentenceEndPattern.test(currentLine[i])) {
+            sentenceEnd = i + 1;
+            break;
+          }
+        }
+        return currentLine.slice(sentenceStart, sentenceEnd).trim();
+      }
+      /**
+       * 패턴 기반 고유명사 감지 (형태소 분석이 없을 때 폴백)
+       */
+      detectProperNounPatterns(text, sentenceContext) {
+        const patterns = [
+          { pattern: /^[A-Z][a-z]+/, name: "\uC601\uC5B4 \uACE0\uC720\uBA85\uC0AC" },
+          // GitHub, React 등
+          { pattern: /^[A-Z]{2,}$/, name: "\uC601\uC5B4 \uC57D\uC5B4" },
+          // API, URL, HTTP
+          { pattern: /\w+님$/, name: "\uC874\uCE6D" },
+          // 김철수님
+          { pattern: /^[가-힣]{2,4}[시도군구]$/, name: "\uC9C0\uBA85" },
+          // 서울시, 부산광역시
+          { pattern: /\d{4}년/, name: "\uC5F0\uB3C4" },
+          // 2018년
+          { pattern: /^[가-힣]+\.(js|ts|py|css|html|md)$/, name: "\uD30C\uC77C\uBA85" }
+          // 파일명
+        ];
+        for (const { pattern, name } of patterns) {
+          if (pattern.test(text)) {
+            Logger.debug(`\u{1F50D} \uD328\uD134 \uACE0\uC720\uBA85\uC0AC \uAC10\uC9C0: "${text}" - \uD328\uD134: ${name}`);
+            return true;
+          }
+        }
+        return false;
+      }
+      /**
+       * AI 분석에 필요한 토큰 사용량을 추정합니다.
+       */
+      estimateTokenUsage(request) {
+        const correctionContexts = this.extractCorrectionContexts(request);
+        const tokenUsage = estimateAnalysisTokenUsage(correctionContexts);
+        const cost = estimateCost(tokenUsage.totalEstimated, this.settings.provider);
+        return {
+          ...tokenUsage,
+          estimatedCost: cost
+        };
+      }
+      /**
+       * 최적의 배치 크기를 계산합니다.
+       * ⭐ JSON 잘림 방지를 위해 보수적 배치 크기 적용
+       */
+      calculateOptimalBatchSize(correctionContexts, hasMorphemeInfo = false) {
+        if (correctionContexts.length === 0)
+          return 5;
+        const avgContextLength = correctionContexts.reduce((sum, ctx) => sum + ctx.fullContext.length, 0) / correctionContexts.length;
+        const systemPromptLength = AI_PROMPTS.analysisSystem.length;
+        const maxInputTokens = this.getModelMaxInputTokens(this.settings.model);
+        let optimalSize = 6;
+        if (avgContextLength < 50) {
+          optimalSize = 8;
+        } else if (avgContextLength < 100) {
+          optimalSize = 6;
+        } else if (avgContextLength < 200) {
+          optimalSize = 4;
+        } else {
+          optimalSize = 3;
+        }
+        if (hasMorphemeInfo) {
+          optimalSize = Math.max(3, optimalSize - 1);
+        }
+        Logger.debug(`JSON \uC798\uB9BC \uBC29\uC9C0 \uBC30\uCE58 \uD06C\uAE30: \uD3C9\uADE0 \uCEE8\uD14D\uC2A4\uD2B8 ${avgContextLength}\uC790, \uD615\uD0DC\uC18C: ${hasMorphemeInfo} \u2192 ${optimalSize}\uAC1C\uC529 \uCC98\uB9AC`);
+        return Math.min(optimalSize, 8);
+      }
+      /**
+       * 모델별 최대 입력 토큰을 가져옵니다 (대략적).
+       */
+      getModelMaxInputTokens(model) {
+        const outputLimit = this.getModelMaxTokens(model);
+        return outputLimit * 10;
+      }
+      /**
+       * 오류들을 배치로 나누어 처리합니다.
+       */
+      createBatches(correctionContexts, maxBatchSize = 10) {
+        const batches = [];
+        for (let i = 0; i < correctionContexts.length; i += maxBatchSize) {
+          batches.push(correctionContexts.slice(i, i + maxBatchSize));
+        }
+        return batches;
+      }
+      /**
+       * 단일 배치를 처리합니다.
+       */
+      async processBatch(batch, batchIndex, totalBatches, client, adjustedMaxTokens, model, morphemeInfo) {
+        var _a;
+        Logger.debug(`\uBC30\uCE58 ${batchIndex + 1}/${totalBatches} \uCC98\uB9AC \uC911 (${batch.length}\uAC1C \uC624\uB958)`);
+        const systemPrompt = AI_PROMPTS.analysisSystem;
+        const userPrompt = morphemeInfo ? AI_PROMPTS.analysisUserWithMorphemes(batch, morphemeInfo) : AI_PROMPTS.analysisUserWithContext(batch);
+        if (morphemeInfo) {
+          Logger.debug(`\uD615\uD0DC\uC18C \uC815\uBCF4\uC640 \uD568\uAED8 AI \uBD84\uC11D \uC9C4\uD589 (\uD1A0\uD070 \uC808\uC57D \uBAA8\uB4DC)`);
+          Logger.debug(`\uD615\uD0DC\uC18C \uD1A0\uD070 \uC218: ${((_a = morphemeInfo.tokens) == null ? void 0 : _a.length) || 0}\uAC1C`);
+        }
+        const messages = [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ];
+        const response = await client.chat(messages, adjustedMaxTokens, model);
+        Logger.debug(`\uBC30\uCE58 ${batchIndex + 1} \uC751\uB2F5 \uC218\uC2E0:`, response.substring(0, 100) + "...");
+        return this.parseAIResponse(response, batch);
+      }
+      /**
+       * AI를 사용하여 맞춤법 오류를 분석하고 최적의 수정사항을 제안합니다.
+       * ⭐ NEW: 형태소 정보 통합 지원
+       */
+      async analyzeCorrections(request, morphemeInfo) {
+        var _a, _b;
+        Logger.debug("analyzeCorrections \uC2DC\uC791:", {
+          enabled: this.settings.enabled,
+          provider: this.settings.provider,
+          model: this.settings.model,
+          correctionsCount: request.corrections.length
+        });
+        if (morphemeInfo) {
+          this.logMorphemeAnalysis(morphemeInfo, request.corrections);
+        }
+        if (!this.settings.enabled) {
+          throw new Error("AI \uAE30\uB2A5\uC774 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.");
+        }
+        if (!await this.hasValidApiKey(this.settings)) {
+          const provider = this.settings.provider;
+          const keyName = provider === "openai" ? "OpenAI API \uD0A4" : provider === "anthropic" ? "Anthropic API \uD0A4" : provider === "google" ? "Google API \uD0A4" : provider === "ollama" ? "Ollama \uC5D4\uB4DC\uD3EC\uC778\uD2B8" : "API \uD0A4";
+          throw new Error(`${keyName}\uAC00 \uC124\uC815\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uD50C\uB7EC\uADF8\uC778 \uC124\uC815\uC5D0\uC11C ${provider} \uC81C\uACF5\uC790\uC758 ${keyName}\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.`);
+        }
+        const ClientFactory = await this.getClientFactory();
+        if (!this.settings.model || this.settings.model.trim() === "") {
+          throw new Error(`\uBAA8\uB378\uC774 \uC124\uC815\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uD50C\uB7EC\uADF8\uC778 \uC124\uC815\uC5D0\uC11C ${this.settings.provider} \uBAA8\uB378\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.`);
+        }
+        const client = ClientFactory.createClient(this.settings);
+        try {
+          const allContexts = this.extractCorrectionContexts(request, morphemeInfo);
+          const contextsToAnalyze = allContexts.filter(
+            (ctx) => ctx.currentState !== "original-kept" && ctx.currentState !== "exception-processed"
+          );
+          const alreadyResolvedContexts = allContexts.filter(
+            (ctx) => ctx.currentState === "original-kept" || ctx.currentState === "exception-processed"
+          );
+          Logger.debug(`\uBD84\uC11D \uB300\uC0C1: ${contextsToAnalyze.length}\uAC1C, \uC774\uBBF8 \uCC98\uB9AC\uB428: ${alreadyResolvedContexts.length}\uAC1C`);
+          let aiResults = [];
+          if (contextsToAnalyze.length > 0) {
+            const maxBatchSize = this.calculateOptimalBatchSize(contextsToAnalyze, !!morphemeInfo);
+            Logger.debug("\uBD84\uC11D \uC694\uCCAD \uC804\uC1A1 \uC911...", {
+              provider: this.settings.provider,
+              model: this.settings.model,
+              totalCorrections: contextsToAnalyze.length,
+              batchSize: maxBatchSize,
+              estimatedBatches: Math.ceil(contextsToAnalyze.length / maxBatchSize),
+              contextWindow: request.contextWindow || 50,
+              maxTokens: this.settings.maxTokens,
+              apiKeySet: !!this.getApiKey()
+            });
+            const batches = this.createBatches(contextsToAnalyze, maxBatchSize);
+            Logger.debug(`${batches.length}\uAC1C \uBC30\uCE58\uB85C \uBD84\uD560\uD558\uC5EC \uCC98\uB9AC\uD569\uB2C8\uB2E4.`);
+            const adjustedMaxTokens = this.adjustTokensForModel(this.settings.maxTokens, this.settings.model);
+            if (morphemeInfo) {
+              Logger.debug("\uD615\uD0DC\uC18C \uC815\uBCF4 \uD65C\uC6A9 AI \uBD84\uC11D \uC2DC\uC791:", {
+                tokensCount: ((_a = morphemeInfo.tokens) == null ? void 0 : _a.length) || 0,
+                sentences: ((_b = morphemeInfo.sentences) == null ? void 0 : _b.length) || 0,
+                language: morphemeInfo.language || "unknown"
+              });
+            }
+            for (let i = 0; i < batches.length; i++) {
+              try {
+                if (request.onProgress) {
+                  const progressMsg = morphemeInfo ? `AI + \uD615\uD0DC\uC18C \uBD84\uC11D \uC911... (${Math.round((i + 1) / batches.length * 100)}%)` : `AI \uBD84\uC11D \uC911... (${Math.round((i + 1) / batches.length * 100)}%)`;
+                  request.onProgress(i + 1, batches.length, progressMsg);
+                }
+                const batchResults = await this.processBatch(
+                  batches[i],
+                  i,
+                  batches.length,
+                  client,
+                  adjustedMaxTokens,
+                  this.settings.model,
+                  morphemeInfo
+                  // ⭐ NEW: 형태소 정보 전달
+                );
+                aiResults.push(...batchResults);
+                if (i < batches.length - 1) {
+                  await new Promise((resolve) => setTimeout(resolve, 1500));
+                }
+              } catch (error) {
+                Logger.error(`\uBC30\uCE58 ${i + 1} \uCC98\uB9AC \uC2E4\uD328:`, error);
+              }
+            }
+            Logger.log(`AI \uBD84\uC11D \uC644\uB8CC: ${aiResults.length}\uAC1C \uACB0\uACFC \uC218\uC9D1\uB428`);
+          }
+          const resolvedResults = alreadyResolvedContexts.map((ctx) => ({
+            correctionIndex: ctx.correctionIndex,
+            selectedValue: ctx.currentValue || ctx.original,
+            isExceptionProcessed: ctx.currentState === "exception-processed",
+            isOriginalKept: ctx.currentState === "original-kept",
+            confidence: 100,
+            reasoning: "\uC0AC\uC6A9\uC790\uAC00 \uC9C1\uC811 \uC120\uD0DD\uD55C \uD56D\uBAA9\uC785\uB2C8\uB2E4."
+          }));
+          const allResults = [...aiResults, ...resolvedResults];
+          allResults.sort((a, b) => a.correctionIndex - b.correctionIndex);
+          Logger.debug(`\uCD5C\uC885 \uCC98\uB9AC \uC644\uB8CC: ${allResults.length}\uAC1C \uACB0\uACFC \uBC18\uD658`);
+          return allResults;
+        } catch (error) {
+          Logger.error("\uBD84\uC11D \uC911 \uC624\uB958 \uBC1C\uC0DD:", error);
+          throw new Error(`AI \uBD84\uC11D \uC2E4\uD328: ${error.message}`);
+        }
+      }
+      /**
+       * AI 응답을 파싱하여 구조화된 결과로 변환합니다.
+       */
+      parseAIResponse(response, correctionContexts) {
+        try {
+          let parsedResponse;
+          let cleanedResponse = response.trim();
+          const codeBlockMatch = cleanedResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+          if (codeBlockMatch) {
+            cleanedResponse = codeBlockMatch[1].trim();
+          }
+          let jsonString = "";
+          const jsonArrayMatch = cleanedResponse.match(/\[[\s\S]*\]/);
+          if (jsonArrayMatch) {
+            jsonString = jsonArrayMatch[0];
+          } else {
+            jsonString = cleanedResponse;
+          }
+          if (!jsonString.endsWith("]") && jsonString.includes("[")) {
+            Logger.warn("JSON\uC774 \uC798\uB9B0 \uAC83\uC73C\uB85C \uBCF4\uC784, \uAC15\uD654\uB41C \uBCF5\uAD6C \uC2DC\uB3C4");
+            let lastCompleteObjectIndex = -1;
+            let braceCount = 0;
+            let inString = false;
+            let escapeNext = false;
+            for (let i = 0; i < jsonString.length; i++) {
+              const char = jsonString[i];
+              if (escapeNext) {
+                escapeNext = false;
+                continue;
+              }
+              if (char === "\\") {
+                escapeNext = true;
+                continue;
+              }
+              if (char === '"') {
+                inString = !inString;
+                continue;
+              }
+              if (!inString) {
+                if (char === "{") {
+                  braceCount++;
+                } else if (char === "}") {
+                  braceCount--;
+                  if (braceCount === 0) {
+                    lastCompleteObjectIndex = i;
+                  }
+                }
+              }
+            }
+            if (lastCompleteObjectIndex > 0) {
+              jsonString = jsonString.substring(0, lastCompleteObjectIndex + 1) + "]";
+              Logger.debug("\uACE0\uAE09 JSON \uBCF5\uAD6C \uC644\uB8CC");
+            } else {
+              const lastBraceIndex = jsonString.lastIndexOf("}");
+              if (lastBraceIndex > 0) {
+                jsonString = jsonString.substring(0, lastBraceIndex + 1) + "]";
+                Logger.debug("\uAE30\uBCF8 JSON \uBCF5\uAD6C \uC644\uB8CC");
+              }
+            }
+          }
+          Logger.debug("\uD30C\uC2F1\uD560 JSON (\uCCAB 200\uC790):", jsonString.substring(0, 200) + (jsonString.length > 200 ? "..." : ""));
+          try {
+            parsedResponse = JSON.parse(jsonString);
+          } catch (parseError) {
+            Logger.warn("\uCD08\uAE30 JSON \uD30C\uC2F1 \uC2E4\uD328, \uCD94\uAC00 \uBCF5\uAD6C \uC2DC\uB3C4:", parseError);
+            let fixedJson = jsonString.replace(/,\s*$/, "");
+            if (!fixedJson.endsWith("]")) {
+              fixedJson += "]";
+            }
+            try {
+              parsedResponse = JSON.parse(fixedJson);
+              Logger.debug("\uC27C\uD45C \uC81C\uAC70\uB85C JSON \uBCF5\uAD6C \uC131\uACF5");
+            } catch (secondError) {
+              const lastCommaIndex = jsonString.lastIndexOf(",");
+              if (lastCommaIndex > 0) {
+                const cutJson = jsonString.substring(0, lastCommaIndex) + "]";
+                try {
+                  parsedResponse = JSON.parse(cutJson);
+                  Logger.debug("\uBD88\uC644\uC804 \uAC1D\uCCB4 \uC81C\uAC70\uB85C JSON \uBCF5\uAD6C \uC131\uACF5");
+                } catch (thirdError) {
+                  throw parseError;
+                }
+              } else {
+                throw parseError;
+              }
+            }
+          }
+          const results = [];
+          for (const item of parsedResponse) {
+            const batchIndex = parseInt(item.correctionIndex);
+            if (isNaN(batchIndex) || batchIndex < 0 || batchIndex >= correctionContexts.length) {
+              Logger.warn("\uC720\uD6A8\uD558\uC9C0 \uC54A\uC740 batchIndex:", batchIndex);
+              continue;
+            }
+            const context = correctionContexts[batchIndex];
+            const originalCorrectionIndex = context.correctionIndex;
+            let selectedValue = item.selectedValue || "";
+            const validOptions = [...context.corrected, context.original];
+            Logger.debug(`AI \uC120\uD0DD \uBD84\uC11D - \uC624\uB958 "${context.original}":`);
+            Logger.debug(`  AI \uC120\uD0DD\uAC12: "${selectedValue}"`);
+            Logger.debug(`  \uC720\uD6A8\uD55C \uC635\uC158\uB4E4: [${validOptions.map((opt) => `"${opt}"`).join(", ")}]`);
+            Logger.debug(`  \uCD94\uCC9C \uC774\uC720: "${item.reasoning}"`);
+            if (!validOptions.includes(selectedValue)) {
+              Logger.warn(`\u{1F534} AI\uAC00 \uC720\uD6A8\uD558\uC9C0 \uC54A\uC740 \uAC12\uC744 \uC120\uD0DD\uD588\uC2B5\uB2C8\uB2E4: "${selectedValue}"`);
+              if (selectedValue === "\uC6D0\uBCF8\uC720\uC9C0" || selectedValue === "\uC608\uC678\uCC98\uB9AC" || !selectedValue) {
+                selectedValue = context.original;
+                Logger.debug(`"${item.selectedValue}"\uB97C \uC6D0\uBCF8 "${context.original}"\uB85C \uBCC0\uACBD`);
+              } else {
+                const matchedOption = this.findBestMatch(selectedValue, validOptions);
+                if (matchedOption) {
+                  Logger.warn(`\u26A0\uFE0F AI \uC120\uD0DD \uBD88\uC77C\uCE58: "${selectedValue}" \u2192 "${matchedOption}" (\uC790\uB3D9 \uB9E4\uCE6D)`);
+                  selectedValue = matchedOption;
+                } else {
+                  Logger.error(`\u274C \uB9E4\uCE6D \uC2E4\uD328 - \uC6D0\uBCF8\uC73C\uB85C \uB300\uCCB4: "${selectedValue}" \u2192 "${context.original}"`);
+                  selectedValue = context.original;
+                }
+              }
+            } else {
+              Logger.debug(`\u2705 AI \uC120\uD0DD\uAC12\uC774 \uC720\uD6A8\uD568: "${selectedValue}"`);
+            }
+            const isOriginalSelected = selectedValue === context.original;
+            const isOriginalKept = isOriginalSelected && !item.isExceptionProcessed;
+            results.push({
+              correctionIndex: originalCorrectionIndex,
+              selectedValue,
+              isExceptionProcessed: item.isExceptionProcessed || false,
+              isOriginalKept,
+              confidence: Math.max(0, Math.min(100, parseInt(item.confidence) || 0)),
+              reasoning: item.reasoning || "\uC774\uC720\uAC00 \uC81C\uACF5\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4."
+            });
+          }
+          Logger.debug(`\uD30C\uC2F1 \uC644\uB8CC: ${results.length}\uAC1C\uC758 \uACB0\uACFC \uCD94\uCD9C\uB428`);
+          const processedIndexes = new Set(results.map((r) => r.correctionIndex));
+          const missingContexts = correctionContexts.filter((ctx) => !processedIndexes.has(ctx.correctionIndex));
+          if (missingContexts.length > 0) {
+            Logger.warn(`\uB204\uB77D\uB41C \uC624\uB958\uB4E4 (\uC6D0\uBCF8 \uC778\uB371\uC2A4): ${missingContexts.map((c) => c.correctionIndex).join(", ")}`);
+            missingContexts.forEach((context) => {
+              const defaultValue = context.corrected[0] || context.original;
+              const isDefaultOriginal = defaultValue === context.original;
+              results.push({
+                correctionIndex: context.correctionIndex,
+                selectedValue: defaultValue,
+                isExceptionProcessed: false,
+                isOriginalKept: isDefaultOriginal,
+                confidence: 50,
+                reasoning: "AI \uBD84\uC11D\uC5D0\uC11C \uB204\uB77D\uB418\uC5B4 \uAE30\uBCF8\uAC12\uC73C\uB85C \uC124\uC815\uB428"
+              });
+            });
+            results.sort((a, b) => a.correctionIndex - b.correctionIndex);
+          }
+          return results;
+        } catch (error) {
+          Logger.error("\uC751\uB2F5 \uD30C\uC2F1 \uC624\uB958:", error);
+          Logger.error("\uC6D0\uBCF8 \uC751\uB2F5 (\uCCAB 500\uC790):", response.substring(0, 500));
+          if (error instanceof SyntaxError) {
+            throw new Error(`JSON \uD615\uC2DD \uC624\uB958: ${error.message}. AI \uC751\uB2F5\uC774 \uC62C\uBC14\uB978 JSON \uD615\uC2DD\uC774 \uC544\uB2D9\uB2C8\uB2E4.`);
+          } else {
+            throw new Error(`AI \uC751\uB2F5 \uD30C\uC2F1 \uC2E4\uD328: ${error.message}`);
+          }
+        }
+      }
+      /**
+       * 사용 가능한 모델 목록을 가져옵니다.
+       */
+      async fetchAvailableModels() {
+        try {
+          const ClientFactory = await this.getClientFactory();
+          return await ClientFactory.fetchModels(this.settings);
+        } catch (error) {
+          Logger.error("\uBAA8\uB378 \uBAA9\uB85D \uAC00\uC838\uC624\uAE30 \uC2E4\uD328:", error);
+          return [];
+        }
+      }
+      /**
+       * AI 설정을 업데이트합니다.
+       */
+      updateSettings(newSettings) {
+        this.settings = newSettings;
+      }
+      /**
+       * AI 서비스가 사용 가능한지 확인합니다.
+       */
+      async isAvailable() {
+        return this.settings.enabled && await this.hasValidApiKey(this.settings);
+      }
+      /**
+       * 현재 설정된 제공자 및 모델 정보를 반환합니다.
+       */
+      getProviderInfo() {
+        return {
+          provider: this.settings.provider,
+          model: this.settings.model,
+          available: this.settings.enabled
+          // 기본적인 활성화 상태만 체크
+        };
+      }
+      /**
+       * 현재 AI 설정을 반환합니다.
+       */
+      getSettings() {
+        return this.settings;
+      }
+      /**
+       * 모델별 최대 출력 토큰을 가져옵니다.
+       */
+      getModelMaxTokens(model) {
+        return MODEL_TOKEN_LIMITS[model] || 2048;
+      }
+      /**
+       * 요청할 토큰 수를 모델 제한에 맞게 조정합니다.
+       */
+      adjustTokensForModel(requestedTokens, model) {
+        const modelLimit = this.getModelMaxTokens(model);
+        if (requestedTokens > modelLimit) {
+          Logger.warn(`\uC694\uCCAD\uB41C \uD1A0\uD070 \uC218(${requestedTokens})\uAC00 \uBAA8\uB378 \uC81C\uD55C(${modelLimit})\uC744 \uCD08\uACFC\uD569\uB2C8\uB2E4. ${modelLimit}\uB85C \uC870\uC815\uD569\uB2C8\uB2E4.`);
+          return modelLimit;
+        }
+        return requestedTokens;
+      }
+      /**
+       * 현재 제공자의 API 키를 반환합니다.
+       */
+      getApiKey() {
+        switch (this.settings.provider) {
+          case "openai":
+            return this.settings.openaiApiKey;
+          case "anthropic":
+            return this.settings.anthropicApiKey;
+          case "google":
+            return this.settings.googleApiKey;
+          case "ollama":
+            return this.settings.ollamaEndpoint;
+          default:
+            return "";
+        }
+      }
+      /**
+       * AI가 반환한 값과 가장 유사한 유효한 옵션을 찾습니다.
+       */
+      findBestMatch(aiValue, validOptions) {
+        if (validOptions.includes(aiValue)) {
+          return aiValue;
+        }
+        const cleanAiValue = aiValue.replace(/[\s\*\~\-\+\[\]]/g, "");
+        for (const option of validOptions) {
+          const cleanOption = option.replace(/[\s\*\~\-\+\[\]]/g, "");
+          if (cleanAiValue === cleanOption) {
+            return option;
+          }
+          if (cleanAiValue.includes(cleanOption) || cleanOption.includes(cleanAiValue)) {
+            return option;
+          }
+        }
+        let bestMatch = null;
+        let bestScore = Infinity;
+        for (const option of validOptions) {
+          const distance = this.levenshteinDistance(aiValue, option);
+          const similarity = 1 - distance / Math.max(aiValue.length, option.length);
+          if (similarity >= 0.7 && distance < bestScore) {
+            bestMatch = option;
+            bestScore = distance;
+          }
+        }
+        return bestMatch;
+      }
+      /**
+       * 두 문자열 간의 편집 거리를 계산합니다.
+       */
+      levenshteinDistance(str1, str2) {
+        const matrix = [];
+        const n = str2.length;
+        const m = str1.length;
+        if (n === 0)
+          return m;
+        if (m === 0)
+          return n;
+        for (let i = 0; i <= n; i++) {
+          matrix[i] = [i];
+        }
+        for (let j = 0; j <= m; j++) {
+          matrix[0][j] = j;
+        }
+        for (let i = 1; i <= n; i++) {
+          for (let j = 1; j <= m; j++) {
+            if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+              matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+              matrix[i][j] = Math.min(
+                matrix[i - 1][j - 1] + 1,
+                matrix[i][j - 1] + 1,
+                matrix[i - 1][j] + 1
+              );
+            }
+          }
+        }
+        return matrix[n][m];
       }
     };
   }
@@ -6188,800 +6995,8 @@ var CorrectionPopup = class extends BaseComponent {
   }
 };
 
-// src/services/aiAnalysisService.ts
-init_aiModels();
-
-// src/utils/tokenEstimator.ts
-function estimateTokenCount(text) {
-  if (!text)
-    return 0;
-  const koreanChars = (text.match(/[\u3131-\u3163\uac00-\ud7a3]/g) || []).length;
-  const englishChars = (text.match(/[a-zA-Z]/g) || []).length;
-  const otherChars = text.length - koreanChars - englishChars;
-  const estimatedTokens = Math.ceil(
-    koreanChars * 1.8 + // 한국어 문자
-    englishChars * 0.25 + // 영어 문자 (4글자당 1토큰)
-    otherChars * 0.5
-    // 기타 문자 (공백, 구두점 등)
-  );
-  return estimatedTokens;
-}
-function estimateAnalysisTokenUsage(correctionContexts) {
-  const systemPromptTokens = 150;
-  let userPromptTokens = 50;
-  userPromptTokens += correctionContexts.length * 20;
-  correctionContexts.forEach((ctx) => {
-    userPromptTokens += estimateTokenCount(ctx.fullContext);
-    userPromptTokens += estimateTokenCount(ctx.original);
-    userPromptTokens += estimateTokenCount(ctx.corrected.join(", "));
-    userPromptTokens += estimateTokenCount(ctx.help);
-  });
-  const inputTokens = systemPromptTokens + userPromptTokens;
-  const estimatedOutputTokens = correctionContexts.length * 75;
-  return {
-    inputTokens,
-    estimatedOutputTokens,
-    totalEstimated: inputTokens + estimatedOutputTokens
-  };
-}
-function estimateCost(tokens, provider) {
-  const costs = {
-    openai: {
-      "gpt-4o": { input: 2.5, output: 10 },
-      // per 1M tokens (USD)
-      "gpt-4o-mini": { input: 0.15, output: 0.6 },
-      "gpt-4-turbo": { input: 10, output: 30 },
-      "gpt-4": { input: 30, output: 60 }
-    },
-    anthropic: {
-      "claude-3-5-sonnet-20241022": { input: 3, output: 15 },
-      "claude-3-5-haiku-20241022": { input: 0.25, output: 1.25 }
-    },
-    google: {
-      "gemini-1.5-pro": { input: 1.25, output: 5 },
-      "gemini-1.5-flash": { input: 0.075, output: 0.3 }
-    }
-  };
-  const avgCostPer1M = 2;
-  const estimatedCostUSD = tokens / 1e6 * avgCostPer1M;
-  const exchangeRate = 1350;
-  const estimatedCostKRW = estimatedCostUSD * exchangeRate;
-  if (estimatedCostUSD < 1e-3) {
-    return "< $0.001 (< \u20A91)";
-  } else if (estimatedCostUSD < 0.01) {
-    return `~$${estimatedCostUSD.toFixed(4)} (~\u20A9${estimatedCostKRW.toFixed(0)})`;
-  } else {
-    return `~$${estimatedCostUSD.toFixed(3)} (~\u20A9${estimatedCostKRW.toFixed(0)})`;
-  }
-}
-
-// src/services/aiAnalysisService.ts
-init_logger();
-var AIAnalysisService = class {
-  constructor(settings) {
-    this.settings = settings;
-  }
-  /**
-   * AI 클라이언트 팩토리를 지연 로딩합니다 (성능 최적화)
-   * @private
-   */
-  async getClientFactory() {
-    const { AIClientFactory: AIClientFactory2 } = await Promise.resolve().then(() => (init_clientFactory(), clientFactory_exports));
-    return AIClientFactory2;
-  }
-  /**
-   * API 키 유효성을 확인합니다 (lazy loading 팩토리 사용)
-   * @private
-   */
-  async hasValidApiKey(settings) {
-    const ClientFactory = await this.getClientFactory();
-    return ClientFactory.hasValidApiKey(settings);
-  }
-  /**
-   * 각 오류에 대한 컨텍스트를 추출합니다.
-   */
-  extractCorrectionContexts(request, morphemeInfo) {
-    const { originalText, corrections, contextWindow = 50, currentStates, editor, file, enhancedContext = true } = request;
-    const contexts = [];
-    corrections.forEach((correction, index) => {
-      const errorIndex = originalText.indexOf(correction.original);
-      if (errorIndex === -1) {
-        Logger.warn(`\uC624\uB958 \uD14D\uC2A4\uD2B8\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC74C: "${correction.original}"`);
-        contexts.push({
-          correctionIndex: index,
-          original: correction.original,
-          corrected: correction.corrected,
-          help: correction.help,
-          contextBefore: "",
-          contextAfter: "",
-          fullContext: correction.original
-        });
-        return;
-      }
-      const startIndex = Math.max(0, errorIndex - contextWindow);
-      const endIndex = Math.min(originalText.length, errorIndex + correction.original.length + contextWindow);
-      const contextBefore = originalText.slice(startIndex, errorIndex);
-      const contextAfter = originalText.slice(errorIndex + correction.original.length, endIndex);
-      const fullContext = originalText.slice(startIndex, endIndex);
-      const stateInfo = currentStates ? currentStates[index] : void 0;
-      const context = {
-        correctionIndex: index,
-        original: correction.original,
-        corrected: correction.corrected,
-        help: correction.help,
-        contextBefore: contextBefore.trim(),
-        contextAfter: contextAfter.trim(),
-        fullContext: fullContext.trim(),
-        currentState: stateInfo == null ? void 0 : stateInfo.state,
-        currentValue: stateInfo == null ? void 0 : stateInfo.value
-      };
-      if (enhancedContext && editor) {
-        try {
-          const enhancedInfo = this.extractEnhancedContext(
-            editor,
-            file,
-            originalText,
-            correction,
-            errorIndex,
-            morphemeInfo
-          );
-          if (enhancedInfo.isLikelyProperNoun) {
-            context.sentenceContext = enhancedInfo.sentenceContext;
-            context.isLikelyProperNoun = true;
-            context.documentType = enhancedInfo.documentType;
-            Logger.debug(`\u{1F50D} \uACE0\uC720\uBA85\uC0AC \uAC10\uC9C0: "${correction.original}" - \uAC10\uC9C0 \uBC29\uBC95: ${enhancedInfo.detectionMethod} - \uBB38\uC7A5 \uCEE8\uD14D\uC2A4\uD2B8 \uCD94\uAC00`);
-          }
-        } catch (error) {
-          Logger.warn("\uD5A5\uC0C1\uB41C \uCEE8\uD14D\uC2A4\uD2B8 \uCD94\uCD9C \uC2E4\uD328:", error);
-        }
-      }
-      contexts.push(context);
-    });
-    return contexts;
-  }
-  /**
-   * 형태소 분석 결과 전체를 로깅합니다.
-   */
-  logMorphemeAnalysis(morphemeInfo, corrections) {
-    Logger.debug("\u{1F4CB} \uD615\uD0DC\uC18C \uBD84\uC11D \uACB0\uACFC \uC694\uC57D:");
-    if (!morphemeInfo || !morphemeInfo.sentences) {
-      Logger.warn("\uD615\uD0DC\uC18C \uBD84\uC11D \uB370\uC774\uD130\uAC00 \uC720\uD6A8\uD558\uC9C0 \uC54A\uC74C");
-      return;
-    }
-    const totalSentences = morphemeInfo.sentences.length;
-    const totalTokens = morphemeInfo.sentences.reduce((sum, sentence) => sum + (sentence.tokens ? sentence.tokens.length : 0), 0);
-    Logger.debug(`  \uCD1D ${totalSentences}\uAC1C \uBB38\uC7A5, ${totalTokens}\uAC1C \uD1A0\uD070 \uBD84\uC11D\uB428`);
-    const properNouns = [];
-    const foreignWords = [];
-    const allTokens = [];
-    morphemeInfo.sentences.forEach((sentence, sentenceIdx) => {
-      if (!sentence.tokens)
-        return;
-      sentence.tokens.forEach((token) => {
-        var _a, _b;
-        const tokenText = ((_a = token.text) == null ? void 0 : _a.content) || "";
-        const tags = ((_b = token.morphemes) == null ? void 0 : _b.map((m) => m.tag)) || [];
-        allTokens.push({ text: tokenText, tags });
-        if (tags.some((tag) => ["NNP"].includes(tag))) {
-          if (!properNouns.includes(tokenText)) {
-            properNouns.push(tokenText);
-          }
-        }
-        if (tags.some((tag) => ["SL", "SH", "SN"].includes(tag))) {
-          if (!foreignWords.includes(tokenText)) {
-            foreignWords.push(tokenText);
-          }
-        }
-      });
-    });
-    if (properNouns.length > 0) {
-      Logger.debug(`  \u{1F3F7}\uFE0F  \uACE0\uC720\uBA85\uC0AC (NNP): [${properNouns.map((noun) => `"${noun}"`).join(", ")}]`);
-    }
-    if (foreignWords.length > 0) {
-      Logger.debug(`  \u{1F310} \uC678\uAD6D\uC5B4/\uD2B9\uC218\uC5B4 (SL/SH/SN): [${foreignWords.map((word) => `"${word}"`).join(", ")}]`);
-    }
-    const errorWords = corrections.map((c) => c.original);
-    const matchedErrors = errorWords.filter(
-      (word) => properNouns.includes(word) || foreignWords.includes(word)
-    );
-    if (matchedErrors.length > 0) {
-      Logger.debug(`  \u2728 \uB9DE\uCDA4\uBC95 \uC624\uB958 \uC911 \uD615\uD0DC\uC18C \uBD84\uC11D\uC73C\uB85C \uAC10\uC9C0\uB41C \uACE0\uC720\uBA85\uC0AC/\uC678\uAD6D\uC5B4: [${matchedErrors.map((word) => `"${word}"`).join(", ")}]`);
-    } else {
-      Logger.debug("  \u2753 \uB9DE\uCDA4\uBC95 \uC624\uB958 \uC911 \uD615\uD0DC\uC18C \uBD84\uC11D\uC73C\uB85C \uACE0\uC720\uBA85\uC0AC/\uC678\uAD6D\uC5B4\uB85C \uBD84\uB958\uB41C \uB2E8\uC5B4 \uC5C6\uC74C");
-    }
-    Logger.debug("\uC0C1\uC138 \uD1A0\uD070 \uC815\uBCF4 (\uCC98\uC74C 10\uAC1C):");
-    allTokens.slice(0, 10).forEach((token, idx) => {
-      Logger.debug(`  ${idx + 1}. "${token.text}" \u2192 [${token.tags.join(", ")}]`);
-    });
-    if (allTokens.length > 10) {
-      Logger.debug(`  ... \uBC0F ${allTokens.length - 10}\uAC1C \uD1A0\uD070 \uB354 \uC788\uC74C`);
-    }
-  }
-  /**
-   * 형태소 분석 결과에서 고유명사를 감지합니다.
-   */
-  isProperNounFromMorphemes(text, morphemeInfo) {
-    if (!morphemeInfo || !morphemeInfo.sentences)
-      return false;
-    for (const sentence of morphemeInfo.sentences) {
-      for (const token of sentence.tokens) {
-        if (token.text.content === text) {
-          for (const morpheme of token.morphemes) {
-            const tag = morpheme.tag;
-            if (["NNP", "SL", "SH", "SN"].includes(tag)) {
-              const tagDescriptions = {
-                "NNP": "\uACE0\uC720\uBA85\uC0AC",
-                "SL": "\uC678\uAD6D\uC5B4",
-                "SH": "\uD55C\uC790",
-                "SN": "\uC22B\uC790"
-              };
-              const tagDescription = tagDescriptions[tag] || tag;
-              Logger.debug(`\u{1F3F7}\uFE0F \uD615\uD0DC\uC18C \uACE0\uC720\uBA85\uC0AC \uAC10\uC9C0: "${text}" - \uD488\uC0AC: ${tag}(${tagDescription})`);
-              return true;
-            }
-          }
-        }
-      }
-    }
-    return false;
-  }
-  /**
-   * Obsidian Editor를 활용한 향상된 컨텍스트 추출
-   */
-  extractEnhancedContext(editor, file, originalText, correction, errorIndex, morphemeInfo) {
-    const errorPosition = editor.offsetToPos(errorIndex);
-    const sentenceContext = this.extractCurrentSentence(editor, errorPosition);
-    const documentType = (file == null ? void 0 : file.extension) || "unknown";
-    let isLikelyProperNoun = false;
-    let detectionMethod = "";
-    if (morphemeInfo) {
-      const morphemeDetected = this.isProperNounFromMorphemes(correction.original, morphemeInfo);
-      const patternDetected = this.detectProperNounPatterns(correction.original, sentenceContext);
-      if (morphemeDetected) {
-        isLikelyProperNoun = true;
-        detectionMethod = "\uD615\uD0DC\uC18C \uBD84\uC11D";
-      } else if (patternDetected) {
-        isLikelyProperNoun = true;
-        detectionMethod = "\uD328\uD134 \uB9E4\uCE6D";
-      }
-    } else {
-      const patternDetected = this.detectProperNounPatterns(correction.original, sentenceContext);
-      if (patternDetected) {
-        isLikelyProperNoun = true;
-        detectionMethod = "\uD328\uD134 \uB9E4\uCE6D (\uD615\uD0DC\uC18C \uBD84\uC11D \uC5C6\uC74C)";
-      }
-    }
-    return {
-      sentenceContext,
-      isLikelyProperNoun,
-      documentType,
-      detectionMethod
-    };
-  }
-  /**
-   * 현재 문장을 추출합니다.
-   */
-  extractCurrentSentence(editor, position) {
-    const currentLine = editor.getLine(position.line);
-    const sentenceEndPattern = /[.!?。！？]/g;
-    let sentenceStart = 0;
-    for (let i = position.ch - 1; i >= 0; i--) {
-      if (sentenceEndPattern.test(currentLine[i])) {
-        sentenceStart = i + 1;
-        break;
-      }
-    }
-    let sentenceEnd = currentLine.length;
-    for (let i = position.ch; i < currentLine.length; i++) {
-      if (sentenceEndPattern.test(currentLine[i])) {
-        sentenceEnd = i + 1;
-        break;
-      }
-    }
-    return currentLine.slice(sentenceStart, sentenceEnd).trim();
-  }
-  /**
-   * 패턴 기반 고유명사 감지 (형태소 분석이 없을 때 폴백)
-   */
-  detectProperNounPatterns(text, sentenceContext) {
-    const patterns = [
-      { pattern: /^[A-Z][a-z]+/, name: "\uC601\uC5B4 \uACE0\uC720\uBA85\uC0AC" },
-      // GitHub, React 등
-      { pattern: /^[A-Z]{2,}$/, name: "\uC601\uC5B4 \uC57D\uC5B4" },
-      // API, URL, HTTP
-      { pattern: /\w+님$/, name: "\uC874\uCE6D" },
-      // 김철수님
-      { pattern: /^[가-힣]{2,4}[시도군구]$/, name: "\uC9C0\uBA85" },
-      // 서울시, 부산광역시
-      { pattern: /\d{4}년/, name: "\uC5F0\uB3C4" },
-      // 2018년
-      { pattern: /^[가-힣]+\.(js|ts|py|css|html|md)$/, name: "\uD30C\uC77C\uBA85" }
-      // 파일명
-    ];
-    for (const { pattern, name } of patterns) {
-      if (pattern.test(text)) {
-        Logger.debug(`\u{1F50D} \uD328\uD134 \uACE0\uC720\uBA85\uC0AC \uAC10\uC9C0: "${text}" - \uD328\uD134: ${name}`);
-        return true;
-      }
-    }
-    return false;
-  }
-  /**
-   * AI 분석에 필요한 토큰 사용량을 추정합니다.
-   */
-  estimateTokenUsage(request) {
-    const correctionContexts = this.extractCorrectionContexts(request);
-    const tokenUsage = estimateAnalysisTokenUsage(correctionContexts);
-    const cost = estimateCost(tokenUsage.totalEstimated, this.settings.provider);
-    return {
-      ...tokenUsage,
-      estimatedCost: cost
-    };
-  }
-  /**
-   * 최적의 배치 크기를 계산합니다.
-   * ⭐ JSON 잘림 방지를 위해 보수적 배치 크기 적용
-   */
-  calculateOptimalBatchSize(correctionContexts, hasMorphemeInfo = false) {
-    if (correctionContexts.length === 0)
-      return 5;
-    const avgContextLength = correctionContexts.reduce((sum, ctx) => sum + ctx.fullContext.length, 0) / correctionContexts.length;
-    const systemPromptLength = AI_PROMPTS.analysisSystem.length;
-    const maxInputTokens = this.getModelMaxInputTokens(this.settings.model);
-    let optimalSize = 6;
-    if (avgContextLength < 50) {
-      optimalSize = 8;
-    } else if (avgContextLength < 100) {
-      optimalSize = 6;
-    } else if (avgContextLength < 200) {
-      optimalSize = 4;
-    } else {
-      optimalSize = 3;
-    }
-    if (hasMorphemeInfo) {
-      optimalSize = Math.max(3, optimalSize - 1);
-    }
-    Logger.debug(`JSON \uC798\uB9BC \uBC29\uC9C0 \uBC30\uCE58 \uD06C\uAE30: \uD3C9\uADE0 \uCEE8\uD14D\uC2A4\uD2B8 ${avgContextLength}\uC790, \uD615\uD0DC\uC18C: ${hasMorphemeInfo} \u2192 ${optimalSize}\uAC1C\uC529 \uCC98\uB9AC`);
-    return Math.min(optimalSize, 8);
-  }
-  /**
-   * 모델별 최대 입력 토큰을 가져옵니다 (대략적).
-   */
-  getModelMaxInputTokens(model) {
-    const outputLimit = this.getModelMaxTokens(model);
-    return outputLimit * 10;
-  }
-  /**
-   * 오류들을 배치로 나누어 처리합니다.
-   */
-  createBatches(correctionContexts, maxBatchSize = 10) {
-    const batches = [];
-    for (let i = 0; i < correctionContexts.length; i += maxBatchSize) {
-      batches.push(correctionContexts.slice(i, i + maxBatchSize));
-    }
-    return batches;
-  }
-  /**
-   * 단일 배치를 처리합니다.
-   */
-  async processBatch(batch, batchIndex, totalBatches, client, adjustedMaxTokens, model, morphemeInfo) {
-    var _a;
-    Logger.debug(`\uBC30\uCE58 ${batchIndex + 1}/${totalBatches} \uCC98\uB9AC \uC911 (${batch.length}\uAC1C \uC624\uB958)`);
-    const systemPrompt = AI_PROMPTS.analysisSystem;
-    const userPrompt = morphemeInfo ? AI_PROMPTS.analysisUserWithMorphemes(batch, morphemeInfo) : AI_PROMPTS.analysisUserWithContext(batch);
-    if (morphemeInfo) {
-      Logger.debug(`\uD615\uD0DC\uC18C \uC815\uBCF4\uC640 \uD568\uAED8 AI \uBD84\uC11D \uC9C4\uD589 (\uD1A0\uD070 \uC808\uC57D \uBAA8\uB4DC)`);
-      Logger.debug(`\uD615\uD0DC\uC18C \uD1A0\uD070 \uC218: ${((_a = morphemeInfo.tokens) == null ? void 0 : _a.length) || 0}\uAC1C`);
-    }
-    const messages = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt }
-    ];
-    const response = await client.chat(messages, adjustedMaxTokens, model);
-    Logger.debug(`\uBC30\uCE58 ${batchIndex + 1} \uC751\uB2F5 \uC218\uC2E0:`, response.substring(0, 100) + "...");
-    return this.parseAIResponse(response, batch);
-  }
-  /**
-   * AI를 사용하여 맞춤법 오류를 분석하고 최적의 수정사항을 제안합니다.
-   * ⭐ NEW: 형태소 정보 통합 지원
-   */
-  async analyzeCorrections(request, morphemeInfo) {
-    var _a, _b;
-    Logger.debug("analyzeCorrections \uC2DC\uC791:", {
-      enabled: this.settings.enabled,
-      provider: this.settings.provider,
-      model: this.settings.model,
-      correctionsCount: request.corrections.length
-    });
-    if (morphemeInfo) {
-      this.logMorphemeAnalysis(morphemeInfo, request.corrections);
-    }
-    if (!this.settings.enabled) {
-      throw new Error("AI \uAE30\uB2A5\uC774 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.");
-    }
-    if (!await this.hasValidApiKey(this.settings)) {
-      const provider = this.settings.provider;
-      const keyName = provider === "openai" ? "OpenAI API \uD0A4" : provider === "anthropic" ? "Anthropic API \uD0A4" : provider === "google" ? "Google API \uD0A4" : provider === "ollama" ? "Ollama \uC5D4\uB4DC\uD3EC\uC778\uD2B8" : "API \uD0A4";
-      throw new Error(`${keyName}\uAC00 \uC124\uC815\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uD50C\uB7EC\uADF8\uC778 \uC124\uC815\uC5D0\uC11C ${provider} \uC81C\uACF5\uC790\uC758 ${keyName}\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.`);
-    }
-    const ClientFactory = await this.getClientFactory();
-    if (!this.settings.model || this.settings.model.trim() === "") {
-      throw new Error(`\uBAA8\uB378\uC774 \uC124\uC815\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uD50C\uB7EC\uADF8\uC778 \uC124\uC815\uC5D0\uC11C ${this.settings.provider} \uBAA8\uB378\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.`);
-    }
-    const client = ClientFactory.createClient(this.settings);
-    try {
-      const allContexts = this.extractCorrectionContexts(request, morphemeInfo);
-      const contextsToAnalyze = allContexts.filter(
-        (ctx) => ctx.currentState !== "original-kept" && ctx.currentState !== "exception-processed"
-      );
-      const alreadyResolvedContexts = allContexts.filter(
-        (ctx) => ctx.currentState === "original-kept" || ctx.currentState === "exception-processed"
-      );
-      Logger.debug(`\uBD84\uC11D \uB300\uC0C1: ${contextsToAnalyze.length}\uAC1C, \uC774\uBBF8 \uCC98\uB9AC\uB428: ${alreadyResolvedContexts.length}\uAC1C`);
-      let aiResults = [];
-      if (contextsToAnalyze.length > 0) {
-        const maxBatchSize = this.calculateOptimalBatchSize(contextsToAnalyze, !!morphemeInfo);
-        Logger.debug("\uBD84\uC11D \uC694\uCCAD \uC804\uC1A1 \uC911...", {
-          provider: this.settings.provider,
-          model: this.settings.model,
-          totalCorrections: contextsToAnalyze.length,
-          batchSize: maxBatchSize,
-          estimatedBatches: Math.ceil(contextsToAnalyze.length / maxBatchSize),
-          contextWindow: request.contextWindow || 50,
-          maxTokens: this.settings.maxTokens,
-          apiKeySet: !!this.getApiKey()
-        });
-        const batches = this.createBatches(contextsToAnalyze, maxBatchSize);
-        Logger.debug(`${batches.length}\uAC1C \uBC30\uCE58\uB85C \uBD84\uD560\uD558\uC5EC \uCC98\uB9AC\uD569\uB2C8\uB2E4.`);
-        const adjustedMaxTokens = this.adjustTokensForModel(this.settings.maxTokens, this.settings.model);
-        if (morphemeInfo) {
-          Logger.debug("\uD615\uD0DC\uC18C \uC815\uBCF4 \uD65C\uC6A9 AI \uBD84\uC11D \uC2DC\uC791:", {
-            tokensCount: ((_a = morphemeInfo.tokens) == null ? void 0 : _a.length) || 0,
-            sentences: ((_b = morphemeInfo.sentences) == null ? void 0 : _b.length) || 0,
-            language: morphemeInfo.language || "unknown"
-          });
-        }
-        for (let i = 0; i < batches.length; i++) {
-          try {
-            if (request.onProgress) {
-              const progressMsg = morphemeInfo ? `AI + \uD615\uD0DC\uC18C \uBD84\uC11D \uC911... (${Math.round((i + 1) / batches.length * 100)}%)` : `AI \uBD84\uC11D \uC911... (${Math.round((i + 1) / batches.length * 100)}%)`;
-              request.onProgress(i + 1, batches.length, progressMsg);
-            }
-            const batchResults = await this.processBatch(
-              batches[i],
-              i,
-              batches.length,
-              client,
-              adjustedMaxTokens,
-              this.settings.model,
-              morphemeInfo
-              // ⭐ NEW: 형태소 정보 전달
-            );
-            aiResults.push(...batchResults);
-            if (i < batches.length - 1) {
-              await new Promise((resolve) => setTimeout(resolve, 1500));
-            }
-          } catch (error) {
-            Logger.error(`\uBC30\uCE58 ${i + 1} \uCC98\uB9AC \uC2E4\uD328:`, error);
-          }
-        }
-        Logger.log(`AI \uBD84\uC11D \uC644\uB8CC: ${aiResults.length}\uAC1C \uACB0\uACFC \uC218\uC9D1\uB428`);
-      }
-      const resolvedResults = alreadyResolvedContexts.map((ctx) => ({
-        correctionIndex: ctx.correctionIndex,
-        selectedValue: ctx.currentValue || ctx.original,
-        isExceptionProcessed: ctx.currentState === "exception-processed",
-        isOriginalKept: ctx.currentState === "original-kept",
-        confidence: 100,
-        reasoning: "\uC0AC\uC6A9\uC790\uAC00 \uC9C1\uC811 \uC120\uD0DD\uD55C \uD56D\uBAA9\uC785\uB2C8\uB2E4."
-      }));
-      const allResults = [...aiResults, ...resolvedResults];
-      allResults.sort((a, b) => a.correctionIndex - b.correctionIndex);
-      Logger.debug(`\uCD5C\uC885 \uCC98\uB9AC \uC644\uB8CC: ${allResults.length}\uAC1C \uACB0\uACFC \uBC18\uD658`);
-      return allResults;
-    } catch (error) {
-      Logger.error("\uBD84\uC11D \uC911 \uC624\uB958 \uBC1C\uC0DD:", error);
-      throw new Error(`AI \uBD84\uC11D \uC2E4\uD328: ${error.message}`);
-    }
-  }
-  /**
-   * AI 응답을 파싱하여 구조화된 결과로 변환합니다.
-   */
-  parseAIResponse(response, correctionContexts) {
-    try {
-      let parsedResponse;
-      let cleanedResponse = response.trim();
-      const codeBlockMatch = cleanedResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-      if (codeBlockMatch) {
-        cleanedResponse = codeBlockMatch[1].trim();
-      }
-      let jsonString = "";
-      const jsonArrayMatch = cleanedResponse.match(/\[[\s\S]*\]/);
-      if (jsonArrayMatch) {
-        jsonString = jsonArrayMatch[0];
-      } else {
-        jsonString = cleanedResponse;
-      }
-      if (!jsonString.endsWith("]") && jsonString.includes("[")) {
-        Logger.warn("JSON\uC774 \uC798\uB9B0 \uAC83\uC73C\uB85C \uBCF4\uC784, \uAC15\uD654\uB41C \uBCF5\uAD6C \uC2DC\uB3C4");
-        let lastCompleteObjectIndex = -1;
-        let braceCount = 0;
-        let inString = false;
-        let escapeNext = false;
-        for (let i = 0; i < jsonString.length; i++) {
-          const char = jsonString[i];
-          if (escapeNext) {
-            escapeNext = false;
-            continue;
-          }
-          if (char === "\\") {
-            escapeNext = true;
-            continue;
-          }
-          if (char === '"') {
-            inString = !inString;
-            continue;
-          }
-          if (!inString) {
-            if (char === "{") {
-              braceCount++;
-            } else if (char === "}") {
-              braceCount--;
-              if (braceCount === 0) {
-                lastCompleteObjectIndex = i;
-              }
-            }
-          }
-        }
-        if (lastCompleteObjectIndex > 0) {
-          jsonString = jsonString.substring(0, lastCompleteObjectIndex + 1) + "]";
-          Logger.debug("\uACE0\uAE09 JSON \uBCF5\uAD6C \uC644\uB8CC");
-        } else {
-          const lastBraceIndex = jsonString.lastIndexOf("}");
-          if (lastBraceIndex > 0) {
-            jsonString = jsonString.substring(0, lastBraceIndex + 1) + "]";
-            Logger.debug("\uAE30\uBCF8 JSON \uBCF5\uAD6C \uC644\uB8CC");
-          }
-        }
-      }
-      Logger.debug("\uD30C\uC2F1\uD560 JSON (\uCCAB 200\uC790):", jsonString.substring(0, 200) + (jsonString.length > 200 ? "..." : ""));
-      try {
-        parsedResponse = JSON.parse(jsonString);
-      } catch (parseError) {
-        Logger.warn("\uCD08\uAE30 JSON \uD30C\uC2F1 \uC2E4\uD328, \uCD94\uAC00 \uBCF5\uAD6C \uC2DC\uB3C4:", parseError);
-        let fixedJson = jsonString.replace(/,\s*$/, "");
-        if (!fixedJson.endsWith("]")) {
-          fixedJson += "]";
-        }
-        try {
-          parsedResponse = JSON.parse(fixedJson);
-          Logger.debug("\uC27C\uD45C \uC81C\uAC70\uB85C JSON \uBCF5\uAD6C \uC131\uACF5");
-        } catch (secondError) {
-          const lastCommaIndex = jsonString.lastIndexOf(",");
-          if (lastCommaIndex > 0) {
-            const cutJson = jsonString.substring(0, lastCommaIndex) + "]";
-            try {
-              parsedResponse = JSON.parse(cutJson);
-              Logger.debug("\uBD88\uC644\uC804 \uAC1D\uCCB4 \uC81C\uAC70\uB85C JSON \uBCF5\uAD6C \uC131\uACF5");
-            } catch (thirdError) {
-              throw parseError;
-            }
-          } else {
-            throw parseError;
-          }
-        }
-      }
-      const results = [];
-      for (const item of parsedResponse) {
-        const batchIndex = parseInt(item.correctionIndex);
-        if (isNaN(batchIndex) || batchIndex < 0 || batchIndex >= correctionContexts.length) {
-          Logger.warn("\uC720\uD6A8\uD558\uC9C0 \uC54A\uC740 batchIndex:", batchIndex);
-          continue;
-        }
-        const context = correctionContexts[batchIndex];
-        const originalCorrectionIndex = context.correctionIndex;
-        let selectedValue = item.selectedValue || "";
-        const validOptions = [...context.corrected, context.original];
-        Logger.debug(`AI \uC120\uD0DD \uBD84\uC11D - \uC624\uB958 "${context.original}":`);
-        Logger.debug(`  AI \uC120\uD0DD\uAC12: "${selectedValue}"`);
-        Logger.debug(`  \uC720\uD6A8\uD55C \uC635\uC158\uB4E4: [${validOptions.map((opt) => `"${opt}"`).join(", ")}]`);
-        Logger.debug(`  \uCD94\uCC9C \uC774\uC720: "${item.reasoning}"`);
-        if (!validOptions.includes(selectedValue)) {
-          Logger.warn(`\u{1F534} AI\uAC00 \uC720\uD6A8\uD558\uC9C0 \uC54A\uC740 \uAC12\uC744 \uC120\uD0DD\uD588\uC2B5\uB2C8\uB2E4: "${selectedValue}"`);
-          if (selectedValue === "\uC6D0\uBCF8\uC720\uC9C0" || selectedValue === "\uC608\uC678\uCC98\uB9AC" || !selectedValue) {
-            selectedValue = context.original;
-            Logger.debug(`"${item.selectedValue}"\uB97C \uC6D0\uBCF8 "${context.original}"\uB85C \uBCC0\uACBD`);
-          } else {
-            const matchedOption = this.findBestMatch(selectedValue, validOptions);
-            if (matchedOption) {
-              Logger.warn(`\u26A0\uFE0F AI \uC120\uD0DD \uBD88\uC77C\uCE58: "${selectedValue}" \u2192 "${matchedOption}" (\uC790\uB3D9 \uB9E4\uCE6D)`);
-              selectedValue = matchedOption;
-            } else {
-              Logger.error(`\u274C \uB9E4\uCE6D \uC2E4\uD328 - \uC6D0\uBCF8\uC73C\uB85C \uB300\uCCB4: "${selectedValue}" \u2192 "${context.original}"`);
-              selectedValue = context.original;
-            }
-          }
-        } else {
-          Logger.debug(`\u2705 AI \uC120\uD0DD\uAC12\uC774 \uC720\uD6A8\uD568: "${selectedValue}"`);
-        }
-        const isOriginalSelected = selectedValue === context.original;
-        const isOriginalKept = isOriginalSelected && !item.isExceptionProcessed;
-        results.push({
-          correctionIndex: originalCorrectionIndex,
-          selectedValue,
-          isExceptionProcessed: item.isExceptionProcessed || false,
-          isOriginalKept,
-          confidence: Math.max(0, Math.min(100, parseInt(item.confidence) || 0)),
-          reasoning: item.reasoning || "\uC774\uC720\uAC00 \uC81C\uACF5\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4."
-        });
-      }
-      Logger.debug(`\uD30C\uC2F1 \uC644\uB8CC: ${results.length}\uAC1C\uC758 \uACB0\uACFC \uCD94\uCD9C\uB428`);
-      const processedIndexes = new Set(results.map((r) => r.correctionIndex));
-      const missingContexts = correctionContexts.filter((ctx) => !processedIndexes.has(ctx.correctionIndex));
-      if (missingContexts.length > 0) {
-        Logger.warn(`\uB204\uB77D\uB41C \uC624\uB958\uB4E4 (\uC6D0\uBCF8 \uC778\uB371\uC2A4): ${missingContexts.map((c) => c.correctionIndex).join(", ")}`);
-        missingContexts.forEach((context) => {
-          const defaultValue = context.corrected[0] || context.original;
-          const isDefaultOriginal = defaultValue === context.original;
-          results.push({
-            correctionIndex: context.correctionIndex,
-            selectedValue: defaultValue,
-            isExceptionProcessed: false,
-            isOriginalKept: isDefaultOriginal,
-            confidence: 50,
-            reasoning: "AI \uBD84\uC11D\uC5D0\uC11C \uB204\uB77D\uB418\uC5B4 \uAE30\uBCF8\uAC12\uC73C\uB85C \uC124\uC815\uB428"
-          });
-        });
-        results.sort((a, b) => a.correctionIndex - b.correctionIndex);
-      }
-      return results;
-    } catch (error) {
-      Logger.error("\uC751\uB2F5 \uD30C\uC2F1 \uC624\uB958:", error);
-      Logger.error("\uC6D0\uBCF8 \uC751\uB2F5 (\uCCAB 500\uC790):", response.substring(0, 500));
-      if (error instanceof SyntaxError) {
-        throw new Error(`JSON \uD615\uC2DD \uC624\uB958: ${error.message}. AI \uC751\uB2F5\uC774 \uC62C\uBC14\uB978 JSON \uD615\uC2DD\uC774 \uC544\uB2D9\uB2C8\uB2E4.`);
-      } else {
-        throw new Error(`AI \uC751\uB2F5 \uD30C\uC2F1 \uC2E4\uD328: ${error.message}`);
-      }
-    }
-  }
-  /**
-   * 사용 가능한 모델 목록을 가져옵니다.
-   */
-  async fetchAvailableModels() {
-    try {
-      const ClientFactory = await this.getClientFactory();
-      return await ClientFactory.fetchModels(this.settings);
-    } catch (error) {
-      Logger.error("\uBAA8\uB378 \uBAA9\uB85D \uAC00\uC838\uC624\uAE30 \uC2E4\uD328:", error);
-      return [];
-    }
-  }
-  /**
-   * AI 설정을 업데이트합니다.
-   */
-  updateSettings(newSettings) {
-    this.settings = newSettings;
-  }
-  /**
-   * AI 서비스가 사용 가능한지 확인합니다.
-   */
-  async isAvailable() {
-    return this.settings.enabled && await this.hasValidApiKey(this.settings);
-  }
-  /**
-   * 현재 설정된 제공자 및 모델 정보를 반환합니다.
-   */
-  getProviderInfo() {
-    return {
-      provider: this.settings.provider,
-      model: this.settings.model,
-      available: this.settings.enabled
-      // 기본적인 활성화 상태만 체크
-    };
-  }
-  /**
-   * 현재 AI 설정을 반환합니다.
-   */
-  getSettings() {
-    return this.settings;
-  }
-  /**
-   * 모델별 최대 출력 토큰을 가져옵니다.
-   */
-  getModelMaxTokens(model) {
-    return MODEL_TOKEN_LIMITS[model] || 2048;
-  }
-  /**
-   * 요청할 토큰 수를 모델 제한에 맞게 조정합니다.
-   */
-  adjustTokensForModel(requestedTokens, model) {
-    const modelLimit = this.getModelMaxTokens(model);
-    if (requestedTokens > modelLimit) {
-      Logger.warn(`\uC694\uCCAD\uB41C \uD1A0\uD070 \uC218(${requestedTokens})\uAC00 \uBAA8\uB378 \uC81C\uD55C(${modelLimit})\uC744 \uCD08\uACFC\uD569\uB2C8\uB2E4. ${modelLimit}\uB85C \uC870\uC815\uD569\uB2C8\uB2E4.`);
-      return modelLimit;
-    }
-    return requestedTokens;
-  }
-  /**
-   * 현재 제공자의 API 키를 반환합니다.
-   */
-  getApiKey() {
-    switch (this.settings.provider) {
-      case "openai":
-        return this.settings.openaiApiKey;
-      case "anthropic":
-        return this.settings.anthropicApiKey;
-      case "google":
-        return this.settings.googleApiKey;
-      case "ollama":
-        return this.settings.ollamaEndpoint;
-      default:
-        return "";
-    }
-  }
-  /**
-   * AI가 반환한 값과 가장 유사한 유효한 옵션을 찾습니다.
-   */
-  findBestMatch(aiValue, validOptions) {
-    if (validOptions.includes(aiValue)) {
-      return aiValue;
-    }
-    const cleanAiValue = aiValue.replace(/[\s\*\~\-\+\[\]]/g, "");
-    for (const option of validOptions) {
-      const cleanOption = option.replace(/[\s\*\~\-\+\[\]]/g, "");
-      if (cleanAiValue === cleanOption) {
-        return option;
-      }
-      if (cleanAiValue.includes(cleanOption) || cleanOption.includes(cleanAiValue)) {
-        return option;
-      }
-    }
-    let bestMatch = null;
-    let bestScore = Infinity;
-    for (const option of validOptions) {
-      const distance = this.levenshteinDistance(aiValue, option);
-      const similarity = 1 - distance / Math.max(aiValue.length, option.length);
-      if (similarity >= 0.7 && distance < bestScore) {
-        bestMatch = option;
-        bestScore = distance;
-      }
-    }
-    return bestMatch;
-  }
-  /**
-   * 두 문자열 간의 편집 거리를 계산합니다.
-   */
-  levenshteinDistance(str1, str2) {
-    const matrix = [];
-    const n = str2.length;
-    const m = str1.length;
-    if (n === 0)
-      return m;
-    if (m === 0)
-      return n;
-    for (let i = 0; i <= n; i++) {
-      matrix[i] = [i];
-    }
-    for (let j = 0; j <= m; j++) {
-      matrix[0][j] = j;
-    }
-    for (let i = 1; i <= n; i++) {
-      for (let j = 1; j <= m; j++) {
-        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1,
-            matrix[i][j - 1] + 1,
-            matrix[i - 1][j] + 1
-          );
-        }
-      }
-    }
-    return matrix[n][m];
-  }
-};
+// src/orchestrator.ts
+init_aiAnalysisService();
 
 // src/ui/loadingManager.ts
 var import_obsidian7 = require("obsidian");
@@ -11308,9 +11323,13 @@ var NotificationUtils = class {
     if (removedCount <= 0) {
       return new import_obsidian11.Notice("\u2139\uFE0F \uC911\uBCF5 \uC624\uB958 \uC5C6\uC74C", duration);
     }
-    const morphemeText = usedMorpheme ? " (\uD615\uD0DC\uC18C \uBD84\uC11D \uD65C\uC6A9)" : "";
-    const message = `\u{1F504} \uC911\uBCF5 \uC624\uB958 ${removedCount}\uAC1C \uC81C\uAC70\uB428${morphemeText}`;
-    Logger.log(`\uC911\uBCF5 \uC81C\uAC70 \uC54C\uB9BC: ${originalCount}\uAC1C \u2192 ${finalCount}\uAC1C${morphemeText}`);
+    let message;
+    if (usedMorpheme) {
+      message = `\u{1F504} \uC911\uBCF5 \uC624\uB958 ${removedCount}\uAC1C \uC81C\uAC70\uB428 (\uD615\uD0DC\uC18C \uBD84\uC11D \uD65C\uC6A9)`;
+    } else {
+      message = `\u{1F504} \uC911\uBCF5 \uC624\uB958 ${removedCount}\uAC1C \uC81C\uAC70\uB428`;
+    }
+    Logger.log(`\uC911\uBCF5 \uC81C\uAC70 \uC54C\uB9BC: ${originalCount}\uAC1C \u2192 ${finalCount}\uAC1C (\uD615\uD0DC\uC18C: ${usedMorpheme})`);
     return new import_obsidian11.Notice(message, duration);
   }
   /**
@@ -11871,15 +11890,22 @@ var InlineModeService = class {
       const doc = view.state.doc;
       const fullText = doc.toString();
       let finalMorphemeData = morphemeData;
+      Logger.log(`\u{1F50D} \uD615\uD0DC\uC18C \uBD84\uC11D \uC870\uAC74 \uD655\uC778: morphemeData=${!!morphemeData}, settings=${!!this.settings}`);
       if (!finalMorphemeData && this.settings) {
         try {
           NotificationUtils.updateNoticeMessage(analysisNotice, "\u{1F4CB} \uD615\uD0DC\uC18C \uBD84\uC11D \uC911...");
+          Logger.log("\u{1F4CB} \uD615\uD0DC\uC18C \uBD84\uC11D \uC2DC\uC791...");
           const apiService = new SpellCheckApiService();
           finalMorphemeData = await apiService.analyzeMorphemes(fullText, this.settings);
-          Logger.debug("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uD615\uD0DC\uC18C \uBD84\uC11D \uC644\uB8CC");
+          Logger.log(`\u{1F4CB} \uD615\uD0DC\uC18C \uBD84\uC11D \uC644\uB8CC: ${!!finalMorphemeData ? "\uC131\uACF5" : "\uC2E4\uD328"}`);
+          if (finalMorphemeData) {
+            Logger.debug("\uD615\uD0DC\uC18C \uBD84\uC11D \uACB0\uACFC:", finalMorphemeData);
+          }
         } catch (error) {
-          Logger.warn("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uD615\uD0DC\uC18C \uBD84\uC11D \uC2E4\uD328, \uAE30\uBCF8 \uB85C\uC9C1 \uC0AC\uC6A9:", error);
+          Logger.error("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uD615\uD0DC\uC18C \uBD84\uC11D \uC2E4\uD328, \uAE30\uBCF8 \uB85C\uC9C1 \uC0AC\uC6A9:", error);
         }
+      } else {
+        Logger.log(`\u{1F4CB} \uD615\uD0DC\uC18C \uBD84\uC11D \uAC74\uB108\uB6F0\uAE30: \uC774\uBBF8 \uC788\uC74C=${!!finalMorphemeData}, \uC124\uC815 \uC5C6\uC74C=${!this.settings}`);
       }
       const originalCount = corrections.length;
       const optimizedCorrections = MorphemeUtils.removeDuplicateCorrections(
@@ -13268,6 +13294,184 @@ var InlineModeService = class {
     Logger.log(`\u{1F535} "${trimmedWord}" \uAD00\uB828 ${errorsToRemove.length}\uAC1C \uC624\uB958\uAC00 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
     return errorsToRemove.length;
   }
+  /**
+   * 📍 선택 영역 내 오류 개수 반환
+   */
+  static getErrorCountInSelection(selectedText) {
+    if (!selectedText.trim() || this.activeErrors.size === 0) {
+      return 0;
+    }
+    let count = 0;
+    this.activeErrors.forEach((error) => {
+      if (selectedText.includes(error.correction.original)) {
+        count++;
+      }
+    });
+    Logger.debug(`\uC120\uD0DD \uC601\uC5ED \uB0B4 \uC624\uB958 \uAC1C\uC218: ${count}\uAC1C (\uC804\uCCB4: ${this.activeErrors.size}\uAC1C)`);
+    return count;
+  }
+  /**
+   * 📍 선택 영역 내 오류들에 대한 AI 분석 실행
+   */
+  static async runAIAnalysisOnErrorsInSelection(selectedText, progressCallback) {
+    var _a, _b;
+    if (!selectedText.trim() || this.activeErrors.size === 0) {
+      throw new Error("\uC120\uD0DD \uC601\uC5ED\uC774\uB098 \uBD84\uC11D\uD560 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+    }
+    if (!((_b = (_a = this.settings) == null ? void 0 : _a.ai) == null ? void 0 : _b.enabled)) {
+      throw new Error("AI \uAE30\uB2A5\uC774 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.");
+    }
+    const selectionErrors = [];
+    const selectionErrorIds = [];
+    this.activeErrors.forEach((error, errorId) => {
+      if (selectedText.includes(error.correction.original)) {
+        selectionErrors.push({
+          original: error.correction.original,
+          corrected: error.correction.corrected || [],
+          morphemeInfo: error.morphemeInfo
+        });
+        selectionErrorIds.push(errorId);
+      }
+    });
+    if (selectionErrors.length === 0) {
+      throw new Error("\uC120\uD0DD \uC601\uC5ED\uC5D0 \uBD84\uC11D\uD560 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+    }
+    Logger.log(`\u{1F916} \uC120\uD0DD \uC601\uC5ED \uB0B4 ${selectionErrors.length}\uAC1C \uC624\uB958\uC5D0 \uB300\uD55C AI \uBD84\uC11D \uC2DC\uC791`);
+    try {
+      const aiService = new (await Promise.resolve().then(() => (init_aiAnalysisService(), aiAnalysisService_exports))).AIAnalysisService(this.settings.ai);
+      const aiRequest = {
+        originalText: selectedText,
+        corrections: selectionErrors,
+        contextWindow: 50,
+        currentStates: {},
+        enhancedContext: true
+      };
+      const analysisResults = await aiService.analyzeCorrections(aiRequest);
+      for (let i = 0; i < analysisResults.length; i++) {
+        const result = analysisResults[i];
+        const errorId = selectionErrorIds[i];
+        const targetError = this.activeErrors.get(errorId);
+        if (targetError) {
+          targetError.aiStatus = result.isExceptionProcessed ? "exception" : result.selectedValue === targetError.correction.original ? "keep-original" : "corrected";
+          targetError.aiConfidence = result.confidence || 0;
+          targetError.aiReasoning = result.reasoning || "";
+          targetError.aiSelectedValue = result.selectedValue;
+          this.activeErrors.set(errorId, targetError);
+          Logger.debug(`\u{1F3A8} \uC120\uD0DD \uC601\uC5ED \uC624\uB958 "${targetError.correction.original}"\uC5D0 AI \uACB0\uACFC \uC801\uC6A9: ${result.selectedValue} (\uC2E0\uB8B0\uB3C4: ${result.confidence}%)`);
+        }
+      }
+      Logger.log(`\u{1F916} \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC644\uB8CC: ${selectionErrors.length}\uAC1C \uC624\uB958 \uCC98\uB9AC\uB428`);
+    } catch (error) {
+      Logger.error("\uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC2E4\uD328:", error);
+      throw error;
+    }
+  }
+  /**
+   * 📍 선택 영역에만 오류 표시 (기존 오류 유지)
+   */
+  static async showErrorsInSelection(view, corrections, selectedText, underlineStyle = "wavy", underlineColor = "var(--color-red)", app, morphemeData) {
+    if (!view || !corrections.length || !selectedText.trim()) {
+      Logger.warn("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC120\uD0DD \uC601\uC5ED \uC624\uB958 \uD45C\uC2DC - \uD544\uC218 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
+    const analysisNotice = NotificationUtils.showAnalysisStartNotice("spelling");
+    try {
+      const doc = view.state.doc;
+      const fullText = doc.toString();
+      const selectionStart = fullText.indexOf(selectedText);
+      const selectionEnd = selectionStart + selectedText.length;
+      if (selectionStart === -1) {
+        throw new Error("\uC120\uD0DD\uB41C \uD14D\uC2A4\uD2B8\uB97C \uBB38\uC11C\uC5D0\uC11C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      }
+      Logger.debug(`\uC120\uD0DD \uC601\uC5ED \uC704\uCE58: ${selectionStart}-${selectionEnd} (${selectedText.length}\uC790)`);
+      const errorsToRemove = [];
+      this.activeErrors.forEach((error, errorId) => {
+        if (error.start >= selectionStart && error.end <= selectionEnd) {
+          errorsToRemove.push(errorId);
+        }
+      });
+      errorsToRemove.forEach((errorId) => {
+        this.activeErrors.delete(errorId);
+      });
+      if (errorsToRemove.length > 0) {
+        view.dispatch({
+          effects: removeErrorDecorations.of(errorsToRemove)
+        });
+        Logger.debug(`\uC120\uD0DD \uC601\uC5ED \uB0B4 \uAE30\uC874 \uC624\uB958 ${errorsToRemove.length}\uAC1C \uC81C\uAC70\uB428`);
+      }
+      let finalMorphemeData = morphemeData;
+      if (!finalMorphemeData && this.settings) {
+        try {
+          NotificationUtils.updateNoticeMessage(analysisNotice, "\u{1F4CB} \uD615\uD0DC\uC18C \uBD84\uC11D \uC911...");
+          const apiService = new SpellCheckApiService();
+          finalMorphemeData = await apiService.analyzeMorphemes(selectedText, this.settings);
+        } catch (error) {
+          Logger.warn("\uC120\uD0DD \uC601\uC5ED \uD615\uD0DC\uC18C \uBD84\uC11D \uC2E4\uD328, \uAE30\uBCF8 \uB85C\uC9C1 \uC0AC\uC6A9:", error);
+        }
+      }
+      NotificationUtils.updateNoticeMessage(analysisNotice, "\u{1F527} \uC624\uB958 \uC911\uBCF5 \uC81C\uAC70 \uC911...");
+      const optimizedCorrections = MorphemeUtils.removeDuplicateCorrections(
+        corrections,
+        finalMorphemeData,
+        selectedText
+      );
+      const filteredCorrections = optimizedCorrections.filter((correction) => {
+        const isIgnored = IgnoredWordsService.isWordIgnored(correction.original, this.settings);
+        if (isIgnored) {
+          Logger.debug(`\uC608\uC678 \uB2E8\uC5B4\uB85C \uD544\uD130\uB9C1\uB428: "${correction.original}"`);
+        }
+        return !isIgnored;
+      });
+      Logger.debug(`\uC120\uD0DD \uC601\uC5ED \uC624\uB958 \uCC98\uB9AC: ${corrections.length} \u2192 ${optimizedCorrections.length} \u2192 ${filteredCorrections.length}\uAC1C`);
+      const errors = [];
+      filteredCorrections.forEach((correction, index) => {
+        const searchText = correction.original;
+        let searchStart = 0;
+        let occurrence = 1;
+        while (searchStart < selectedText.length) {
+          const foundIndex = selectedText.indexOf(searchText, searchStart);
+          if (foundIndex === -1)
+            break;
+          const absoluteStart = selectionStart + foundIndex;
+          const absoluteEnd = absoluteStart + searchText.length;
+          const uniqueId = `${searchText}_${foundIndex}_${occurrence}`;
+          const posInfo = finalMorphemeData ? MorphemeUtils.extractPosInfo(correction.original, finalMorphemeData) : null;
+          const error = {
+            uniqueId,
+            start: absoluteStart,
+            end: absoluteEnd,
+            line: 0,
+            // 선택 영역에서는 정확한 라인 계산 생략
+            ch: 0,
+            // 선택 영역에서는 정확한 문자 위치 계산 생략
+            isActive: true,
+            correction,
+            morphemeInfo: posInfo || void 0
+          };
+          errors.push(error);
+          this.activeErrors.set(uniqueId, error);
+          Logger.debug(`\uC120\uD0DD \uC601\uC5ED \uC624\uB958 \uC704\uCE58: "${searchText}" at ${absoluteStart}-${absoluteEnd}`);
+          searchStart = foundIndex + 1;
+          occurrence++;
+        }
+      });
+      if (errors.length > 0) {
+        view.dispatch({
+          effects: addErrorDecorations.of({
+            errors,
+            underlineStyle,
+            underlineColor
+          })
+        });
+      }
+      NotificationUtils.hideNotice(analysisNotice);
+      Logger.log(`\uC120\uD0DD \uC601\uC5ED \uC624\uB958 \uD45C\uC2DC \uC644\uB8CC: ${errors.length}\uAC1C \uC624\uB958 \uCD94\uAC00\uB428`);
+    } catch (error) {
+      NotificationUtils.hideNotice(analysisNotice);
+      Logger.error("\uC120\uD0DD \uC601\uC5ED \uC624\uB958 \uD45C\uC2DC \uC2E4\uD328:", error);
+      throw error;
+    }
+  }
   // 🚧 구현 중인 기능들 - 향후 완성 예정
   // 위의 복잡한 메서드들은 향후 단계별로 구현할 예정입니다.
   // 현재는 기본 Command Palette 명령어와 UI 연동에 집중합니다.
@@ -13420,28 +13624,53 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       new import_obsidian15.Notice("CodeMirror \uC5D0\uB514\uD130 \uBDF0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
-    Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791");
     try {
       InlineModeService.setEditorView(editorView, this.settings, this.app);
-      const fullText = editorView.state.doc.toString();
-      if (!fullText.trim()) {
+      const selectedText = editor.getSelection();
+      let targetText;
+      let isSelection = false;
+      if (selectedText.trim()) {
+        targetText = selectedText;
+        isSelection = true;
+        Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC120\uD0DD \uC601\uC5ED \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791 (${targetText.length}\uC790)`);
+      } else {
+        targetText = editorView.state.doc.toString();
+        Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC804\uCCB4 \uBB38\uC11C \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791 (${targetText.length}\uC790)`);
+      }
+      if (!targetText.trim()) {
         new import_obsidian15.Notice("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
         return;
       }
       const apiService = new SpellCheckApiService();
-      const result = await apiService.checkSpelling(fullText, this.settings);
+      const result = await apiService.checkSpelling(targetText, this.settings);
       if (!result.corrections || result.corrections.length === 0) {
-        new import_obsidian15.Notice("\uB9DE\uCDA4\uBC95 \uC624\uB958\uAC00 \uBC1C\uACAC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+        new import_obsidian15.Notice(`${isSelection ? "\uC120\uD0DD \uC601\uC5ED\uC5D0\uC11C " : ""}\uB9DE\uCDA4\uBC95 \uC624\uB958\uAC00 \uBC1C\uACAC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.`);
+        if (isSelection) {
+          return;
+        }
+        InlineModeService.clearErrors(editorView);
         return;
       }
-      await InlineModeService.showErrors(
-        editorView,
-        result.corrections,
-        this.settings.inlineMode.underlineStyle,
-        this.settings.inlineMode.underlineColor,
-        this.app
-      );
-      Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC644\uB8CC`);
+      if (isSelection) {
+        await InlineModeService.showErrorsInSelection(
+          editorView,
+          result.corrections,
+          selectedText,
+          this.settings.inlineMode.underlineStyle,
+          this.settings.inlineMode.underlineColor,
+          this.app
+        );
+        Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC120\uD0DD \uC601\uC5ED \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC644\uB8CC (${result.corrections.length}\uAC1C \uC624\uB958)`);
+      } else {
+        await InlineModeService.showErrors(
+          editorView,
+          result.corrections,
+          this.settings.inlineMode.underlineStyle,
+          this.settings.inlineMode.underlineColor,
+          this.app
+        );
+        Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC804\uCCB4 \uBB38\uC11C \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC644\uB8CC (${result.corrections.length}\uAC1C \uC624\uB958)`);
+      }
     } catch (error) {
       Logger.error("\uC778\uB77C\uC778 \uBAA8\uB4DC \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC624\uB958:", error);
       new import_obsidian15.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
@@ -13507,13 +13736,46 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       Logger.log(`\uC778\uB77C\uC778 AI \uBD84\uC11D \uC2DC\uC791 - ${isSelection ? "\uC120\uD0DD\uB41C \uC601\uC5ED" : "\uC804\uCCB4 \uBB38\uC11C"}: ${targetText.length}\uC790`);
       const hasExistingErrors = InlineModeService.hasErrors();
       if (hasExistingErrors) {
-        await this.analyzeExistingInlineErrors();
+        if (isSelection) {
+          await this.analyzeExistingInlineErrorsInSelection(selectedText);
+        } else {
+          await this.analyzeExistingInlineErrors();
+        }
       } else {
         await this.analyzeTextWithSpellCheckAndAI(targetText, isSelection);
       }
     } catch (error) {
       Logger.error("\uC778\uB77C\uC778 AI \uBD84\uC11D \uC624\uB958:", error);
       new import_obsidian15.Notice("AI \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+    }
+  }
+  /**
+   * 선택 영역 내 기존 인라인 오류에 대한 AI 분석
+   */
+  async analyzeExistingInlineErrorsInSelection(selectedText) {
+    const analysisNotice = new import_obsidian15.Notice("\u{1F916} \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D\uC744 \uC2DC\uC791\uD569\uB2C8\uB2E4...", 0);
+    try {
+      const selectionErrorCount = InlineModeService.getErrorCountInSelection(selectedText);
+      if (selectionErrorCount === 0) {
+        analysisNotice.hide();
+        new import_obsidian15.Notice("\u26A0\uFE0F \uC120\uD0DD \uC601\uC5ED\uC5D0 \uBD84\uC11D\uD560 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.", 3e3);
+        return;
+      }
+      analysisNotice.setMessage(`\u{1F522} \uC120\uD0DD \uC601\uC5ED \uB0B4 ${selectionErrorCount}\uAC1C \uC624\uB958 \uBD84\uC11D \uC900\uBE44 \uC911...`);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      analysisNotice.setMessage("\u{1F9E0} \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC911... (\uC218\uC2ED \uCD08 \uC18C\uC694\uB420 \uC218 \uC788\uC2B5\uB2C8\uB2E4)");
+      await InlineModeService.runAIAnalysisOnErrorsInSelection(selectedText, (current, total) => {
+        analysisNotice.setMessage(`\u{1F9E0} \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC911... (${current}/${total})`);
+      });
+      InlineModeService.refreshErrorWidgets();
+      Logger.debug("\uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC644\uB8CC \uD6C4 UI \uC0C8\uB85C\uACE0\uCE68 \uC2E4\uD589");
+      analysisNotice.hide();
+      new import_obsidian15.Notice(`\u2705 \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC644\uB8CC! ${selectionErrorCount}\uAC1C \uC624\uB958\uC5D0 \uC0C9\uC0C1\uC774 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, 4e3);
+      new import_obsidian15.Notice("\u{1F4A1} \uC624\uB958\uB97C \uD074\uB9AD\uD558\uC5EC AI \uCD94\uCC9C \uC774\uC720\uB97C \uD655\uC778\uD558\uC138\uC694.", 3e3);
+    } catch (error) {
+      analysisNotice.hide();
+      Logger.error("\uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC2E4\uD328:", error);
+      new import_obsidian15.Notice("\u274C \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", 4e3);
     }
   }
   /**

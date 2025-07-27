@@ -100,10 +100,15 @@ export class NotificationUtils {
       return new Notice('ℹ️ 중복 오류 없음', duration);
     }
     
-    const morphemeText = usedMorpheme ? ' (형태소 분석 활용)' : '';
-    const message = `🔄 중복 오류 ${removedCount}개 제거됨${morphemeText}`;
+    // 형태소 분석 여부에 따른 메시지 차별화
+    let message: string;
+    if (usedMorpheme) {
+      message = `🔄 중복 오류 ${removedCount}개 제거됨 (형태소 분석 활용)`;
+    } else {
+      message = `🔄 중복 오류 ${removedCount}개 제거됨`;
+    }
     
-    Logger.log(`중복 제거 알림: ${originalCount}개 → ${finalCount}개${morphemeText}`);
+    Logger.log(`중복 제거 알림: ${originalCount}개 → ${finalCount}개 (형태소: ${usedMorpheme})`);
     return new Notice(message, duration);
   }
 
