@@ -113,3 +113,28 @@
 .spell-user-edited.clickable-error:active {
     background: rgba(139, 92, 246, 0.35);
 }
+
+/* 🤖 인라인 모드 AI 분석 결과별 색상 스타일 */
+.korean-grammar-error-inline[data-ai-status="exception"] {
+    text-decoration: wavy underline #3b82f6 2px !important;
+    background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+.korean-grammar-error-inline[data-ai-status="keep-original"] {
+    text-decoration: wavy underline #f59e0b 2px !important;
+    background-color: rgba(245, 158, 11, 0.1) !important;
+}
+
+/* 🤖 corrected 상태는 이제 Replace Decoration + Widget으로 처리됨 */
+/* 기존 CSS pseudo-element 방식 제거 - Widget이 완전히 대체함 */
+
+/* 호버 상태 */
+.korean-grammar-error-inline[data-ai-status="exception"]:hover {
+    background-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+.korean-grammar-error-inline[data-ai-status="keep-original"]:hover {
+    background-color: rgba(245, 158, 11, 0.2) !important;
+}
+
+/* corrected 호버 효과도 Widget 내부에서 처리됨 */

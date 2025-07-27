@@ -11,6 +11,101 @@ import { NotificationUtils } from '../utils/notificationUtils';
 import { SpellCheckApiService } from './api';
 
 /**
+ * 🤖 AI 교정 텍스트 Widget - Replace Decoration용
+ * 특수문자 안전 처리 및 완벽한 baseline 정렬
+ */
+class AITextWidget extends WidgetType {
+  constructor(
+    private aiText: string,
+    private errorId: string,
+    private originalText: string
+  ) {
+    super();
+  }
+
+  toDOM(): HTMLElement {
+    const span = document.createElement('span');
+    
+    // 🔧 textContent로 특수문자 안전 처리 (괄호, 따옴표 등)
+    span.textContent = this.aiText;
+    
+    // 🎨 AI 교정 스타일 적용 (Widget 전용 클래스)
+    span.className = 'korean-grammar-ai-widget';
+    span.style.cssText = `
+      color: #10b981 !important;
+      text-decoration: wavy underline #10b981 2px !important;
+      background-color: rgba(16, 185, 129, 0.1) !important;
+      cursor: pointer !important;
+      display: inline !important;
+      font-family: inherit !important;
+      font-size: inherit !important;
+      line-height: inherit !important;
+    `;
+    
+    // 🔧 데이터 속성 설정 (툴팁 및 클릭 처리용)
+    span.setAttribute('data-error-id', this.errorId);
+    span.setAttribute('data-original', this.originalText);
+    span.setAttribute('data-ai-status', 'corrected');
+    span.setAttribute('data-ai-selected-value', this.aiText);
+    span.setAttribute('role', 'button');
+    span.setAttribute('tabindex', '0');
+    
+    // 🖱️ 호버 효과 + 툴팁 표시
+    span.addEventListener('mouseenter', (e) => {
+      span.style.backgroundColor = 'rgba(16, 185, 129, 0.2) !important';
+      
+      // 🔍 툴팁 표시 - AI 분석 결과 포함
+      const mockError: InlineError = {
+        uniqueId: this.errorId,
+        correction: {
+          original: this.originalText,
+          corrected: [this.aiText], // AI가 선택한 텍스트
+          help: 'AI가 선택한 수정사항' // help 필드 추가
+        },
+        start: 0,
+        end: 0,
+        line: 0, // 필수 필드 추가
+        ch: 0,   // 필수 필드 추가
+        isActive: true,
+        aiAnalysis: {
+          selectedValue: this.aiText,
+          confidence: 90, // 기본 신뢰도
+          reasoning: 'AI가 자동으로 선택한 수정사항입니다.',
+          isExceptionProcessed: false
+        },
+        aiStatus: 'corrected',
+        aiSelectedValue: this.aiText
+      };
+      
+      // 툴팁 표시 (마우스 위치 포함)
+      if ((window as any).globalInlineTooltip) {
+        const mousePosition = { x: e.clientX, y: e.clientY };
+        (window as any).globalInlineTooltip.show(mockError, span, 'hover', mousePosition);
+      }
+    });
+    
+    span.addEventListener('mouseleave', () => {
+      span.style.backgroundColor = 'rgba(16, 185, 129, 0.1) !important';
+      
+      // 🔍 툴팁 숨기기 (더 긴 딜레이 - 툴팁으로 마우스 이동할 충분한 시간 확보)
+      setTimeout(() => {
+        if ((window as any).globalInlineTooltip && !(window as any).globalInlineTooltip.isHovered) {
+          (window as any).globalInlineTooltip.hide();
+        }
+      }, 500); // 150ms → 500ms로 증가
+    });
+    
+    Logger.debug(`🤖 AI Widget 생성: "${this.originalText}" → "${this.aiText}"`);
+    
+    return span;
+  }
+
+  eq(other: AITextWidget): boolean {
+    return this.aiText === other.aiText && this.errorId === other.errorId;
+  }
+}
+
+/**
  * 오류 위젯 클래스
  * CodeMirror 6의 WidgetType을 확장하여 인라인 오류 표시
  */
@@ -210,13 +305,30 @@ export const errorDecorationField = StateField.define<DecorationSet>({
           // 포커스된 오류인지 확인 (현재는 항상 false이지만 나중에 상태 확인)
           const isFocused = false; // TODO: 포커스 상태 확인
           
-          // Mark decoration을 사용하여 원본 텍스트를 유지하면서 스타일 적용
+          // 🤖 AI 분석 상태가 'corrected'인 경우 Replace Decoration + Widget 사용
+          if (error.aiStatus === 'corrected' && error.aiSelectedValue) {
+            Logger.debug(`🔄 Replace Decoration 사용: "${error.correction.original}" → "${error.aiSelectedValue}"`);
+            
+            return Decoration.replace({
+              widget: new AITextWidget(
+                error.aiSelectedValue,
+                error.uniqueId,
+                error.correction.original
+              ),
+              inclusive: false,
+              block: false
+            }).range(error.start, error.end);
+          }
+          
+          // 🔴 기본 Mark decoration (AI 분석 전 또는 다른 상태)
           return Decoration.mark({
             class: `korean-grammar-error-inline ${isFocused ? 'korean-grammar-focused' : ''}`,
             attributes: {
               'data-error-id': error.uniqueId,
               'data-original': error.correction.original,
               'data-corrected': JSON.stringify(error.correction.corrected),
+              'data-ai-status': error.aiStatus || 'none', // 🤖 AI 상태 정보 (CSS 선택자용)
+              'data-ai-selected-value': error.aiSelectedValue || '', // 🤖 AI가 선택한 수정 텍스트 (CSS content용)
               'role': 'button',
               'tabindex': '0'
             },
@@ -269,12 +381,9 @@ export const errorDecorationField = StateField.define<DecorationSet>({
                 'data-error-id': error.uniqueId,
                 'data-original': error.correction.original,
                 'data-corrected': JSON.stringify(error.correction.corrected),
+                'data-ai-status': error.aiStatus || 'none', // 🤖 AI 상태 정보 (CSS 선택자용)
                 'role': 'button',
-                'tabindex': '0',
-                // 인라인 스타일로 강제 적용 (CSS 간섭 방지)
-                'style': isFocused ? 
-                  'outline: 3px solid var(--color-red) !important; outline-offset: 2px !important; border-radius: 4px !important; text-decoration-line: underline !important; text-decoration-style: wavy !important; text-decoration-color: var(--color-red) !important; text-decoration-thickness: 2px !important;' : 
-                  InlineModeService.getErrorStyle('wavy', 'var(--color-red)')
+                'tabindex': '0'
               }
             }).range(error.start, error.end);
           });
@@ -2242,23 +2351,30 @@ export class InlineModeService {
   /**
    * 다크모드를 고려한 오류 스타일을 생성합니다.
    */
-  static getErrorStyle(underlineStyle: string, underlineColor: string, isHover: boolean = false): string {
+  static getErrorStyle(underlineStyle: string, underlineColor: string, isHover: boolean = false, aiStatus?: string, aiColor?: string, aiBackgroundColor?: string): string {
     // 다크모드 감지
     const isDarkMode = document.body.classList.contains('theme-dark');
     
-    // CSS 변수를 사용하여 Obsidian 테마와 호환성 확보
     let actualColor: string;
     let actualBgColor: string;
     
-    // Obsidian 표준 색상 변수 사용
-    if (isDarkMode) {
-      // 다크모드: --color-red (#fb464c)와 투명도 조절
-      actualColor = isHover ? 'var(--color-red)' : 'var(--color-red)';
-      actualBgColor = isHover ? 'rgba(var(--color-red-rgb), 0.2)' : 'rgba(var(--color-red-rgb), 0.1)';
+    // 🤖 AI 분석 결과가 있으면 AI 색상 사용
+    if (aiStatus && aiColor && aiBackgroundColor) {
+      actualColor = aiColor;
+      actualBgColor = isHover ? aiBackgroundColor.replace('0.1', '0.2') : aiBackgroundColor;
+      
+      Logger.debug(`🎨 AI 색상 적용: ${aiStatus} - ${actualColor}`);
     } else {
-      // 라이트모드: --color-red (#e93147)와 투명도 조절  
-      actualColor = isHover ? 'var(--color-red)' : 'var(--color-red)';
-      actualBgColor = isHover ? 'rgba(var(--color-red-rgb), 0.15)' : 'rgba(var(--color-red-rgb), 0.08)';
+      // 기본 오류 색상 (빨간색)
+      if (isDarkMode) {
+        // 다크모드: --color-red (#fb464c)와 투명도 조절
+        actualColor = isHover ? 'var(--color-red)' : 'var(--color-red)';
+        actualBgColor = isHover ? 'rgba(var(--color-red-rgb), 0.2)' : 'rgba(var(--color-red-rgb), 0.1)';
+      } else {
+        // 라이트모드: --color-red (#e93147)와 투명도 조절  
+        actualColor = isHover ? 'var(--color-red)' : 'var(--color-red)';
+        actualBgColor = isHover ? 'rgba(var(--color-red-rgb), 0.15)' : 'rgba(var(--color-red-rgb), 0.08)';
+      }
     }
     
     return `text-decoration-line: underline !important; text-decoration-style: ${underlineStyle} !important; text-decoration-color: ${actualColor} !important; text-decoration-thickness: 2px !important; background-color: ${actualBgColor} !important; cursor: pointer !important;`;
@@ -2418,4 +2534,201 @@ export class InlineModeService {
       originalElement.appendChild(expandedZone);
     }
   }
+
+  /**
+   * 🤖 기존 오류가 있는지 확인
+   */
+  static hasErrors(): boolean {
+    return this.activeErrors.size > 0;
+  }
+
+  /**
+   * 🤖 오류 ID로 최신 AI 분석 결과가 포함된 오류 객체 가져오기
+   */
+  static getErrorWithAIData(errorId: string): InlineError | undefined {
+    return this.activeErrors.get(errorId);
+  }
+
+  /**
+   * 🤖 기존 인라인 오류에 대한 AI 분석 실행
+   */
+  static async runAIAnalysisOnExistingErrors(): Promise<void> {
+    if (this.activeErrors.size === 0) {
+      Logger.warn('AI 분석할 기존 오류가 없습니다.');
+      throw new Error('분석할 오류가 없습니다. 먼저 맞춤법 검사를 실행하세요.');
+    }
+
+    if (!this.settings?.ai?.enabled) {
+      Logger.warn('AI 기능이 비활성화되어 있습니다.');
+      throw new Error('AI 기능이 비활성화되어 있습니다. 설정에서 AI 기능을 활성화하세요.');
+    }
+
+    Logger.log(`🤖 기존 오류 ${this.activeErrors.size}개에 대한 AI 분석 시작`);
+
+    try {
+      // 기존 오류들을 corrections 형태로 변환
+      const corrections: any[] = [];
+      this.activeErrors.forEach((error) => {
+        corrections.push({
+          original: error.correction.original,
+          corrected: error.correction.corrected || []
+        });
+      });
+      
+      // AI 분석 서비스가 있는지 확인
+      const aiService = (window as any).koreanGrammarPlugin?.instance?.orchestrator?.aiService;
+      
+      if (!aiService) {
+        throw new Error('AI 분석 서비스를 찾을 수 없습니다.');
+      }
+
+      // AI 분석 요청 생성 (CorrectionPopup의 로직 재활용)
+      const currentStates: { [correctionIndex: number]: { state: "error" | "corrected" | "exception-processed" | "original-kept" | "user-edited", value: string } } = {};
+      corrections.forEach((_, index) => {
+        currentStates[index] = { state: 'error', value: '' };
+      });
+
+      const aiRequest = {
+        corrections,
+        morphemeData: null,
+        userEdits: [], // 인라인 모드에서는 사용자 편집 없음
+        currentStates,
+        originalText: corrections.map(c => c.original).join(' ') // 원본 텍스트 추가
+      };
+
+      // AI 분석 실행
+      const analysisResults = await aiService.analyzeCorrections(aiRequest);
+
+      Logger.log(`🤖 AI 분석 완료: ${analysisResults.length}개 결과`);
+
+      // 결과를 기존 오류에 적용
+      for (const result of analysisResults) {
+        const errorArray = Array.from(this.activeErrors.values());
+        const targetError = errorArray[result.correctionIndex];
+        
+        if (targetError) {
+          // AI 분석 결과를 오류 객체에 저장
+          targetError.aiAnalysis = {
+            selectedValue: result.selectedValue,
+            confidence: result.confidence,
+            reasoning: result.reasoning,
+            isExceptionProcessed: result.isExceptionProcessed
+          };
+          
+          // 🎨 AI 상태에 따른 색상 설정
+          if (result.isExceptionProcessed) {
+            targetError.aiStatus = 'exception';
+            targetError.aiColor = '#3b82f6'; // 파란색
+            targetError.aiBackgroundColor = 'rgba(59, 130, 246, 0.1)';
+          } else if (result.selectedValue === targetError.correction.original) {
+            targetError.aiStatus = 'keep-original';
+            targetError.aiColor = '#f59e0b'; // 주황색
+            targetError.aiBackgroundColor = 'rgba(245, 158, 11, 0.1)';
+          } else {
+            targetError.aiStatus = 'corrected';
+            targetError.aiColor = '#10b981'; // 녹색
+            targetError.aiBackgroundColor = 'rgba(16, 185, 129, 0.1)';
+            targetError.aiSelectedValue = result.selectedValue;
+          }
+          
+          // activeErrors 맵에 업데이트된 오류 저장
+          this.activeErrors.set(targetError.uniqueId, targetError);
+          
+          Logger.debug(`🎨 오류 "${targetError.correction.original}"에 AI 분석 결과 적용: ${result.selectedValue} (신뢰도: ${result.confidence}%) - 색상: ${targetError.aiStatus}`);
+        }
+      }
+
+      // UI 업데이트 (기존 오류 위젯들에 AI 결과 반영)
+      if (this.currentView) {
+        this.refreshErrorWidgets();
+      }
+
+      Logger.log('🤖 AI 분석 결과가 인라인 오류에 적용되었습니다.');
+
+    } catch (error) {
+      Logger.error('AI 분석 실행 중 오류:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 텍스트 맞춤법 검사 (기존 로직 재활용)
+   */
+  static async checkText(text: string): Promise<void> {
+    if (!text.trim()) {
+      throw new Error('검사할 텍스트가 없습니다.');
+    }
+
+    if (!this.currentView) {
+      throw new Error('에디터 뷰가 설정되지 않았습니다.');
+    }
+
+    Logger.log(`📝 인라인 모드 맞춤법 검사 시작: ${text.length}자`);
+
+    try {
+      // API 서비스를 통해 맞춤법 검사 실행
+      const apiService = new SpellCheckApiService();
+      const result = await apiService.checkSpelling(text, this.settings);
+
+      if (!result.corrections || result.corrections.length === 0) {
+        Logger.log('맞춤법 오류가 발견되지 않았습니다.');
+        throw new Error('맞춤법 오류가 발견되지 않았습니다.');
+      }
+
+      // 인라인 모드로 오류 표시
+      await this.showErrors(
+        this.currentView,
+        result.corrections,
+        this.settings?.inlineMode?.underlineStyle || 'wavy',
+        this.settings?.inlineMode?.underlineColor || 'var(--color-red)',
+        this.app || undefined
+      );
+
+      Logger.log(`📝 인라인 모드 맞춤법 검사 완료: ${result.corrections.length}개 오류 발견`);
+
+    } catch (error) {
+      Logger.error('인라인 모드 맞춤법 검사 오류:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 오류 위젯들을 새로고침 (AI 분석 결과 반영)
+   */
+  private static refreshErrorWidgets(): void {
+    if (!this.currentView) {
+      Logger.warn('refreshErrorWidgets: 에디터 뷰가 없습니다.');
+      return;
+    }
+
+    Logger.debug('인라인 오류 위젯 새로고침 시작 (AI 결과 반영)');
+
+    try {
+      // 기존 오류들을 먼저 지우기
+      this.currentView.dispatch({
+        effects: [clearAllErrorDecorations.of(true)]
+      });
+
+      // AI 색상이 반영된 오류들을 다시 추가 (CSS 클래스 기반)
+      if (this.activeErrors.size > 0) {
+        this.currentView.dispatch({
+          effects: addErrorDecorations.of({
+            errors: Array.from(this.activeErrors.values()),
+            underlineStyle: this.settings?.inlineMode?.underlineStyle || 'wavy',
+            underlineColor: this.settings?.inlineMode?.underlineColor || 'var(--color-red)'
+          })
+        });
+      }
+
+      Logger.debug(`${this.activeErrors.size}개 오류 위젯 새로고침 완료 (AI 색상 반영)`);
+
+    } catch (error) {
+      Logger.error('오류 위젯 새로고침 실패:', error);
+    }
+  }
+
+  // 🚧 구현 중인 기능들 - 향후 완성 예정
+  
+  // 위의 복잡한 메서드들은 향후 단계별로 구현할 예정입니다.
+  // 현재는 기본 Command Palette 명령어와 UI 연동에 집중합니다.
 }

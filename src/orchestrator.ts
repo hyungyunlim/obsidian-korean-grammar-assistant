@@ -511,3 +511,90 @@ export class SpellCheckOrchestrator {
     }
   }
 }
+
+/**
+ * 🤖 인라인 모드 전용 워크플로우 오케스트레이터
+ * CorrectionPopup의 로직을 재활용하여 인라인 모드에서 AI 분석 수행
+ */
+export class WorkflowOrchestrator {
+  private aiService: AIAnalysisService;
+  private settings: PluginSettings;
+
+  constructor(settings?: PluginSettings) {
+    this.settings = settings || this.getDefaultSettings();
+    this.aiService = new AIAnalysisService(this.settings.ai);
+  }
+
+  /**
+   * 인라인 모드용 AI 분석 수행
+   * CorrectionPopup의 로직을 최대한 재활용
+   */
+  async performAIAnalysisForInline(corrections: any[], morphemeData?: any): Promise<any[]> {
+    try {
+      Logger.log(`🤖 인라인 모드 AI 분석 시작: ${corrections.length}개 교정`);
+
+      // AI 분석 서비스 초기화 확인
+      if (!this.aiService) {
+        throw new Error('AI 서비스가 초기화되지 않았습니다.');
+      }
+
+      // AI 분석 요청 생성 (CorrectionPopup의 로직 재활용)
+      const currentStates: { [correctionIndex: number]: { state: "error" | "corrected" | "exception-processed" | "original-kept" | "user-edited", value: string } } = {};
+      corrections.forEach((_, index) => {
+        currentStates[index] = { state: 'error', value: '' };
+      });
+
+      const aiRequest = {
+        corrections,
+        morphemeData,
+        userEdits: [], // 인라인 모드에서는 사용자 편집 없음
+        currentStates,
+        originalText: corrections.map(c => c.original).join(' ') // 원본 텍스트 추가
+      };
+
+      // AI 분석 실행
+      const results = await this.aiService.analyzeCorrections(aiRequest);
+
+      Logger.log(`🤖 AI 분석 완료: ${results.length}개 결과`);
+      return results;
+
+    } catch (error) {
+      Logger.error('🤖 인라인 모드 AI 분석 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 기본 설정 반환
+   */
+  private getDefaultSettings(): PluginSettings {
+    return {
+      apiKey: '',
+      apiHost: 'bareun-api.junlim.org',
+      apiPort: 443,
+      ignoredWords: [],
+      ai: {
+        enabled: false,
+        provider: 'openai',
+        model: 'gpt-4o-mini',
+        openaiApiKey: '',
+        anthropicApiKey: '',
+        googleApiKey: '',
+        ollamaEndpoint: 'http://localhost:11434',
+        maxTokens: 1500,
+        temperature: 0.3,
+        showTokenWarning: true,
+        tokenWarningThreshold: 1000
+      },
+      filterSingleCharErrors: true,
+      inlineMode: {
+        enabled: false,
+        underlineStyle: 'wavy',
+        underlineColor: '#ff0000',
+        tooltipTrigger: 'auto',
+        showTooltipOnHover: true,
+        showTooltipOnClick: true
+      }
+    };
+  }
+}

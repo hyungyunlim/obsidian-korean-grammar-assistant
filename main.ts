@@ -33,6 +33,7 @@ export default class KoreanGrammarPlugin extends Plugin {
   settings: PluginSettings;
   orchestrator: SpellCheckOrchestrator;
   grammarSuggest: KoreanGrammarSuggest | null = null;
+  // 🤖 InlineModeService는 정적 클래스로 설계되어 인스턴스 불필요
 
   async onload() {
     // 디버그/프로덕션 모드 설정
@@ -127,6 +128,23 @@ export default class KoreanGrammarPlugin extends Plugin {
       },
     });
 
+    // 🤖 인라인 모드 AI 분석 명령어 추가
+    this.addCommand({
+      id: "inline-ai-analysis",
+      name: "🤖 인라인 AI 분석 (베타)",
+      callback: async () => {
+        if (!this.settings.inlineMode.enabled) {
+          new Notice("인라인 모드가 비활성화되어 있습니다. 설정에서 베타 기능을 활성화하세요.");
+          return;
+        }
+        if (!this.settings.ai.enabled) {
+          new Notice("AI 기능이 비활성화되어 있습니다. 설정에서 AI 기능을 활성화하세요.");
+          return;
+        }
+        await this.executeInlineAIAnalysis();
+      },
+    });
+
     // 인라인 모드가 활성화된 경우 EditorSuggest 등록
     if (this.settings.inlineMode.enabled) {
       this.enableInlineMode();
@@ -134,6 +152,12 @@ export default class KoreanGrammarPlugin extends Plugin {
 
     // 설정 탭 추가
     this.addSettingTab(new ModernSettingsTab(this.app, this));
+
+    // 🤖 전역 설정 등록 (인라인 모드 AI 분석용)
+    (window as any).koreanGrammarPlugin = {
+      settings: this.settings,
+      instance: this
+    };
 
     Logger.log('Korean Grammar Assistant 플러그인 로딩 완료');
   }
@@ -318,6 +342,104 @@ export default class KoreanGrammarPlugin extends Plugin {
     } catch (error) {
       Logger.error('EditorSuggest 기반 맞춤법 검사 오류:', error);
       new Notice('맞춤법 검사 중 오류가 발생했습니다.');
+    }
+  }
+
+  /**
+   * 🤖 인라인 모드 AI 분석 실행
+   */
+  async executeInlineAIAnalysis(): Promise<void> {
+    const activeLeaf = this.app.workspace.activeLeaf;
+    if (!activeLeaf) {
+      new Notice('활성화된 편집기가 없습니다.');
+      return;
+    }
+
+    // @ts-ignore - Obsidian 내부 API 사용
+    const editor = activeLeaf.view.editor;
+    if (!editor) {
+      new Notice('편집기를 찾을 수 없습니다.');
+      return;
+    }
+
+    try {
+      // 선택된 텍스트가 있는지 확인
+      const selectedText = editor.getSelection();
+      let targetText = selectedText;
+      let isSelection = false;
+
+      if (!targetText.trim()) {
+        // 선택된 텍스트가 없으면 전체 문서
+        targetText = editor.getValue();
+        if (!targetText.trim()) {
+          new Notice('분석할 텍스트가 없습니다.');
+          return;
+        }
+      } else {
+        isSelection = true;
+      }
+
+      Logger.log(`인라인 AI 분석 시작 - ${isSelection ? '선택된 영역' : '전체 문서'}: ${targetText.length}자`);
+
+      // 🔧 기존 인라인 오류가 있는지 확인
+      const hasExistingErrors = InlineModeService.hasErrors();
+
+      if (hasExistingErrors) {
+        // 케이스 1: 기존 오류가 있는 경우 - AI 분석 실행
+        await this.analyzeExistingInlineErrors();
+      } else {
+        // 케이스 2: 기존 오류가 없는 경우 - 맞춤법 검사 먼저 실행 후 AI 분석
+        await this.analyzeTextWithSpellCheckAndAI(targetText, isSelection);
+      }
+
+    } catch (error) {
+      Logger.error('인라인 AI 분석 오류:', error);
+      new Notice('AI 분석 중 오류가 발생했습니다.');
+    }
+  }
+
+  /**
+   * 기존 인라인 오류에 대한 AI 분석
+   */
+  private async analyzeExistingInlineErrors(): Promise<void> {
+    new Notice('기존 오류에 대한 AI 분석을 시작합니다...');
+    
+    try {
+      await InlineModeService.runAIAnalysisOnExistingErrors();
+      new Notice('✅ AI 분석이 완료되었습니다. 오류를 클릭하여 AI 추천 이유를 확인하세요.');
+    } catch (error) {
+      Logger.error('기존 오류 AI 분석 실패:', error);
+      new Notice('AI 분석 중 오류가 발생했습니다.');
+    }
+  }
+
+  /**
+   * 맞춤법 검사 후 AI 분석 실행
+   */
+  private async analyzeTextWithSpellCheckAndAI(targetText: string, isSelection: boolean): Promise<void> {
+    new Notice('맞춤법 검사를 먼저 실행합니다...');
+
+    try {
+      // 1단계: 맞춤법 검사 실행
+      if (this.grammarSuggest) {
+        await this.grammarSuggest.updateCorrections(targetText);
+      } else {
+        // InlineModeService를 통해 맞춤법 검사 실행
+        await InlineModeService.checkText(targetText);
+      }
+
+      // 잠시 대기 (맞춤법 검사 완료 대기)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // 2단계: AI 분석 실행
+      new Notice('AI 분석을 시작합니다...');
+      
+      await InlineModeService.runAIAnalysisOnExistingErrors();
+      new Notice('✅ 맞춤법 검사 및 AI 분석이 완료되었습니다.');
+
+    } catch (error) {
+      Logger.error('맞춤법 검사 및 AI 분석 실패:', error);
+      new Notice('분석 중 오류가 발생했습니다.');
     }
   }
 }

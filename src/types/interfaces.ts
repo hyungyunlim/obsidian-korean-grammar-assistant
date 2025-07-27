@@ -219,4 +219,15 @@ export interface InlineError {
     tags: string[]; // 세부 형태소 태그들
     confidence: number; // 분석 신뢰도 (0-1)
   };
+  // 🤖 AI 분석 관련 필드
+  aiAnalysis?: {
+    selectedValue: string;
+    isExceptionProcessed: boolean;
+    confidence: number; // 0-100
+    reasoning: string;
+  };
+  aiColor?: string; // AI 분석 결과에 따른 색상
+  aiBackgroundColor?: string; // AI 분석 결과에 따른 배경색
+  aiStatus?: 'exception' | 'keep-original' | 'corrected'; // AI 분석 상태
+  aiSelectedValue?: string; // AI가 선택한 수정값
 }

@@ -13,6 +13,7 @@ export class InlineTooltip {
   private isVisible: boolean = false;
   private hoverTimeout: NodeJS.Timeout | null = null;
   private hideTimeout: NodeJS.Timeout | null = null;
+  public isHovered: boolean = false; // 🔍 툴팁 호버 상태 추적
 
   /**
    * 툴팁 표시
@@ -76,6 +77,7 @@ export class InlineTooltip {
     
     this.isVisible = false;
     this.currentError = null;
+    this.isHovered = false; // 🔍 호버 상태 초기화
     
     // 호버 타이머 정리
     if (this.hoverTimeout) {
@@ -141,6 +143,24 @@ export class InlineTooltip {
     } else {
       this.createSingleErrorTooltip(error, targetElement, triggerType);
     }
+
+    // 🔍 툴팁 호버 상태 이벤트 추가 (AI Widget 지속성 지원)
+    this.tooltip.addEventListener('mouseenter', () => {
+      this.isHovered = true;
+      Logger.debug('🖱️ 툴팁 마우스 진입 - 호버 상태 유지');
+    });
+    
+    this.tooltip.addEventListener('mouseleave', () => {
+      this.isHovered = false;
+      Logger.debug('🖱️ 툴팁 마우스 이탈 - 호버 상태 해제');
+      
+      // 짧은 딜레이 후 툴팁 숨기기 (추가 상호작용 시간 확보)
+      setTimeout(() => {
+        if (!this.isHovered) {
+          this.hide();
+        }
+      }, 200);
+    });
 
     document.body.appendChild(this.tooltip);
     
@@ -1083,6 +1103,15 @@ export class InlineTooltip {
   private createSingleErrorTooltip(error: InlineError, targetElement: HTMLElement, triggerType: 'hover' | 'click'): void {
     if (!this.tooltip) return;
 
+    // 🤖 최신 AI 분석 결과가 포함된 오류 객체 가져오기
+    const latestError = InlineModeService.getErrorWithAIData(error.uniqueId);
+    if (latestError) {
+      error = latestError;
+      console.debug(`🤖 툴팁 오류 정보 업데이트: ${error.correction.original} - AI 상태: ${error.aiStatus || 'none'}`);
+    } else {
+      console.debug(`🤖 툴팁 생성: ${error.correction.original} - 기존 AI 상태: ${error.aiStatus || 'none'}`);
+    }
+
     // 모바일 최적화를 위한 플랫폼 감지 (메서드 전체에서 사용)
     const isMobile = Platform.isMobile;
     const isPhone = (Platform as any).isPhone || (window.innerWidth <= 480);
@@ -1365,6 +1394,55 @@ export class InlineTooltip {
           helpArea.style.display = isHidden ? 'block' : 'none';
         }
       });
+    }
+
+    // 🤖 AI 분석 결과 영역 (도움말 영역 아래)
+    if (error.aiAnalysis) {
+      const aiArea = this.tooltip!.createEl('div', { cls: 'tooltip-ai-area' });
+      aiArea.style.cssText = `
+        padding: 8px 12px;
+        border-top: 1px solid var(--background-modifier-border);
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(16, 185, 129, 0.05));
+        font-size: 11px;
+        color: var(--text-muted);
+        line-height: 1.4;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      `;
+
+      // 🤖 AI 아이콘
+      const aiIcon = aiArea.createEl('span', { text: '🤖' });
+      aiIcon.style.cssText = 'font-size: 12px; flex-shrink: 0;';
+
+      // AI 분석 상태별 텍스트
+      const statusText = aiArea.createEl('span');
+      statusText.style.cssText = 'flex: 1; font-style: italic;';
+      
+      let statusMessage = '';
+      if (error.aiStatus === 'exception') {
+        statusMessage = `예외 처리 추천 (${error.aiAnalysis.confidence}%)`;
+      } else if (error.aiStatus === 'keep-original') {
+        statusMessage = `원본 유지 추천 (${error.aiAnalysis.confidence}%)`;
+      } else if (error.aiStatus === 'corrected') {
+        statusMessage = `"${error.aiSelectedValue}" 추천 (${error.aiAnalysis.confidence}%)`;
+      }
+      
+      statusText.textContent = statusMessage;
+
+      // AI 추론 이유 (축약 표시)
+      if (error.aiAnalysis.reasoning) {
+        const reasoningText = aiArea.createEl('div');
+        reasoningText.style.cssText = `
+          margin-top: 4px;
+          font-size: 10px;
+          color: var(--text-faint);
+          border-left: 2px solid var(--color-accent);
+          padding-left: 6px;
+          font-style: normal;
+        `;
+        reasoningText.textContent = error.aiAnalysis.reasoning;
+      }
     }
 
     // 클릭 모드가 아닌 경우 마우스 떠나면 자동 숨김 (개선된 로직)

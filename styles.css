@@ -726,6 +726,20 @@ body.spell-popup-open #correctionPopup [contenteditable] {
 .spell-user-edited.clickable-error:active {
   background: rgba(139, 92, 246, 0.35);
 }
+.korean-grammar-error-inline[data-ai-status=exception] {
+  text-decoration: wavy underline #3b82f6 2px !important;
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+.korean-grammar-error-inline[data-ai-status=keep-original] {
+  text-decoration: wavy underline #f59e0b 2px !important;
+  background-color: rgba(245, 158, 11, 0.1) !important;
+}
+.korean-grammar-error-inline[data-ai-status=exception]:hover {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+}
+.korean-grammar-error-inline[data-ai-status=keep-original]:hover {
+  background-color: rgba(245, 158, 11, 0.2) !important;
+}
 
 /* styles/ai.css */
 #correctionPopup .ai-analysis-result {
@@ -1412,14 +1426,30 @@ body.spell-popup-open #correctionPopup [contenteditable] {
 /* styles/inline-suggest.css */
 .korean-grammar-error-inline {
 }
-.korean-grammar-error-inline {
+.korean-grammar-error-inline:not([data-ai-status="exception"]):not([data-ai-status="keep-original"]):not([data-ai-status="corrected"]) {
   text-decoration: wavy underline var(--color-red) 2px !important;
   background-color: rgba(var(--color-red-rgb), 0.1) !important;
   cursor: pointer !important;
 }
-.korean-grammar-error-inline:hover {
+.korean-grammar-error-inline:not([data-ai-status="exception"]):not([data-ai-status="keep-original"]):not([data-ai-status="corrected"]):hover {
   text-decoration: wavy underline var(--color-red) 2px !important;
   background-color: rgba(var(--color-red-rgb), 0.2) !important;
+}
+.korean-grammar-error-inline[data-ai-status=exception] {
+  text-decoration: wavy underline #3b82f6 2px !important;
+  background-color: rgba(59, 130, 246, 0.1) !important;
+  cursor: pointer !important;
+}
+.korean-grammar-error-inline[data-ai-status=exception]:hover {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+}
+.korean-grammar-error-inline[data-ai-status=keep-original] {
+  text-decoration: wavy underline #f59e0b 2px !important;
+  background-color: rgba(245, 158, 11, 0.1) !important;
+  cursor: pointer !important;
+}
+.korean-grammar-error-inline[data-ai-status=keep-original]:hover {
+  background-color: rgba(245, 158, 11, 0.2) !important;
 }
 .korean-grammar-focused,
 .cm-editor .korean-grammar-focused,

@@ -9533,7 +9533,9 @@ var InlineTooltip = class {
     this.isVisible = false;
     this.hoverTimeout = null;
     this.hideTimeout = null;
+    this.isHovered = false;
   }
+  // 🔍 툴팁 호버 상태 추적
   /**
    * 툴팁 표시
    */
@@ -9577,6 +9579,7 @@ var InlineTooltip = class {
     this.showCursorInBackground();
     this.isVisible = false;
     this.currentError = null;
+    this.isHovered = false;
     if (this.hoverTimeout) {
       clearTimeout(this.hoverTimeout);
       this.hoverTimeout = null;
@@ -9628,6 +9631,19 @@ var InlineTooltip = class {
     } else {
       this.createSingleErrorTooltip(error, targetElement, triggerType);
     }
+    this.tooltip.addEventListener("mouseenter", () => {
+      this.isHovered = true;
+      Logger.debug("\u{1F5B1}\uFE0F \uD234\uD301 \uB9C8\uC6B0\uC2A4 \uC9C4\uC785 - \uD638\uBC84 \uC0C1\uD0DC \uC720\uC9C0");
+    });
+    this.tooltip.addEventListener("mouseleave", () => {
+      this.isHovered = false;
+      Logger.debug("\u{1F5B1}\uFE0F \uD234\uD301 \uB9C8\uC6B0\uC2A4 \uC774\uD0C8 - \uD638\uBC84 \uC0C1\uD0DC \uD574\uC81C");
+      setTimeout(() => {
+        if (!this.isHovered) {
+          this.hide();
+        }
+      }, 200);
+    });
     document.body.appendChild(this.tooltip);
     if (isMobile) {
       Logger.log(`\u{1F4F1} \uBAA8\uBC14\uC77C \uD234\uD301 \uC0DD\uC131: ${error.correction.original} (${triggerType})`);
@@ -10378,6 +10394,13 @@ var InlineTooltip = class {
   createSingleErrorTooltip(error, targetElement, triggerType) {
     if (!this.tooltip)
       return;
+    const latestError = InlineModeService.getErrorWithAIData(error.uniqueId);
+    if (latestError) {
+      error = latestError;
+      console.debug(`\u{1F916} \uD234\uD301 \uC624\uB958 \uC815\uBCF4 \uC5C5\uB370\uC774\uD2B8: ${error.correction.original} - AI \uC0C1\uD0DC: ${error.aiStatus || "none"}`);
+    } else {
+      console.debug(`\u{1F916} \uD234\uD301 \uC0DD\uC131: ${error.correction.original} - \uAE30\uC874 AI \uC0C1\uD0DC: ${error.aiStatus || "none"}`);
+    }
     const isMobile = import_obsidian10.Platform.isMobile;
     const isPhone = import_obsidian10.Platform.isPhone || window.innerWidth <= 480;
     const mainContent = this.tooltip.createEl("div", { cls: "tooltip-main-content" });
@@ -10602,6 +10625,45 @@ var InlineTooltip = class {
           helpArea.style.display = isHidden ? "block" : "none";
         }
       });
+    }
+    if (error.aiAnalysis) {
+      const aiArea = this.tooltip.createEl("div", { cls: "tooltip-ai-area" });
+      aiArea.style.cssText = `
+        padding: 8px 12px;
+        border-top: 1px solid var(--background-modifier-border);
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(16, 185, 129, 0.05));
+        font-size: 11px;
+        color: var(--text-muted);
+        line-height: 1.4;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      `;
+      const aiIcon = aiArea.createEl("span", { text: "\u{1F916}" });
+      aiIcon.style.cssText = "font-size: 12px; flex-shrink: 0;";
+      const statusText = aiArea.createEl("span");
+      statusText.style.cssText = "flex: 1; font-style: italic;";
+      let statusMessage = "";
+      if (error.aiStatus === "exception") {
+        statusMessage = `\uC608\uC678 \uCC98\uB9AC \uCD94\uCC9C (${error.aiAnalysis.confidence}%)`;
+      } else if (error.aiStatus === "keep-original") {
+        statusMessage = `\uC6D0\uBCF8 \uC720\uC9C0 \uCD94\uCC9C (${error.aiAnalysis.confidence}%)`;
+      } else if (error.aiStatus === "corrected") {
+        statusMessage = `"${error.aiSelectedValue}" \uCD94\uCC9C (${error.aiAnalysis.confidence}%)`;
+      }
+      statusText.textContent = statusMessage;
+      if (error.aiAnalysis.reasoning) {
+        const reasoningText = aiArea.createEl("div");
+        reasoningText.style.cssText = `
+          margin-top: 4px;
+          font-size: 10px;
+          color: var(--text-faint);
+          border-left: 2px solid var(--color-accent);
+          padding-left: 6px;
+          font-style: normal;
+        `;
+        reasoningText.textContent = error.aiAnalysis.reasoning;
+      }
     }
     if (triggerType === "hover") {
       this.setupHoverEvents(targetElement);
@@ -11317,6 +11379,81 @@ var NotificationUtils = class {
 };
 
 // src/services/inlineModeService.ts
+var AITextWidget = class extends import_view.WidgetType {
+  constructor(aiText, errorId, originalText) {
+    super();
+    this.aiText = aiText;
+    this.errorId = errorId;
+    this.originalText = originalText;
+  }
+  toDOM() {
+    const span = document.createElement("span");
+    span.textContent = this.aiText;
+    span.className = "korean-grammar-ai-widget";
+    span.style.cssText = `
+      color: #10b981 !important;
+      text-decoration: wavy underline #10b981 2px !important;
+      background-color: rgba(16, 185, 129, 0.1) !important;
+      cursor: pointer !important;
+      display: inline !important;
+      font-family: inherit !important;
+      font-size: inherit !important;
+      line-height: inherit !important;
+    `;
+    span.setAttribute("data-error-id", this.errorId);
+    span.setAttribute("data-original", this.originalText);
+    span.setAttribute("data-ai-status", "corrected");
+    span.setAttribute("data-ai-selected-value", this.aiText);
+    span.setAttribute("role", "button");
+    span.setAttribute("tabindex", "0");
+    span.addEventListener("mouseenter", (e) => {
+      span.style.backgroundColor = "rgba(16, 185, 129, 0.2) !important";
+      const mockError = {
+        uniqueId: this.errorId,
+        correction: {
+          original: this.originalText,
+          corrected: [this.aiText],
+          // AI가 선택한 텍스트
+          help: "AI\uAC00 \uC120\uD0DD\uD55C \uC218\uC815\uC0AC\uD56D"
+          // help 필드 추가
+        },
+        start: 0,
+        end: 0,
+        line: 0,
+        // 필수 필드 추가
+        ch: 0,
+        // 필수 필드 추가
+        isActive: true,
+        aiAnalysis: {
+          selectedValue: this.aiText,
+          confidence: 90,
+          // 기본 신뢰도
+          reasoning: "AI\uAC00 \uC790\uB3D9\uC73C\uB85C \uC120\uD0DD\uD55C \uC218\uC815\uC0AC\uD56D\uC785\uB2C8\uB2E4.",
+          isExceptionProcessed: false
+        },
+        aiStatus: "corrected",
+        aiSelectedValue: this.aiText
+      };
+      if (window.globalInlineTooltip) {
+        const mousePosition = { x: e.clientX, y: e.clientY };
+        window.globalInlineTooltip.show(mockError, span, "hover", mousePosition);
+      }
+    });
+    span.addEventListener("mouseleave", () => {
+      span.style.backgroundColor = "rgba(16, 185, 129, 0.1) !important";
+      setTimeout(() => {
+        if (window.globalInlineTooltip && !window.globalInlineTooltip.isHovered) {
+          window.globalInlineTooltip.hide();
+        }
+      }, 500);
+    });
+    Logger.debug(`\u{1F916} AI Widget \uC0DD\uC131: "${this.originalText}" \u2192 "${this.aiText}"`);
+    return span;
+  }
+  eq(other) {
+    return this.aiText === other.aiText && this.errorId === other.errorId;
+  }
+};
 var addErrorDecorations = import_state.StateEffect.define({
   map: (val, change) => val
 });
@@ -11374,12 +11511,28 @@ var errorDecorationField = import_state.StateField.define({
         const { errors, underlineStyle, underlineColor } = effect.value;
         const newDecorations = errors.map((error) => {
           const isFocused = false;
+          if (error.aiStatus === "corrected" && error.aiSelectedValue) {
+            Logger.debug(`\u{1F504} Replace Decoration \uC0AC\uC6A9: "${error.correction.original}" \u2192 "${error.aiSelectedValue}"`);
+            return import_view.Decoration.replace({
+              widget: new AITextWidget(
+                error.aiSelectedValue,
+                error.uniqueId,
+                error.correction.original
+              ),
+              inclusive: false,
+              block: false
+            }).range(error.start, error.end);
+          }
           return import_view.Decoration.mark({
             class: `korean-grammar-error-inline ${isFocused ? "korean-grammar-focused" : ""}`,
             attributes: {
               "data-error-id": error.uniqueId,
               "data-original": error.correction.original,
               "data-corrected": JSON.stringify(error.correction.corrected),
+              "data-ai-status": error.aiStatus || "none",
+              // 🤖 AI 상태 정보 (CSS 선택자용)
+              "data-ai-selected-value": error.aiSelectedValue || "",
+              // 🤖 AI가 선택한 수정 텍스트 (CSS content용)
               "role": "button",
               "tabindex": "0"
             },
@@ -11422,10 +11575,10 @@ var errorDecorationField = import_state.StateField.define({
                 "data-error-id": error.uniqueId,
                 "data-original": error.correction.original,
                 "data-corrected": JSON.stringify(error.correction.corrected),
+                "data-ai-status": error.aiStatus || "none",
+                // 🤖 AI 상태 정보 (CSS 선택자용)
                 "role": "button",
-                "tabindex": "0",
-                // 인라인 스타일로 강제 적용 (CSS 간섭 방지)
-                "style": isFocused ? "outline: 3px solid var(--color-red) !important; outline-offset: 2px !important; border-radius: 4px !important; text-decoration-line: underline !important; text-decoration-style: wavy !important; text-decoration-color: var(--color-red) !important; text-decoration-thickness: 2px !important;" : InlineModeService.getErrorStyle("wavy", "var(--color-red)")
+                "tabindex": "0"
               }
             }).range(error.start, error.end);
           });
@@ -12649,16 +12802,22 @@ var InlineModeService = class {
   /**
    * 다크모드를 고려한 오류 스타일을 생성합니다.
    */
-  static getErrorStyle(underlineStyle, underlineColor, isHover = false) {
+  static getErrorStyle(underlineStyle, underlineColor, isHover = false, aiStatus, aiColor, aiBackgroundColor) {
     const isDarkMode = document.body.classList.contains("theme-dark");
     let actualColor;
     let actualBgColor;
-    if (isDarkMode) {
-      actualColor = isHover ? "var(--color-red)" : "var(--color-red)";
-      actualBgColor = isHover ? "rgba(var(--color-red-rgb), 0.2)" : "rgba(var(--color-red-rgb), 0.1)";
+    if (aiStatus && aiColor && aiBackgroundColor) {
+      actualColor = aiColor;
+      actualBgColor = isHover ? aiBackgroundColor.replace("0.1", "0.2") : aiBackgroundColor;
+      Logger.debug(`\u{1F3A8} AI \uC0C9\uC0C1 \uC801\uC6A9: ${aiStatus} - ${actualColor}`);
     } else {
-      actualColor = isHover ? "var(--color-red)" : "var(--color-red)";
-      actualBgColor = isHover ? "rgba(var(--color-red-rgb), 0.15)" : "rgba(var(--color-red-rgb), 0.08)";
+      if (isDarkMode) {
+        actualColor = isHover ? "var(--color-red)" : "var(--color-red)";
+        actualBgColor = isHover ? "rgba(var(--color-red-rgb), 0.2)" : "rgba(var(--color-red-rgb), 0.1)";
+      } else {
+        actualColor = isHover ? "var(--color-red)" : "var(--color-red)";
+        actualBgColor = isHover ? "rgba(var(--color-red-rgb), 0.15)" : "rgba(var(--color-red-rgb), 0.08)";
+      }
     }
     return `text-decoration-line: underline !important; text-decoration-style: ${underlineStyle} !important; text-decoration-color: ${actualColor} !important; text-decoration-thickness: 2px !important; background-color: ${actualBgColor} !important; cursor: pointer !important;`;
   }
@@ -12789,6 +12948,159 @@ var InlineModeService = class {
       originalElement.appendChild(expandedZone);
     }
   }
+  /**
+   * 🤖 기존 오류가 있는지 확인
+   */
+  static hasErrors() {
+    return this.activeErrors.size > 0;
+  }
+  /**
+   * 🤖 오류 ID로 최신 AI 분석 결과가 포함된 오류 객체 가져오기
+   */
+  static getErrorWithAIData(errorId) {
+    return this.activeErrors.get(errorId);
+  }
+  /**
+   * 🤖 기존 인라인 오류에 대한 AI 분석 실행
+   */
+  static async runAIAnalysisOnExistingErrors() {
+    var _a, _b, _c, _d, _e;
+    if (this.activeErrors.size === 0) {
+      Logger.warn("AI \uBD84\uC11D\uD560 \uAE30\uC874 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      throw new Error("\uBD84\uC11D\uD560 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC\uB97C \uC2E4\uD589\uD558\uC138\uC694.");
+    }
+    if (!((_b = (_a = this.settings) == null ? void 0 : _a.ai) == null ? void 0 : _b.enabled)) {
+      Logger.warn("AI \uAE30\uB2A5\uC774 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.");
+      throw new Error("AI \uAE30\uB2A5\uC774 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C AI \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
+    }
+    Logger.log(`\u{1F916} \uAE30\uC874 \uC624\uB958 ${this.activeErrors.size}\uAC1C\uC5D0 \uB300\uD55C AI \uBD84\uC11D \uC2DC\uC791`);
+    try {
+      const corrections = [];
+      this.activeErrors.forEach((error) => {
+        corrections.push({
+          original: error.correction.original,
+          corrected: error.correction.corrected || []
+        });
+      });
+      const aiService = (_e = (_d = (_c = window.koreanGrammarPlugin) == null ? void 0 : _c.instance) == null ? void 0 : _d.orchestrator) == null ? void 0 : _e.aiService;
+      if (!aiService) {
+        throw new Error("AI \uBD84\uC11D \uC11C\uBE44\uC2A4\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      }
+      const currentStates = {};
+      corrections.forEach((_, index) => {
+        currentStates[index] = { state: "error", value: "" };
+      });
+      const aiRequest = {
+        corrections,
+        morphemeData: null,
+        userEdits: [],
+        // 인라인 모드에서는 사용자 편집 없음
+        currentStates,
+        originalText: corrections.map((c) => c.original).join(" ")
+        // 원본 텍스트 추가
+      };
+      const analysisResults = await aiService.analyzeCorrections(aiRequest);
+      Logger.log(`\u{1F916} AI \uBD84\uC11D \uC644\uB8CC: ${analysisResults.length}\uAC1C \uACB0\uACFC`);
+      for (const result of analysisResults) {
+        const errorArray = Array.from(this.activeErrors.values());
+        const targetError = errorArray[result.correctionIndex];
+        if (targetError) {
+          targetError.aiAnalysis = {
+            selectedValue: result.selectedValue,
+            confidence: result.confidence,
+            reasoning: result.reasoning,
+            isExceptionProcessed: result.isExceptionProcessed
+          };
+          if (result.isExceptionProcessed) {
+            targetError.aiStatus = "exception";
+            targetError.aiColor = "#3b82f6";
+            targetError.aiBackgroundColor = "rgba(59, 130, 246, 0.1)";
+          } else if (result.selectedValue === targetError.correction.original) {
+            targetError.aiStatus = "keep-original";
+            targetError.aiColor = "#f59e0b";
+            targetError.aiBackgroundColor = "rgba(245, 158, 11, 0.1)";
+          } else {
+            targetError.aiStatus = "corrected";
+            targetError.aiColor = "#10b981";
+            targetError.aiBackgroundColor = "rgba(16, 185, 129, 0.1)";
+            targetError.aiSelectedValue = result.selectedValue;
+          }
+          this.activeErrors.set(targetError.uniqueId, targetError);
+          Logger.debug(`\u{1F3A8} \uC624\uB958 "${targetError.correction.original}"\uC5D0 AI \uBD84\uC11D \uACB0\uACFC \uC801\uC6A9: ${result.selectedValue} (\uC2E0\uB8B0\uB3C4: ${result.confidence}%) - \uC0C9\uC0C1: ${targetError.aiStatus}`);
+        }
+      }
+      if (this.currentView) {
+        this.refreshErrorWidgets();
+      }
+      Logger.log("\u{1F916} AI \uBD84\uC11D \uACB0\uACFC\uAC00 \uC778\uB77C\uC778 \uC624\uB958\uC5D0 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
+    } catch (error) {
+      Logger.error("AI \uBD84\uC11D \uC2E4\uD589 \uC911 \uC624\uB958:", error);
+      throw error;
+    }
+  }
+  /**
+   * 텍스트 맞춤법 검사 (기존 로직 재활용)
+   */
+  static async checkText(text) {
+    var _a, _b, _c, _d;
+    if (!text.trim()) {
+      throw new Error("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+    }
+    if (!this.currentView) {
+      throw new Error("\uC5D0\uB514\uD130 \uBDF0\uAC00 \uC124\uC815\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+    }
+    Logger.log(`\u{1F4DD} \uC778\uB77C\uC778 \uBAA8\uB4DC \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791: ${text.length}\uC790`);
+    try {
+      const apiService = new SpellCheckApiService();
+      const result = await apiService.checkSpelling(text, this.settings);
+      if (!result.corrections || result.corrections.length === 0) {
+        Logger.log("\uB9DE\uCDA4\uBC95 \uC624\uB958\uAC00 \uBC1C\uACAC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+        throw new Error("\uB9DE\uCDA4\uBC95 \uC624\uB958\uAC00 \uBC1C\uACAC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+      }
+      await this.showErrors(
+        this.currentView,
+        result.corrections,
+        ((_b = (_a = this.settings) == null ? void 0 : _a.inlineMode) == null ? void 0 : _b.underlineStyle) || "wavy",
+        ((_d = (_c = this.settings) == null ? void 0 : _c.inlineMode) == null ? void 0 : _d.underlineColor) || "var(--color-red)",
+        this.app || void 0
+      );
+      Logger.log(`\u{1F4DD} \uC778\uB77C\uC778 \uBAA8\uB4DC \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC644\uB8CC: ${result.corrections.length}\uAC1C \uC624\uB958 \uBC1C\uACAC`);
+    } catch (error) {
+      Logger.error("\uC778\uB77C\uC778 \uBAA8\uB4DC \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC624\uB958:", error);
+      throw error;
+    }
+  }
+  /**
+   * 오류 위젯들을 새로고침 (AI 분석 결과 반영)
+   */
+  static refreshErrorWidgets() {
+    var _a, _b, _c, _d;
+    if (!this.currentView) {
+      Logger.warn("refreshErrorWidgets: \uC5D0\uB514\uD130 \uBDF0\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
+    Logger.debug("\uC778\uB77C\uC778 \uC624\uB958 \uC704\uC82F \uC0C8\uB85C\uACE0\uCE68 \uC2DC\uC791 (AI \uACB0\uACFC \uBC18\uC601)");
+    try {
+      this.currentView.dispatch({
+        effects: [clearAllErrorDecorations.of(true)]
+      });
+      if (this.activeErrors.size > 0) {
+        this.currentView.dispatch({
+          effects: addErrorDecorations.of({
+            errors: Array.from(this.activeErrors.values()),
+            underlineStyle: ((_b = (_a = this.settings) == null ? void 0 : _a.inlineMode) == null ? void 0 : _b.underlineStyle) || "wavy",
+            underlineColor: ((_d = (_c = this.settings) == null ? void 0 : _c.inlineMode) == null ? void 0 : _d.underlineColor) || "var(--color-red)"
+          })
+        });
+      }
+      Logger.debug(`${this.activeErrors.size}\uAC1C \uC624\uB958 \uC704\uC82F \uC0C8\uB85C\uACE0\uCE68 \uC644\uB8CC (AI \uC0C9\uC0C1 \uBC18\uC601)`);
+    } catch (error) {
+      Logger.error("\uC624\uB958 \uC704\uC82F \uC0C8\uB85C\uACE0\uCE68 \uC2E4\uD328:", error);
+    }
+  }
+  // 🚧 구현 중인 기능들 - 향후 완성 예정
+  // 위의 복잡한 메서드들은 향후 단계별로 구현할 예정입니다.
+  // 현재는 기본 Command Palette 명령어와 UI 연동에 집중합니다.
 };
 InlineModeService.activeErrors = /* @__PURE__ */ new Map();
 InlineModeService.currentView = null;
@@ -13118,6 +13430,7 @@ var KoreanGrammarPlugin = class extends import_obsidian16.Plugin {
     super(...arguments);
     this.grammarSuggest = null;
   }
+  // 🤖 InlineModeService는 정적 클래스로 설계되어 인스턴스 불필요
   async onload() {
     if (false) {
       Logger.configureForProduction();
@@ -13188,10 +13501,29 @@ var KoreanGrammarPlugin = class extends import_obsidian16.Plugin {
         await this.executeInlineSpellCheckWithSuggest();
       }
     });
+    this.addCommand({
+      id: "inline-ai-analysis",
+      name: "\u{1F916} \uC778\uB77C\uC778 AI \uBD84\uC11D (\uBCA0\uD0C0)",
+      callback: async () => {
+        if (!this.settings.inlineMode.enabled) {
+          new import_obsidian16.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
+          return;
+        }
+        if (!this.settings.ai.enabled) {
+          new import_obsidian16.Notice("AI \uAE30\uB2A5\uC774 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C AI \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
+          return;
+        }
+        await this.executeInlineAIAnalysis();
+      }
+    });
     if (this.settings.inlineMode.enabled) {
       this.enableInlineMode();
     }
     this.addSettingTab(new ModernSettingsTab(this.app, this));
+    window.koreanGrammarPlugin = {
+      settings: this.settings,
+      instance: this
+    };
     Logger.log("Korean Grammar Assistant \uD50C\uB7EC\uADF8\uC778 \uB85C\uB529 \uC644\uB8CC");
   }
   onunload() {
@@ -13324,6 +13656,78 @@ var KoreanGrammarPlugin = class extends import_obsidian16.Plugin {
     } catch (error) {
       Logger.error("EditorSuggest \uAE30\uBC18 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC624\uB958:", error);
       new import_obsidian16.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+    }
+  }
+  /**
+   * 🤖 인라인 모드 AI 분석 실행
+   */
+  async executeInlineAIAnalysis() {
+    const activeLeaf = this.app.workspace.activeLeaf;
+    if (!activeLeaf) {
+      new import_obsidian16.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
+    const editor = activeLeaf.view.editor;
+    if (!editor) {
+      new import_obsidian16.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
+    try {
+      const selectedText = editor.getSelection();
+      let targetText = selectedText;
+      let isSelection = false;
+      if (!targetText.trim()) {
+        targetText = editor.getValue();
+        if (!targetText.trim()) {
+          new import_obsidian16.Notice("\uBD84\uC11D\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+          return;
+        }
+      } else {
+        isSelection = true;
+      }
+      Logger.log(`\uC778\uB77C\uC778 AI \uBD84\uC11D \uC2DC\uC791 - ${isSelection ? "\uC120\uD0DD\uB41C \uC601\uC5ED" : "\uC804\uCCB4 \uBB38\uC11C"}: ${targetText.length}\uC790`);
+      const hasExistingErrors = InlineModeService.hasErrors();
+      if (hasExistingErrors) {
+        await this.analyzeExistingInlineErrors();
+      } else {
+        await this.analyzeTextWithSpellCheckAndAI(targetText, isSelection);
+      }
+    } catch (error) {
+      Logger.error("\uC778\uB77C\uC778 AI \uBD84\uC11D \uC624\uB958:", error);
+      new import_obsidian16.Notice("AI \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+    }
+  }
+  /**
+   * 기존 인라인 오류에 대한 AI 분석
+   */
+  async analyzeExistingInlineErrors() {
+    new import_obsidian16.Notice("\uAE30\uC874 \uC624\uB958\uC5D0 \uB300\uD55C AI \uBD84\uC11D\uC744 \uC2DC\uC791\uD569\uB2C8\uB2E4...");
+    try {
+      await InlineModeService.runAIAnalysisOnExistingErrors();
+      new import_obsidian16.Notice("\u2705 AI \uBD84\uC11D\uC774 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC624\uB958\uB97C \uD074\uB9AD\uD558\uC5EC AI \uCD94\uCC9C \uC774\uC720\uB97C \uD655\uC778\uD558\uC138\uC694.");
+    } catch (error) {
+      Logger.error("\uAE30\uC874 \uC624\uB958 AI \uBD84\uC11D \uC2E4\uD328:", error);
+      new import_obsidian16.Notice("AI \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+    }
+  }
+  /**
+   * 맞춤법 검사 후 AI 분석 실행
+   */
+  async analyzeTextWithSpellCheckAndAI(targetText, isSelection) {
+    new import_obsidian16.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC\uB97C \uBA3C\uC800 \uC2E4\uD589\uD569\uB2C8\uB2E4...");
+    try {
+      if (this.grammarSuggest) {
+        await this.grammarSuggest.updateCorrections(targetText);
+      } else {
+        await InlineModeService.checkText(targetText);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1e3));
+      new import_obsidian16.Notice("AI \uBD84\uC11D\uC744 \uC2DC\uC791\uD569\uB2C8\uB2E4...");
+      await InlineModeService.runAIAnalysisOnExistingErrors();
+      new import_obsidian16.Notice("\u2705 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uBC0F AI \uBD84\uC11D\uC774 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
+    } catch (error) {
+      Logger.error("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uBC0F AI \uBD84\uC11D \uC2E4\uD328:", error);
+      new import_obsidian16.Notice("\uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
     }
   }
 };

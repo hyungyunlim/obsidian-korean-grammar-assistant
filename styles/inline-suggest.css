@@ -10,17 +10,38 @@
   /* 빈 규칙 - 모든 스타일은 JavaScript에서 인라인으로 처리 */
 }
 
-/* 인라인 오류 기본 스타일 - CSS에서 직접 적용 */
-.korean-grammar-error-inline {
+/* 🔴 기본 오류 스타일 (AI 분석 전) */
+.korean-grammar-error-inline:not([data-ai-status="exception"]):not([data-ai-status="keep-original"]):not([data-ai-status="corrected"]) {
   text-decoration: wavy underline var(--color-red) 2px !important;
   background-color: rgba(var(--color-red-rgb), 0.1) !important;
   cursor: pointer !important;
 }
-
-.korean-grammar-error-inline:hover {
+.korean-grammar-error-inline:not([data-ai-status="exception"]):not([data-ai-status="keep-original"]):not([data-ai-status="corrected"]):hover {
   text-decoration: wavy underline var(--color-red) 2px !important;
   background-color: rgba(var(--color-red-rgb), 0.2) !important;
 }
+
+/* 🤖 AI 분석 결과별 색상 스타일 */
+.korean-grammar-error-inline[data-ai-status="exception"] {
+  text-decoration: wavy underline #3b82f6 2px !important;
+  background-color: rgba(59, 130, 246, 0.1) !important;
+  cursor: pointer !important;
+}
+.korean-grammar-error-inline[data-ai-status="exception"]:hover {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+.korean-grammar-error-inline[data-ai-status="keep-original"] {
+  text-decoration: wavy underline #f59e0b 2px !important;
+  background-color: rgba(245, 158, 11, 0.1) !important;
+  cursor: pointer !important;
+}
+.korean-grammar-error-inline[data-ai-status="keep-original"]:hover {
+  background-color: rgba(245, 158, 11, 0.2) !important;
+}
+
+/* 🤖 corrected 상태는 이제 Replace Decoration + Widget으로 처리됨 */
+/* 기존 CSS pseudo-element 방식 제거 - AITextWidget이 완전히 대체함 */
 
 /* 키보드로 포커스된 오류 스타일 */
 .korean-grammar-focused,
