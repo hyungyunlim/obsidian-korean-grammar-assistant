@@ -402,14 +402,38 @@ export default class KoreanGrammarPlugin extends Plugin {
    * 기존 인라인 오류에 대한 AI 분석
    */
   private async analyzeExistingInlineErrors(): Promise<void> {
-    new Notice('기존 오류에 대한 AI 분석을 시작합니다...');
+    // 1단계: 분석 시작 알림
+    const analysisNotice = new Notice('🤖 AI 분석을 시작합니다...', 0); // 지속적으로 표시
     
     try {
-      await InlineModeService.runAIAnalysisOnExistingErrors();
-      new Notice('✅ AI 분석이 완료되었습니다. 오류를 클릭하여 AI 추천 이유를 확인하세요.');
+      // 2단계: 토큰 사용량 추정 알림
+      const errorCount = InlineModeService.getErrorCount();
+      analysisNotice.setMessage(`🔢 ${errorCount}개 오류 분석 준비 중...`);
+      
+      // 잠시 대기 (UI 업데이트 시간 확보)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // 3단계: AI API 호출 알림
+      analysisNotice.setMessage('🧠 AI 분석 중... (수십 초 소요될 수 있습니다)');
+      
+      // 진행률 콜백을 통한 실시간 업데이트
+      await InlineModeService.runAIAnalysisOnExistingErrors((current: number, total: number) => {
+        analysisNotice.setMessage(`🧠 AI 분석 중... (${current}/${total})`);
+      });
+      
+      // 3.5단계: UI 새로고침 강제 실행
+      InlineModeService.refreshErrorWidgets();
+      Logger.debug('AI 분석 완료 후 UI 새로고침 실행');
+      
+      // 4단계: 완료 알림
+      analysisNotice.hide();
+      new Notice(`✅ AI 분석 완료! ${errorCount}개 오류에 색상이 적용되었습니다.`, 4000);
+      new Notice('💡 오류를 클릭하여 AI 추천 이유를 확인하세요.', 3000);
+      
     } catch (error) {
+      analysisNotice.hide();
       Logger.error('기존 오류 AI 분석 실패:', error);
-      new Notice('AI 분석 중 오류가 발생했습니다.');
+      new Notice('❌ AI 분석 중 오류가 발생했습니다.', 4000);
     }
   }
 
@@ -417,29 +441,82 @@ export default class KoreanGrammarPlugin extends Plugin {
    * 맞춤법 검사 후 AI 분석 실행
    */
   private async analyzeTextWithSpellCheckAndAI(targetText: string, isSelection: boolean): Promise<void> {
-    new Notice('맞춤법 검사를 먼저 실행합니다...');
+    // 전체 프로세스 알림 (지속적 표시)
+    const processNotice = new Notice('📝 맞춤법 검사를 시작합니다...', 0);
+
+    // 에디터 정보 가져오기
+    const activeLeaf = this.app.workspace.activeLeaf;
+    if (!activeLeaf) {
+      processNotice.hide();
+      new Notice('활성화된 편집기가 없습니다.');
+      return;
+    }
 
     try {
       // 1단계: 맞춤법 검사 실행
+      processNotice.setMessage(`📝 ${targetText.length}자 텍스트 맞춤법 검사 중...`);
+      
       if (this.grammarSuggest) {
         await this.grammarSuggest.updateCorrections(targetText);
       } else {
         // InlineModeService를 통해 맞춤법 검사 실행
+        // 1. 에디터 뷰 설정 (중요!)
+        // @ts-ignore - Obsidian 내부 API 사용  
+        const editorView = (activeLeaf.view as any).editor?.cm;
+        if (editorView) {
+          InlineModeService.setEditorView(editorView, this.app);
+          Logger.debug('에디터 뷰 설정 완료 for checkText');
+        }
+        
+        // 2. 맞춤법 검사 실행
         await InlineModeService.checkText(targetText);
       }
 
       // 잠시 대기 (맞춤법 검사 완료 대기)
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // 2단계: AI 분석 실행
-      new Notice('AI 분석을 시작합니다...');
+      // 오류 개수 확인
+      const errorCount = InlineModeService.getErrorCount();
+      if (errorCount === 0) {
+        processNotice.hide();
+        new Notice('✅ 맞춤법 오류가 발견되지 않았습니다.', 3000);
+        return;
+      }
+
+      // 2단계: 맞춤법 검사 완료 - 빨간색 오류 확인 시간 제공
+      processNotice.setMessage(`✅ 맞춤법 검사 완료! ${errorCount}개 오류 발견 (빨간색 표시)`);
       
-      await InlineModeService.runAIAnalysisOnExistingErrors();
-      new Notice('✅ 맞춤법 검사 및 AI 분석이 완료되었습니다.');
+      // 사용자가 빨간색 오류를 확인할 수 있는 시간 (3초)
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // 3단계: AI 분석 시작 알림
+      processNotice.setMessage(`🤖 ${errorCount}개 오류에 대한 AI 분석 시작...`);
+      
+      // 잠시 대기 (UI 업데이트 시간 확보)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // 3단계: AI API 호출
+      processNotice.setMessage('🧠 AI 분석 중... (수십 초 소요될 수 있습니다)');
+      
+      // 진행률 콜백을 통한 실시간 업데이트
+      await InlineModeService.runAIAnalysisOnExistingErrors((current: number, total: number) => {
+        processNotice.setMessage(`🧠 AI 분석 중... (${current}/${total})`);
+      });
+      
+      // 3.5단계: UI 새로고침 강제 실행
+      InlineModeService.refreshErrorWidgets();
+      Logger.debug('AI 분석 완료 후 UI 새로고침 실행');
+      
+      // 4단계: 완료 알림
+      processNotice.hide();
+      new Notice(`✅ 맞춤법 검사 및 AI 분석 완료!`, 4000);
+      new Notice(`🎨 ${errorCount}개 오류에 AI 색상이 적용되었습니다.`, 3000);
+      new Notice('💡 오류를 클릭하여 AI 추천 이유를 확인하세요.', 3000);
 
     } catch (error) {
+      processNotice.hide();
       Logger.error('맞춤법 검사 및 AI 분석 실패:', error);
-      new Notice('분석 중 오류가 발생했습니다.');
+      new Notice('❌ 분석 중 오류가 발생했습니다.', 4000);
     }
   }
 }

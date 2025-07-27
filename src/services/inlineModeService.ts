@@ -2543,6 +2543,13 @@ export class InlineModeService {
   }
 
   /**
+   * 🤖 현재 오류 개수 반환
+   */
+  static getErrorCount(): number {
+    return this.activeErrors.size;
+  }
+
+  /**
    * 🤖 오류 ID로 최신 AI 분석 결과가 포함된 오류 객체 가져오기
    */
   static getErrorWithAIData(errorId: string): InlineError | undefined {
@@ -2552,7 +2559,7 @@ export class InlineModeService {
   /**
    * 🤖 기존 인라인 오류에 대한 AI 분석 실행
    */
-  static async runAIAnalysisOnExistingErrors(): Promise<void> {
+  static async runAIAnalysisOnExistingErrors(progressCallback?: (current: number, total: number) => void): Promise<void> {
     if (this.activeErrors.size === 0) {
       Logger.warn('AI 분석할 기존 오류가 없습니다.');
       throw new Error('분석할 오류가 없습니다. 먼저 맞춤법 검사를 실행하세요.');
@@ -2601,8 +2608,20 @@ export class InlineModeService {
 
       Logger.log(`🤖 AI 분석 완료: ${analysisResults.length}개 결과`);
 
-      // 결과를 기존 오류에 적용
-      for (const result of analysisResults) {
+      // 결과를 기존 오류에 적용 (배치 처리 진행률 표시)
+      const totalResults = analysisResults.length;
+      for (let i = 0; i < analysisResults.length; i++) {
+        const result = analysisResults[i];
+        
+        // 진행률 콜백 호출
+        if (progressCallback) {
+          progressCallback(i + 1, totalResults);
+        }
+        
+        // 각 결과 적용 시 약간의 딜레이 (UI 업데이트 시간 확보)
+        if (i > 0 && i % 3 === 0) { // 3개마다 짧은 딜레이
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
         const errorArray = Array.from(this.activeErrors.values());
         const targetError = errorArray[result.correctionIndex];
         
@@ -2695,7 +2714,7 @@ export class InlineModeService {
   /**
    * 오류 위젯들을 새로고침 (AI 분석 결과 반영)
    */
-  private static refreshErrorWidgets(): void {
+  static refreshErrorWidgets(): void {
     if (!this.currentView) {
       Logger.warn('refreshErrorWidgets: 에디터 뷰가 없습니다.');
       return;

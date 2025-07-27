@@ -12955,6 +12955,12 @@ var InlineModeService = class {
     return this.activeErrors.size > 0;
   }
   /**
+   * 🤖 현재 오류 개수 반환
+   */
+  static getErrorCount() {
+    return this.activeErrors.size;
+  }
+  /**
    * 🤖 오류 ID로 최신 AI 분석 결과가 포함된 오류 객체 가져오기
    */
   static getErrorWithAIData(errorId) {
@@ -12963,7 +12969,7 @@ var InlineModeService = class {
   /**
    * 🤖 기존 인라인 오류에 대한 AI 분석 실행
    */
-  static async runAIAnalysisOnExistingErrors() {
+  static async runAIAnalysisOnExistingErrors(progressCallback) {
     var _a, _b, _c, _d, _e;
     if (this.activeErrors.size === 0) {
       Logger.warn("AI \uBD84\uC11D\uD560 \uAE30\uC874 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
@@ -13001,7 +13007,15 @@ var InlineModeService = class {
       };
       const analysisResults = await aiService.analyzeCorrections(aiRequest);
       Logger.log(`\u{1F916} AI \uBD84\uC11D \uC644\uB8CC: ${analysisResults.length}\uAC1C \uACB0\uACFC`);
-      for (const result of analysisResults) {
+      const totalResults = analysisResults.length;
+      for (let i = 0; i < analysisResults.length; i++) {
+        const result = analysisResults[i];
+        if (progressCallback) {
+          progressCallback(i + 1, totalResults);
+        }
+        if (i > 0 && i % 3 === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
         const errorArray = Array.from(this.activeErrors.values());
         const targetError = errorArray[result.correctionIndex];
         if (targetError) {
@@ -13701,33 +13715,75 @@ var KoreanGrammarPlugin = class extends import_obsidian16.Plugin {
    * 기존 인라인 오류에 대한 AI 분석
    */
   async analyzeExistingInlineErrors() {
-    new import_obsidian16.Notice("\uAE30\uC874 \uC624\uB958\uC5D0 \uB300\uD55C AI \uBD84\uC11D\uC744 \uC2DC\uC791\uD569\uB2C8\uB2E4...");
+    const analysisNotice = new import_obsidian16.Notice("\u{1F916} AI \uBD84\uC11D\uC744 \uC2DC\uC791\uD569\uB2C8\uB2E4...", 0);
     try {
-      await InlineModeService.runAIAnalysisOnExistingErrors();
-      new import_obsidian16.Notice("\u2705 AI \uBD84\uC11D\uC774 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC624\uB958\uB97C \uD074\uB9AD\uD558\uC5EC AI \uCD94\uCC9C \uC774\uC720\uB97C \uD655\uC778\uD558\uC138\uC694.");
+      const errorCount = InlineModeService.getErrorCount();
+      analysisNotice.setMessage(`\u{1F522} ${errorCount}\uAC1C \uC624\uB958 \uBD84\uC11D \uC900\uBE44 \uC911...`);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      analysisNotice.setMessage("\u{1F9E0} AI \uBD84\uC11D \uC911... (\uC218\uC2ED \uCD08 \uC18C\uC694\uB420 \uC218 \uC788\uC2B5\uB2C8\uB2E4)");
+      await InlineModeService.runAIAnalysisOnExistingErrors((current, total) => {
+        analysisNotice.setMessage(`\u{1F9E0} AI \uBD84\uC11D \uC911... (${current}/${total})`);
+      });
+      InlineModeService.refreshErrorWidgets();
+      Logger.debug("AI \uBD84\uC11D \uC644\uB8CC \uD6C4 UI \uC0C8\uB85C\uACE0\uCE68 \uC2E4\uD589");
+      analysisNotice.hide();
+      new import_obsidian16.Notice(`\u2705 AI \uBD84\uC11D \uC644\uB8CC! ${errorCount}\uAC1C \uC624\uB958\uC5D0 \uC0C9\uC0C1\uC774 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, 4e3);
+      new import_obsidian16.Notice("\u{1F4A1} \uC624\uB958\uB97C \uD074\uB9AD\uD558\uC5EC AI \uCD94\uCC9C \uC774\uC720\uB97C \uD655\uC778\uD558\uC138\uC694.", 3e3);
     } catch (error) {
+      analysisNotice.hide();
       Logger.error("\uAE30\uC874 \uC624\uB958 AI \uBD84\uC11D \uC2E4\uD328:", error);
-      new import_obsidian16.Notice("AI \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\u274C AI \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", 4e3);
     }
   }
   /**
    * 맞춤법 검사 후 AI 분석 실행
    */
   async analyzeTextWithSpellCheckAndAI(targetText, isSelection) {
-    new import_obsidian16.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC\uB97C \uBA3C\uC800 \uC2E4\uD589\uD569\uB2C8\uB2E4...");
+    var _a;
+    const processNotice = new import_obsidian16.Notice("\u{1F4DD} \uB9DE\uCDA4\uBC95 \uAC80\uC0AC\uB97C \uC2DC\uC791\uD569\uB2C8\uB2E4...", 0);
+    const activeLeaf = this.app.workspace.activeLeaf;
+    if (!activeLeaf) {
+      processNotice.hide();
+      new import_obsidian16.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
     try {
+      processNotice.setMessage(`\u{1F4DD} ${targetText.length}\uC790 \uD14D\uC2A4\uD2B8 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911...`);
       if (this.grammarSuggest) {
         await this.grammarSuggest.updateCorrections(targetText);
       } else {
+        const editorView = (_a = activeLeaf.view.editor) == null ? void 0 : _a.cm;
+        if (editorView) {
+          InlineModeService.setEditorView(editorView, this.app);
+          Logger.debug("\uC5D0\uB514\uD130 \uBDF0 \uC124\uC815 \uC644\uB8CC for checkText");
+        }
         await InlineModeService.checkText(targetText);
       }
       await new Promise((resolve) => setTimeout(resolve, 1e3));
-      new import_obsidian16.Notice("AI \uBD84\uC11D\uC744 \uC2DC\uC791\uD569\uB2C8\uB2E4...");
-      await InlineModeService.runAIAnalysisOnExistingErrors();
-      new import_obsidian16.Notice("\u2705 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uBC0F AI \uBD84\uC11D\uC774 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
+      const errorCount = InlineModeService.getErrorCount();
+      if (errorCount === 0) {
+        processNotice.hide();
+        new import_obsidian16.Notice("\u2705 \uB9DE\uCDA4\uBC95 \uC624\uB958\uAC00 \uBC1C\uACAC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.", 3e3);
+        return;
+      }
+      processNotice.setMessage(`\u2705 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC644\uB8CC! ${errorCount}\uAC1C \uC624\uB958 \uBC1C\uACAC (\uBE68\uAC04\uC0C9 \uD45C\uC2DC)`);
+      await new Promise((resolve) => setTimeout(resolve, 3e3));
+      processNotice.setMessage(`\u{1F916} ${errorCount}\uAC1C \uC624\uB958\uC5D0 \uB300\uD55C AI \uBD84\uC11D \uC2DC\uC791...`);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      processNotice.setMessage("\u{1F9E0} AI \uBD84\uC11D \uC911... (\uC218\uC2ED \uCD08 \uC18C\uC694\uB420 \uC218 \uC788\uC2B5\uB2C8\uB2E4)");
+      await InlineModeService.runAIAnalysisOnExistingErrors((current, total) => {
+        processNotice.setMessage(`\u{1F9E0} AI \uBD84\uC11D \uC911... (${current}/${total})`);
+      });
+      InlineModeService.refreshErrorWidgets();
+      Logger.debug("AI \uBD84\uC11D \uC644\uB8CC \uD6C4 UI \uC0C8\uB85C\uACE0\uCE68 \uC2E4\uD589");
+      processNotice.hide();
+      new import_obsidian16.Notice(`\u2705 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uBC0F AI \uBD84\uC11D \uC644\uB8CC!`, 4e3);
+      new import_obsidian16.Notice(`\u{1F3A8} ${errorCount}\uAC1C \uC624\uB958\uC5D0 AI \uC0C9\uC0C1\uC774 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, 3e3);
+      new import_obsidian16.Notice("\u{1F4A1} \uC624\uB958\uB97C \uD074\uB9AD\uD558\uC5EC AI \uCD94\uCC9C \uC774\uC720\uB97C \uD655\uC778\uD558\uC138\uC694.", 3e3);
     } catch (error) {
+      processNotice.hide();
       Logger.error("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uBC0F AI \uBD84\uC11D \uC2E4\uD328:", error);
-      new import_obsidian16.Notice("\uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\u274C \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", 4e3);
     }
   }
 };
