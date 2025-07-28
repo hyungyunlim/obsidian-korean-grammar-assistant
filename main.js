@@ -2538,10 +2538,11 @@ var tokenWarningModal_exports = {};
 __export(tokenWarningModal_exports, {
   TokenWarningModal: () => TokenWarningModal
 });
-var TokenWarningModal;
+var import_obsidian15, TokenWarningModal;
 var init_tokenWarningModal = __esm({
   "src/utils/tokenWarningModal.ts"() {
     init_logger();
+    import_obsidian15 = require("obsidian");
     TokenWarningModal = class {
       /**
        * 토큰 사용량 경고를 확인하고 사용자 확인을 받습니다.
@@ -2600,12 +2601,21 @@ var init_tokenWarningModal = __esm({
       `;
           const modalContent = this.createTokenWarningModal(tokenUsage, isOverMaxTokens, maxTokens);
           modal.appendChild(modalContent);
+          if (import_obsidian15.Platform.isMobile) {
+            document.body.classList.add("spell-popup-open");
+            this.hideKeyboardAndBlurEditor();
+            Logger.debug("\u{1F4F1} \uD1A0\uD070 \uBAA8\uB2EC: spell-popup-open \uD074\uB798\uC2A4 \uCD94\uAC00 \uBC0F \uD0A4\uBCF4\uB4DC \uC228\uAE40 \uCC98\uB9AC");
+          }
           document.body.appendChild(modal);
           setTimeout(() => {
             modal.focus();
             Logger.debug("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uD3EC\uCEE4\uC2A4 \uC124\uC815 \uC644\uB8CC");
           }, 10);
           let handleResponse = (action) => {
+            if (import_obsidian15.Platform.isMobile) {
+              document.body.classList.remove("spell-popup-open");
+              Logger.debug("\u{1F4F1} \uD1A0\uD070 \uBAA8\uB2EC: spell-popup-open \uD074\uB798\uC2A4 \uC81C\uAC70\uB85C \uBC30\uACBD \uC785\uB825 \uBCF5\uC6D0");
+            }
             modal.remove();
             if (action === "proceed") {
               Logger.log("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uC0AC\uC6A9\uC790\uAC00 \uACC4\uC18D \uC9C4\uD589\uC744 \uC120\uD0DD\uD588\uC2B5\uB2C8\uB2E4.");
@@ -2848,6 +2858,58 @@ var init_tokenWarningModal = __esm({
           };
         }
       }
+      /**
+       * 🔧 모바일에서 키보드 숨기기 및 에디터 포커스 해제 (인라인 툴팁과 동일한 로직)
+       */
+      static hideKeyboardAndBlurEditor() {
+        var _a, _b, _c, _d;
+        try {
+          const obsidianApp = window.app;
+          if (obsidianApp) {
+            const activeView = obsidianApp.workspace.getActiveViewOfType(import_obsidian15.MarkdownView);
+            if (activeView == null ? void 0 : activeView.editor) {
+              if ((_b = (_a = activeView.editor).hasFocus) == null ? void 0 : _b.call(_a)) {
+                Logger.log("\u{1F4F1} \uD1A0\uD070 \uBAA8\uB2EC: \uC5D0\uB514\uD130 \uD3EC\uCEE4\uC2A4 \uD574\uC81C \uC2DC\uC791");
+                (_d = (_c = activeView.editor).blur) == null ? void 0 : _d.call(_c);
+                const cmEditor = activeView.editor.cm;
+                if (cmEditor && cmEditor.dom) {
+                  cmEditor.dom.blur();
+                }
+              }
+            }
+          }
+          const focusedElement = document.activeElement;
+          if (focusedElement && focusedElement.blur) {
+            focusedElement.blur();
+            Logger.log("\u{1F4F1} \uD1A0\uD070 \uBAA8\uB2EC: DOM \uD3EC\uCEE4\uC2A4 \uD574\uC81C \uC644\uB8CC");
+          }
+          const cmEditors = document.querySelectorAll(".cm-editor .cm-content");
+          cmEditors.forEach((editor) => {
+            if (editor instanceof HTMLElement) {
+              editor.blur();
+            }
+          });
+          const hiddenInput = document.createElement("input");
+          hiddenInput.style.cssText = `
+        position: absolute;
+        left: -9999px;
+        top: -9999px;
+        opacity: 0;
+        pointer-events: none;
+      `;
+          document.body.appendChild(hiddenInput);
+          setTimeout(() => {
+            hiddenInput.focus();
+            setTimeout(() => {
+              hiddenInput.blur();
+              document.body.removeChild(hiddenInput);
+              Logger.log("\u{1F4F1} \uD1A0\uD070 \uBAA8\uB2EC: \uD0A4\uBCF4\uB4DC \uC228\uAE40 \uCC98\uB9AC \uC644\uB8CC");
+            }, 50);
+          }, 100);
+        } catch (error) {
+          Logger.warn("\u{1F4F1} \uD1A0\uD070 \uBAA8\uB2EC \uD0A4\uBCF4\uB4DC \uC228\uAE40 \uC911 \uC624\uB958:", error);
+        }
+      }
     };
   }
 });
@@ -2858,7 +2920,7 @@ __export(main_exports, {
   default: () => KoreanGrammarPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian15 = require("obsidian");
+var import_obsidian16 = require("obsidian");
 init_settings();
 
 // src/orchestrator.ts
@@ -10269,10 +10331,51 @@ var InlineTooltip = class {
       obsidianAPI: !!app
     });
     if (isMobile) {
-      this.positionTooltipMobile(targetElement, targetRect, viewportWidth, viewportHeight, keyboardHeight, isPhone, editorContainerRect, mousePosition);
+      const useFixedPosition = isPhone;
+      if (useFixedPosition) {
+        this.positionTooltipMobileFixed(targetElement, targetRect, viewportWidth, viewportHeight, keyboardHeight, mousePosition);
+      } else {
+        this.positionTooltipMobile(targetElement, targetRect, viewportWidth, viewportHeight, keyboardHeight, isPhone, editorContainerRect, mousePosition);
+      }
     } else {
       this.positionTooltipDesktop(targetElement, targetRect, viewportWidth, viewportHeight, editorContainerRect, mousePosition);
     }
+  }
+  /**
+   * 모바일 고정 위치 툴팁 (화면 하단 고정)
+   */
+  positionTooltipMobileFixed(targetElement, targetRect, viewportWidth, viewportHeight, keyboardHeight, mousePosition) {
+    var _a;
+    if (!this.tooltip)
+      return;
+    Logger.log("\u{1F4F1} \uBAA8\uBC14\uC77C \uACE0\uC815 \uC704\uCE58 \uD234\uD301 \uD65C\uC131\uD654");
+    const hasAIAnalysis = this.tooltip.querySelector(".tooltip-ai-area") !== null;
+    const fixedWidth = viewportWidth - 16;
+    const fixedHeight = hasAIAnalysis ? 110 : 85;
+    this.tooltip.style.width = `${fixedWidth}px`;
+    this.tooltip.style.height = `${fixedHeight}px`;
+    this.tooltip.style.maxHeight = `${fixedHeight}px`;
+    this.tooltip.style.minWidth = `${fixedWidth}px`;
+    this.tooltip.style.fontSize = "13px";
+    const safeBottomMargin = hasAIAnalysis ? 90 : 80;
+    const bottomOffset = keyboardHeight > 0 ? keyboardHeight + 12 : safeBottomMargin;
+    const finalLeft = (viewportWidth - fixedWidth) / 2;
+    const finalTop = viewportHeight - fixedHeight - bottomOffset;
+    this.tooltip.style.position = "fixed";
+    this.tooltip.style.left = `${finalLeft}px`;
+    this.tooltip.style.top = `${finalTop}px`;
+    this.tooltip.style.zIndex = "1000";
+    this.tooltip.style.visibility = "visible";
+    this.tooltip.style.boxShadow = "0 -2px 12px rgba(0, 0, 0, 0.2)";
+    this.tooltip.style.borderRadius = "12px 12px 0 0";
+    this.tooltip.style.border = "1px solid var(--background-modifier-border)";
+    Logger.log(`\u{1F4F1} \uACE0\uC815 \uD234\uD301 (${hasAIAnalysis ? "AI+" : "\uAE30\uBCF8"}): ${fixedWidth}x${fixedHeight}px (${Math.round(fixedWidth / viewportWidth * 100)}% \uB108\uBE44)`, {
+      position: `(${finalLeft}, ${finalTop})`,
+      bottomMargin: `${safeBottomMargin}px (${hasAIAnalysis ? "AI \uD655\uC7A5" : "\uAE30\uBCF8"})`,
+      keyboard: keyboardHeight > 0,
+      aiAnalysis: hasAIAnalysis,
+      target: ((_a = targetElement.textContent) == null ? void 0 : _a.substring(0, 15)) || "unknown"
+    });
   }
   /**
    * 모바일 툴팁 위치 계산 (화면 구석 완전 대응)
@@ -10316,7 +10419,7 @@ var InlineTooltip = class {
     const isRightEdge = editorLeft + editorWidth - effectiveRight < cornerThreshold;
     const isTopEdge = effectiveTop - editorTop < cornerThreshold;
     const isBottomEdge = editorTop + editorHeight - effectiveBottom < cornerThreshold;
-    const fingerOffset = mousePosition ? isPhone ? 35 : 30 : isPhone ? 60 : 50;
+    const fingerOffset = mousePosition ? isPhone ? 15 : 12 : isPhone ? 25 : 20;
     const safeMargin = 16;
     let finalLeft = 0;
     let finalTop = 0;
@@ -10350,10 +10453,10 @@ var InlineTooltip = class {
       finalTop = referenceCenterY - adaptiveSize.maxHeight - fingerOffset;
       Logger.debug(`\u{1F4F1} \uD558\uB2E8 \uAD6C\uC11D: \uC704\uCABD \uBC30\uCE58 (\uC624\uD504\uC14B: ${fingerOffset}px)`);
     } else if (spaceAbove > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
-      finalTop = referenceCenterY - adaptiveSize.maxHeight - (mousePosition ? 20 : 30);
+      finalTop = referenceCenterY - adaptiveSize.maxHeight - (mousePosition ? 8 : 12);
       Logger.debug(`\u{1F4F1} \uC704\uCABD \uBC30\uCE58 (\uD130\uCE58 \uCD5C\uC801\uD654)`);
     } else if (spaceBelow > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
-      finalTop = referenceCenterY + (mousePosition ? 20 : 30);
+      finalTop = referenceCenterY + (mousePosition ? 8 : 12);
       Logger.debug(`\u{1F4F1} \uC544\uB798\uCABD \uBC30\uCE58 (\uD130\uCE58 \uCD5C\uC801\uD654)`);
     } else {
       const centerY = effectiveViewportHeight / 2;
@@ -10715,14 +10818,16 @@ var InlineTooltip = class {
           if (!helpArea) {
             helpArea = this.tooltip.createEl("div", { cls: "tooltip-help-area" });
             helpArea.style.cssText = `
-              padding: 8px 12px;
+              padding: ${isMobile ? isPhone ? "4px 8px" : "5px 9px" : "6px 10px"};
               border-top: 1px solid var(--background-modifier-border);
               background: var(--background-secondary);
-              font-size: 11px;
+              font-size: ${isMobile ? isPhone ? "10px" : "11px" : "11px"};
               color: var(--text-muted);
-              line-height: 1.4;
+              line-height: 1.3;
               white-space: pre-wrap;
               word-break: break-word;
+              min-height: ${isMobile ? isPhone ? "20px" : "22px" : "24px"};
+              flex-shrink: 0;
             `;
             helpArea.textContent = originalError.correction.help;
           } else {
@@ -10995,13 +11100,80 @@ var InlineTooltip = class {
     }
     const isMobile = import_obsidian10.Platform.isMobile;
     const isPhone = import_obsidian10.Platform.isPhone || window.innerWidth <= 480;
+    const header = this.tooltip.createEl("div", { cls: "tooltip-header" });
+    header.style.cssText = `
+      padding: ${isMobile ? isPhone ? "6px 10px" : "7px 11px" : "6px 10px"};
+      border-bottom: 1px solid var(--background-modifier-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--background-secondary);
+      border-radius: 6px 6px 0 0;
+      font-size: ${isMobile ? isPhone ? "12px" : "13px" : "13px"};
+      font-weight: 500;
+      color: var(--text-muted);
+      min-height: 32px;
+    `;
+    const headerText = header.createEl("span", {
+      text: "\uB9DE\uCDA4\uBC95 \uC624\uB958",
+      cls: "header-text"
+    });
+    headerText.style.cssText = `
+      font-size: ${isMobile ? isPhone ? "12px" : "13px" : "13px"};
+    `;
+    const headerCloseButton = header.createEl("button", {
+      text: "\u2715",
+      cls: "header-close-button"
+    });
+    headerCloseButton.style.cssText = `
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: ${isMobile ? isPhone ? "14px" : "15px" : "14px"};
+      font-weight: bold;
+      cursor: pointer;
+      padding: 0;
+      width: ${isMobile ? isPhone ? "20px" : "22px" : "20px"};
+      height: ${isMobile ? isPhone ? "20px" : "22px" : "20px"};
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.7;
+      transition: all 0.2s ease;
+    `;
+    if (isMobile) {
+      headerCloseButton.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        headerCloseButton.style.opacity = "1";
+        headerCloseButton.style.color = "var(--text-normal)";
+        headerCloseButton.style.background = "var(--interactive-hover)";
+        if ("vibrate" in navigator) {
+          navigator.vibrate(10);
+        }
+      }, { passive: false });
+      headerCloseButton.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        headerCloseButton.style.opacity = "0.7";
+        headerCloseButton.style.color = "var(--text-muted)";
+        headerCloseButton.style.background = "none";
+        this.hide(true);
+      }, { passive: false });
+    }
+    headerCloseButton.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.hide(true);
+    });
     const mainContent = this.tooltip.createEl("div", { cls: "tooltip-main-content" });
     mainContent.style.cssText = `
       display: flex;
       align-items: center;
-      gap: ${isMobile ? isPhone ? "6px" : "7px" : "8px"};
-      padding: ${isMobile ? isPhone ? "6px 10px" : "7px 11px" : "8px 12px"};
+      gap: ${isMobile ? isPhone ? "4px" : "5px" : "6px"};
+      padding: ${isMobile ? isPhone ? "4px 8px" : "5px 9px" : "6px 10px"};
       white-space: nowrap;
+      flex: 1;
+      min-height: 0;
     `;
     const errorWordContainer = mainContent.createEl("div", { cls: "error-word-container" });
     errorWordContainer.style.cssText = `
@@ -11207,14 +11379,16 @@ var InlineTooltip = class {
         if (!helpArea) {
           helpArea = this.tooltip.createEl("div", { cls: "tooltip-help-area" });
           helpArea.style.cssText = `
-            padding: 8px 12px;
+            padding: ${isMobile ? isPhone ? "4px 8px" : "5px 9px" : "6px 10px"};
             border-top: 1px solid var(--background-modifier-border);
             background: var(--background-secondary);
-            font-size: 11px;
+            font-size: ${isMobile ? isPhone ? "10px" : "11px" : "11px"};
             color: var(--text-muted);
-            line-height: 1.4;
+            line-height: 1.3;
             white-space: pre-wrap;
             word-break: break-word;
+            min-height: ${isMobile ? isPhone ? "20px" : "22px" : "24px"};
+            flex-shrink: 0;
           `;
           helpArea.textContent = error.correction.help;
         } else {
@@ -11226,15 +11400,17 @@ var InlineTooltip = class {
     if (error.aiAnalysis) {
       const aiArea = this.tooltip.createEl("div", { cls: "tooltip-ai-area" });
       aiArea.style.cssText = `
-        padding: 8px 12px;
+        padding: ${isMobile ? isPhone ? "4px 8px" : "5px 9px" : "6px 10px"};
         border-top: 1px solid var(--background-modifier-border);
         background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(16, 185, 129, 0.05));
-        font-size: 11px;
+        font-size: ${isMobile ? isPhone ? "10px" : "11px" : "11px"};
         color: var(--text-muted);
-        line-height: 1.4;
+        line-height: 1.3;
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: ${isMobile ? isPhone ? "4px" : "5px" : "6px"};
+        min-height: ${isMobile ? isPhone ? "20px" : "22px" : "24px"};
+        flex-shrink: 0;
       `;
       const aiIcon = aiArea.createEl("span", { text: "\u{1F916}" });
       aiIcon.style.cssText = "font-size: 12px; flex-shrink: 0;";
@@ -11513,6 +11689,35 @@ var InlineTooltip = class {
     });
   }
   /**
+   * 에디터 포커스만 해제 (키보드는 유지) - 깜빡임 없는 대안
+   */
+  blurEditorOnly() {
+    var _a, _b, _c, _d;
+    try {
+      const obsidianApp = window.app;
+      if (obsidianApp) {
+        const activeView = obsidianApp.workspace.getActiveViewOfType(import_obsidian10.MarkdownView);
+        if (activeView == null ? void 0 : activeView.editor) {
+          if ((_b = (_a = activeView.editor).hasFocus) == null ? void 0 : _b.call(_a)) {
+            Logger.log("\u{1F4F1} \uC5D0\uB514\uD130 \uD3EC\uCEE4\uC2A4\uB9CC \uD574\uC81C (\uD0A4\uBCF4\uB4DC \uC720\uC9C0)");
+            (_d = (_c = activeView.editor).blur) == null ? void 0 : _d.call(_c);
+            const cmEditor = activeView.editor.cm;
+            if (cmEditor && cmEditor.dom) {
+              cmEditor.dom.blur();
+            }
+          }
+        }
+      }
+      const focusedElement = document.activeElement;
+      if (focusedElement && focusedElement.blur) {
+        focusedElement.blur();
+        Logger.log("\u{1F4F1} DOM \uD3EC\uCEE4\uC2A4 \uD574\uC81C \uC644\uB8CC (\uD0A4\uBCF4\uB4DC\uB294 \uC720\uC9C0)");
+      }
+    } catch (error) {
+      Logger.warn("\u{1F4F1} \uC5D0\uB514\uD130 \uD3EC\uCEE4\uC2A4 \uD574\uC81C \uC911 \uC624\uB958:", error);
+    }
+  }
+  /**
    * 모바일에서 키보드 숨기기 및 에디터 포커스 해제
    */
   hideKeyboardAndBlurEditor() {
@@ -11545,35 +11750,29 @@ var InlineTooltip = class {
       });
       const hiddenInput = document.createElement("input");
       hiddenInput.style.cssText = `
-        position: absolute;
+        position: fixed;
         left: -9999px;
         top: -9999px;
         opacity: 0;
         pointer-events: none;
+        width: 1px;
+        height: 1px;
+        border: none;
+        background: transparent;
+        font-size: 16px;
       `;
       document.body.appendChild(hiddenInput);
       setTimeout(() => {
         hiddenInput.focus();
         setTimeout(() => {
           hiddenInput.blur();
-          document.body.removeChild(hiddenInput);
-          Logger.log("\u{1F4F1} \uBAA8\uBC14\uC77C: \uD0A4\uBCF4\uB4DC \uC228\uAE40 \uCC98\uB9AC \uC644\uB8CC");
-        }, 50);
-      }, 100);
-      if (window.visualViewport) {
-        const handleViewportChange = () => {
-          if (this.tooltip && this.isVisible) {
-            setTimeout(() => {
-              var _a2;
-              const targetElement = document.querySelector(`[data-error-id="${(_a2 = this.currentError) == null ? void 0 : _a2.uniqueId}"]`);
-              if (targetElement) {
-                this.positionTooltip(targetElement);
-              }
-            }, 300);
-          }
-        };
-        window.visualViewport.addEventListener("resize", handleViewportChange, { once: true });
-      }
+          setTimeout(() => {
+            document.body.removeChild(hiddenInput);
+            Logger.log("\u{1F4F1} \uBAA8\uBC14\uC77C: \uD0A4\uBCF4\uB4DC \uC228\uAE40 \uCC98\uB9AC \uC644\uB8CC (\uCD5C\uC801\uD654\uB428)");
+          }, 10);
+        }, 10);
+      }, 50);
+      Logger.debug("\u{1F4F1} \uBDF0\uD3EC\uD2B8 \uBCC0\uACBD \uD578\uB4E4\uB7EC \uBE44\uD65C\uC131\uD654 - \uD234\uD301 \uC704\uCE58 \uACE0\uC815 \uC720\uC9C0");
     } catch (error) {
       Logger.warn("\u{1F4F1} \uBAA8\uBC14\uC77C \uD0A4\uBCF4\uB4DC \uC228\uAE40 \uC911 \uC624\uB958:", error);
     }
@@ -11646,6 +11845,10 @@ var InlineTooltip = class {
   handleErrorWordClick(error, targetElement) {
     const aiStatus = error.aiStatus;
     Logger.log(`\u{1F5B1}\uFE0F \uC624\uB958 \uB2E8\uC5B4 \uD074\uB9AD: "${error.correction.original}" (AI \uC0C1\uD0DC: ${aiStatus || "none"})`);
+    if (import_obsidian10.Platform.isMobile && (aiStatus === "corrected" || aiStatus === "exception" || aiStatus === "keep-original")) {
+      Logger.log(`\u{1F4F1} \uBAA8\uBC14\uC77C\uC5D0\uC11C AI \uBD84\uC11D \uD6C4 \uD130\uCE58 - \uD234\uD301\uB9CC \uD45C\uC2DC: "${error.correction.original}"`);
+      return;
+    }
     switch (aiStatus) {
       case "corrected":
         this.applyAISelectedValue(error, targetElement);
@@ -12126,6 +12329,10 @@ var AITextWidget = class extends import_view.WidgetType {
       }, 500);
     });
     span.addEventListener("click", (e) => {
+      if (import_obsidian12.Platform.isMobile) {
+        Logger.debug("\u{1F7E2} AI Widget: \uBAA8\uBC14\uC77C\uC5D0\uC11C \uD074\uB9AD \uC774\uBCA4\uD2B8 \uBB34\uC2DC (\uD130\uCE58 \uC774\uBCA4\uD2B8 \uC0AC\uC6A9)");
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
       Logger.log(`\u{1F7E2} AI Widget \uD074\uB9AD: "${this.originalText}" \u2192 "${this.aiText}" (\uD655\uC815 \uC801\uC6A9)`);
@@ -12135,6 +12342,10 @@ var AITextWidget = class extends import_view.WidgetType {
       }
     });
     span.addEventListener("dblclick", (e) => {
+      if (import_obsidian12.Platform.isMobile) {
+        Logger.debug("\u{1F7E2} AI Widget: \uBAA8\uBC14\uC77C\uC5D0\uC11C \uB354\uBE14\uD074\uB9AD \uC774\uBCA4\uD2B8 \uBB34\uC2DC");
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
       Logger.log(`\u{1F7E2} AI Widget \uB354\uBE14\uD074\uB9AD: "${this.originalText}" \uD3B8\uC9D1 \uBAA8\uB4DC \uC9C4\uC785`);
@@ -14430,11 +14641,11 @@ InlineModeService.currentHoveredError = null;
 InlineModeService.hoverTimeout = null;
 
 // main.ts
-(0, import_obsidian15.addIcon)(
+(0, import_obsidian16.addIcon)(
   "han-spellchecker",
   `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 18 18" fill="currentColor"><path d="M3.6,3.9c1.3,0,2.9,0,4.2,0,.7,0,2.3-.5,2.3.7,0,.3-.3.5-.6.5-2.2,0-4.6.2-6.8,0-.4,0-.7-.4-.8-.8-.2-.7,1.2-.7,1.5-.4h0ZM6.1,11c-4.2,0-3.7-5.8.7-5.2,3.7.2,3.1,5.6-.5,5.2h-.2ZM3.6,1.6c.7,0,1.5.4,2.3.4.8.1,1.6,0,2.4,0,.8,1.2-1.4,1.5-2.9,1.3-.9,0-2.7-.8-1.9-1.7h0ZM6.3,9.7c2.5,0,1.9-3.4-.6-2.8-1.2.2-1.4,1.8-.5,2.4.2.2.9.2,1,.3h0ZM4.9,13.2c-.1-1.2,1.5-.9,1.6.1.4,1.5-.2,2.3,2,2.1,1,0,6.7-.6,5,1.1-2.3.5-5.4.7-7.6-.3-.6-.8-.3-2.2-.9-3h0ZM11.3,1.1c2.6-.3,1.5,3.8,2,5,.6.4,2.6-.5,2.8.7,0,.4-.3.6-.6.7-.7.1-1.6,0-2.3.1-.2.1,0,.5-.1,1.1,0,1,0,4.2-.8,4.2-.2,0-.5-.3-.6-.6-.3-1.4,0-3.4,0-5,0-1.9,0-3.8-.2-4.6-.1-.4-.5-1.2-.1-1.5h.1Z"/></svg>`
 );
-var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
+var KoreanGrammarPlugin = class extends import_obsidian16.Plugin {
   async onload() {
     if (false) {
       Logger.configureForProduction();
@@ -14488,7 +14699,7 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       name: "\uC778\uB77C\uC778 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC (\uBCA0\uD0C0)",
       callback: async () => {
         if (!this.settings.inlineMode.enabled) {
-          new import_obsidian15.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
+          new import_obsidian16.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
           return;
         }
         await this.executeInlineSpellCheck();
@@ -14499,11 +14710,11 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       name: "\u{1F916} \uC778\uB77C\uC778 AI \uBD84\uC11D (\uBCA0\uD0C0)",
       callback: async () => {
         if (!this.settings.inlineMode.enabled) {
-          new import_obsidian15.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
+          new import_obsidian16.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
           return;
         }
         if (!this.settings.ai.enabled) {
-          new import_obsidian15.Notice("AI \uAE30\uB2A5\uC774 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C AI \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
+          new import_obsidian16.Notice("AI \uAE30\uB2A5\uC774 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C AI \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
           return;
         }
         await this.executeInlineAIAnalysis();
@@ -14514,7 +14725,7 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       name: "\u{1F4DD} \uC778\uB77C\uC778 \uC624\uB958 \uC77C\uAD04 \uC801\uC6A9",
       callback: async () => {
         if (!this.settings.inlineMode.enabled) {
-          new import_obsidian15.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
+          new import_obsidian16.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
           return;
         }
         await this.executeInlineApplyAll();
@@ -14525,7 +14736,7 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       name: "\u{1F5D1}\uFE0F \uC778\uB77C\uC778 \uBD84\uC11D \uACB0\uACFC \uD45C\uC2DC \uC77C\uAD04 \uCDE8\uC18C",
       callback: async () => {
         if (!this.settings.inlineMode.enabled) {
-          new import_obsidian15.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
+          new import_obsidian16.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
           return;
         }
         await this.executeInlineClearAll();
@@ -14570,17 +14781,17 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
   async executeInlineSpellCheck() {
     const activeLeaf = this.app.workspace.activeLeaf;
     if (!activeLeaf) {
-      new import_obsidian15.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     const editor = activeLeaf.view.editor;
     if (!editor) {
-      new import_obsidian15.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     const editorView = editor.cm;
     if (!editorView) {
-      new import_obsidian15.Notice("CodeMirror \uC5D0\uB514\uD130 \uBDF0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("CodeMirror \uC5D0\uB514\uD130 \uBDF0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     try {
@@ -14597,13 +14808,13 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
         Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC804\uCCB4 \uBB38\uC11C \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791 (${targetText.length}\uC790)`);
       }
       if (!targetText.trim()) {
-        new import_obsidian15.Notice("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+        new import_obsidian16.Notice("\uAC80\uC0AC\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
         return;
       }
       const apiService = new SpellCheckApiService();
       const result = await apiService.checkSpelling(targetText, this.settings);
       if (!result.corrections || result.corrections.length === 0) {
-        new import_obsidian15.Notice(`${isSelection ? "\uC120\uD0DD \uC601\uC5ED\uC5D0\uC11C " : ""}\uB9DE\uCDA4\uBC95 \uC624\uB958\uAC00 \uBC1C\uACAC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.`);
+        new import_obsidian16.Notice(`${isSelection ? "\uC120\uD0DD \uC601\uC5ED\uC5D0\uC11C " : ""}\uB9DE\uCDA4\uBC95 \uC624\uB958\uAC00 \uBC1C\uACAC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.`);
         if (isSelection) {
           return;
         }
@@ -14632,7 +14843,7 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       }
     } catch (error) {
       Logger.error("\uC778\uB77C\uC778 \uBAA8\uB4DC \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC624\uB958:", error);
-      new import_obsidian15.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
     }
   }
   /**
@@ -14653,7 +14864,7 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       Logger.log("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654\uB428 (InlineModeService + \uD0A4\uBCF4\uB4DC \uB2E8\uCD95\uD0A4)");
     } catch (error) {
       Logger.error("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654 \uC2E4\uD328:", error);
-      new import_obsidian15.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC \uD65C\uC131\uD654\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
     }
   }
   /**
@@ -14670,9 +14881,9 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
    */
   async executeInlineAIAnalysis() {
     var _a;
-    const activeView = this.app.workspace.getActiveViewOfType(import_obsidian15.MarkdownView);
+    const activeView = this.app.workspace.getActiveViewOfType(import_obsidian16.MarkdownView);
     if (!(activeView == null ? void 0 : activeView.editor)) {
-      new import_obsidian15.Notice("\uD65C\uC131\uD654\uB41C \uB9C8\uD06C\uB2E4\uC6B4 \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\uD65C\uC131\uD654\uB41C \uB9C8\uD06C\uB2E4\uC6B4 \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     const editor = activeView.editor;
@@ -14683,7 +14894,7 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       if (!targetText.trim()) {
         targetText = editor.getValue();
         if (!targetText.trim()) {
-          new import_obsidian15.Notice("\uBD84\uC11D\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+          new import_obsidian16.Notice("\uBD84\uC11D\uD560 \uD14D\uC2A4\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
           return;
         }
       } else {
@@ -14694,7 +14905,7 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       const currentEditorView = (_a = activeView.editor) == null ? void 0 : _a.cm;
       if (!currentEditorView) {
         Logger.error("\uD604\uC7AC \uC5D0\uB514\uD130\uBDF0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4");
-        new import_obsidian15.Notice("\uC5D0\uB514\uD130\uBDF0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+        new import_obsidian16.Notice("\uC5D0\uB514\uD130\uBDF0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
         return;
       }
       Logger.log("\u{1F527} CRITICAL: \uD604\uC7AC \uBB38\uC11C\uC758 \uC5D0\uB514\uD130\uBDF0\uB85C InlineModeService \uAC15\uC81C \uC7AC\uC124\uC815");
@@ -14718,7 +14929,7 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       }
     } catch (error) {
       Logger.error("\uC778\uB77C\uC778 AI \uBD84\uC11D \uC624\uB958:", error);
-      new import_obsidian15.Notice("AI \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("AI \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
     }
   }
   /**
@@ -14727,12 +14938,12 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
   async analyzeExistingInlineErrorsInSelection(selectedText) {
     const { getCurrentModelInfo: getCurrentModelInfo2 } = await Promise.resolve().then(() => (init_aiModels(), aiModels_exports));
     const modelInfo = getCurrentModelInfo2(this.settings.ai);
-    const analysisNotice = new import_obsidian15.Notice(`\u{1F916} \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC2DC\uC791 (${modelInfo.displayName})...`, 0);
+    const analysisNotice = new import_obsidian16.Notice(`\u{1F916} \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC2DC\uC791 (${modelInfo.displayName})...`, 0);
     try {
       const selectionErrorCount = InlineModeService.getErrorCountInSelection(selectedText);
       if (selectionErrorCount === 0) {
         analysisNotice.hide();
-        new import_obsidian15.Notice("\u26A0\uFE0F \uC120\uD0DD \uC601\uC5ED\uC5D0 \uBD84\uC11D\uD560 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.", 3e3);
+        new import_obsidian16.Notice("\u26A0\uFE0F \uC120\uD0DD \uC601\uC5ED\uC5D0 \uBD84\uC11D\uD560 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.", 3e3);
         return;
       }
       analysisNotice.setMessage(`\u{1F522} \uC120\uD0DD \uC601\uC5ED \uB0B4 ${selectionErrorCount}\uAC1C \uC624\uB958 \uBD84\uC11D \uC900\uBE44 \uC911...`);
@@ -14743,12 +14954,12 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       });
       InlineModeService.refreshErrorWidgets();
       analysisNotice.hide();
-      new import_obsidian15.Notice(`\u2705 \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC644\uB8CC! ${selectionErrorCount}\uAC1C \uC624\uB958\uC5D0 \uC0C9\uC0C1\uC774 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, 4e3);
-      new import_obsidian15.Notice("\u{1F4A1} \uC624\uB958\uB97C \uD074\uB9AD\uD558\uC5EC AI \uCD94\uCC9C \uC774\uC720\uB97C \uD655\uC778\uD558\uC138\uC694.", 3e3);
+      new import_obsidian16.Notice(`\u2705 \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC644\uB8CC! ${selectionErrorCount}\uAC1C \uC624\uB958\uC5D0 \uC0C9\uC0C1\uC774 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, 4e3);
+      new import_obsidian16.Notice("\u{1F4A1} \uC624\uB958\uB97C \uD074\uB9AD\uD558\uC5EC AI \uCD94\uCC9C \uC774\uC720\uB97C \uD655\uC778\uD558\uC138\uC694.", 3e3);
     } catch (error) {
       analysisNotice.hide();
       Logger.error("\uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC2E4\uD328:", error);
-      new import_obsidian15.Notice("\u274C \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", 4e3);
+      new import_obsidian16.Notice("\u274C \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", 4e3);
     }
   }
   /**
@@ -14757,7 +14968,7 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
   async analyzeExistingInlineErrors() {
     const { getCurrentModelInfo: getCurrentModelInfo2 } = await Promise.resolve().then(() => (init_aiModels(), aiModels_exports));
     const modelInfo = getCurrentModelInfo2(this.settings.ai);
-    const analysisNotice = new import_obsidian15.Notice(`\u{1F916} AI \uBD84\uC11D \uC2DC\uC791 (${modelInfo.displayName})...`, 0);
+    const analysisNotice = new import_obsidian16.Notice(`\u{1F916} AI \uBD84\uC11D \uC2DC\uC791 (${modelInfo.displayName})...`, 0);
     try {
       const errorCount = InlineModeService.getErrorCount();
       analysisNotice.setMessage(`\u{1F522} ${errorCount}\uAC1C \uC624\uB958 \uBD84\uC11D \uC900\uBE44 \uC911...`);
@@ -14775,12 +14986,12 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       });
       InlineModeService.refreshErrorWidgets();
       analysisNotice.hide();
-      new import_obsidian15.Notice(`\u2705 AI \uBD84\uC11D \uC644\uB8CC! ${errorCount}\uAC1C \uC624\uB958\uC5D0 \uC0C9\uC0C1\uC774 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, 4e3);
-      new import_obsidian15.Notice("\u{1F4A1} \uC624\uB958\uB97C \uD074\uB9AD\uD558\uC5EC AI \uCD94\uCC9C \uC774\uC720\uB97C \uD655\uC778\uD558\uC138\uC694.", 3e3);
+      new import_obsidian16.Notice(`\u2705 AI \uBD84\uC11D \uC644\uB8CC! ${errorCount}\uAC1C \uC624\uB958\uC5D0 \uC0C9\uC0C1\uC774 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, 4e3);
+      new import_obsidian16.Notice("\u{1F4A1} \uC624\uB958\uB97C \uD074\uB9AD\uD558\uC5EC AI \uCD94\uCC9C \uC774\uC720\uB97C \uD655\uC778\uD558\uC138\uC694.", 3e3);
     } catch (error) {
       analysisNotice.hide();
       Logger.error("\uAE30\uC874 \uC624\uB958 AI \uBD84\uC11D \uC2E4\uD328:", error);
-      new import_obsidian15.Notice("\u274C AI \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", 4e3);
+      new import_obsidian16.Notice("\u274C AI \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", 4e3);
     }
   }
   /**
@@ -14788,11 +14999,11 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
    */
   async analyzeTextWithSpellCheckAndAI(targetText, isSelection) {
     var _a;
-    const processNotice = new import_obsidian15.Notice("\u{1F4DD} \uB9DE\uCDA4\uBC95 \uAC80\uC0AC\uB97C \uC2DC\uC791\uD569\uB2C8\uB2E4...", 0);
+    const processNotice = new import_obsidian16.Notice("\u{1F4DD} \uB9DE\uCDA4\uBC95 \uAC80\uC0AC\uB97C \uC2DC\uC791\uD569\uB2C8\uB2E4...", 0);
     const activeLeaf = this.app.workspace.activeLeaf;
     if (!activeLeaf) {
       processNotice.hide();
-      new import_obsidian15.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     try {
@@ -14806,7 +15017,7 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       const errorCount = InlineModeService.getErrorCount();
       if (errorCount === 0) {
         processNotice.hide();
-        new import_obsidian15.Notice("\u2705 \uB9DE\uCDA4\uBC95 \uC624\uB958\uAC00 \uBC1C\uACAC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.", 3e3);
+        new import_obsidian16.Notice("\u2705 \uB9DE\uCDA4\uBC95 \uC624\uB958\uAC00 \uBC1C\uACAC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.", 3e3);
         return;
       }
       processNotice.setMessage(`\u2705 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC644\uB8CC! ${errorCount}\uAC1C \uC624\uB958 \uBC1C\uACAC (\uBE68\uAC04\uC0C9 \uD45C\uC2DC)`);
@@ -14839,13 +15050,13 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       });
       InlineModeService.refreshErrorWidgets();
       processNotice.hide();
-      new import_obsidian15.Notice(`\u2705 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uBC0F AI \uBD84\uC11D \uC644\uB8CC!`, 4e3);
-      new import_obsidian15.Notice(`\u{1F3A8} ${errorCount}\uAC1C \uC624\uB958\uC5D0 AI \uC0C9\uC0C1\uC774 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, 3e3);
-      new import_obsidian15.Notice("\u{1F4A1} \uC624\uB958\uB97C \uD074\uB9AD\uD558\uC5EC AI \uCD94\uCC9C \uC774\uC720\uB97C \uD655\uC778\uD558\uC138\uC694.", 3e3);
+      new import_obsidian16.Notice(`\u2705 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uBC0F AI \uBD84\uC11D \uC644\uB8CC!`, 4e3);
+      new import_obsidian16.Notice(`\u{1F3A8} ${errorCount}\uAC1C \uC624\uB958\uC5D0 AI \uC0C9\uC0C1\uC774 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, 3e3);
+      new import_obsidian16.Notice("\u{1F4A1} \uC624\uB958\uB97C \uD074\uB9AD\uD558\uC5EC AI \uCD94\uCC9C \uC774\uC720\uB97C \uD655\uC778\uD558\uC138\uC694.", 3e3);
     } catch (error) {
       processNotice.hide();
       Logger.error("\uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uBC0F AI \uBD84\uC11D \uC2E4\uD328:", error);
-      new import_obsidian15.Notice("\u274C \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", 4e3);
+      new import_obsidian16.Notice("\u274C \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", 4e3);
     }
   }
   /**
@@ -14855,15 +15066,15 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
     var _a;
     const activeLeaf = this.app.workspace.activeLeaf;
     if (!activeLeaf || !activeLeaf.view || !activeLeaf.view.editor) {
-      new import_obsidian15.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     const errorCount = InlineModeService.getErrorCount();
     if (errorCount === 0) {
-      new import_obsidian15.Notice("\uC801\uC6A9\uD560 \uC778\uB77C\uC778 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC\uB97C \uC2E4\uD589\uD558\uC138\uC694.");
+      new import_obsidian16.Notice("\uC801\uC6A9\uD560 \uC778\uB77C\uC778 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC\uB97C \uC2E4\uD589\uD558\uC138\uC694.");
       return;
     }
-    const processNotice = new import_obsidian15.Notice(`\u{1F4DD} ${errorCount}\uAC1C \uC624\uB958 \uC77C\uAD04 \uC801\uC6A9 \uC911...`, 0);
+    const processNotice = new import_obsidian16.Notice(`\u{1F4DD} ${errorCount}\uAC1C \uC624\uB958 \uC77C\uAD04 \uC801\uC6A9 \uC911...`, 0);
     try {
       const editorView = (_a = activeLeaf.view.editor) == null ? void 0 : _a.cm;
       if (editorView) {
@@ -14871,15 +15082,15 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       }
       const appliedCount = await InlineModeService.applyAllCorrections();
       processNotice.hide();
-      new import_obsidian15.Notice(`\u2705 ${appliedCount}\uAC1C \uC624\uB958\uAC00 \uC5D0\uB514\uD130\uC5D0 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4!`, 4e3);
+      new import_obsidian16.Notice(`\u2705 ${appliedCount}\uAC1C \uC624\uB958\uAC00 \uC5D0\uB514\uD130\uC5D0 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4!`, 4e3);
       if (appliedCount < errorCount) {
         const skippedCount = errorCount - appliedCount;
-        new import_obsidian15.Notice(`\u{1F4A1} ${skippedCount}\uAC1C \uC624\uB958\uB294 \uAC74\uB108\uB6F0\uAC70\uB098 \uC608\uC678\uCC98\uB9AC \uC0AC\uC804\uC5D0 \uB4F1\uB85D\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, 3e3);
+        new import_obsidian16.Notice(`\u{1F4A1} ${skippedCount}\uAC1C \uC624\uB958\uB294 \uAC74\uB108\uB6F0\uAC70\uB098 \uC608\uC678\uCC98\uB9AC \uC0AC\uC804\uC5D0 \uB4F1\uB85D\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, 3e3);
       }
     } catch (error) {
       processNotice.hide();
       Logger.error("\uC778\uB77C\uC778 \uC624\uB958 \uC77C\uAD04 \uC801\uC6A9 \uC2E4\uD328:", error);
-      new import_obsidian15.Notice("\u274C \uC77C\uAD04 \uC801\uC6A9 \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", 4e3);
+      new import_obsidian16.Notice("\u274C \uC77C\uAD04 \uC801\uC6A9 \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", 4e3);
     }
   }
   /**
@@ -14889,15 +15100,15 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
     var _a;
     const activeLeaf = this.app.workspace.activeLeaf;
     if (!activeLeaf || !activeLeaf.view || !activeLeaf.view.editor) {
-      new import_obsidian15.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     const errorCount = InlineModeService.getErrorCount();
     if (errorCount === 0) {
-      new import_obsidian15.Notice("\uCDE8\uC18C\uD560 \uC778\uB77C\uC778 \uBD84\uC11D \uACB0\uACFC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("\uCDE8\uC18C\uD560 \uC778\uB77C\uC778 \uBD84\uC11D \uACB0\uACFC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
-    const processNotice = new import_obsidian15.Notice(`\u{1F5D1}\uFE0F ${errorCount}\uAC1C \uBD84\uC11D \uACB0\uACFC \uD45C\uC2DC \uC77C\uAD04 \uCDE8\uC18C \uC911...`, 2e3);
+    const processNotice = new import_obsidian16.Notice(`\u{1F5D1}\uFE0F ${errorCount}\uAC1C \uBD84\uC11D \uACB0\uACFC \uD45C\uC2DC \uC77C\uAD04 \uCDE8\uC18C \uC911...`, 2e3);
     try {
       const editorView = (_a = activeLeaf.view.editor) == null ? void 0 : _a.cm;
       if (editorView) {
@@ -14905,11 +15116,11 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
         InlineModeService.clearErrors(editorView);
       }
       processNotice.hide();
-      new import_obsidian15.Notice(`\u2705 ${errorCount}\uAC1C \uBD84\uC11D \uACB0\uACFC \uD45C\uC2DC\uAC00 \uBAA8\uB450 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4!`, 3e3);
+      new import_obsidian16.Notice(`\u2705 ${errorCount}\uAC1C \uBD84\uC11D \uACB0\uACFC \uD45C\uC2DC\uAC00 \uBAA8\uB450 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4!`, 3e3);
     } catch (error) {
       processNotice.hide();
       Logger.error("\uC778\uB77C\uC778 \uBD84\uC11D \uACB0\uACFC \uD45C\uC2DC \uC77C\uAD04 \uCDE8\uC18C \uC2E4\uD328:", error);
-      new import_obsidian15.Notice("\u274C \uBD84\uC11D \uACB0\uACFC \uD45C\uC2DC \uC77C\uAD04 \uCDE8\uC18C \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", 4e3);
+      new import_obsidian16.Notice("\u274C \uBD84\uC11D \uACB0\uACFC \uD45C\uC2DC \uC77C\uAD04 \uCDE8\uC18C \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", 4e3);
     }
   }
   /**
@@ -14921,7 +15132,7 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       Logger.log("\u{1F50D} \uC778\uB77C\uC778 \uD1A0\uD070 \uACBD\uACE0 \uD655\uC778 \uC2DC\uC791");
       const { TokenWarningModal: TokenWarningModal2 } = await Promise.resolve().then(() => (init_tokenWarningModal(), tokenWarningModal_exports));
       Logger.log("\u{1F50D} TokenWarningModal \uC784\uD3EC\uD2B8 \uC644\uB8CC");
-      const activeView = this.app.workspace.getActiveViewOfType(import_obsidian15.MarkdownView);
+      const activeView = this.app.workspace.getActiveViewOfType(import_obsidian16.MarkdownView);
       if (!(activeView == null ? void 0 : activeView.editor)) {
         Logger.warn("\uD65C\uC131 \uB9C8\uD06C\uB2E4\uC6B4 \uC5D0\uB514\uD130\uAC00 \uC5C6\uC5B4\uC11C \uD1A0\uD070 \uACBD\uACE0 \uAC74\uB108\uB700");
         return true;
@@ -14971,7 +15182,7 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
         this.settings.ai.maxTokens = newMaxTokens;
         this.saveSettings();
         Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uCD5C\uB300 \uD1A0\uD070\uC744 ${newMaxTokens}\uC73C\uB85C \uC5C5\uB370\uC774\uD2B8\uD588\uC2B5\uB2C8\uB2E4.`);
-        new import_obsidian15.Notice(`\u2699\uFE0F \uCD5C\uB300 \uD1A0\uD070\uC774 ${newMaxTokens.toLocaleString()}\uC73C\uB85C \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, 3e3);
+        new import_obsidian16.Notice(`\u2699\uFE0F \uCD5C\uB300 \uD1A0\uD070\uC774 ${newMaxTokens.toLocaleString()}\uC73C\uB85C \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, 3e3);
       };
       Logger.log("\u{1F50D} TokenWarningModal.checkTokenUsageWarning \uD638\uCD9C \uC2DC\uC791");
       const result = await TokenWarningModal2.checkTokenUsageWarning(
@@ -14997,7 +15208,7 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       var _a, _b, _c;
       if (((_b = (_a = this.settings) == null ? void 0 : _a.inlineMode) == null ? void 0 : _b.enabled) && InlineModeService.hasErrors()) {
         Logger.log("\u{1F527} file-open: InlineModeService \uC0C1\uD0DC \uC815\uB9AC \uC911");
-        const activeView = this.app.workspace.getActiveViewOfType(import_obsidian15.MarkdownView);
+        const activeView = this.app.workspace.getActiveViewOfType(import_obsidian16.MarkdownView);
         if (activeView == null ? void 0 : activeView.editor) {
           const currentEditorView = (_c = activeView.editor) == null ? void 0 : _c.cm;
           if (currentEditorView) {
