@@ -141,3 +141,72 @@ export type AnthropicModel = typeof ANTHROPIC_MODELS[number];
 export type GoogleModel = typeof GOOGLE_MODELS[number];
 export type OllamaModel = typeof OLLAMA_MODELS[number];
 export type RecommendedModel = typeof RECOMMENDED_MODELS_FOR_KOREAN[number];
+
+/**
+ * AI 설정에서 현재 사용 중인 모델 정보를 가져옵니다.
+ */
+export function getCurrentModelInfo(aiSettings: any): {
+  provider: string;
+  model: string;
+  displayName: string;
+} {
+  if (!aiSettings || !aiSettings.enabled) {
+    return {
+      provider: 'N/A',
+      model: 'N/A',
+      displayName: 'AI 기능 비활성화'
+    };
+  }
+
+  const provider = aiSettings.provider || 'openai';
+  const model = aiSettings[`${provider}Model`] || AI_PROVIDER_DEFAULTS[provider as keyof typeof AI_PROVIDER_DEFAULTS];
+
+  // 제공자별 표시명 정의
+  const providerDisplayNames: Record<string, string> = {
+    openai: 'OpenAI',
+    anthropic: 'Anthropic',
+    google: 'Google',
+    ollama: 'Ollama (로컬)'
+  };
+
+  // 모델별 표시명 정의
+  const modelDisplayNames: Record<string, string> = {
+    // OpenAI
+    'gpt-4o': 'GPT-4o',
+    'gpt-4o-mini': 'GPT-4o Mini',
+    'gpt-4-turbo': 'GPT-4 Turbo',
+    'gpt-4': 'GPT-4',
+    'gpt-3.5-turbo': 'GPT-3.5 Turbo',
+    'o1-preview': 'o1 Preview',
+    'o1-mini': 'o1 Mini',
+    
+    // Anthropic
+    'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
+    'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
+    'claude-3-opus-20240229': 'Claude 3 Opus',
+    'claude-3-sonnet-20240229': 'Claude 3 Sonnet',
+    'claude-3-haiku-20240307': 'Claude 3 Haiku',
+    
+    // Google
+    'gemini-1.5-pro': 'Gemini 1.5 Pro',
+    'gemini-1.5-flash': 'Gemini 1.5 Flash',
+    'gemini-1.5-flash-8b': 'Gemini 1.5 Flash 8B',
+    'gemini-1.0-pro': 'Gemini 1.0 Pro',
+    
+    // Ollama (일반적인 패턴으로 표시)
+    'llama3.2:3b': 'Llama 3.2 (3B)',
+    'llama3.2:1b': 'Llama 3.2 (1B)',
+    'llama3.1:8b': 'Llama 3.1 (8B)',
+    'mistral:7b': 'Mistral (7B)',
+    'qwen2:7b': 'Qwen 2 (7B)'
+  };
+
+  const providerName = providerDisplayNames[provider] || provider.toUpperCase();
+  const modelName = modelDisplayNames[model] || model;
+  
+  return {
+    provider: providerName,
+    model: modelName,
+    displayName: `${providerName} ${modelName}`
+  };
+}

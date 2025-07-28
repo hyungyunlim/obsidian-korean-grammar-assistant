@@ -460,13 +460,17 @@ export class InlineTooltip {
     if (isBottomEdge || availableSpaceBelow < adaptiveSize.maxHeight + smallOffset + minSpacing) {
       // 하단 구석이거나 아래쪽 공간 부족: 마우스/오류 바로 위쪽에 배치
       if (mousePosition) {
-        // 마우스 위치 기반: 마우스 위에 적당한 거리로 배치 
-        finalTop = mousePosition.y - 80; // 80px 위쪽으로 적절한 거리
+        // 마우스 위치 기반: AI 상태에 따른 오프셋 적용
+        const isAIError = this.currentError?.aiStatus === 'corrected' || this.currentError?.aiStatus === 'exception' || this.currentError?.aiStatus === 'keep-original';
+        const mouseOffset = isAIError ? 120 : 80; // AI 툴팁은 더 큰 오프셋 필요
+        finalTop = mousePosition.y - mouseOffset;
       } else {
-        // 요소 기반: 요소 바로 위에  
-        finalTop = referenceRect.top - adaptiveSize.maxHeight - smallOffset;
+        // 요소 기반: AI 상태에 따른 오프셋 적용 (AI 툴팁은 더 길어서 더 큰 오프셋 필요)
+        const isAIError = this.currentError?.aiStatus === 'corrected' || this.currentError?.aiStatus === 'exception' || this.currentError?.aiStatus === 'keep-original';
+        const aiOffset = isAIError ? 100 : smallOffset; // AI 오류에는 100px 오프셋 적용
+        finalTop = referenceRect.top - adaptiveSize.maxHeight - aiOffset;
       }
-      Logger.debug(`🖥️ 하단/공간부족: 바로 위쪽 배치 (finalTop: ${finalTop}, 마우스: ${mousePosition ? `(${mousePosition.x}, ${mousePosition.y})` : '없음'}, 공간: ${availableSpaceBelow}px)`);
+      Logger.debug(`🖥️하단/공간부족: 바로 위쪽 배치 (finalTop: ${finalTop}, 마우스: ${mousePosition ? `(${mousePosition.x}, ${mousePosition.y})` : '없음'}, AI상태: ${this.currentError?.aiStatus || 'none'}, 공간: ${availableSpaceBelow}px)`);
     } else {
       // 아래쪽에 충분한 공간: 참조점 바로 아래 배치
       finalTop = referenceRect.bottom + smallOffset;
@@ -1140,14 +1144,23 @@ export class InlineTooltip {
       text: error.correction.original,
       cls: 'error-word'
     });
+    
+    // 🎨 AI 상태에 따른 색상 및 스타일 설정
+    const { color, backgroundColor, cursor } = this.getErrorWordStyle(error);
+    
     errorWord.style.cssText = `
-      color: var(--text-error);
+      color: ${color};
       font-weight: 600;
-      background: rgba(255, 0, 0, 0.1);
+      background: ${backgroundColor};
       padding: ${isMobile ? (isPhone ? '3px 6px' : '4px 7px') : '4px 8px'};
       border-radius: 3px;
       font-size: ${isMobile ? (isPhone ? '12px' : '13px') : '13px'};
+      cursor: ${cursor};
+      transition: opacity 0.2s ease;
     `;
+    
+    // 🖱️ 클릭 처리는 InlineModeService에서 담당 (중복 이벤트 방지)
+    // errorWord에는 별도 클릭 이벤트를 등록하지 않음
 
     // 형태소 정보 표시 (중요한 품사만)
     if (error.morphemeInfo && this.isImportantPos(error.morphemeInfo.mainPos, error.morphemeInfo.tags)) {
@@ -1906,6 +1919,125 @@ export class InlineTooltip {
     }
 
     return false;
+  }
+
+  /**
+   * 🎨 AI 상태에 따른 오류 단어 스타일 반환
+   */
+  private getErrorWordStyle(error: InlineError): { color: string; backgroundColor: string; cursor: string } {
+    const aiStatus = error.aiStatus;
+    
+    switch (aiStatus) {
+      case 'corrected': // 🟢 녹색 (AI 교정)
+        return {
+          color: '#10b981', // 녹색
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          cursor: 'pointer'
+        };
+      
+      case 'exception': // 🔵 파란색 (예외 처리)
+        return {
+          color: '#3b82f6', // 파란색
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          cursor: 'pointer'
+        };
+      
+      case 'keep-original': // 🟠 주황색 (원본 유지)
+        return {
+          color: '#f59e0b', // 주황색
+          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+          cursor: 'pointer'
+        };
+      
+      default: // 🔴 빨간색 (기본)
+        return {
+          color: 'var(--text-error)', // 빨간색
+          backgroundColor: 'rgba(255, 0, 0, 0.1)',
+          cursor: 'pointer'
+        };
+    }
+  }
+
+  /**
+   * 🖱️ 오류 단어 클릭 이벤트 처리
+   */
+  private handleErrorWordClick(error: InlineError, targetElement: HTMLElement): void {
+    const aiStatus = error.aiStatus;
+    
+    Logger.log(`🖱️ 오류 단어 클릭: "${error.correction.original}" (AI 상태: ${aiStatus || 'none'})`);
+    
+    switch (aiStatus) {
+      case 'corrected': // 🟢 녹색: AI 선택값 적용
+        this.applyAISelectedValue(error, targetElement);
+        break;
+      
+      case 'exception': // 🔵 파란색: 예외 사전 등록
+        this.addToExceptionWords(error);
+        break;
+      
+      case 'keep-original': // 🟠 주황색: 원본 유지 (변경 없음)
+        this.keepOriginalValue(error, targetElement);
+        break;
+      
+      default: // 🔴 빨간색: 첫 번째 수정 제안 적용 (기존 동작)
+        this.applyFirstSuggestion(error, targetElement);
+        break;
+    }
+  }
+
+  /**
+   * 🟢 AI 선택값 적용
+   */
+  private applyAISelectedValue(error: InlineError, targetElement: HTMLElement): void {
+    if (!error.aiSelectedValue) {
+      Logger.warn('AI 선택값이 없습니다.');
+      new Notice('AI 선택값이 없습니다.');
+      return;
+    }
+    
+    Logger.log(`🟢 AI 선택값 적용: "${error.correction.original}" → "${error.aiSelectedValue}"`);
+    
+    try {
+      InlineModeService.applySuggestion(error, error.aiSelectedValue);
+      new Notice(`✅ AI 교정 적용: "${error.aiSelectedValue}"`);
+      this.hide();
+    } catch (error) {
+      Logger.error('AI 선택값 적용 실패:', error);
+      new Notice('❌ AI 교정 적용에 실패했습니다.');
+    }
+  }
+
+
+  /**
+   * 🟠 원본 유지 (변경 없음)
+   */
+  private keepOriginalValue(error: InlineError, targetElement: HTMLElement): void {
+    Logger.log(`🟠 원본 유지: "${error.correction.original}"`);
+    new Notice(`🟠 원본 유지: "${error.correction.original}"`);
+    this.hide();
+  }
+
+  /**
+   * 🔴 첫 번째 수정 제안 적용 (기존 동작)
+   */
+  private applyFirstSuggestion(error: InlineError, targetElement: HTMLElement): void {
+    if (!error.correction.corrected || error.correction.corrected.length === 0) {
+      Logger.warn('수정 제안이 없습니다.');
+      new Notice('수정 제안이 없습니다.');
+      return;
+    }
+    
+    const firstSuggestion = error.correction.corrected[0];
+    Logger.log(`🔴 첫 번째 수정 제안 적용: "${error.correction.original}" → "${firstSuggestion}"`);
+    
+    try {
+      InlineModeService.applySuggestion(error, firstSuggestion);
+      new Notice(`✅ 수정 적용: "${firstSuggestion}"`);
+      this.hide();
+    } catch (error) {
+      Logger.error('수정 제안 적용 실패:', error);
+      new Notice('❌ 수정 적용에 실패했습니다.');
+    }
   }
 }
 

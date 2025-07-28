@@ -2768,9 +2768,17 @@ var SpellCheckApiService = class {
             Logger.debug("  \uC81C\uC548 \uC218:", ((_e = block.revisions) == null ? void 0 : _e.length) || 0);
             if (block.origin && block.revised && block.revisions) {
               const blockOriginalText = block.origin.content;
+              const blockStart = block.origin.beginOffset;
+              const blockLength = block.origin.length;
+              const blockEnd = blockStart + blockLength;
+              const actualTextAtPosition = originalText.slice(blockStart, blockEnd);
+              const positionMatches = actualTextAtPosition === blockOriginalText;
               Logger.log(`\u{1F4DD} \uBE14\uB85D \uC0C1\uC138 \uBD84\uC11D:`);
-              Logger.log(`  \uC6D0\uBCF8: "${blockOriginalText}"`);
-              Logger.log(`  \uAD50\uC815: "${block.revised}"`);
+              Logger.log(`  API \uC6D0\uBCF8: "${blockOriginalText}"`);
+              Logger.log(`  API \uAD50\uC815: "${block.revised}"`);
+              Logger.log(`  API \uC704\uCE58: ${blockStart}-${blockEnd} (\uAE38\uC774: ${blockLength})`);
+              Logger.log(`  \uC2E4\uC81C \uC704\uCE58 \uD14D\uC2A4\uD2B8: "${actualTextAtPosition}"`);
+              Logger.log(`  \uC704\uCE58 \uB9E4\uCE6D: ${positionMatches ? "\u2705" : "\u274C"}`);
               Logger.log(`  \uC6D0\uBCF8 = \uAD50\uC815: ${blockOriginalText === block.revised}`);
               if (blockOriginalText === block.revised) {
                 Logger.debug("  -> \uC6D0\uBCF8\uACFC \uAD50\uC815\uBCF8\uC774 \uB3D9\uC77C\uD558\uC5EC \uAC74\uB108\uB700");
@@ -2780,9 +2788,20 @@ var SpellCheckApiService = class {
                 Logger.debug("  -> \uBE48 \uD14D\uC2A4\uD2B8\uB85C \uAC74\uB108\uB700");
                 return;
               }
-              if (originalText.indexOf(blockOriginalText) === -1) {
-                Logger.debug("  -> \uC6D0\uBCF8 \uD14D\uC2A4\uD2B8\uC5D0\uC11C \uCC3E\uC744 \uC218 \uC5C6\uC5B4 \uAC74\uB108\uB700");
-                return;
+              if (!positionMatches) {
+                Logger.debug(`\u{1F4CD} API \uC704\uCE58 vs \uC2E4\uC81C \uC704\uCE58 \uCC28\uC774: ${blockStart}-${blockEnd} vs "${actualTextAtPosition}"`);
+                const foundIndex = originalText.indexOf(blockOriginalText);
+                if (foundIndex === -1) {
+                  Logger.debug("  -> \uC6D0\uBCF8 \uD14D\uC2A4\uD2B8\uC5D0\uC11C \uC644\uC804\uD788 \uCC3E\uC744 \uC218 \uC5C6\uC5B4 \uAC74\uB108\uB700");
+                  return;
+                } else {
+                  Logger.debug(`  -> "${blockOriginalText}" \uC2E4\uC81C \uC704\uCE58: ${foundIndex} (API\uC640 ${Math.abs(foundIndex - blockStart)}\uC790 \uCC28\uC774)`);
+                }
+              } else {
+                if (originalText.indexOf(blockOriginalText) === -1) {
+                  Logger.debug("  -> \uC6D0\uBCF8 \uD14D\uC2A4\uD2B8\uC5D0\uC11C \uCC3E\uC744 \uC218 \uC5C6\uC5B4 \uAC74\uB108\uB700");
+                  return;
+                }
               }
               const suggestions = block.revisions.map((rev) => rev.revised);
               Logger.debug(`  \u{1F50D} API\uC5D0\uC11C \uBC1B\uC740 \uC81C\uC548 \uC218: ${suggestions.length}\uAC1C`);
@@ -9941,6 +9960,7 @@ var InlineTooltip = class {
    * 데스크톱 툴팁 위치 계산 (개선된 구석 처리)
    */
   positionTooltipDesktop(targetElement, targetRect, viewportWidth, viewportHeight, editorContainerRect = null, mousePosition) {
+    var _a, _b, _c, _d, _e, _f, _g;
     if (!this.tooltip)
       return;
     const editorLeft = (editorContainerRect == null ? void 0 : editorContainerRect.left) || 0;
@@ -9993,11 +10013,15 @@ var InlineTooltip = class {
     Logger.debug(`\u{1F50D} \uD558\uB2E8 \uAC10\uC9C0: isBottomEdge=${isBottomEdge}, availableSpaceBelow=${availableSpaceBelow}, \uD544\uC694\uACF5\uAC04=${adaptiveSize.maxHeight + smallOffset + minSpacing}, \uB9C8\uC6B0\uC2A4Y=${mousePosition == null ? void 0 : mousePosition.y}, \uC5D0\uB514\uD130\uD558\uB2E8=${editorTop + editorHeight}`);
     if (isBottomEdge || availableSpaceBelow < adaptiveSize.maxHeight + smallOffset + minSpacing) {
       if (mousePosition) {
-        finalTop = mousePosition.y - 80;
+        const isAIError = ((_a = this.currentError) == null ? void 0 : _a.aiStatus) === "corrected" || ((_b = this.currentError) == null ? void 0 : _b.aiStatus) === "exception" || ((_c = this.currentError) == null ? void 0 : _c.aiStatus) === "keep-original";
+        const mouseOffset = isAIError ? 120 : 80;
+        finalTop = mousePosition.y - mouseOffset;
       } else {
-        finalTop = referenceRect.top - adaptiveSize.maxHeight - smallOffset;
+        const isAIError = ((_d = this.currentError) == null ? void 0 : _d.aiStatus) === "corrected" || ((_e = this.currentError) == null ? void 0 : _e.aiStatus) === "exception" || ((_f = this.currentError) == null ? void 0 : _f.aiStatus) === "keep-original";
+        const aiOffset = isAIError ? 100 : smallOffset;
+        finalTop = referenceRect.top - adaptiveSize.maxHeight - aiOffset;
       }
-      Logger.debug(`\u{1F5A5}\uFE0F \uD558\uB2E8/\uACF5\uAC04\uBD80\uC871: \uBC14\uB85C \uC704\uCABD \uBC30\uCE58 (finalTop: ${finalTop}, \uB9C8\uC6B0\uC2A4: ${mousePosition ? `(${mousePosition.x}, ${mousePosition.y})` : "\uC5C6\uC74C"}, \uACF5\uAC04: ${availableSpaceBelow}px)`);
+      Logger.debug(`\u{1F5A5}\uFE0F\uD558\uB2E8/\uACF5\uAC04\uBD80\uC871: \uBC14\uB85C \uC704\uCABD \uBC30\uCE58 (finalTop: ${finalTop}, \uB9C8\uC6B0\uC2A4: ${mousePosition ? `(${mousePosition.x}, ${mousePosition.y})` : "\uC5C6\uC74C"}, AI\uC0C1\uD0DC: ${((_g = this.currentError) == null ? void 0 : _g.aiStatus) || "none"}, \uACF5\uAC04: ${availableSpaceBelow}px)`);
     } else {
       finalTop = referenceRect.bottom + smallOffset;
       Logger.debug(`\u{1F5A5}\uFE0F \uC544\uB798\uCABD \uBC30\uCE58 (finalTop: ${finalTop}, \uCC38\uC870bottom: ${referenceRect.bottom}, \uACF5\uAC04: ${availableSpaceBelow}px)`);
@@ -12262,9 +12286,14 @@ var InlineModeService = class {
               morphemeInfo: posInfo
               // 형태소 정보 추가
             };
+            const actualText = fullText.slice(foundIndex, foundIndex + searchText.length);
+            const positionMatches = actualText === searchText;
+            if (!positionMatches) {
+              Logger.debug(`\u{1F4CD} \uC778\uB77C\uC778 \uC704\uCE58 \uAC80\uC99D: "${searchText}" at ${foundIndex} \u2192 "${actualText}"`);
+            }
             errors.push(error);
             this.activeErrors.set(uniqueId, error);
-            Logger.debug(`\u{1F3AF} \uC624\uB958 \uC704\uCE58 \uC124\uC815: "${searchText}" (${uniqueId}) at ${foundIndex}-${foundIndex + searchText.length}${posInfo ? ` [${posInfo.mainPos}]` : ""}`);
+            Logger.debug(`\u{1F3AF} \uC624\uB958 \uC704\uCE58 \uC124\uC815: "${searchText}" (${uniqueId}) at ${foundIndex}-${foundIndex + searchText.length}${posInfo ? ` [${posInfo.mainPos}]` : ""} ${positionMatches ? "\u2705" : "\u274C"}`);
             Logger.debug(`activeErrors \uD604\uC7AC \uD06C\uAE30: ${this.activeErrors.size}\uAC1C`);
             occurrence++;
           }

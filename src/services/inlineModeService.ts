@@ -1046,10 +1046,18 @@ export class InlineModeService {
               morphemeInfo: posInfo // 형태소 정보 추가
             };
             
+            // 🔍 위치 검증: 실제로 해당 위치에 예상 텍스트가 있는지 확인
+            const actualText = fullText.slice(foundIndex, foundIndex + searchText.length);
+            const positionMatches = actualText === searchText;
+            
+            if (!positionMatches) {
+              Logger.debug(`📍 인라인 위치 검증: "${searchText}" at ${foundIndex} → "${actualText}"`);
+            }
+            
             errors.push(error);
             this.activeErrors.set(uniqueId, error);
             
-            Logger.debug(`🎯 오류 위치 설정: "${searchText}" (${uniqueId}) at ${foundIndex}-${foundIndex + searchText.length}${posInfo ? ` [${posInfo.mainPos}]` : ''}`);
+            Logger.debug(`🎯 오류 위치 설정: "${searchText}" (${uniqueId}) at ${foundIndex}-${foundIndex + searchText.length}${posInfo ? ` [${posInfo.mainPos}]` : ''} ${positionMatches ? '✅' : '❌'}`);
             Logger.debug(`activeErrors 현재 크기: ${this.activeErrors.size}개`);
             occurrence++;
           }

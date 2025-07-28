@@ -316,10 +316,20 @@ export class SpellCheckApiService {
             
             if (block.origin && block.revised && block.revisions) {
               const blockOriginalText = block.origin.content;
+              const blockStart = block.origin.beginOffset;
+              const blockLength = block.origin.length;
+              const blockEnd = blockStart + blockLength;
+              
+              // 🔍 실제 텍스트에서 해당 위치의 내용 확인
+              const actualTextAtPosition = originalText.slice(blockStart, blockEnd);
+              const positionMatches = actualTextAtPosition === blockOriginalText;
               
               Logger.log(`📝 블록 상세 분석:`);
-              Logger.log(`  원본: "${blockOriginalText}"`);
-              Logger.log(`  교정: "${block.revised}"`);
+              Logger.log(`  API 원본: "${blockOriginalText}"`);
+              Logger.log(`  API 교정: "${block.revised}"`);
+              Logger.log(`  API 위치: ${blockStart}-${blockEnd} (길이: ${blockLength})`);
+              Logger.log(`  실제 위치 텍스트: "${actualTextAtPosition}"`);
+              Logger.log(`  위치 매칭: ${positionMatches ? '✅' : '❌'}`);
               Logger.log(`  원본 = 교정: ${blockOriginalText === block.revised}`);
               
               // 🔧 기본 검증: 원본과 교정본이 같으면 건너뜀
@@ -334,10 +344,24 @@ export class SpellCheckApiService {
                 return;
               }
               
-              // 실제 원문에서 찾을 수 있는지 확인
-              if (originalText.indexOf(blockOriginalText) === -1) {
-                Logger.debug('  -> 원본 텍스트에서 찾을 수 없어 건너뜀');
-                return;
+              // 🔧 위치 매칭 실패 시 대안 처리 (정상 동작 - API가 텍스트 전처리함)
+              if (!positionMatches) {
+                Logger.debug(`📍 API 위치 vs 실제 위치 차이: ${blockStart}-${blockEnd} vs "${actualTextAtPosition}"`);
+                
+                // 실제 원문에서 찾을 수 있는지 확인
+                const foundIndex = originalText.indexOf(blockOriginalText);
+                if (foundIndex === -1) {
+                  Logger.debug('  -> 원본 텍스트에서 완전히 찾을 수 없어 건너뜀');
+                  return;
+                } else {
+                  Logger.debug(`  -> "${blockOriginalText}" 실제 위치: ${foundIndex} (API와 ${Math.abs(foundIndex - blockStart)}자 차이)`);
+                }
+              } else {
+                // 실제 원문에서 찾을 수 있는지 확인 (기존 로직)
+                if (originalText.indexOf(blockOriginalText) === -1) {
+                  Logger.debug('  -> 원본 텍스트에서 찾을 수 없어 건너뜀');
+                  return;
+                }
               }
               
               // 여러 수정 제안이 있을 경우 모두 포함
