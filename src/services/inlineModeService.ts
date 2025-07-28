@@ -948,9 +948,7 @@ export class InlineModeService {
       // (중복 초기화 방지)
 
       // 기존 오류 제거
-      Logger.debug(`showErrors: clearErrors 호출 전 activeErrors: ${this.activeErrors.size}개`);
       this.clearErrors(view);
-      Logger.debug(`showErrors: clearErrors 호출 후 activeErrors: ${this.activeErrors.size}개`);
 
       // 에디터 텍스트 가져오기
       const doc = view.state.doc;
@@ -970,9 +968,6 @@ export class InlineModeService {
           finalMorphemeData = await apiService.analyzeMorphemes(fullText, this.settings);
           Logger.log(`📋 형태소 분석 완료: ${!!finalMorphemeData ? '성공' : '실패'}`);
           
-          if (finalMorphemeData) {
-            Logger.debug('형태소 분석 결과:', finalMorphemeData);
-          }
         } catch (error) {
           Logger.error('인라인 모드: 형태소 분석 실패, 기본 로직 사용:', error);
         }

@@ -2883,7 +2883,6 @@ var SpellCheckApiService = class {
     const cacheKey = `morpheme_${this.hashText(text)}`;
     const cachedResult = this.morphemeCache.get(cacheKey);
     if (cachedResult) {
-      Logger.debug("\uD615\uD0DC\uC18C \uBD84\uC11D \uCE90\uC2DC\uC5D0\uC11C \uACB0\uACFC \uBC18\uD658:", { textLength: text.length });
       return cachedResult;
     }
     try {
@@ -2983,7 +2982,6 @@ var SpellCheckApiService = class {
     if (this.morphemeCache.size > this.maxCacheSize) {
       const firstKey = this.morphemeCache.keys().next().value;
       this.morphemeCache.delete(firstKey);
-      Logger.debug("\uD615\uD0DC\uC18C \uCE90\uC2DC \uD06C\uAE30 \uAD00\uB9AC: \uC624\uB798\uB41C \uD56D\uBAA9 \uC0AD\uC81C");
     }
   }
   /**
@@ -2991,7 +2989,6 @@ var SpellCheckApiService = class {
    */
   clearMorphemeCache() {
     this.morphemeCache.clear();
-    Logger.debug("\uD615\uD0DC\uC18C \uCE90\uC2DC \uC815\uB9AC \uC644\uB8CC");
   }
   /**
    * 캐시 통계를 반환합니다.
@@ -12648,9 +12645,7 @@ var InlineModeService = class {
     }
     const analysisNotice = NotificationUtils.showAnalysisStartNotice("spelling");
     try {
-      Logger.debug(`showErrors: clearErrors \uD638\uCD9C \uC804 activeErrors: ${this.activeErrors.size}\uAC1C`);
       this.clearErrors(view);
-      Logger.debug(`showErrors: clearErrors \uD638\uCD9C \uD6C4 activeErrors: ${this.activeErrors.size}\uAC1C`);
       const doc = view.state.doc;
       const fullText = doc.toString();
       let finalMorphemeData = morphemeData;
@@ -12662,9 +12657,6 @@ var InlineModeService = class {
           const apiService = new SpellCheckApiService();
           finalMorphemeData = await apiService.analyzeMorphemes(fullText, this.settings);
           Logger.log(`\u{1F4CB} \uD615\uD0DC\uC18C \uBD84\uC11D \uC644\uB8CC: ${!!finalMorphemeData ? "\uC131\uACF5" : "\uC2E4\uD328"}`);
-          if (finalMorphemeData) {
-            Logger.debug("\uD615\uD0DC\uC18C \uBD84\uC11D \uACB0\uACFC:", finalMorphemeData);
-          }
         } catch (error) {
           Logger.error("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uD615\uD0DC\uC18C \uBD84\uC11D \uC2E4\uD328, \uAE30\uBCF8 \uB85C\uC9C1 \uC0AC\uC6A9:", error);
         }
@@ -14750,7 +14742,6 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
         analysisNotice.setMessage(`\u{1F9E0} ${modelInfo.model} \uBD84\uC11D \uC911... (${current}/${total})`);
       });
       InlineModeService.refreshErrorWidgets();
-      Logger.debug("\uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC644\uB8CC \uD6C4 UI \uC0C8\uB85C\uACE0\uCE68 \uC2E4\uD589");
       analysisNotice.hide();
       new import_obsidian15.Notice(`\u2705 \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC644\uB8CC! ${selectionErrorCount}\uAC1C \uC624\uB958\uC5D0 \uC0C9\uC0C1\uC774 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, 4e3);
       new import_obsidian15.Notice("\u{1F4A1} \uC624\uB958\uB97C \uD074\uB9AD\uD558\uC5EC AI \uCD94\uCC9C \uC774\uC720\uB97C \uD655\uC778\uD558\uC138\uC694.", 3e3);
@@ -14783,7 +14774,6 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
         analysisNotice.setMessage(`\u{1F9E0} ${modelInfo.model} \uBD84\uC11D \uC911... (${current}/${total})`);
       });
       InlineModeService.refreshErrorWidgets();
-      Logger.debug("AI \uBD84\uC11D \uC644\uB8CC \uD6C4 UI \uC0C8\uB85C\uACE0\uCE68 \uC2E4\uD589");
       analysisNotice.hide();
       new import_obsidian15.Notice(`\u2705 AI \uBD84\uC11D \uC644\uB8CC! ${errorCount}\uAC1C \uC624\uB958\uC5D0 \uC0C9\uC0C1\uC774 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, 4e3);
       new import_obsidian15.Notice("\u{1F4A1} \uC624\uB958\uB97C \uD074\uB9AD\uD558\uC5EC AI \uCD94\uCC9C \uC774\uC720\uB97C \uD655\uC778\uD558\uC138\uC694.", 3e3);
@@ -14810,10 +14800,8 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       const editorView = (_a = activeLeaf.view.editor) == null ? void 0 : _a.cm;
       if (editorView) {
         InlineModeService.setEditorView(editorView, this.settings, this.app);
-        Logger.debug("\uC5D0\uB514\uD130 \uBDF0 \uBC0F \uC124\uC815 \uC644\uB8CC for checkText");
       }
       await InlineModeService.checkText(targetText);
-      Logger.debug("InlineModeService \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC644\uB8CC");
       await new Promise((resolve) => setTimeout(resolve, 1e3));
       const errorCount = InlineModeService.getErrorCount();
       if (errorCount === 0) {
@@ -14850,7 +14838,6 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
         processNotice.setMessage(`\u{1F9E0} ${modelInfo.model} \uBD84\uC11D \uC911... (${current}/${total})`);
       });
       InlineModeService.refreshErrorWidgets();
-      Logger.debug("AI \uBD84\uC11D \uC644\uB8CC \uD6C4 UI \uC0C8\uB85C\uACE0\uCE68 \uC2E4\uD589");
       processNotice.hide();
       new import_obsidian15.Notice(`\u2705 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uBC0F AI \uBD84\uC11D \uC644\uB8CC!`, 4e3);
       new import_obsidian15.Notice(`\u{1F3A8} ${errorCount}\uAC1C \uC624\uB958\uC5D0 AI \uC0C9\uC0C1\uC774 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, 3e3);
@@ -15008,7 +14995,6 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
     Logger.log("\u{1F527} \uBB38\uC11C \uC804\uD658 \uAC10\uC9C0 \uC774\uBCA4\uD2B8 \uB9AC\uC2A4\uB108 \uC124\uC815 \uC911...");
     this.fileOpenListener = this.app.workspace.on("file-open", (file) => {
       var _a, _b, _c;
-      Logger.debug(`\u{1F527} file-open \uC774\uBCA4\uD2B8: ${(file == null ? void 0 : file.path) || "null"}`);
       if (((_b = (_a = this.settings) == null ? void 0 : _a.inlineMode) == null ? void 0 : _b.enabled) && InlineModeService.hasErrors()) {
         Logger.log("\u{1F527} file-open: InlineModeService \uC0C1\uD0DC \uC815\uB9AC \uC911");
         const activeView = this.app.workspace.getActiveViewOfType(import_obsidian15.MarkdownView);
@@ -15021,13 +15007,12 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       }
     });
     this.activeLeafChangeListener = this.app.workspace.on("active-leaf-change", (leaf) => {
-      var _a, _b, _c, _d, _e;
-      Logger.debug(`\u{1F527} active-leaf-change \uC774\uBCA4\uD2B8: ${((_a = leaf == null ? void 0 : leaf.getViewState()) == null ? void 0 : _a.type) || "null"}`);
-      if (((_b = leaf == null ? void 0 : leaf.view) == null ? void 0 : _b.getViewType()) === "markdown" && ((_d = (_c = this.settings) == null ? void 0 : _c.inlineMode) == null ? void 0 : _d.enabled)) {
+      var _a, _b, _c, _d;
+      if (((_a = leaf == null ? void 0 : leaf.view) == null ? void 0 : _a.getViewType()) === "markdown" && ((_c = (_b = this.settings) == null ? void 0 : _b.inlineMode) == null ? void 0 : _c.enabled)) {
         const markdownView = leaf.view;
         if ((markdownView == null ? void 0 : markdownView.editor) && InlineModeService.hasErrors()) {
           Logger.log("\u{1F527} active-leaf-change: InlineModeService \uC0C1\uD0DC \uC815\uB9AC \uC911");
-          const currentEditorView = (_e = markdownView.editor) == null ? void 0 : _e.cm;
+          const currentEditorView = (_d = markdownView.editor) == null ? void 0 : _d.cm;
           if (currentEditorView) {
             InlineModeService.setEditorView(currentEditorView, this.settings, this.app);
           }

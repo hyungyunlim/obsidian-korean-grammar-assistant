@@ -463,7 +463,6 @@ export default class KoreanGrammarPlugin extends Plugin {
       
       // 3.5단계: UI 새로고침 강제 실행
       InlineModeService.refreshErrorWidgets();
-      Logger.debug('선택 영역 AI 분석 완료 후 UI 새로고침 실행');
       
       // 4단계: 완료 알림
       analysisNotice.hide();
@@ -515,7 +514,6 @@ export default class KoreanGrammarPlugin extends Plugin {
       
       // 3.5단계: UI 새로고침 강제 실행
       InlineModeService.refreshErrorWidgets();
-      Logger.debug('AI 분석 완료 후 UI 새로고침 실행');
       
       // 4단계: 완료 알림
       analysisNotice.hide();
@@ -553,12 +551,10 @@ export default class KoreanGrammarPlugin extends Plugin {
       const editorView = (activeLeaf.view as any).editor?.cm;
       if (editorView) {
         InlineModeService.setEditorView(editorView, this.settings, this.app);
-        Logger.debug('에디터 뷰 및 설정 완료 for checkText');
       }
       
       // InlineModeService를 통한 맞춤법 검사 실행
       await InlineModeService.checkText(targetText);
-      Logger.debug('InlineModeService 맞춤법 검사 완료');
 
       // 잠시 대기 (맞춤법 검사 완료 대기)
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -617,7 +613,6 @@ export default class KoreanGrammarPlugin extends Plugin {
       
       // 3.5단계: UI 새로고침 강제 실행
       InlineModeService.refreshErrorWidgets();
-      Logger.debug('AI 분석 완료 후 UI 새로고침 실행');
       
       // 4단계: 완료 알림
       processNotice.hide();
@@ -823,7 +818,6 @@ export default class KoreanGrammarPlugin extends Plugin {
 
     // 파일 변경 감지 - 다른 파일로 이동할 때 트리거
     this.fileOpenListener = this.app.workspace.on('file-open', (file) => {
-      Logger.debug(`🔧 file-open 이벤트: ${file?.path || 'null'}`);
       
       // 인라인 모드가 활성화되어 있고 현재 뷰가 존재하면 상태 정리
       if (this.settings?.inlineMode?.enabled && InlineModeService.hasErrors()) {
@@ -841,7 +835,6 @@ export default class KoreanGrammarPlugin extends Plugin {
 
     // 리프 변경 감지 - 탭 변경, 패널 변경 등을 포함한 더 광범위한 변경 감지
     this.activeLeafChangeListener = this.app.workspace.on('active-leaf-change', (leaf) => {
-      Logger.debug(`🔧 active-leaf-change 이벤트: ${leaf?.getViewState()?.type || 'null'}`);
       
       // 마크다운 뷰로 변경되었을 때만 처리
       if (leaf?.view?.getViewType() === 'markdown' && this.settings?.inlineMode?.enabled) {

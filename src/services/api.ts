@@ -78,7 +78,6 @@ export class SpellCheckApiService {
     const cacheKey = `morpheme_${this.hashText(text)}`;
     const cachedResult = this.morphemeCache.get(cacheKey);
     if (cachedResult) {
-      Logger.debug('형태소 분석 캐시에서 결과 반환:', { textLength: text.length });
       return cachedResult;
     }
 
@@ -196,7 +195,6 @@ export class SpellCheckApiService {
       // 가장 오래된 항목부터 제거 (Map은 삽입 순서를 유지)
       const firstKey = this.morphemeCache.keys().next().value;
       this.morphemeCache.delete(firstKey);
-      Logger.debug('형태소 캐시 크기 관리: 오래된 항목 삭제');
     }
   }
 
@@ -205,7 +203,6 @@ export class SpellCheckApiService {
    */
   clearMorphemeCache(): void {
     this.morphemeCache.clear();
-    Logger.debug('형태소 캐시 정리 완료');
   }
 
   /**
