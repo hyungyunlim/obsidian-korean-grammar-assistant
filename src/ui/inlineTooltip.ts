@@ -92,6 +92,31 @@ export class InlineTooltip {
   }
 
   /**
+   * 지연 후 툴팁 숨기기 예약
+   */
+  private scheduleHide(delay: number): void {
+    this.clearHideTimeout(); // 기존 타이머 정리
+    
+    this.hideTimeout = setTimeout(() => {
+      if (!this.isHovered) {
+        Logger.debug(`🕐 예약된 툴팁 숨기기 실행 (${delay}ms 후)`);
+        this.hide();
+      }
+    }, delay);
+  }
+
+  /**
+   * 툴팁 숨기기 타이머 취소
+   */
+  private clearHideTimeout(): void {
+    if (this.hideTimeout) {
+      clearTimeout(this.hideTimeout);
+      this.hideTimeout = null;
+      Logger.debug('⏰ 툴팁 숨기기 타이머 취소');
+    }
+  }
+
+  /**
    * 툴팁이 표시 중인지 확인
    */
   get visible(): boolean {
@@ -147,6 +172,7 @@ export class InlineTooltip {
     // 🔍 툴팁 호버 상태 이벤트 추가 (AI Widget 지속성 지원)
     this.tooltip.addEventListener('mouseenter', () => {
       this.isHovered = true;
+      this.clearHideTimeout(); // 숨기기 타이머 취소
       Logger.debug('🖱️ 툴팁 마우스 진입 - 호버 상태 유지');
     });
     
@@ -154,12 +180,13 @@ export class InlineTooltip {
       this.isHovered = false;
       Logger.debug('🖱️ 툴팁 마우스 이탈 - 호버 상태 해제');
       
-      // 짧은 딜레이 후 툴팁 숨기기 (추가 상호작용 시간 확보)
-      setTimeout(() => {
-        if (!this.isHovered) {
-          this.hide();
-        }
-      }, 200);
+      // AI 툴팁의 경우 더 긴 딜레이 (오프셋이 커서 마우스 이동 시간 필요)
+      const isAITooltip = this.currentError?.aiStatus === 'corrected' || 
+                         this.currentError?.aiStatus === 'exception' || 
+                         this.currentError?.aiStatus === 'keep-original';
+      const hideDelay = isAITooltip ? 800 : 300; // AI 툴팁은 800ms, 일반은 300ms
+      
+      this.scheduleHide(hideDelay);
     });
 
     document.body.appendChild(this.tooltip);
@@ -1428,33 +1455,17 @@ export class InlineTooltip {
       const aiIcon = aiArea.createEl('span', { text: '🤖' });
       aiIcon.style.cssText = 'font-size: 12px; flex-shrink: 0;';
 
-      // AI 분석 상태별 텍스트
-      const statusText = aiArea.createEl('span');
-      statusText.style.cssText = 'flex: 1; font-style: italic;';
+      // AI 추천 이유 간단 표시
+      const reasoningText = aiArea.createEl('span');
+      reasoningText.style.cssText = 'flex: 1; font-style: italic; font-size: 11px; color: var(--text-muted);';
       
-      let statusMessage = '';
-      if (error.aiStatus === 'exception') {
-        statusMessage = `예외 처리 추천 (${error.aiAnalysis.confidence}%)`;
-      } else if (error.aiStatus === 'keep-original') {
-        statusMessage = `원본 유지 추천 (${error.aiAnalysis.confidence}%)`;
-      } else if (error.aiStatus === 'corrected') {
-        statusMessage = `"${error.aiSelectedValue}" 추천 (${error.aiAnalysis.confidence}%)`;
-      }
-      
-      statusText.textContent = statusMessage;
-
-      // AI 추론 이유 (축약 표시)
+      // AI 분석 이유를 짧게 표시 (첫 번째 문장만)
       if (error.aiAnalysis.reasoning) {
-        const reasoningText = aiArea.createEl('div');
-        reasoningText.style.cssText = `
-          margin-top: 4px;
-          font-size: 10px;
-          color: var(--text-faint);
-          border-left: 2px solid var(--color-accent);
-          padding-left: 6px;
-          font-style: normal;
-        `;
-        reasoningText.textContent = error.aiAnalysis.reasoning;
+        const shortReason = error.aiAnalysis.reasoning.split('.')[0] + '.';
+        reasoningText.textContent = shortReason;
+      } else {
+        // 이유가 없으면 신뢰도만 표시
+        reasoningText.textContent = `신뢰도 ${error.aiAnalysis.confidence}%`;
       }
     }
 

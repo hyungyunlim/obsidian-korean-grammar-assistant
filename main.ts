@@ -144,6 +144,19 @@ export default class KoreanGrammarPlugin extends Plugin {
       },
     });
 
+    // 인라인 분석 결과 표시 일괄 취소 명령어 추가
+    this.addCommand({
+      id: "inline-clear-all",
+      name: "🗑️ 인라인 분석 결과 표시 일괄 취소",
+      callback: async () => {
+        if (!this.settings.inlineMode.enabled) {
+          new Notice("인라인 모드가 비활성화되어 있습니다. 설정에서 베타 기능을 활성화하세요.");
+          return;
+        }
+        await this.executeInlineClearAll();
+      },
+    });
+
     // 인라인 모드가 활성화된 경우 확장 기능 등록
     if (this.settings.inlineMode.enabled) {
       this.enableInlineMode();
@@ -596,6 +609,47 @@ export default class KoreanGrammarPlugin extends Plugin {
       processNotice.hide();
       Logger.error('인라인 오류 일괄 적용 실패:', error);
       new Notice('❌ 일괄 적용 중 오류가 발생했습니다.', 4000);
+    }
+  }
+
+  /**
+   * 인라인 분석 결과 표시 일괄 취소 실행
+   */
+  async executeInlineClearAll(): Promise<void> {
+    const activeLeaf = this.app.workspace.activeLeaf;
+    if (!activeLeaf || !activeLeaf.view || !(activeLeaf.view as any).editor) {
+      new Notice('활성화된 편집기가 없습니다.');
+      return;
+    }
+
+    // 현재 분석 결과가 있는지 확인
+    const errorCount = InlineModeService.getErrorCount();
+    if (errorCount === 0) {
+      new Notice('취소할 인라인 분석 결과가 없습니다.');
+      return;
+    }
+
+    const processNotice = new Notice(`🗑️ ${errorCount}개 분석 결과 표시 일괄 취소 중...`, 2000);
+
+    try {
+      // 에디터 뷰 설정
+      // @ts-ignore - Obsidian 내부 API 사용  
+      const editorView = (activeLeaf.view as any).editor?.cm;
+      if (editorView) {
+        InlineModeService.setEditorView(editorView, this.settings, this.app);
+        
+        // 모든 오류 제거
+        InlineModeService.clearErrors(editorView);
+      }
+
+      // 완료 알림
+      processNotice.hide();
+      new Notice(`✅ ${errorCount}개 분석 결과 표시가 모두 제거되었습니다!`, 3000);
+
+    } catch (error) {
+      processNotice.hide();
+      Logger.error('인라인 분석 결과 표시 일괄 취소 실패:', error);
+      new Notice('❌ 분석 결과 표시 일괄 취소 중 오류가 발생했습니다.', 4000);
     }
   }
 }
