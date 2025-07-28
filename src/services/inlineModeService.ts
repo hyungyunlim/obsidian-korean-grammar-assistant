@@ -98,6 +98,12 @@ class AITextWidget extends WidgetType {
     
     // 🖱️ 클릭 이벤트 추가 (AI 선택값 그대로 적용)
     span.addEventListener('click', (e) => {
+      // 🔧 모바일에서는 터치 이벤트를 사용하므로 클릭 이벤트 무시
+      if (Platform.isMobile) {
+        Logger.debug('🟢 AI Widget: 모바일에서 클릭 이벤트 무시 (터치 이벤트 사용)');
+        return;
+      }
+      
       e.preventDefault();
       e.stopPropagation();
       
@@ -114,6 +120,12 @@ class AITextWidget extends WidgetType {
     
     // 🖱️ 더블클릭 이벤트 추가 (편집 모드)
     span.addEventListener('dblclick', (e) => {
+      // 🔧 모바일에서는 터치 이벤트를 사용하므로 더블클릭 이벤트 무시
+      if (Platform.isMobile) {
+        Logger.debug('🟢 AI Widget: 모바일에서 더블클릭 이벤트 무시');
+        return;
+      }
+      
       e.preventDefault();
       e.stopPropagation();
       
