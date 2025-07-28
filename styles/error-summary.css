@@ -315,13 +315,17 @@
 }
 
 #correctionPopup .error-help-compact {
+    padding: 4px 8px !important;
+    border-top: 1px solid var(--background-modifier-border) !important;
+    background: var(--background-secondary) !important;
     font-size: 10px !important;
     color: var(--text-muted) !important;
-    font-style: italic !important;
-    line-height: 1.2 !important;
-    margin-left: 4px !important;
-    margin-top: 2px !important;
-    opacity: 0.8 !important;
+    line-height: 1.3 !important;
+    min-height: 20px !important;
+    flex-shrink: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
 }
 
 /* Error placeholder styles */

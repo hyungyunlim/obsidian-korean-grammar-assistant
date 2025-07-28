@@ -263,7 +263,8 @@
     }
     
     #correctionPopup .error-help-compact {
-        font-size: 11px;
-        margin-top: 4px;
+        font-size: 11px !important;
+        padding: 5px 9px !important;
+        min-height: 22px !important;
     }
 }

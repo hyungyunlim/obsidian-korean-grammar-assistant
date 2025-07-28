@@ -4,7 +4,7 @@
  */
 
 import { Logger } from './logger';
-import { Notice } from 'obsidian';
+import { Notice, Platform, MarkdownView } from 'obsidian';
 import type { AIAnalysisRequest } from '../types/interfaces';
 
 export interface TokenUsage {
@@ -100,6 +100,13 @@ export class TokenWarningModal {
       const modalContent = this.createTokenWarningModal(tokenUsage, isOverMaxTokens, maxTokens);
       modal.appendChild(modalContent);
 
+      // 🔧 모바일에서 배경 커서/입력 차단 및 키보드 숨김
+      if (Platform.isMobile) {
+        document.body.classList.add('spell-popup-open');
+        this.hideKeyboardAndBlurEditor();
+        Logger.debug('📱 토큰 모달: spell-popup-open 클래스 추가 및 키보드 숨김 처리');
+      }
+
       document.body.appendChild(modal);
       
       // 포커스 설정 (약간의 지연)
@@ -110,6 +117,12 @@ export class TokenWarningModal {
 
       // 이벤트 처리
       let handleResponse = (action: 'cancel' | 'proceed' | 'updateSettings') => {
+        // 🔧 모바일에서 배경 입력 차단 해제 (CorrectionPopup과 동일한 방식)
+        if (Platform.isMobile) {
+          document.body.classList.remove('spell-popup-open');
+          Logger.debug('📱 토큰 모달: spell-popup-open 클래스 제거로 배경 입력 복원');
+        }
+        
         modal.remove();
         
         if (action === 'proceed') {
@@ -418,4 +431,70 @@ export class TokenWarningModal {
       };
     }
   }
+
+  /**
+   * 🔧 모바일에서 키보드 숨기기 및 에디터 포커스 해제 (인라인 툴팁과 동일한 로직)
+   */
+  private static hideKeyboardAndBlurEditor(): void {
+    try {
+      // 1. 옵시디언 API를 통한 에디터 포커스 해제 (window를 통한 접근)
+      const obsidianApp = (window as any).app;
+      if (obsidianApp) {
+        const activeView = obsidianApp.workspace.getActiveViewOfType(MarkdownView);
+        if (activeView?.editor) {
+          // 에디터가 포커스되어 있는지 확인 후 포커스 해제
+          if ((activeView.editor as any).hasFocus?.()) {
+            Logger.log('📱 토큰 모달: 에디터 포커스 해제 시작');
+            (activeView.editor as any).blur?.();
+            
+            // CodeMirror 에디터 직접 접근
+            const cmEditor = (activeView.editor as any).cm;
+            if (cmEditor && cmEditor.dom) {
+              (cmEditor.dom as HTMLElement).blur();
+            }
+          }
+        }
+      }
+
+      // 2. DOM 레벨에서 모든 포커스 가능한 요소 포커스 해제
+      const focusedElement = document.activeElement as HTMLElement;
+      if (focusedElement && focusedElement.blur) {
+        focusedElement.blur();
+        Logger.log('📱 토큰 모달: DOM 포커스 해제 완료');
+      }
+
+      // 3. CodeMirror 에디터 포커스 해제 (추가 안전장치)
+      const cmEditors = document.querySelectorAll('.cm-editor .cm-content');
+      cmEditors.forEach(editor => {
+        if (editor instanceof HTMLElement) {
+          editor.blur();
+        }
+      });
+
+      // 4. 키보드 숨기기를 위한 더미 input 생성 및 포커스/블러
+      const hiddenInput = document.createElement('input');
+      hiddenInput.style.cssText = `
+        position: absolute;
+        left: -9999px;
+        top: -9999px;
+        opacity: 0;
+        pointer-events: none;
+      `;
+      document.body.appendChild(hiddenInput);
+      
+      // 짧은 시간 후 포커스 후 즉시 블러하여 키보드 숨기기
+      setTimeout(() => {
+        hiddenInput.focus();
+        setTimeout(() => {
+          hiddenInput.blur();
+          document.body.removeChild(hiddenInput);
+          Logger.log('📱 토큰 모달: 키보드 숨김 처리 완료');
+        }, 50);
+      }, 100);
+
+    } catch (error) {
+      Logger.warn('📱 토큰 모달 키보드 숨김 중 오류:', error);
+    }
+  }
+
 }

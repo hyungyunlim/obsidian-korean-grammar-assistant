@@ -38,8 +38,9 @@ export class InlineTooltip {
       (window as any).tooltipProtected = true;
       
       setTimeout(() => {
+        // 🔧 키보드 숨김 활성화 - 이전 방식 유지
         this.hideKeyboardAndBlurEditor();
-        // 🔧 모바일에서는 플래그를 해제하지 않음 (수동 닫기만)
+        
         Logger.debug('📱 모바일 툴팁 보호 플래그 유지 - 수동 닫기만 허용');
       }, 100);
     }
@@ -261,10 +262,71 @@ export class InlineTooltip {
     });
 
     if (isMobile) {
-      this.positionTooltipMobile(targetElement, targetRect, viewportWidth, viewportHeight, keyboardHeight, isPhone, editorContainerRect, mousePosition);
+      // 모바일에서 고정 위치 UI 사용 여부 결정
+      const useFixedPosition = isPhone; // 폰에서는 고정 위치, 태블릿은 기존 방식
+      
+      if (useFixedPosition) {
+        this.positionTooltipMobileFixed(targetElement, targetRect, viewportWidth, viewportHeight, keyboardHeight, mousePosition);
+      } else {
+        this.positionTooltipMobile(targetElement, targetRect, viewportWidth, viewportHeight, keyboardHeight, isPhone, editorContainerRect, mousePosition);
+      }
     } else {
       this.positionTooltipDesktop(targetElement, targetRect, viewportWidth, viewportHeight, editorContainerRect, mousePosition);
     }
+  }
+
+  /**
+   * 모바일 고정 위치 툴팁 (화면 하단 고정)
+   */
+  private positionTooltipMobileFixed(
+    targetElement: HTMLElement,
+    targetRect: DOMRect,
+    viewportWidth: number,
+    viewportHeight: number,
+    keyboardHeight: number,
+    mousePosition?: { x: number; y: number }
+  ): void {
+    if (!this.tooltip) return;
+
+    Logger.log('📱 모바일 고정 위치 툴팁 활성화');
+
+    // AI 분석 영역이 있는지 확인
+    const hasAIAnalysis = this.tooltip.querySelector('.tooltip-ai-area') !== null;
+    
+    // 컴팩트한 크기 설정 (AI 분석에 따라 높이 조정)
+    const fixedWidth = viewportWidth - 16; // 양쪽 8px씩만 마진
+    const fixedHeight = hasAIAnalysis ? 110 : 85; // AI 분석 시 25px 추가
+    
+    this.tooltip.style.width = `${fixedWidth}px`;
+    this.tooltip.style.height = `${fixedHeight}px`;
+    this.tooltip.style.maxHeight = `${fixedHeight}px`;
+    this.tooltip.style.minWidth = `${fixedWidth}px`;
+    this.tooltip.style.fontSize = '13px'; // 폰트도 약간 축소
+
+    // 화면 하단에 고정 (AI 분석에 따라 여백 조정)
+    const safeBottomMargin = hasAIAnalysis ? 90 : 80; // AI 분석 시 적절한 여백
+    const bottomOffset = keyboardHeight > 0 ? keyboardHeight + 12 : safeBottomMargin;
+    
+    const finalLeft = (viewportWidth - fixedWidth) / 2; // 중앙 정렬
+    const finalTop = viewportHeight - fixedHeight - bottomOffset;
+
+    // 위치 적용 (단순화)
+    this.tooltip.style.position = 'fixed';
+    this.tooltip.style.left = `${finalLeft}px`;
+    this.tooltip.style.top = `${finalTop}px`;
+    this.tooltip.style.zIndex = '1000';
+    this.tooltip.style.visibility = 'visible';
+    this.tooltip.style.boxShadow = '0 -2px 12px rgba(0, 0, 0, 0.2)'; // 더 얕은 그림자
+    this.tooltip.style.borderRadius = '12px 12px 0 0'; // 덜 둥글게
+    this.tooltip.style.border = '1px solid var(--background-modifier-border)';
+
+    Logger.log(`📱 고정 툴팁 (${hasAIAnalysis ? 'AI+' : '기본'}): ${fixedWidth}x${fixedHeight}px (${Math.round((fixedWidth / viewportWidth) * 100)}% 너비)`, {
+      position: `(${finalLeft}, ${finalTop})`,
+      bottomMargin: `${safeBottomMargin}px (${hasAIAnalysis ? 'AI 확장' : '기본'})`,
+      keyboard: keyboardHeight > 0,
+      aiAnalysis: hasAIAnalysis,
+      target: targetElement.textContent?.substring(0, 15) || 'unknown'
+    });
   }
 
   /**
@@ -328,7 +390,7 @@ export class InlineTooltip {
     const isTopEdge = effectiveTop - editorTop < cornerThreshold;
     const isBottomEdge = editorTop + editorHeight - effectiveBottom < cornerThreshold;
     
-    const fingerOffset = mousePosition ? (isPhone ? 35 : 30) : (isPhone ? 60 : 50); // 터치 위치 있으면 줄임
+    const fingerOffset = mousePosition ? (isPhone ? 15 : 12) : (isPhone ? 25 : 20); // 터치 위치 있으면 줄임
     const safeMargin = 16;
     
     let finalLeft = 0;
@@ -370,10 +432,10 @@ export class InlineTooltip {
       finalTop = referenceCenterY - adaptiveSize.maxHeight - fingerOffset;
       Logger.debug(`📱 하단 구석: 위쪽 배치 (오프셋: ${fingerOffset}px)`);
     } else if (spaceAbove > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
-      finalTop = referenceCenterY - adaptiveSize.maxHeight - (mousePosition ? 20 : 30);
+      finalTop = referenceCenterY - adaptiveSize.maxHeight - (mousePosition ? 8 : 12);
       Logger.debug(`📱 위쪽 배치 (터치 최적화)`);
     } else if (spaceBelow > adaptiveSize.maxHeight + fingerOffset + safeMargin) {
-      finalTop = referenceCenterY + (mousePosition ? 20 : 30);
+      finalTop = referenceCenterY + (mousePosition ? 8 : 12);
       Logger.debug(`📱 아래쪽 배치 (터치 최적화)`);
     } else {
       // 공간 매우 부족: 터치 지점에 최대한 가깝게
@@ -835,14 +897,16 @@ export class InlineTooltip {
             // 도움말 영역 생성
             helpArea = this.tooltip!.createEl('div', { cls: 'tooltip-help-area' });
             helpArea.style.cssText = `
-              padding: 8px 12px;
+              padding: ${isMobile ? (isPhone ? '4px 8px' : '5px 9px') : '6px 10px'};
               border-top: 1px solid var(--background-modifier-border);
               background: var(--background-secondary);
-              font-size: 11px;
+              font-size: ${isMobile ? (isPhone ? '10px' : '11px') : '11px'};
               color: var(--text-muted);
-              line-height: 1.4;
+              line-height: 1.3;
               white-space: pre-wrap;
               word-break: break-word;
+              min-height: ${isMobile ? (isPhone ? '20px' : '22px') : '24px'};
+              flex-shrink: 0;
             `;
             helpArea.textContent = originalError.correction.help;
           } else {
@@ -1173,15 +1237,92 @@ export class InlineTooltip {
     const isMobile = Platform.isMobile;
     const isPhone = (Platform as any).isPhone || (window.innerWidth <= 480);
 
-    // 상단 메인 콘텐츠 영역 (가로 레이아웃) - 모바일 최적화
+    // 헤더 영역 - 컴팩트한 크기로 축소
+    const header = this.tooltip.createEl('div', { cls: 'tooltip-header' });
+    header.style.cssText = `
+      padding: ${isMobile ? (isPhone ? '6px 10px' : '7px 11px') : '6px 10px'};
+      border-bottom: 1px solid var(--background-modifier-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--background-secondary);
+      border-radius: 6px 6px 0 0;
+      font-size: ${isMobile ? (isPhone ? '12px' : '13px') : '13px'};
+      font-weight: 500;
+      color: var(--text-muted);
+      min-height: 32px;
+    `;
+
+    // 헤더 텍스트 - 컴팩트
+    const headerText = header.createEl('span', { 
+      text: '맞춤법 오류',
+      cls: 'header-text'
+    });
+    headerText.style.cssText = `
+      font-size: ${isMobile ? (isPhone ? '12px' : '13px') : '13px'};
+    `;
+
+    // 우상단 닫기 버튼 (✕) - 더 작게
+    const headerCloseButton = header.createEl('button', { 
+      text: '✕',
+      cls: 'header-close-button'
+    });
+    headerCloseButton.style.cssText = `
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: ${isMobile ? (isPhone ? '14px' : '15px') : '14px'};
+      font-weight: bold;
+      cursor: pointer;
+      padding: 0;
+      width: ${isMobile ? (isPhone ? '20px' : '22px') : '20px'};
+      height: ${isMobile ? (isPhone ? '20px' : '22px') : '20px'};
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.7;
+      transition: all 0.2s ease;
+    `;
+
+    // 모바일 터치 피드백 - 순수 아이콘 효과
+    if (isMobile) {
+      headerCloseButton.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        headerCloseButton.style.opacity = '1';
+        headerCloseButton.style.color = 'var(--text-normal)';
+        headerCloseButton.style.background = 'var(--interactive-hover)';
+        if ('vibrate' in navigator) {
+          navigator.vibrate(10);
+        }
+      }, { passive: false });
+      
+      headerCloseButton.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        headerCloseButton.style.opacity = '0.7';
+        headerCloseButton.style.color = 'var(--text-muted)';
+        headerCloseButton.style.background = 'none';
+        this.hide(true); // 강제 닫기
+      }, { passive: false });
+    }
+
+    headerCloseButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.hide(true); // 강제 닫기
+    });
+
+    // 상단 메인 콘텐츠 영역 - 컴팩트한 패딩
     const mainContent = this.tooltip.createEl('div', { cls: 'tooltip-main-content' });
     
     mainContent.style.cssText = `
       display: flex;
       align-items: center;
-      gap: ${isMobile ? (isPhone ? '6px' : '7px') : '8px'};
-      padding: ${isMobile ? (isPhone ? '6px 10px' : '7px 11px') : '8px 12px'};
+      gap: ${isMobile ? (isPhone ? '4px' : '5px') : '6px'};
+      padding: ${isMobile ? (isPhone ? '4px 8px' : '5px 9px') : '6px 10px'};
       white-space: nowrap;
+      flex: 1;
+      min-height: 0;
     `;
 
     // 오류 단어 표시 (간소화) - 모바일 최적화 + 형태소 정보
@@ -1447,14 +1588,16 @@ export class InlineTooltip {
           // 도움말 영역 생성
           helpArea = this.tooltip!.createEl('div', { cls: 'tooltip-help-area' });
           helpArea.style.cssText = `
-            padding: 8px 12px;
+            padding: ${isMobile ? (isPhone ? '4px 8px' : '5px 9px') : '6px 10px'};
             border-top: 1px solid var(--background-modifier-border);
             background: var(--background-secondary);
-            font-size: 11px;
+            font-size: ${isMobile ? (isPhone ? '10px' : '11px') : '11px'};
             color: var(--text-muted);
-            line-height: 1.4;
+            line-height: 1.3;
             white-space: pre-wrap;
             word-break: break-word;
+            min-height: ${isMobile ? (isPhone ? '20px' : '22px') : '24px'};
+            flex-shrink: 0;
           `;
           helpArea.textContent = error.correction.help;
         } else {
@@ -1469,15 +1612,17 @@ export class InlineTooltip {
     if (error.aiAnalysis) {
       const aiArea = this.tooltip!.createEl('div', { cls: 'tooltip-ai-area' });
       aiArea.style.cssText = `
-        padding: 8px 12px;
+        padding: ${isMobile ? (isPhone ? '4px 8px' : '5px 9px') : '6px 10px'};
         border-top: 1px solid var(--background-modifier-border);
         background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(16, 185, 129, 0.05));
-        font-size: 11px;
+        font-size: ${isMobile ? (isPhone ? '10px' : '11px') : '11px'};
         color: var(--text-muted);
-        line-height: 1.4;
+        line-height: 1.3;
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: ${isMobile ? (isPhone ? '4px' : '5px') : '6px'};
+        min-height: ${isMobile ? (isPhone ? '20px' : '22px') : '24px'};
+        flex-shrink: 0;
       `;
 
       // 🤖 AI 아이콘
@@ -1852,6 +1997,41 @@ export class InlineTooltip {
   }
 
   /**
+   * 에디터 포커스만 해제 (키보드는 유지) - 깜빡임 없는 대안
+   */
+  private blurEditorOnly(): void {
+    try {
+      // 옵시디언 API를 통한 에디터 포커스 해제만
+      const obsidianApp = (window as any).app;
+      if (obsidianApp) {
+        const activeView = obsidianApp.workspace.getActiveViewOfType(MarkdownView);
+        if (activeView?.editor) {
+          if ((activeView.editor as any).hasFocus?.()) {
+            Logger.log('📱 에디터 포커스만 해제 (키보드 유지)');
+            (activeView.editor as any).blur?.();
+            
+            // CodeMirror 에디터 직접 접근
+            const cmEditor = (activeView.editor as any).cm;
+            if (cmEditor && cmEditor.dom) {
+              (cmEditor.dom as HTMLElement).blur();
+            }
+          }
+        }
+      }
+
+      // DOM 레벨에서 포커스 해제
+      const focusedElement = document.activeElement as HTMLElement;
+      if (focusedElement && focusedElement.blur) {
+        focusedElement.blur();
+        Logger.log('📱 DOM 포커스 해제 완료 (키보드는 유지)');
+      }
+
+    } catch (error) {
+      Logger.warn('📱 에디터 포커스 해제 중 오류:', error);
+    }
+  }
+
+  /**
    * 모바일에서 키보드 숨기기 및 에디터 포커스 해제
    */
   private hideKeyboardAndBlurEditor(): void {
@@ -1890,43 +2070,38 @@ export class InlineTooltip {
         }
       });
 
-      // 4. 키보드 숨기기를 위한 더미 input 생성 및 포커스/블러
+      // 4. 키보드 숨기기 - 더 부드러운 방식 (깜빡임 최소화)
       const hiddenInput = document.createElement('input');
       hiddenInput.style.cssText = `
-        position: absolute;
+        position: fixed;
         left: -9999px;
         top: -9999px;
         opacity: 0;
         pointer-events: none;
+        width: 1px;
+        height: 1px;
+        border: none;
+        background: transparent;
+        font-size: 16px;
       `;
       document.body.appendChild(hiddenInput);
       
-      // 짧은 시간 후 포커스 후 즉시 블러하여 키보드 숨기기
+      // 더 짧은 지연시간으로 깜빡임 최소화
       setTimeout(() => {
         hiddenInput.focus();
+        // 즉시 블러 처리로 깜빡임 시간 단축
         setTimeout(() => {
           hiddenInput.blur();
-          document.body.removeChild(hiddenInput);
-          Logger.log('📱 모바일: 키보드 숨김 처리 완료');
-        }, 50);
-      }, 100);
+          setTimeout(() => {
+            document.body.removeChild(hiddenInput);
+            Logger.log('📱 모바일: 키보드 숨김 처리 완료 (최적화됨)');
+          }, 10);
+        }, 10);
+      }, 50);
 
-      // 5. 뷰포트 변경 시 툴팁 재배치 (키보드 숨김 후)
-      if (window.visualViewport) {
-        const handleViewportChange = () => {
-          if (this.tooltip && this.isVisible) {
-            // 키보드가 사라진 후 툴팁 위치 재조정
-            setTimeout(() => {
-              const targetElement = document.querySelector(`[data-error-id="${this.currentError?.uniqueId}"]`) as HTMLElement;
-              if (targetElement) {
-                this.positionTooltip(targetElement);
-              }
-            }, 300);
-          }
-        };
-        
-        window.visualViewport.addEventListener('resize', handleViewportChange, { once: true });
-      }
+      // 5. 뷰포트 변경 시 툴팁 재배치 비활성화 (오프셋 변경 방지)
+      // 키보드 숨김 후 자동 위치 재조정은 오프셋을 변경시키므로 비활성화
+      Logger.debug('📱 뷰포트 변경 핸들러 비활성화 - 툴팁 위치 고정 유지');
 
     } catch (error) {
       Logger.warn('📱 모바일 키보드 숨김 중 오류:', error);
@@ -2005,6 +2180,13 @@ export class InlineTooltip {
     const aiStatus = error.aiStatus;
     
     Logger.log(`🖱️ 오류 단어 클릭: "${error.correction.original}" (AI 상태: ${aiStatus || 'none'})`);
+    
+    // 🔧 모바일에서는 AI 분석 후에도 클릭 시 툴팁만 표시 (적용하지 않음)
+    if (Platform.isMobile && (aiStatus === 'corrected' || aiStatus === 'exception' || aiStatus === 'keep-original')) {
+      Logger.log(`📱 모바일에서 AI 분석 후 터치 - 툴팁만 표시: "${error.correction.original}"`);
+      // 툴팁이 이미 표시된 상태이므로 아무것도 하지 않음
+      return;
+    }
     
     switch (aiStatus) {
       case 'corrected': // 🟢 녹색: AI 선택값 적용
