@@ -332,6 +332,13 @@ export class SpellCheckApiService {
               Logger.log(`  위치 매칭: ${positionMatches ? '✅' : '❌'}`);
               Logger.log(`  원본 = 교정: ${blockOriginalText === block.revised}`);
               
+              // 🔍 이미 처리된 교정인지 확인
+              if (correctionMap.has(blockOriginalText)) {
+                Logger.warn(`  ⚠️ 이미 존재하는 교정: "${blockOriginalText}"`);
+                Logger.warn(`  기존 제안들:`, correctionMap.get(blockOriginalText)!.corrected);
+                Logger.warn(`  새로운 제안들:`, block.revisions.map(rev => rev.revised));
+              }
+              
               // 🔧 기본 검증: 원본과 교정본이 같으면 건너뜀
               if (blockOriginalText === block.revised) {
                 Logger.debug('  -> 원본과 교정본이 동일하여 건너뜀');
@@ -401,13 +408,32 @@ export class SpellCheckApiService {
                 if (correctionMap.has(blockOriginalText)) {
                   Logger.debug('  -> 기존 교정에 제안 추가');
                   const existing = correctionMap.get(blockOriginalText)!;
-                  // 새로운 제안들을 기존 제안들과 합치고 중복 제거
-                  const combinedSuggestions = [...new Set([...existing.corrected, ...filteredSuggestions])];
-                  correctionMap.set(blockOriginalText, {
-                    ...existing,
-                    corrected: combinedSuggestions
+                  
+                  // 🔧 더 강력한 중복 제거: 기존 제안과 새 제안을 비교
+                  Logger.debug('  🔍 중복 제거 상세 분석:');
+                  Logger.debug('    기존 제안들:', existing.corrected);
+                  Logger.debug('    새로운 제안들:', filteredSuggestions);
+                  
+                  const newUniqueSuggestions = filteredSuggestions.filter(newSuggestion => {
+                    const isDuplicate = existing.corrected.includes(newSuggestion);
+                    Logger.debug(`    "${newSuggestion}" 중복 검사: ${isDuplicate ? '중복됨' : '고유함'}`);
+                    return !isDuplicate;
                   });
-                  Logger.debug('  -> 통합된 제안들:', combinedSuggestions);
+                  
+                  Logger.debug('  -> 필터링된 고유 제안들:', newUniqueSuggestions);
+                  
+                  if (newUniqueSuggestions.length > 0) {
+                    const combinedSuggestions = [...existing.corrected, ...newUniqueSuggestions];
+                    correctionMap.set(blockOriginalText, {
+                      ...existing,
+                      corrected: combinedSuggestions
+                    });
+                    Logger.debug('  -> 새로운 고유 제안들 추가:', newUniqueSuggestions);
+                    Logger.debug('  -> 최종 통합된 제안들:', combinedSuggestions);
+                  } else {
+                    Logger.warn('  ⚠️ 모든 제안이 중복되어 기존 유지:', existing.corrected);
+                    Logger.warn('  ⚠️ 이것이 툴팁에서 중복 표시되는 원인일 수 있습니다!');
+                  }
                 } else {
                   Logger.debug('  -> 새 교정 생성');
                   correctionMap.set(blockOriginalText, {
@@ -433,12 +459,21 @@ export class SpellCheckApiService {
     Logger.debug('교정 맵 크기:', correctionMap.size);
     Logger.log('최종 교정 배열:', corrections);
     
-    // 🔍 최종 교정 상세 분석
+    // 🔍 최종 교정 상세 분석 및 강제 중복 제거
     Logger.log('📊 최종 교정 상세:');
     Logger.log(`  총 교정 수: ${corrections.length}개`);
     corrections.forEach((correction, index) => {
+      // 🔧 강제 중복 제거 (Set 기반)
+      const originalCount = correction.corrected.length;
+      correction.corrected = [...new Set(correction.corrected)];
+      const deduplicatedCount = correction.corrected.length;
+      
       Logger.log(`  ${index + 1}. "${correction.original}" → [${correction.corrected.join(', ')}]`);
       Logger.log(`     설명: ${correction.help}`);
+      
+      if (originalCount !== deduplicatedCount) {
+        Logger.warn(`  ⚠️ 최종 중복 제거 완료: ${originalCount}개 → ${deduplicatedCount}개`);
+      }
     });
     
     // 만약 교정된 텍스트는 있지만 세부 오류 정보가 없는 경우
@@ -559,47 +594,74 @@ export class SpellCheckApiService {
     morphemeData: MorphemeResponse, 
     originalText: string
   ): Correction[] {
-    // 토큰 정보를 위치별로 매핑 (토큰이 전체 단어 경계를 나타냄)
+    // 토큰 정보를 위치별로 매핑 (위치 정보 포함하여 중복 토큰 구별)
     const tokenMap = new Map<string, Token>();
+    const tokensByPosition = new Map<number, Token[]>();
     
     morphemeData.sentences.forEach(sentence => {
       sentence.tokens.forEach(token => {
-        tokenMap.set(token.text.content, token);
+        const tokenText = token.text.content;
+        const tokenPosition = token.text.beginOffset;
+        
+        // 텍스트 기반 맵 (기존 호환성 유지)
+        tokenMap.set(tokenText, token);
+        
+        // 위치 기반 맵 (정확한 매칭용)
+        if (!tokensByPosition.has(tokenPosition)) {
+          tokensByPosition.set(tokenPosition, []);
+        }
+        tokensByPosition.get(tokenPosition)!.push(token);
       });
     });
 
     Logger.debug('토큰 맵:', Array.from(tokenMap.keys()));
+    Logger.debug('위치별 토큰 맵:', Array.from(tokensByPosition.entries()).map(([pos, tokens]) => 
+      `${pos}: [${tokens.map(t => t.text.content).join(', ')}]`));
+    
+    // 토큰 맵을 확장하여 위치 정보를 활용할 수 있도록 저장
+    (tokenMap as any).tokensByPosition = tokensByPosition;
 
     // 겹치는 교정들을 식별하고 통합
     const groupedCorrections: Correction[] = [];
     const processedRanges = new Set<string>();
+    const processedCorrections = new Set<string>(); // 이미 처리된 교정 텍스트 추적
 
     corrections.forEach(correction => {
+      // 🔧 동일한 교정 텍스트는 한 번만 처리
+      if (processedCorrections.has(correction.original)) {
+        Logger.debug(`이미 처리된 교정 건너뜀: "${correction.original}"`);
+        return;
+      }
+
       const correctionPositions = this.findAllPositions(originalText, correction.original);
+      Logger.debug(`"${correction.original}" 위치들:`, correctionPositions);
       
-      correctionPositions.forEach(position => {
-        const rangeKey = `${position}_${position + correction.original.length}`;
+      // 첫 번째 위치에서만 겹침 검사 수행
+      const firstPosition = correctionPositions[0];
+      if (firstPosition !== undefined) {
+        const rangeKey = `${firstPosition}_${firstPosition + correction.original.length}`;
         
         if (!processedRanges.has(rangeKey)) {
           // 이 위치에서 겹치는 다른 교정들 찾기
           const overlappingCorrections = this.findOverlappingCorrections(
-            corrections, originalText, position, correction.original.length
+            corrections, originalText, firstPosition, correction.original.length
           );
           
           if (overlappingCorrections.length > 1) {
-            Logger.debug(`위치 ${position}에서 겹치는 교정들:`, overlappingCorrections.map(c => c.original));
+            Logger.debug(`위치 ${firstPosition}에서 겹치는 교정들:`, overlappingCorrections.map(c => c.original));
             
             // 형태소 정보를 기반으로 최적의 교정 선택
             const bestCorrection = this.selectBestCorrectionWithTokens(
-              overlappingCorrections, tokenMap, originalText, position
+              overlappingCorrections, tokenMap, originalText, firstPosition
             );
             
             if (bestCorrection) {
               groupedCorrections.push(bestCorrection);
               Logger.debug(`선택된 교정: "${bestCorrection.original}"`);
               
-              // 겹치는 모든 범위를 처리됨으로 표시
+              // 겹치는 모든 교정들을 처리됨으로 표시
               overlappingCorrections.forEach(corr => {
+                processedCorrections.add(corr.original);
                 const corrPositions = this.findAllPositions(originalText, corr.original);
                 corrPositions.forEach(pos => {
                   const key = `${pos}_${pos + corr.original.length}`;
@@ -610,10 +672,17 @@ export class SpellCheckApiService {
           } else {
             // 겹치지 않는 교정은 그대로 추가
             groupedCorrections.push(correction);
-            processedRanges.add(rangeKey);
+            Logger.debug(`독립적인 교정 추가: "${correction.original}"`);
+            
+            // 모든 위치를 처리됨으로 표시
+            correctionPositions.forEach(pos => {
+              const key = `${pos}_${pos + correction.original.length}`;
+              processedRanges.add(key);
+            });
+            processedCorrections.add(correction.original);
           }
         }
-      });
+      }
     });
 
     return groupedCorrections;
@@ -621,6 +690,7 @@ export class SpellCheckApiService {
 
   /**
    * 특정 위치에서 겹치는 교정들을 찾습니다.
+   * 수정: 실제로 범위가 겹치는 경우만 정확히 감지하도록 개선
    */
   private findOverlappingCorrections(
     corrections: Correction[], 
@@ -637,20 +707,27 @@ export class SpellCheckApiService {
       positions.forEach(pos => {
         const corrEnd = pos + correction.original.length;
         
-        // 겹치는 조건 확인
-        if (!(corrEnd <= position || endPosition <= pos)) {
+        // 🔧 더 엄격한 겹침 조건: 실제로 겹치는 구간이 있는지 확인
+        const hasOverlap = Math.max(0, Math.min(endPosition, corrEnd) - Math.max(position, pos)) > 0;
+        
+        if (hasOverlap) {
           if (!overlapping.some(existing => existing.original === correction.original)) {
+            Logger.debug(`겹침 감지: "${correction.original}" (위치 ${pos}-${corrEnd}) ↔ 기준 (위치 ${position}-${endPosition})`);
             overlapping.push(correction);
           }
+        } else {
+          Logger.debug(`겹침 없음: "${correction.original}" (위치 ${pos}-${corrEnd}) ↔ 기준 (위치 ${position}-${endPosition})`);
         }
       });
     });
 
+    Logger.debug(`겹치는 교정 ${overlapping.length}개 발견:`, overlapping.map(c => c.original));
     return overlapping;
   }
 
   /**
    * 토큰 정보를 기반으로 최적의 교정을 선택합니다.
+   * 수정: 위치 정보를 고려한 정확한 토큰 매칭
    */
   private selectBestCorrectionWithTokens(
     corrections: Correction[], 
@@ -658,28 +735,71 @@ export class SpellCheckApiService {
     text: string, 
     position: number
   ): Correction | null {
-    // 1. 토큰 경계와 일치하는 교정 우선 선택
+    Logger.debug(`토큰 기반 교정 선택 시작: 위치 ${position}, 후보 ${corrections.length}개`);
+    
+    // 1. 토큰 경계와 일치하는 교정 우선 선택 (위치 정보 고려)
     for (const correction of corrections) {
-      const token = tokenMap.get(correction.original);
-      if (token) {
-        Logger.debug(`토큰 경계 일치 교정 선택: "${correction.original}" (토큰 단위)`);
+      // 해당 교정이 현재 위치에서 토큰 경계와 일치하는지 확인
+      const isTokenBoundary = this.isTokenBoundaryMatch(correction, tokenMap, text, position);
+      if (isTokenBoundary) {
+        Logger.debug(`토큰 경계 일치 교정 선택: "${correction.original}" (위치 ${position}에서 토큰 단위)`);
         return correction;
       }
     }
 
-    // 2. 가장 긴 텍스트 우선
+    // 2. 가장 긴 텍스트 우선 (더 구체적인 교정)
     const longestCorrections = corrections.filter(c => 
       c.original.length === Math.max(...corrections.map(corr => corr.original.length))
     );
 
     if (longestCorrections.length === 1) {
-      Logger.debug(`가장 긴 교정 선택: "${longestCorrections[0].original}"`);
+      Logger.debug(`가장 긴 교정 선택: "${longestCorrections[0].original}" (${longestCorrections[0].original.length}글자)`);
       return longestCorrections[0];
     }
 
     // 3. 첫 번째 교정 선택 (기본값)
-    Logger.debug(`기본 선택: "${longestCorrections[0].original}"`);
+    Logger.debug(`기본 선택 (동일 길이 중 첫 번째): "${longestCorrections[0].original}"`);
     return longestCorrections[0];
+  }
+
+  /**
+   * 교정이 특정 위치에서 토큰 경계와 일치하는지 확인합니다.
+   */
+  private isTokenBoundaryMatch(
+    correction: Correction,
+    tokenMap: Map<string, Token>,
+    text: string,
+    position: number
+  ): boolean {
+    // 위치별 토큰 맵이 있으면 더 정확한 매칭 사용
+    const tokensByPosition = (tokenMap as any).tokensByPosition as Map<number, Token[]> | undefined;
+    
+    if (tokensByPosition) {
+      // 위치 기반 정확한 매칭
+      for (const [tokenPos, tokens] of tokensByPosition.entries()) {
+        if (Math.abs(tokenPos - position) <= 2) { // 2글자 오차 허용
+          const matchingToken = tokens.find(token => token.text.content === correction.original);
+          if (matchingToken) {
+            Logger.debug(`토큰 경계 매칭 성공 (위치기반): "${correction.original}" 토큰위치=${tokenPos} 교정위치=${position}`);
+            return true;
+          }
+        }
+      }
+    } else {
+      // 기존 방식 (호환성 유지)
+      for (const [tokenText, token] of tokenMap.entries()) {
+        if (tokenText === correction.original) {
+          const tokenPosition = token.text.beginOffset;
+          if (Math.abs(tokenPosition - position) <= 2) {
+            Logger.debug(`토큰 경계 매칭 성공 (기존방식): "${correction.original}" 토큰위치=${tokenPosition} 교정위치=${position}`);
+            return true;
+          }
+        }
+      }
+    }
+    
+    Logger.debug(`토큰 경계 매칭 실패: "${correction.original}" 위치=${position}`);
+    return false;
   }
 
   /**

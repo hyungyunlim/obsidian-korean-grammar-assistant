@@ -162,10 +162,18 @@ export class InlineTooltip {
       }, { passive: true });
     }
 
+    // 🔍 툴팁 타입 결정 디버깅
+    Logger.debug(`🔍 툴팁 타입 결정: "${error.correction.original}"`);
+    Logger.debug(`  isMerged: ${error.isMerged}`);
+    Logger.debug(`  originalErrors: ${error.originalErrors?.length || 0}개`);
+    Logger.debug(`  correction.corrected: [${error.correction.corrected.join(', ')}]`);
+    
     // 병합된 오류인 경우 원본 오류별로 구분해서 표시
     if (error.isMerged && error.originalErrors && error.originalErrors.length > 0) {
+      Logger.debug(`🔧 병합된 툴팁 사용: ${error.originalErrors.length}개 원본 오류`);
       this.createMergedErrorTooltip(error, targetElement, triggerType);
     } else {
+      Logger.debug(`🔧 단일 툴팁 사용`);
       this.createSingleErrorTooltip(error, targetElement, triggerType);
     }
 
@@ -561,6 +569,21 @@ export class InlineTooltip {
     const isMobile = Platform.isMobile;
     const isPhone = Platform.isPhone;
 
+    // 🔧 먼저 중복 제거된 오류 계산 (헤더에서 사용하기 위해)
+    Logger.debug(`🔍 병합된 툴팁 생성: ${mergedError.originalErrors.length}개 원본 오류`);
+    mergedError.originalErrors.forEach((error, index) => {
+      Logger.debug(`  ${index + 1}. "${error.correction.original}" → [${error.correction.corrected.join(', ')}]`);
+    });
+    
+    const uniqueOriginalErrors = mergedError.originalErrors.filter((error, index, arr) => 
+      arr.findIndex(e => e.correction.original === error.correction.original) === index
+    );
+    
+    Logger.warn(`🔧 중복된 원본 오류 제거: ${mergedError.originalErrors.length}개 → ${uniqueOriginalErrors.length}개`);
+    if (mergedError.originalErrors.length !== uniqueOriginalErrors.length) {
+      Logger.warn(`🔧 이것이 툴팁에서 동일한 제안이 여러 번 나타나는 원인입니다!`);
+    }
+
     // 헤더 영역 - 닫기 버튼 포함
     const header = this.tooltip.createEl('div', { cls: 'tooltip-header' });
     header.style.cssText = `
@@ -577,9 +600,9 @@ export class InlineTooltip {
       justify-content: center;
     `;
 
-    // 헤더 텍스트
+    // 🔧 헤더 텍스트 (필터링된 개수 반영)
     const headerText = header.createEl('span', { 
-      text: `${mergedError.originalErrors.length}개 오류 병합됨`,
+      text: `${uniqueOriginalErrors.length}개 오류 병합됨`,
       cls: 'header-text'
     });
     headerText.style.cssText = `
@@ -674,8 +697,8 @@ export class InlineTooltip {
       min-height: ${isMobile ? (isPhone ? '120px' : '140px') : 'auto'};
     `;
 
-    // 각 원본 오류별로 섹션 생성 - 모바일 최적화
-    mergedError.originalErrors.forEach((originalError, index) => {
+    // 🔍 각 원본 오류별로 섹션 생성 - 모바일 최적화 (이미 중복 제거됨)
+    uniqueOriginalErrors.forEach((originalError, index) => {
       const errorSection = scrollContainer.createEl('div', { cls: 'error-section' });
       errorSection.style.cssText = `
         padding: ${isMobile ? (isPhone ? '10px 12px' : '11px 13px') : '8px 12px'};
@@ -733,8 +756,11 @@ export class InlineTooltip {
         overflow: hidden;
       `;
 
-      // 수정 제안들 (원본 오류어와 완전히 동일한 span 요소) - 모바일 최적화
-      originalError.correction.corrected.forEach((suggestion, index) => {
+      // 🔧 수정 제안들 (중복 제거 강화) - 모바일 최적화
+      const uniqueSuggestions = [...new Set(originalError.correction.corrected)];
+      Logger.debug(`🔧 병합된 툴팁 제안 중복 제거: ${originalError.correction.corrected.length}개 → ${uniqueSuggestions.length}개`);
+      
+      uniqueSuggestions.forEach((suggestion, index) => {
         const suggestionButton = suggestionsList.createEl('span', {
           text: suggestion,
           cls: 'suggestion-button'
@@ -1223,8 +1249,11 @@ export class InlineTooltip {
       flex-wrap: wrap;
     `;
 
-    // 수정 제안들 (원본 오류어와 완전히 동일한 span 요소 사용)
-    error.correction.corrected.forEach((suggestion, index) => {
+    // 🔧 수정 제안들 (중복 제거 강화)
+    const uniqueSuggestions = [...new Set(error.correction.corrected)];
+    Logger.debug(`🔧 툴팁 제안 중복 제거: ${error.correction.corrected.length}개 → ${uniqueSuggestions.length}개`);
+    
+    uniqueSuggestions.forEach((suggestion, index) => {
       const suggestionButton = suggestionsList.createEl('span', {
         text: suggestion,
         cls: 'suggestion-button'

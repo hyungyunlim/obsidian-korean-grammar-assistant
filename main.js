@@ -3099,6 +3099,11 @@ var SpellCheckApiService = class {
               Logger.log(`  \uC2E4\uC81C \uC704\uCE58 \uD14D\uC2A4\uD2B8: "${actualTextAtPosition}"`);
               Logger.log(`  \uC704\uCE58 \uB9E4\uCE6D: ${positionMatches ? "\u2705" : "\u274C"}`);
               Logger.log(`  \uC6D0\uBCF8 = \uAD50\uC815: ${blockOriginalText === block.revised}`);
+              if (correctionMap.has(blockOriginalText)) {
+                Logger.warn(`  \u26A0\uFE0F \uC774\uBBF8 \uC874\uC7AC\uD558\uB294 \uAD50\uC815: "${blockOriginalText}"`);
+                Logger.warn(`  \uAE30\uC874 \uC81C\uC548\uB4E4:`, correctionMap.get(blockOriginalText).corrected);
+                Logger.warn(`  \uC0C8\uB85C\uC6B4 \uC81C\uC548\uB4E4:`, block.revisions.map((rev) => rev.revised));
+              }
               if (blockOriginalText === block.revised) {
                 Logger.debug("  -> \uC6D0\uBCF8\uACFC \uAD50\uC815\uBCF8\uC774 \uB3D9\uC77C\uD558\uC5EC \uAC74\uB108\uB700");
                 return;
@@ -3143,12 +3148,27 @@ var SpellCheckApiService = class {
                 if (correctionMap.has(blockOriginalText)) {
                   Logger.debug("  -> \uAE30\uC874 \uAD50\uC815\uC5D0 \uC81C\uC548 \uCD94\uAC00");
                   const existing = correctionMap.get(blockOriginalText);
-                  const combinedSuggestions = [.../* @__PURE__ */ new Set([...existing.corrected, ...filteredSuggestions])];
-                  correctionMap.set(blockOriginalText, {
-                    ...existing,
-                    corrected: combinedSuggestions
+                  Logger.debug("  \u{1F50D} \uC911\uBCF5 \uC81C\uAC70 \uC0C1\uC138 \uBD84\uC11D:");
+                  Logger.debug("    \uAE30\uC874 \uC81C\uC548\uB4E4:", existing.corrected);
+                  Logger.debug("    \uC0C8\uB85C\uC6B4 \uC81C\uC548\uB4E4:", filteredSuggestions);
+                  const newUniqueSuggestions = filteredSuggestions.filter((newSuggestion) => {
+                    const isDuplicate = existing.corrected.includes(newSuggestion);
+                    Logger.debug(`    "${newSuggestion}" \uC911\uBCF5 \uAC80\uC0AC: ${isDuplicate ? "\uC911\uBCF5\uB428" : "\uACE0\uC720\uD568"}`);
+                    return !isDuplicate;
                   });
-                  Logger.debug("  -> \uD1B5\uD569\uB41C \uC81C\uC548\uB4E4:", combinedSuggestions);
+                  Logger.debug("  -> \uD544\uD130\uB9C1\uB41C \uACE0\uC720 \uC81C\uC548\uB4E4:", newUniqueSuggestions);
+                  if (newUniqueSuggestions.length > 0) {
+                    const combinedSuggestions = [...existing.corrected, ...newUniqueSuggestions];
+                    correctionMap.set(blockOriginalText, {
+                      ...existing,
+                      corrected: combinedSuggestions
+                    });
+                    Logger.debug("  -> \uC0C8\uB85C\uC6B4 \uACE0\uC720 \uC81C\uC548\uB4E4 \uCD94\uAC00:", newUniqueSuggestions);
+                    Logger.debug("  -> \uCD5C\uC885 \uD1B5\uD569\uB41C \uC81C\uC548\uB4E4:", combinedSuggestions);
+                  } else {
+                    Logger.warn("  \u26A0\uFE0F \uBAA8\uB4E0 \uC81C\uC548\uC774 \uC911\uBCF5\uB418\uC5B4 \uAE30\uC874 \uC720\uC9C0:", existing.corrected);
+                    Logger.warn("  \u26A0\uFE0F \uC774\uAC83\uC774 \uD234\uD301\uC5D0\uC11C \uC911\uBCF5 \uD45C\uC2DC\uB418\uB294 \uC6D0\uC778\uC77C \uC218 \uC788\uC2B5\uB2C8\uB2E4!");
+                  }
                 } else {
                   Logger.debug("  -> \uC0C8 \uAD50\uC815 \uC0DD\uC131");
                   correctionMap.set(blockOriginalText, {
@@ -3173,8 +3193,14 @@ var SpellCheckApiService = class {
     Logger.log("\u{1F4CA} \uCD5C\uC885 \uAD50\uC815 \uC0C1\uC138:");
     Logger.log(`  \uCD1D \uAD50\uC815 \uC218: ${corrections.length}\uAC1C`);
     corrections.forEach((correction, index) => {
+      const originalCount = correction.corrected.length;
+      correction.corrected = [...new Set(correction.corrected)];
+      const deduplicatedCount = correction.corrected.length;
       Logger.log(`  ${index + 1}. "${correction.original}" \u2192 [${correction.corrected.join(", ")}]`);
       Logger.log(`     \uC124\uBA85: ${correction.help}`);
+      if (originalCount !== deduplicatedCount) {
+        Logger.warn(`  \u26A0\uFE0F \uCD5C\uC885 \uC911\uBCF5 \uC81C\uAC70 \uC644\uB8CC: ${originalCount}\uAC1C \u2192 ${deduplicatedCount}\uAC1C`);
+      }
     });
     const normalizedSource = originalText.replace(/\s+/g, " ").trim();
     const normalizedResult = resultOutput.replace(/\s+/g, " ").trim();
@@ -3259,37 +3285,54 @@ var SpellCheckApiService = class {
    */
   groupCorrectionsByMorphemes(corrections, morphemeData, originalText) {
     const tokenMap = /* @__PURE__ */ new Map();
+    const tokensByPosition = /* @__PURE__ */ new Map();
     morphemeData.sentences.forEach((sentence) => {
       sentence.tokens.forEach((token) => {
-        tokenMap.set(token.text.content, token);
+        const tokenText = token.text.content;
+        const tokenPosition = token.text.beginOffset;
+        tokenMap.set(tokenText, token);
+        if (!tokensByPosition.has(tokenPosition)) {
+          tokensByPosition.set(tokenPosition, []);
+        }
+        tokensByPosition.get(tokenPosition).push(token);
       });
     });
     Logger.debug("\uD1A0\uD070 \uB9F5:", Array.from(tokenMap.keys()));
+    Logger.debug("\uC704\uCE58\uBCC4 \uD1A0\uD070 \uB9F5:", Array.from(tokensByPosition.entries()).map(([pos, tokens]) => `${pos}: [${tokens.map((t) => t.text.content).join(", ")}]`));
+    tokenMap.tokensByPosition = tokensByPosition;
     const groupedCorrections = [];
     const processedRanges = /* @__PURE__ */ new Set();
+    const processedCorrections = /* @__PURE__ */ new Set();
     corrections.forEach((correction) => {
+      if (processedCorrections.has(correction.original)) {
+        Logger.debug(`\uC774\uBBF8 \uCC98\uB9AC\uB41C \uAD50\uC815 \uAC74\uB108\uB700: "${correction.original}"`);
+        return;
+      }
       const correctionPositions = this.findAllPositions(originalText, correction.original);
-      correctionPositions.forEach((position) => {
-        const rangeKey = `${position}_${position + correction.original.length}`;
+      Logger.debug(`"${correction.original}" \uC704\uCE58\uB4E4:`, correctionPositions);
+      const firstPosition = correctionPositions[0];
+      if (firstPosition !== void 0) {
+        const rangeKey = `${firstPosition}_${firstPosition + correction.original.length}`;
         if (!processedRanges.has(rangeKey)) {
           const overlappingCorrections = this.findOverlappingCorrections(
             corrections,
             originalText,
-            position,
+            firstPosition,
             correction.original.length
           );
           if (overlappingCorrections.length > 1) {
-            Logger.debug(`\uC704\uCE58 ${position}\uC5D0\uC11C \uACB9\uCE58\uB294 \uAD50\uC815\uB4E4:`, overlappingCorrections.map((c) => c.original));
+            Logger.debug(`\uC704\uCE58 ${firstPosition}\uC5D0\uC11C \uACB9\uCE58\uB294 \uAD50\uC815\uB4E4:`, overlappingCorrections.map((c) => c.original));
             const bestCorrection = this.selectBestCorrectionWithTokens(
               overlappingCorrections,
               tokenMap,
               originalText,
-              position
+              firstPosition
             );
             if (bestCorrection) {
               groupedCorrections.push(bestCorrection);
               Logger.debug(`\uC120\uD0DD\uB41C \uAD50\uC815: "${bestCorrection.original}"`);
               overlappingCorrections.forEach((corr) => {
+                processedCorrections.add(corr.original);
                 const corrPositions = this.findAllPositions(originalText, corr.original);
                 corrPositions.forEach((pos) => {
                   const key = `${pos}_${pos + corr.original.length}`;
@@ -3299,15 +3342,21 @@ var SpellCheckApiService = class {
             }
           } else {
             groupedCorrections.push(correction);
-            processedRanges.add(rangeKey);
+            Logger.debug(`\uB3C5\uB9BD\uC801\uC778 \uAD50\uC815 \uCD94\uAC00: "${correction.original}"`);
+            correctionPositions.forEach((pos) => {
+              const key = `${pos}_${pos + correction.original.length}`;
+              processedRanges.add(key);
+            });
+            processedCorrections.add(correction.original);
           }
         }
-      });
+      }
     });
     return groupedCorrections;
   }
   /**
    * 특정 위치에서 겹치는 교정들을 찾습니다.
+   * 수정: 실제로 범위가 겹치는 경우만 정확히 감지하도록 개선
    */
   findOverlappingCorrections(corrections, text, position, length) {
     const overlapping = [];
@@ -3316,23 +3365,30 @@ var SpellCheckApiService = class {
       const positions = this.findAllPositions(text, correction.original);
       positions.forEach((pos) => {
         const corrEnd = pos + correction.original.length;
-        if (!(corrEnd <= position || endPosition <= pos)) {
+        const hasOverlap = Math.max(0, Math.min(endPosition, corrEnd) - Math.max(position, pos)) > 0;
+        if (hasOverlap) {
           if (!overlapping.some((existing) => existing.original === correction.original)) {
+            Logger.debug(`\uACB9\uCE68 \uAC10\uC9C0: "${correction.original}" (\uC704\uCE58 ${pos}-${corrEnd}) \u2194 \uAE30\uC900 (\uC704\uCE58 ${position}-${endPosition})`);
             overlapping.push(correction);
           }
+        } else {
+          Logger.debug(`\uACB9\uCE68 \uC5C6\uC74C: "${correction.original}" (\uC704\uCE58 ${pos}-${corrEnd}) \u2194 \uAE30\uC900 (\uC704\uCE58 ${position}-${endPosition})`);
         }
       });
     });
+    Logger.debug(`\uACB9\uCE58\uB294 \uAD50\uC815 ${overlapping.length}\uAC1C \uBC1C\uACAC:`, overlapping.map((c) => c.original));
     return overlapping;
   }
   /**
    * 토큰 정보를 기반으로 최적의 교정을 선택합니다.
+   * 수정: 위치 정보를 고려한 정확한 토큰 매칭
    */
   selectBestCorrectionWithTokens(corrections, tokenMap, text, position) {
+    Logger.debug(`\uD1A0\uD070 \uAE30\uBC18 \uAD50\uC815 \uC120\uD0DD \uC2DC\uC791: \uC704\uCE58 ${position}, \uD6C4\uBCF4 ${corrections.length}\uAC1C`);
     for (const correction of corrections) {
-      const token = tokenMap.get(correction.original);
-      if (token) {
-        Logger.debug(`\uD1A0\uD070 \uACBD\uACC4 \uC77C\uCE58 \uAD50\uC815 \uC120\uD0DD: "${correction.original}" (\uD1A0\uD070 \uB2E8\uC704)`);
+      const isTokenBoundary = this.isTokenBoundaryMatch(correction, tokenMap, text, position);
+      if (isTokenBoundary) {
+        Logger.debug(`\uD1A0\uD070 \uACBD\uACC4 \uC77C\uCE58 \uAD50\uC815 \uC120\uD0DD: "${correction.original}" (\uC704\uCE58 ${position}\uC5D0\uC11C \uD1A0\uD070 \uB2E8\uC704)`);
         return correction;
       }
     }
@@ -3340,11 +3396,40 @@ var SpellCheckApiService = class {
       (c) => c.original.length === Math.max(...corrections.map((corr) => corr.original.length))
     );
     if (longestCorrections.length === 1) {
-      Logger.debug(`\uAC00\uC7A5 \uAE34 \uAD50\uC815 \uC120\uD0DD: "${longestCorrections[0].original}"`);
+      Logger.debug(`\uAC00\uC7A5 \uAE34 \uAD50\uC815 \uC120\uD0DD: "${longestCorrections[0].original}" (${longestCorrections[0].original.length}\uAE00\uC790)`);
       return longestCorrections[0];
     }
-    Logger.debug(`\uAE30\uBCF8 \uC120\uD0DD: "${longestCorrections[0].original}"`);
+    Logger.debug(`\uAE30\uBCF8 \uC120\uD0DD (\uB3D9\uC77C \uAE38\uC774 \uC911 \uCCAB \uBC88\uC9F8): "${longestCorrections[0].original}"`);
     return longestCorrections[0];
+  }
+  /**
+   * 교정이 특정 위치에서 토큰 경계와 일치하는지 확인합니다.
+   */
+  isTokenBoundaryMatch(correction, tokenMap, text, position) {
+    const tokensByPosition = tokenMap.tokensByPosition;
+    if (tokensByPosition) {
+      for (const [tokenPos, tokens] of tokensByPosition.entries()) {
+        if (Math.abs(tokenPos - position) <= 2) {
+          const matchingToken = tokens.find((token) => token.text.content === correction.original);
+          if (matchingToken) {
+            Logger.debug(`\uD1A0\uD070 \uACBD\uACC4 \uB9E4\uCE6D \uC131\uACF5 (\uC704\uCE58\uAE30\uBC18): "${correction.original}" \uD1A0\uD070\uC704\uCE58=${tokenPos} \uAD50\uC815\uC704\uCE58=${position}`);
+            return true;
+          }
+        }
+      }
+    } else {
+      for (const [tokenText, token] of tokenMap.entries()) {
+        if (tokenText === correction.original) {
+          const tokenPosition = token.text.beginOffset;
+          if (Math.abs(tokenPosition - position) <= 2) {
+            Logger.debug(`\uD1A0\uD070 \uACBD\uACC4 \uB9E4\uCE6D \uC131\uACF5 (\uAE30\uC874\uBC29\uC2DD): "${correction.original}" \uD1A0\uD070\uC704\uCE58=${tokenPosition} \uAD50\uC815\uC704\uCE58=${position}`);
+            return true;
+          }
+        }
+      }
+    }
+    Logger.debug(`\uD1A0\uD070 \uACBD\uACC4 \uB9E4\uCE6D \uC2E4\uD328: "${correction.original}" \uC704\uCE58=${position}`);
+    return false;
   }
   /**
    * 텍스트에서 특정 패턴의 모든 위치를 찾습니다.
@@ -10084,6 +10169,7 @@ var InlineTooltip = class {
    * 툴팁 생성
    */
   createTooltip(error, targetElement, triggerType) {
+    var _a;
     this.tooltip = document.createElement("div");
     this.tooltip.className = "korean-grammar-inline-tooltip";
     const isMobile = import_obsidian10.Platform.isMobile;
@@ -10111,9 +10197,15 @@ var InlineTooltip = class {
         e.stopPropagation();
       }, { passive: true });
     }
+    Logger.debug(`\u{1F50D} \uD234\uD301 \uD0C0\uC785 \uACB0\uC815: "${error.correction.original}"`);
+    Logger.debug(`  isMerged: ${error.isMerged}`);
+    Logger.debug(`  originalErrors: ${((_a = error.originalErrors) == null ? void 0 : _a.length) || 0}\uAC1C`);
+    Logger.debug(`  correction.corrected: [${error.correction.corrected.join(", ")}]`);
     if (error.isMerged && error.originalErrors && error.originalErrors.length > 0) {
+      Logger.debug(`\u{1F527} \uBCD1\uD569\uB41C \uD234\uD301 \uC0AC\uC6A9: ${error.originalErrors.length}\uAC1C \uC6D0\uBCF8 \uC624\uB958`);
       this.createMergedErrorTooltip(error, targetElement, triggerType);
     } else {
+      Logger.debug(`\u{1F527} \uB2E8\uC77C \uD234\uD301 \uC0AC\uC6A9`);
       this.createSingleErrorTooltip(error, targetElement, triggerType);
     }
     this.tooltip.addEventListener("mouseenter", () => {
@@ -10122,10 +10214,10 @@ var InlineTooltip = class {
       Logger.debug("\u{1F5B1}\uFE0F \uD234\uD301 \uB9C8\uC6B0\uC2A4 \uC9C4\uC785 - \uD638\uBC84 \uC0C1\uD0DC \uC720\uC9C0");
     });
     this.tooltip.addEventListener("mouseleave", () => {
-      var _a, _b, _c;
+      var _a2, _b, _c;
       this.isHovered = false;
       Logger.debug("\u{1F5B1}\uFE0F \uD234\uD301 \uB9C8\uC6B0\uC2A4 \uC774\uD0C8 - \uD638\uBC84 \uC0C1\uD0DC \uD574\uC81C");
-      const isAITooltip = ((_a = this.currentError) == null ? void 0 : _a.aiStatus) === "corrected" || ((_b = this.currentError) == null ? void 0 : _b.aiStatus) === "exception" || ((_c = this.currentError) == null ? void 0 : _c.aiStatus) === "keep-original";
+      const isAITooltip = ((_a2 = this.currentError) == null ? void 0 : _a2.aiStatus) === "corrected" || ((_b = this.currentError) == null ? void 0 : _b.aiStatus) === "exception" || ((_c = this.currentError) == null ? void 0 : _c.aiStatus) === "keep-original";
       const hideDelay = isAITooltip ? 800 : 300;
       this.scheduleHide(hideDelay);
     });
@@ -10410,6 +10502,17 @@ var InlineTooltip = class {
       return;
     const isMobile = import_obsidian10.Platform.isMobile;
     const isPhone = import_obsidian10.Platform.isPhone;
+    Logger.debug(`\u{1F50D} \uBCD1\uD569\uB41C \uD234\uD301 \uC0DD\uC131: ${mergedError.originalErrors.length}\uAC1C \uC6D0\uBCF8 \uC624\uB958`);
+    mergedError.originalErrors.forEach((error, index) => {
+      Logger.debug(`  ${index + 1}. "${error.correction.original}" \u2192 [${error.correction.corrected.join(", ")}]`);
+    });
+    const uniqueOriginalErrors = mergedError.originalErrors.filter(
+      (error, index, arr) => arr.findIndex((e) => e.correction.original === error.correction.original) === index
+    );
+    Logger.warn(`\u{1F527} \uC911\uBCF5\uB41C \uC6D0\uBCF8 \uC624\uB958 \uC81C\uAC70: ${mergedError.originalErrors.length}\uAC1C \u2192 ${uniqueOriginalErrors.length}\uAC1C`);
+    if (mergedError.originalErrors.length !== uniqueOriginalErrors.length) {
+      Logger.warn(`\u{1F527} \uC774\uAC83\uC774 \uD234\uD301\uC5D0\uC11C \uB3D9\uC77C\uD55C \uC81C\uC548\uC774 \uC5EC\uB7EC \uBC88 \uB098\uD0C0\uB098\uB294 \uC6D0\uC778\uC785\uB2C8\uB2E4!`);
+    }
     const header = this.tooltip.createEl("div", { cls: "tooltip-header" });
     header.style.cssText = `
       padding: ${isMobile ? isPhone ? "10px 12px" : "11px 13px" : "8px 12px"};
@@ -10425,7 +10528,7 @@ var InlineTooltip = class {
       justify-content: center;
     `;
     const headerText = header.createEl("span", {
-      text: `${mergedError.originalErrors.length}\uAC1C \uC624\uB958 \uBCD1\uD569\uB428`,
+      text: `${uniqueOriginalErrors.length}\uAC1C \uC624\uB958 \uBCD1\uD569\uB428`,
       cls: "header-text"
     });
     headerText.style.cssText = `
@@ -10508,7 +10611,7 @@ var InlineTooltip = class {
       max-height: ${isMobile ? isPhone ? "280px" : "320px" : "250px"};
       min-height: ${isMobile ? isPhone ? "120px" : "140px" : "auto"};
     `;
-    mergedError.originalErrors.forEach((originalError, index) => {
+    uniqueOriginalErrors.forEach((originalError, index) => {
       const errorSection = scrollContainer.createEl("div", { cls: "error-section" });
       errorSection.style.cssText = `
         padding: ${isMobile ? isPhone ? "10px 12px" : "11px 13px" : "8px 12px"};
@@ -10557,7 +10660,9 @@ var InlineTooltip = class {
         flex-wrap: wrap;
         overflow: hidden;
       `;
-      originalError.correction.corrected.forEach((suggestion, index2) => {
+      const uniqueSuggestions = [...new Set(originalError.correction.corrected)];
+      Logger.debug(`\u{1F527} \uBCD1\uD569\uB41C \uD234\uD301 \uC81C\uC548 \uC911\uBCF5 \uC81C\uAC70: ${originalError.correction.corrected.length}\uAC1C \u2192 ${uniqueSuggestions.length}\uAC1C`);
+      uniqueSuggestions.forEach((suggestion, index2) => {
         const suggestionButton = suggestionsList.createEl("span", {
           text: suggestion,
           cls: "suggestion-button"
@@ -10951,7 +11056,9 @@ var InlineTooltip = class {
       gap: ${isMobile ? isPhone ? "4px" : "5px" : "6px"};
       flex-wrap: wrap;
     `;
-    error.correction.corrected.forEach((suggestion, index) => {
+    const uniqueSuggestions = [...new Set(error.correction.corrected)];
+    Logger.debug(`\u{1F527} \uD234\uD301 \uC81C\uC548 \uC911\uBCF5 \uC81C\uAC70: ${error.correction.corrected.length}\uAC1C \u2192 ${uniqueSuggestions.length}\uAC1C`);
+    uniqueSuggestions.forEach((suggestion, index) => {
       const suggestionButton = suggestionsList.createEl("span", {
         text: suggestion,
         cls: "suggestion-button"
