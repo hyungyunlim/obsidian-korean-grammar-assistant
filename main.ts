@@ -5,6 +5,7 @@ import {
   Setting,
   addIcon,
   Notice,
+  MarkdownView,
 } from "obsidian";
 
 // Import modularized components
@@ -32,6 +33,10 @@ export default class KoreanGrammarPlugin extends Plugin {
   settings: PluginSettings;
   orchestrator: SpellCheckOrchestrator;
   // 🤖 InlineModeService는 정적 클래스로 설계되어 인스턴스 불필요
+  
+  // 🔧 문서 전환 감지 이벤트 참조
+  private fileOpenListener?: any;
+  private activeLeafChangeListener?: any;
 
   async onload() {
     // 디버그/프로덕션 모드 설정
@@ -171,10 +176,21 @@ export default class KoreanGrammarPlugin extends Plugin {
       instance: this
     };
 
+    // 🔧 문서 전환 감지 이벤트 리스너 등록
+    this.setupDocumentChangeListeners();
+
     Logger.log('Korean Grammar Assistant 플러그인 로딩 완료');
   }
 
   onunload() {
+    // 🔧 문서 전환 감지 이벤트 리스너 정리
+    if (this.fileOpenListener) {
+      this.app.workspace.offref(this.fileOpenListener);
+    }
+    if (this.activeLeafChangeListener) {
+      this.app.workspace.offref(this.activeLeafChangeListener);
+    }
+    
     // 인라인 모드 정리
     this.disableInlineMode();
     
@@ -338,18 +354,13 @@ export default class KoreanGrammarPlugin extends Plugin {
    * 🤖 인라인 모드 AI 분석 실행
    */
   async executeInlineAIAnalysis(): Promise<void> {
-    const activeLeaf = this.app.workspace.activeLeaf;
-    if (!activeLeaf) {
-      new Notice('활성화된 편집기가 없습니다.');
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!activeView?.editor) {
+      new Notice('활성화된 마크다운 편집기가 없습니다.');
       return;
     }
 
-    // @ts-ignore - Obsidian 내부 API 사용
-    const editor = activeLeaf.view.editor;
-    if (!editor) {
-      new Notice('편집기를 찾을 수 없습니다.');
-      return;
-    }
+    const editor = activeView.editor;
 
     try {
       // 선택된 텍스트가 있는지 확인
@@ -370,20 +381,44 @@ export default class KoreanGrammarPlugin extends Plugin {
 
       Logger.log(`인라인 AI 분석 시작 - ${isSelection ? '선택된 영역' : '전체 문서'}: ${targetText.length}자`);
 
-      // 🔧 기존 인라인 오류가 있는지 확인
-      const hasExistingErrors = InlineModeService.hasErrors();
+      // 🔧 CRITICAL: 현재 활성 문서의 에디터를 명시적으로 포커스하고 InlineModeService 재설정
+      // 문서 클릭 후 에디터 포커스가 없는 상태에서도 올바르게 작동하도록
+      editor.focus(); // 에디터에 포커스 부여
+      
+      // @ts-ignore - Obsidian 내부 API 사용
+      const currentEditorView = (activeView as any).editor?.cm;
+      if (!currentEditorView) {
+        Logger.error('현재 에디터뷰를 찾을 수 없습니다');
+        new Notice('에디터뷰를 찾을 수 없습니다.');
+        return;
+      }
+      
+      Logger.log('🔧 CRITICAL: 현재 문서의 에디터뷰로 InlineModeService 강제 재설정');
+      
+      // 🔥 SMART FIX: 현재 문서 텍스트에 실제로 존재하는 오류만 유지
+      Logger.log('🔥 SMART FIX: 현재 문서 기준으로 오류 필터링');
+      InlineModeService.setEditorView(currentEditorView, this.settings, this.app);
+      InlineModeService.filterErrorsByCurrentDocument(targetText);
+      
+      // 🔧 이제 정리된 상태에서 현재 문서의 오류 상태 확인
+      const hasCurrentDocumentErrors = InlineModeService.hasErrors();
+      Logger.log(`🔍 현재 문서의 오류 존재 여부: ${hasCurrentDocumentErrors}`);
 
-      if (hasExistingErrors) {
-        // 케이스 1: 기존 오류가 있는 경우 - AI 분석 실행
+      if (hasCurrentDocumentErrors) {
+        // 케이스 1: 현재 문서에 오류가 있는 경우 - AI 분석 실행
+        Logger.log('🔍 케이스 1: 현재 문서에 오류가 있어서 AI 분석 실행');
         if (isSelection) {
           // 선택 영역이 있으면 해당 영역의 오류만 AI 분석
+          Logger.log('🔍 선택 영역 AI 분석 실행');
           await this.analyzeExistingInlineErrorsInSelection(selectedText);
         } else {
           // 선택 영역이 없으면 전체 오류 AI 분석
+          Logger.log('🔍 전체 오류 AI 분석 실행');
           await this.analyzeExistingInlineErrors();
         }
       } else {
-        // 케이스 2: 기존 오류가 없는 경우 - 맞춤법 검사 먼저 실행 후 AI 분석
+        // 케이스 2: 현재 문서에 오류가 없는 경우 - 맞춤법 검사 먼저 실행 후 AI 분석
+        Logger.log('🔍 케이스 2: 현재 문서에 오류가 없어서 맞춤법 검사 후 AI 분석 실행');
         await this.analyzeTextWithSpellCheckAndAI(targetText, isSelection);
       }
 
@@ -454,9 +489,18 @@ export default class KoreanGrammarPlugin extends Plugin {
     const analysisNotice = new Notice(`🤖 AI 분석 시작 (${modelInfo.displayName})...`, 0); // 지속적으로 표시
     
     try {
-      // 2단계: 토큰 사용량 추정 알림
+      // 2단계: 토큰 사용량 추정 및 경고 확인
       const errorCount = InlineModeService.getErrorCount();
       analysisNotice.setMessage(`🔢 ${errorCount}개 오류 분석 준비 중...`);
+      
+      // 토큰 사용량 경고 확인
+      Logger.log(`🔍 토큰 경고 확인 시작 - 오류 개수: ${errorCount}`);
+      const shouldProceed = await this.checkInlineTokenUsageWarning();
+      Logger.log(`🔍 토큰 경고 결과: ${shouldProceed ? '진행' : '취소'}`);
+      if (!shouldProceed) {
+        analysisNotice.hide();
+        return; // 사용자가 취소한 경우
+      }
       
       // 잠시 대기 (UI 업데이트 시간 확보)
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -537,6 +581,28 @@ export default class KoreanGrammarPlugin extends Plugin {
       const { getCurrentModelInfo } = await import('./src/constants/aiModels');
       const modelInfo = getCurrentModelInfo(this.settings.ai);
       processNotice.setMessage(`🤖 ${errorCount}개 오류 AI 분석 시작 (${modelInfo.displayName})...`);
+      
+      // 토큰 사용량 경고 확인
+      Logger.log(`🔍 맞춤법 검사 후 토큰 경고 확인 시작 - 오류 개수: ${errorCount}`);
+      Logger.log(`🔍 AI 설정 확인:`, {
+        enabled: this.settings.ai.enabled,
+        provider: this.settings.ai.provider,
+        showTokenWarning: this.settings.ai.showTokenWarning,
+        threshold: this.settings.ai.tokenWarningThreshold,
+        maxTokens: this.settings.ai.maxTokens
+      });
+      
+      try {
+        const shouldProceed = await this.checkInlineTokenUsageWarning();
+        Logger.log(`🔍 맞춤법 검사 후 토큰 경고 결과: ${shouldProceed ? '진행' : '취소'}`);
+        if (!shouldProceed) {
+          processNotice.hide();
+          return; // 사용자가 취소한 경우
+        }
+      } catch (error) {
+        Logger.error('🔍 토큰 경고 확인 중 예외 발생:', error);
+        // 에러 발생 시에도 계속 진행
+      }
       
       // 잠시 대기 (UI 업데이트 시간 확보)
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -651,6 +717,147 @@ export default class KoreanGrammarPlugin extends Plugin {
       Logger.error('인라인 분석 결과 표시 일괄 취소 실패:', error);
       new Notice('❌ 분석 결과 표시 일괄 취소 중 오류가 발생했습니다.', 4000);
     }
+  }
+
+  /**
+   * 인라인 모드 AI 분석 토큰 경고 확인
+   */
+  private async checkInlineTokenUsageWarning(): Promise<boolean> {
+    try {
+      Logger.log('🔍 인라인 토큰 경고 확인 시작');
+      
+      // TokenWarningModal import
+      const { TokenWarningModal } = await import('./src/utils/tokenWarningModal');
+      Logger.log('🔍 TokenWarningModal 임포트 완료');
+      
+      // 🔧 현재 문서 검증 추가
+      const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (!activeView?.editor) {
+        Logger.warn('활성 마크다운 에디터가 없어서 토큰 경고 건너뜀');
+        return true;
+      }
+      
+      // @ts-ignore - Obsidian 내부 API 사용  
+      const currentEditorView = (activeView as any).editor?.cm;
+      if (!currentEditorView || !InlineModeService.isCurrentView(currentEditorView)) {
+        Logger.warn('현재 에디터뷰가 InlineModeService와 일치하지 않아서 토큰 경고 건너뜀');
+        return true;
+      }
+      
+      // 현재 문서의 유효한 오류들만 가져오기
+      const errorCount = InlineModeService.getErrorCount();
+      Logger.log(`🔍 현재 문서의 유효한 오류 개수: ${errorCount}`);
+      if (errorCount === 0) {
+        Logger.log('🔍 유효한 오류가 없어서 바로 진행');
+        return true; // 오류가 없으면 바로 진행
+      }
+
+      // 실제 오류 개수를 반영한 토큰 추정 (30개 오류면 30개로 계산)
+      const sampleErrors = Array.from({ length: errorCount }, (_, i) => ({
+        original: `샘플오류${i + 1}`,
+        corrected: [`수정안${i + 1}`],
+        help: `샘플 도움말 ${i + 1}`
+      }));
+
+      Logger.log(`🔍 토큰 추정용 샘플 오류 생성: ${sampleErrors.length}개 (실제 오류 개수: ${errorCount})`);
+
+      // AI 분석 요청 구성 (간단한 형태)
+      const request = {
+        originalText: '', // 인라인 모드에서는 전체 텍스트 불필요
+        corrections: sampleErrors,
+        contextWindow: errorCount > 1 ? 30 : 100, // 복수 오류 시 최적화
+        currentStates: {},
+        enhancedContext: false // 인라인 모드에서는 단순한 컨텍스트
+      };
+
+      // AI 서비스 가져오기
+      const { AIAnalysisService } = await import('./src/services/aiAnalysisService');
+      const aiService = new AIAnalysisService(this.settings.ai);
+
+      // 토큰 경고 설정
+      const tokenWarningSettings = {
+        showTokenWarning: this.settings.ai.showTokenWarning,
+        tokenWarningThreshold: this.settings.ai.tokenWarningThreshold,
+        maxTokens: this.settings.ai.maxTokens
+      };
+
+      Logger.log('🔍 토큰 경고 설정:', {
+        showTokenWarning: tokenWarningSettings.showTokenWarning,
+        threshold: tokenWarningSettings.tokenWarningThreshold,
+        maxTokens: tokenWarningSettings.maxTokens,
+        aiEnabled: this.settings.ai.enabled,
+        provider: this.settings.ai.provider
+      });
+
+      // 설정 업데이트 콜백
+      const onSettingsUpdate = (newMaxTokens: number) => {
+        this.settings.ai.maxTokens = newMaxTokens;
+        this.saveSettings();
+        Logger.log(`인라인 모드: 최대 토큰을 ${newMaxTokens}으로 업데이트했습니다.`);
+        new Notice(`⚙️ 최대 토큰이 ${newMaxTokens.toLocaleString()}으로 업데이트되었습니다.`, 3000);
+      };
+
+      Logger.log('🔍 TokenWarningModal.checkTokenUsageWarning 호출 시작');
+      const result = await TokenWarningModal.checkTokenUsageWarning(
+        request, 
+        aiService, 
+        tokenWarningSettings, 
+        onSettingsUpdate
+      );
+      Logger.log(`🔍 TokenWarningModal.checkTokenUsageWarning 결과: ${result}`);
+      return result;
+
+    } catch (error) {
+      Logger.error('인라인 토큰 경고 확인 중 오류:', error);
+      // 오류 발생 시 기본적으로 진행 허용
+      return true;
+    }
+  }
+
+  /**
+   * 🔧 문서 전환 감지 이벤트 리스너 설정
+   * 파일이나 리프가 변경될 때마다 InlineModeService 상태를 자동으로 정리
+   */
+  private setupDocumentChangeListeners(): void {
+    Logger.log('🔧 문서 전환 감지 이벤트 리스너 설정 중...');
+
+    // 파일 변경 감지 - 다른 파일로 이동할 때 트리거
+    this.fileOpenListener = this.app.workspace.on('file-open', (file) => {
+      Logger.debug(`🔧 file-open 이벤트: ${file?.path || 'null'}`);
+      
+      // 인라인 모드가 활성화되어 있고 현재 뷰가 존재하면 상태 정리
+      if (this.settings?.inlineMode?.enabled && InlineModeService.hasErrors()) {
+        Logger.log('🔧 file-open: InlineModeService 상태 정리 중');
+        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (activeView?.editor) {
+          // @ts-ignore - Obsidian 내부 API 사용
+          const currentEditorView = (activeView as any).editor?.cm;
+          if (currentEditorView) {
+            InlineModeService.setEditorView(currentEditorView, this.settings, this.app);
+          }
+        }
+      }
+    });
+
+    // 리프 변경 감지 - 탭 변경, 패널 변경 등을 포함한 더 광범위한 변경 감지
+    this.activeLeafChangeListener = this.app.workspace.on('active-leaf-change', (leaf) => {
+      Logger.debug(`🔧 active-leaf-change 이벤트: ${leaf?.getViewState()?.type || 'null'}`);
+      
+      // 마크다운 뷰로 변경되었을 때만 처리
+      if (leaf?.view?.getViewType() === 'markdown' && this.settings?.inlineMode?.enabled) {
+        const markdownView = leaf.view as MarkdownView;
+        if (markdownView?.editor && InlineModeService.hasErrors()) {
+          Logger.log('🔧 active-leaf-change: InlineModeService 상태 정리 중');
+          // @ts-ignore - Obsidian 내부 API 사용
+          const currentEditorView = (markdownView as any).editor?.cm;
+          if (currentEditorView) {
+            InlineModeService.setEditorView(currentEditorView, this.settings, this.app);
+          }
+        }
+      }
+    });
+
+    Logger.log('🔧 문서 전환 감지 이벤트 리스너 설정 완료');
   }
 }
 

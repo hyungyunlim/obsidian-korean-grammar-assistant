@@ -2533,6 +2533,325 @@ var init_advancedSettingsService = __esm({
   }
 });
 
+// src/utils/tokenWarningModal.ts
+var tokenWarningModal_exports = {};
+__export(tokenWarningModal_exports, {
+  TokenWarningModal: () => TokenWarningModal
+});
+var TokenWarningModal;
+var init_tokenWarningModal = __esm({
+  "src/utils/tokenWarningModal.ts"() {
+    init_logger();
+    TokenWarningModal = class {
+      /**
+       * 토큰 사용량 경고를 확인하고 사용자 확인을 받습니다.
+       */
+      static async checkTokenUsageWarning(request, aiService, settings, onSettingsUpdate) {
+        Logger.log("\u{1F50D} TokenWarningModal.checkTokenUsageWarning \uC2DC\uC791");
+        const aiSettings = aiService == null ? void 0 : aiService.getProviderInfo();
+        Logger.log("\u{1F50D} AI \uC11C\uBE44\uC2A4 \uC815\uBCF4:", aiSettings);
+        if (!aiService || !(aiSettings == null ? void 0 : aiSettings.available)) {
+          Logger.warn("AI \uC11C\uBE44\uC2A4\uB97C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+          return false;
+        }
+        const showWarning = settings.showTokenWarning;
+        const threshold = settings.tokenWarningThreshold;
+        const maxTokens = settings.maxTokens;
+        Logger.log("\u{1F50D} \uD1A0\uD070 \uACBD\uACE0 \uC124\uC815 \uD655\uC778:", { showWarning, threshold, maxTokens });
+        if (!showWarning) {
+          Logger.log("\u{1F50D} \uD1A0\uD070 \uACBD\uACE0\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC5B4\uC11C \uBC14\uB85C \uC9C4\uD589");
+          return true;
+        }
+        Logger.log("\u{1F50D} \uD1A0\uD070 \uC0AC\uC6A9\uB7C9 \uCD94\uC815 \uC2DC\uC791");
+        const tokenUsage = await this.estimateTokenUsageWithMorphemes(request, aiService);
+        const isOverMaxTokens = tokenUsage.totalEstimated > maxTokens;
+        Logger.log("\u{1F50D} \uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC \uD1A0\uD070 \uC0AC\uC6A9\uB7C9:", {
+          total: tokenUsage.totalEstimated,
+          input: tokenUsage.inputTokens,
+          output: tokenUsage.estimatedOutputTokens,
+          cost: tokenUsage.estimatedCost,
+          morphemeOptimized: tokenUsage.morphemeOptimized,
+          threshold,
+          maxTokens,
+          isOverThreshold: tokenUsage.totalEstimated >= threshold,
+          isOverMaxTokens
+        });
+        if (tokenUsage.totalEstimated < threshold && !isOverMaxTokens) {
+          Logger.log("\u{1F50D} \uC784\uACC4\uAC12 \uBBF8\uB9CC\uC774\uACE0 \uCD5C\uB300 \uD1A0\uD070 \uC774\uB0B4\uB77C\uC11C \uBC14\uB85C \uC9C4\uD589");
+          return true;
+        }
+        Logger.log("\u{1F50D} \uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC \uD45C\uC2DC \uC870\uAC74 \uB9CC\uC871 - \uBAA8\uB2EC \uD45C\uC2DC \uC2DC\uC791");
+        return new Promise((resolve) => {
+          var _a, _b, _c;
+          const modal = document.createElement("div");
+          modal.className = "modal-overlay token-warning-overlay";
+          modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        backdrop-filter: blur(2px);
+      `;
+          const modalContent = this.createTokenWarningModal(tokenUsage, isOverMaxTokens, maxTokens);
+          modal.appendChild(modalContent);
+          document.body.appendChild(modal);
+          setTimeout(() => {
+            modal.focus();
+            Logger.debug("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uD3EC\uCEE4\uC2A4 \uC124\uC815 \uC644\uB8CC");
+          }, 10);
+          let handleResponse = (action) => {
+            modal.remove();
+            if (action === "proceed") {
+              Logger.log("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uC0AC\uC6A9\uC790\uAC00 \uACC4\uC18D \uC9C4\uD589\uC744 \uC120\uD0DD\uD588\uC2B5\uB2C8\uB2E4.");
+              resolve(true);
+            } else if (action === "updateSettings") {
+              Logger.log("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uC0AC\uC6A9\uC790\uAC00 \uC124\uC815 \uC5C5\uB370\uC774\uD2B8\uB97C \uC120\uD0DD\uD588\uC2B5\uB2C8\uB2E4.");
+              if (onSettingsUpdate) {
+                const newMaxTokens = tokenUsage.totalEstimated + 1e3;
+                onSettingsUpdate(newMaxTokens);
+              }
+              resolve(true);
+            } else {
+              Logger.log("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uC0AC\uC6A9\uC790\uAC00 \uCDE8\uC18C\uB97C \uC120\uD0DD\uD588\uC2B5\uB2C8\uB2E4.");
+              resolve(false);
+            }
+          };
+          const handleKeyboard = (e) => {
+            Logger.debug(`\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uD0A4 \uC774\uBCA4\uD2B8 \uAC10\uC9C0 - ${e.key} (\uCF54\uB4DC: ${e.code})`);
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            if (e.key === "Enter") {
+              Logger.debug("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: Enter\uD0A4 \uAC10\uC9C0 - \uC9C4\uD589");
+              handleResponse("proceed");
+            } else if (e.key === "Escape") {
+              Logger.debug("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: Escape\uD0A4 \uAC10\uC9C0 - \uCDE8\uC18C");
+              handleResponse("cancel");
+            }
+          };
+          modal.addEventListener("keydown", handleKeyboard, { capture: true });
+          const globalKeyHandler = (e) => {
+            if (document.body.contains(modal)) {
+              Logger.debug(`\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uAE00\uB85C\uBC8C \uD0A4 \uC774\uBCA4\uD2B8 \uCC28\uB2E8 - ${e.key}`);
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+              if (e.key === "Enter") {
+                Logger.debug("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uAE00\uB85C\uBC8C Enter\uD0A4 \uAC10\uC9C0 - \uC9C4\uD589");
+                handleResponse("proceed");
+              } else if (e.key === "Escape") {
+                Logger.debug("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uAE00\uB85C\uBC8C Escape\uD0A4 \uAC10\uC9C0 - \uCDE8\uC18C");
+                handleResponse("cancel");
+              }
+            }
+          };
+          window.addEventListener("keydown", globalKeyHandler, { capture: true });
+          const originalHandleResponse = handleResponse;
+          handleResponse = (action) => {
+            modal.removeEventListener("keydown", handleKeyboard, { capture: true });
+            window.removeEventListener("keydown", globalKeyHandler, { capture: true });
+            Logger.debug("\uD1A0\uD070 \uACBD\uACE0 \uBAA8\uB2EC: \uBAA8\uB4E0 \uC774\uBCA4\uD2B8 \uB9AC\uC2A4\uB108 \uC81C\uAC70 \uC644\uB8CC");
+            originalHandleResponse(action);
+          };
+          (_a = modal.querySelector("#token-warning-cancel")) == null ? void 0 : _a.addEventListener("click", () => handleResponse("cancel"));
+          (_b = modal.querySelector("#token-warning-proceed")) == null ? void 0 : _b.addEventListener("click", () => handleResponse("proceed"));
+          (_c = modal.querySelector("#token-warning-update-settings")) == null ? void 0 : _c.addEventListener("click", () => handleResponse("updateSettings"));
+        });
+      }
+      /**
+       * 토큰 경고 모달의 DOM 구조를 생성합니다.
+       */
+      static createTokenWarningModal(tokenUsage, isOverMaxTokens, maxTokens) {
+        const content = document.createElement("div");
+        content.className = "token-warning-content";
+        content.style.cssText = `
+      background: var(--background-primary);
+      border: 1px solid var(--background-modifier-border);
+      border-radius: 8px;
+      padding: 20px;
+      min-width: 400px;
+      max-width: 500px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    `;
+        const headerInfo = content.appendChild(document.createElement("div"));
+        headerInfo.className = "token-warning-header";
+        headerInfo.style.cssText = `
+      margin-bottom: 16px;
+      text-align: center;
+    `;
+        const title = headerInfo.appendChild(document.createElement("h3"));
+        title.className = "token-warning-title";
+        title.style.cssText = "margin: 0 0 8px 0; color: var(--text-normal);";
+        title.textContent = isOverMaxTokens ? "\uD1A0\uD070 \uC0AC\uC6A9\uB7C9 \uD655\uC778" : "\uD1A0\uD070 \uC0AC\uC6A9\uB7C9 \uC548\uB0B4";
+        const description = headerInfo.appendChild(document.createElement("p"));
+        description.className = "token-warning-description";
+        description.style.cssText = "margin: 0; color: var(--text-muted); font-size: 14px;";
+        description.textContent = isOverMaxTokens ? "\uC124\uC815\uB41C \uD55C\uACC4\uB97C \uCD08\uACFC\uD588\uC2B5\uB2C8\uB2E4" : "\uC608\uC0C1 \uC0AC\uC6A9\uB7C9\uC774 \uB192\uC2B5\uB2C8\uB2E4";
+        const details = content.appendChild(document.createElement("div"));
+        details.className = "token-warning-details";
+        details.style.cssText = `
+      background: var(--background-secondary);
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 16px;
+    `;
+        const stats = details.appendChild(document.createElement("div"));
+        stats.className = "token-warning-stats";
+        stats.style.cssText = "display: flex; justify-content: space-between; margin-bottom: 12px;";
+        const totalTokenItem = stats.appendChild(document.createElement("div"));
+        totalTokenItem.className = "token-stat-item";
+        totalTokenItem.style.cssText = "text-align: center;";
+        const totalTokenNumber = totalTokenItem.appendChild(document.createElement("div"));
+        totalTokenNumber.className = "token-stat-number";
+        totalTokenNumber.style.cssText = "font-size: 20px; font-weight: bold; color: var(--text-accent);";
+        totalTokenNumber.textContent = tokenUsage.totalEstimated.toLocaleString();
+        const totalTokenLabel = totalTokenItem.appendChild(document.createElement("div"));
+        totalTokenLabel.className = "token-stat-label";
+        totalTokenLabel.style.cssText = "font-size: 12px; color: var(--text-muted); margin-top: 4px;";
+        totalTokenLabel.textContent = "\uCD1D \uD1A0\uD070";
+        const costItem = stats.appendChild(document.createElement("div"));
+        costItem.className = "token-stat-item";
+        costItem.style.cssText = "text-align: center;";
+        const costNumber = costItem.appendChild(document.createElement("div"));
+        costNumber.className = "token-stat-number";
+        costNumber.style.cssText = "font-size: 20px; font-weight: bold; color: var(--text-accent);";
+        costNumber.textContent = tokenUsage.estimatedCost;
+        const costLabel = costItem.appendChild(document.createElement("div"));
+        costLabel.className = "token-stat-label";
+        costLabel.style.cssText = "font-size: 12px; color: var(--text-muted); margin-top: 4px;";
+        costLabel.textContent = "\uC608\uC0C1 \uBE44\uC6A9";
+        const rec = details.appendChild(document.createElement("div"));
+        rec.className = "token-warning-recommendation";
+        rec.style.cssText = "border-top: 1px solid var(--background-modifier-border); padding-top: 12px; margin-top: 12px;";
+        const recText = rec.appendChild(document.createElement("div"));
+        recText.className = "token-warning-recommendation-text";
+        recText.style.cssText = "font-size: 13px; color: var(--text-muted); text-align: center;";
+        const detailText = `\uC785\uB825: ${tokenUsage.inputTokens.toLocaleString()} \u2022 \uCD9C\uB825: ${tokenUsage.estimatedOutputTokens.toLocaleString()}`;
+        recText.textContent = detailText;
+        if (isOverMaxTokens) {
+          const overLimit = content.appendChild(document.createElement("div"));
+          overLimit.className = "token-warning-over-limit";
+          overLimit.style.cssText = `
+        background: var(--background-modifier-error);
+        border: 1px solid var(--text-error);
+        border-radius: 6px;
+        padding: 12px;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      `;
+          const overLimitIcon = overLimit.appendChild(document.createElement("div"));
+          overLimitIcon.style.cssText = "font-size: 20px; flex-shrink: 0;";
+          overLimitIcon.textContent = "\u26A0\uFE0F";
+          const overLimitText = overLimit.appendChild(document.createElement("div"));
+          overLimitText.style.cssText = "flex: 1;";
+          const overLimitTitle = overLimitText.appendChild(document.createElement("div"));
+          overLimitTitle.className = "token-warning-over-limit-title";
+          overLimitTitle.style.cssText = "font-weight: bold; color: var(--text-error); margin-bottom: 4px;";
+          overLimitTitle.textContent = "\uC124\uC815\uB41C \uCD5C\uB300 \uD1A0\uD070\uC744 \uCD08\uACFC\uD588\uC2B5\uB2C8\uB2E4";
+          const overLimitDesc = overLimitText.appendChild(document.createElement("div"));
+          overLimitDesc.className = "token-warning-over-limit-description";
+          overLimitDesc.style.cssText = "font-size: 12px; color: var(--text-muted);";
+          overLimitDesc.textContent = `\uD604\uC7AC \uC124\uC815: ${maxTokens.toLocaleString()} \uD1A0\uD070 \u2192 \uCD08\uACFC\uB7C9: ${(tokenUsage.totalEstimated - maxTokens).toLocaleString()} \uD1A0\uD070`;
+        }
+        const actions = content.appendChild(document.createElement("div"));
+        actions.className = "token-warning-actions";
+        actions.style.cssText = "display: flex; gap: 8px; justify-content: flex-end;";
+        const cancelBtn = actions.appendChild(document.createElement("button"));
+        cancelBtn.id = "token-warning-cancel";
+        cancelBtn.className = "mod-cta";
+        cancelBtn.style.cssText = "background: var(--interactive-normal); border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; color: var(--text-normal);";
+        cancelBtn.textContent = "\uCDE8\uC18C";
+        if (isOverMaxTokens) {
+          const updateBtn = actions.appendChild(document.createElement("button"));
+          updateBtn.id = "token-warning-update-settings";
+          updateBtn.className = "mod-cta";
+          updateBtn.style.cssText = "background: var(--interactive-accent); border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; color: white;";
+          updateBtn.textContent = "\uC124\uC815 \uC5C5\uB370\uC774\uD2B8 \uD6C4 \uC9C4\uD589";
+        }
+        const proceedBtn = actions.appendChild(document.createElement("button"));
+        proceedBtn.id = "token-warning-proceed";
+        proceedBtn.className = "mod-cta";
+        proceedBtn.style.cssText = "background: var(--interactive-accent); border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; color: white;";
+        proceedBtn.textContent = isOverMaxTokens ? "\uAC15\uC81C \uC9C4\uD589" : "\uACC4\uC18D \uC9C4\uD589";
+        return content;
+      }
+      /**
+       * 형태소 최적화를 고려한 토큰 사용량을 추정합니다.
+       */
+      static async estimateTokenUsageWithMorphemes(request, aiService) {
+        var _a;
+        try {
+          Logger.log("\u{1F50D} \uD1A0\uD070 \uCD94\uC815 \uC2DC\uC791 - \uC694\uCCAD \uC815\uBCF4:", {
+            correctionsCount: request.corrections.length,
+            contextWindow: request.contextWindow,
+            originalTextLength: ((_a = request.originalText) == null ? void 0 : _a.length) || 0
+          });
+          const hasMultipleCorrections = request.corrections.length > 1;
+          const morphemeOptimized = hasMultipleCorrections;
+          Logger.log("\u{1F50D} \uD1A0\uD070 \uACBD\uACE0\uC6A9 \uD615\uD0DC\uC18C \uCD5C\uC801\uD654 \uCD94\uC815:", {
+            correctionsCount: request.corrections.length,
+            estimatedOptimization: morphemeOptimized,
+            reason: morphemeOptimized ? "\uBCF5\uC218 \uAD50\uC815\uC73C\uB85C \uCEE8\uD14D\uC2A4\uD2B8 \uCD95\uC18C \uC608\uC0C1" : "\uB2E8\uC77C \uAD50\uC815\uC73C\uB85C \uCD5C\uC801\uD654 \uBD88\uD544\uC694"
+          });
+          const adjustedRequest = {
+            ...request,
+            contextWindow: morphemeOptimized ? 30 : 100
+            // 형태소 최적화 시 컨텍스트 축소
+          };
+          Logger.log("\u{1F50D} AI \uC11C\uBE44\uC2A4 \uD1A0\uD070 \uCD94\uC815 \uD638\uCD9C \uC804");
+          const baseEstimation = (aiService == null ? void 0 : aiService.estimateTokenUsage(adjustedRequest)) || {
+            inputTokens: 0,
+            estimatedOutputTokens: 0,
+            totalEstimated: 0,
+            estimatedCost: "$0.00"
+          };
+          Logger.log("\u{1F50D} AI \uC11C\uBE44\uC2A4 \uD1A0\uD070 \uCD94\uC815 \uACB0\uACFC:", baseEstimation);
+          const morphemeTokens = morphemeOptimized ? 50 : 0;
+          const finalEstimation = {
+            inputTokens: baseEstimation.inputTokens + morphemeTokens,
+            estimatedOutputTokens: baseEstimation.estimatedOutputTokens,
+            totalEstimated: baseEstimation.totalEstimated + morphemeTokens,
+            estimatedCost: baseEstimation.estimatedCost,
+            morphemeOptimized
+          };
+          Logger.debug("\uD615\uD0DC\uC18C \uCD5C\uC801\uD654 \uBC18\uC601 \uD1A0\uD070 \uCD94\uC815:", {
+            before: baseEstimation.totalEstimated,
+            after: finalEstimation.totalEstimated,
+            contextReduction: morphemeOptimized ? 100 - 30 : 0,
+            // 70토큰 절약
+            morphemeTokens,
+            netChange: morphemeOptimized ? morphemeTokens - 70 : 0,
+            // 순 변화량
+            optimized: morphemeOptimized
+          });
+          return finalEstimation;
+        } catch (error) {
+          Logger.error("\uD1A0\uD070 \uCD94\uC815 \uC2E4\uD328, \uAE30\uBCF8\uAC12 \uC0AC\uC6A9:", error);
+          const fallbackEstimation = (aiService == null ? void 0 : aiService.estimateTokenUsage(request)) || {
+            inputTokens: 0,
+            estimatedOutputTokens: 0,
+            totalEstimated: 0,
+            estimatedCost: "$0.00"
+          };
+          Logger.warn("\uD3F4\uBC31 \uD1A0\uD070 \uCD94\uC815 \uC0AC\uC6A9:", fallbackEstimation);
+          return {
+            ...fallbackEstimation,
+            morphemeOptimized: false
+          };
+        }
+      }
+    };
+  }
+});
+
 // main.ts
 var main_exports = {};
 __export(main_exports, {
@@ -9734,6 +10053,28 @@ var InlineTooltip = class {
     }
   }
   /**
+   * 지연 후 툴팁 숨기기 예약
+   */
+  scheduleHide(delay) {
+    this.clearHideTimeout();
+    this.hideTimeout = setTimeout(() => {
+      if (!this.isHovered) {
+        Logger.debug(`\u{1F550} \uC608\uC57D\uB41C \uD234\uD301 \uC228\uAE30\uAE30 \uC2E4\uD589 (${delay}ms \uD6C4)`);
+        this.hide();
+      }
+    }, delay);
+  }
+  /**
+   * 툴팁 숨기기 타이머 취소
+   */
+  clearHideTimeout() {
+    if (this.hideTimeout) {
+      clearTimeout(this.hideTimeout);
+      this.hideTimeout = null;
+      Logger.debug("\u23F0 \uD234\uD301 \uC228\uAE30\uAE30 \uD0C0\uC774\uBA38 \uCDE8\uC18C");
+    }
+  }
+  /**
    * 툴팁이 표시 중인지 확인
    */
   get visible() {
@@ -9777,16 +10118,16 @@ var InlineTooltip = class {
     }
     this.tooltip.addEventListener("mouseenter", () => {
       this.isHovered = true;
+      this.clearHideTimeout();
       Logger.debug("\u{1F5B1}\uFE0F \uD234\uD301 \uB9C8\uC6B0\uC2A4 \uC9C4\uC785 - \uD638\uBC84 \uC0C1\uD0DC \uC720\uC9C0");
     });
     this.tooltip.addEventListener("mouseleave", () => {
+      var _a, _b, _c;
       this.isHovered = false;
       Logger.debug("\u{1F5B1}\uFE0F \uD234\uD301 \uB9C8\uC6B0\uC2A4 \uC774\uD0C8 - \uD638\uBC84 \uC0C1\uD0DC \uD574\uC81C");
-      setTimeout(() => {
-        if (!this.isHovered) {
-          this.hide();
-        }
-      }, 200);
+      const isAITooltip = ((_a = this.currentError) == null ? void 0 : _a.aiStatus) === "corrected" || ((_b = this.currentError) == null ? void 0 : _b.aiStatus) === "exception" || ((_c = this.currentError) == null ? void 0 : _c.aiStatus) === "keep-original";
+      const hideDelay = isAITooltip ? 800 : 300;
+      this.scheduleHide(hideDelay);
     });
     document.body.appendChild(this.tooltip);
     if (isMobile) {
@@ -10793,28 +11134,13 @@ var InlineTooltip = class {
       `;
       const aiIcon = aiArea.createEl("span", { text: "\u{1F916}" });
       aiIcon.style.cssText = "font-size: 12px; flex-shrink: 0;";
-      const statusText = aiArea.createEl("span");
-      statusText.style.cssText = "flex: 1; font-style: italic;";
-      let statusMessage = "";
-      if (error.aiStatus === "exception") {
-        statusMessage = `\uC608\uC678 \uCC98\uB9AC \uCD94\uCC9C (${error.aiAnalysis.confidence}%)`;
-      } else if (error.aiStatus === "keep-original") {
-        statusMessage = `\uC6D0\uBCF8 \uC720\uC9C0 \uCD94\uCC9C (${error.aiAnalysis.confidence}%)`;
-      } else if (error.aiStatus === "corrected") {
-        statusMessage = `"${error.aiSelectedValue}" \uCD94\uCC9C (${error.aiAnalysis.confidence}%)`;
-      }
-      statusText.textContent = statusMessage;
+      const reasoningText = aiArea.createEl("span");
+      reasoningText.style.cssText = "flex: 1; font-style: italic; font-size: 11px; color: var(--text-muted);";
       if (error.aiAnalysis.reasoning) {
-        const reasoningText = aiArea.createEl("div");
-        reasoningText.style.cssText = `
-          margin-top: 4px;
-          font-size: 10px;
-          color: var(--text-faint);
-          border-left: 2px solid var(--color-accent);
-          padding-left: 6px;
-          font-style: normal;
-        `;
-        reasoningText.textContent = error.aiAnalysis.reasoning;
+        const shortReason = error.aiAnalysis.reasoning.split(".")[0] + ".";
+        reasoningText.textContent = shortReason;
+      } else {
+        reasoningText.textContent = `\uC2E0\uB8B0\uB3C4 ${error.aiAnalysis.confidence}%`;
       }
     }
     if (triggerType === "hover") {
@@ -11929,6 +12255,11 @@ var InlineModeService = class {
    * 에디터 뷰 및 설정 초기화
    */
   static setEditorView(view, settings, app) {
+    if (this.currentView && this.currentView !== view) {
+      Logger.debug("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC774\uC804 \uC5D0\uB514\uD130\uBDF0\uC640 \uB2E4\uB984 - \uC0C1\uD0DC \uC815\uB9AC \uC911");
+      this.clearErrors(this.currentView);
+      this.activeErrors.clear();
+    }
     this.currentView = view;
     if (settings) {
       this.settings = settings;
@@ -13451,10 +13782,44 @@ var InlineModeService = class {
     return this.activeErrors.size > 0;
   }
   /**
+   * 🔧 주어진 에디터뷰가 현재 InlineModeService가 관리하는 뷰인지 확인
+   */
+  static isCurrentView(editorView) {
+    return this.currentView === editorView;
+  }
+  /**
    * 🤖 현재 오류 개수 반환
    */
   static getErrorCount() {
     return this.activeErrors.size;
+  }
+  /**
+   * 🔥 강제 오류 상태 완전 정리 (외부 호출용)
+   */
+  static forceCleanAllErrors() {
+    Logger.log("\u{1F525} InlineModeService: \uAC15\uC81C \uC624\uB958 \uC0C1\uD0DC \uC644\uC804 \uC815\uB9AC");
+    this.activeErrors.clear();
+    if (this.currentView) {
+      this.clearErrors(this.currentView);
+    }
+  }
+  /**
+   * 🔥 현재 문서 텍스트에 실제로 존재하는 오류만 유지 (기존 선택 영역 로직 활용)
+   */
+  static filterErrorsByCurrentDocument(currentDocumentText) {
+    const originalCount = this.activeErrors.size;
+    Logger.log(`\u{1F525} \uD604\uC7AC \uBB38\uC11C \uAE30\uC900 \uC624\uB958 \uD544\uD130\uB9C1 \uC2DC\uC791 - \uC804\uCCB4 \uC624\uB958: ${originalCount}\uAC1C`);
+    const errorsToRemove = [];
+    this.activeErrors.forEach((error, errorId) => {
+      if (!currentDocumentText.includes(error.correction.original)) {
+        errorsToRemove.push(errorId);
+      }
+    });
+    errorsToRemove.forEach((errorId) => this.activeErrors.delete(errorId));
+    if (errorsToRemove.length > 0) {
+      this.refreshErrorWidgets();
+    }
+    Logger.log(`\u{1F525} \uC624\uB958 \uD544\uD130\uB9C1 \uC644\uB8CC - \uC81C\uAC70: ${errorsToRemove.length}\uAC1C, \uC720\uC9C0: ${this.activeErrors.size}\uAC1C`);
   }
   /**
    * 🤖 오류 ID로 최신 AI 분석 결과가 포함된 오류 객체 가져오기
@@ -13971,7 +14336,6 @@ InlineModeService.hoverTimeout = null;
   `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 18 18" fill="currentColor"><path d="M3.6,3.9c1.3,0,2.9,0,4.2,0,.7,0,2.3-.5,2.3.7,0,.3-.3.5-.6.5-2.2,0-4.6.2-6.8,0-.4,0-.7-.4-.8-.8-.2-.7,1.2-.7,1.5-.4h0ZM6.1,11c-4.2,0-3.7-5.8.7-5.2,3.7.2,3.1,5.6-.5,5.2h-.2ZM3.6,1.6c.7,0,1.5.4,2.3.4.8.1,1.6,0,2.4,0,.8,1.2-1.4,1.5-2.9,1.3-.9,0-2.7-.8-1.9-1.7h0ZM6.3,9.7c2.5,0,1.9-3.4-.6-2.8-1.2.2-1.4,1.8-.5,2.4.2.2.9.2,1,.3h0ZM4.9,13.2c-.1-1.2,1.5-.9,1.6.1.4,1.5-.2,2.3,2,2.1,1,0,6.7-.6,5,1.1-2.3.5-5.4.7-7.6-.3-.6-.8-.3-2.2-.9-3h0ZM11.3,1.1c2.6-.3,1.5,3.8,2,5,.6.4,2.6-.5,2.8.7,0,.4-.3.6-.6.7-.7.1-1.6,0-2.3.1-.2.1,0,.5-.1,1.1,0,1,0,4.2-.8,4.2-.2,0-.5-.3-.6-.6-.3-1.4,0-3.4,0-5,0-1.9,0-3.8-.2-4.6-.1-.4-.5-1.2-.1-1.5h.1Z"/></svg>`
 );
 var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
-  // 🤖 InlineModeService는 정적 클래스로 설계되어 인스턴스 불필요
   async onload() {
     if (false) {
       Logger.configureForProduction();
@@ -14057,6 +14421,17 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
         await this.executeInlineApplyAll();
       }
     });
+    this.addCommand({
+      id: "inline-clear-all",
+      name: "\u{1F5D1}\uFE0F \uC778\uB77C\uC778 \uBD84\uC11D \uACB0\uACFC \uD45C\uC2DC \uC77C\uAD04 \uCDE8\uC18C",
+      callback: async () => {
+        if (!this.settings.inlineMode.enabled) {
+          new import_obsidian15.Notice("\uC778\uB77C\uC778 \uBAA8\uB4DC\uAC00 \uBE44\uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C \uBCA0\uD0C0 \uAE30\uB2A5\uC744 \uD65C\uC131\uD654\uD558\uC138\uC694.");
+          return;
+        }
+        await this.executeInlineClearAll();
+      }
+    });
     if (this.settings.inlineMode.enabled) {
       this.enableInlineMode();
     }
@@ -14065,9 +14440,16 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       settings: this.settings,
       instance: this
     };
+    this.setupDocumentChangeListeners();
     Logger.log("Korean Grammar Assistant \uD50C\uB7EC\uADF8\uC778 \uB85C\uB529 \uC644\uB8CC");
   }
   onunload() {
+    if (this.fileOpenListener) {
+      this.app.workspace.offref(this.fileOpenListener);
+    }
+    if (this.activeLeafChangeListener) {
+      this.app.workspace.offref(this.activeLeafChangeListener);
+    }
     this.disableInlineMode();
     if (this.orchestrator) {
       this.orchestrator.destroy();
@@ -14188,16 +14570,13 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
    * 🤖 인라인 모드 AI 분석 실행
    */
   async executeInlineAIAnalysis() {
-    const activeLeaf = this.app.workspace.activeLeaf;
-    if (!activeLeaf) {
-      new import_obsidian15.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+    var _a;
+    const activeView = this.app.workspace.getActiveViewOfType(import_obsidian15.MarkdownView);
+    if (!(activeView == null ? void 0 : activeView.editor)) {
+      new import_obsidian15.Notice("\uD65C\uC131\uD654\uB41C \uB9C8\uD06C\uB2E4\uC6B4 \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
-    const editor = activeLeaf.view.editor;
-    if (!editor) {
-      new import_obsidian15.Notice("\uD3B8\uC9D1\uAE30\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
-      return;
-    }
+    const editor = activeView.editor;
     try {
       const selectedText = editor.getSelection();
       let targetText = selectedText;
@@ -14212,14 +14591,30 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
         isSelection = true;
       }
       Logger.log(`\uC778\uB77C\uC778 AI \uBD84\uC11D \uC2DC\uC791 - ${isSelection ? "\uC120\uD0DD\uB41C \uC601\uC5ED" : "\uC804\uCCB4 \uBB38\uC11C"}: ${targetText.length}\uC790`);
-      const hasExistingErrors = InlineModeService.hasErrors();
-      if (hasExistingErrors) {
+      editor.focus();
+      const currentEditorView = (_a = activeView.editor) == null ? void 0 : _a.cm;
+      if (!currentEditorView) {
+        Logger.error("\uD604\uC7AC \uC5D0\uB514\uD130\uBDF0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4");
+        new import_obsidian15.Notice("\uC5D0\uB514\uD130\uBDF0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+        return;
+      }
+      Logger.log("\u{1F527} CRITICAL: \uD604\uC7AC \uBB38\uC11C\uC758 \uC5D0\uB514\uD130\uBDF0\uB85C InlineModeService \uAC15\uC81C \uC7AC\uC124\uC815");
+      Logger.log("\u{1F525} SMART FIX: \uD604\uC7AC \uBB38\uC11C \uAE30\uC900\uC73C\uB85C \uC624\uB958 \uD544\uD130\uB9C1");
+      InlineModeService.setEditorView(currentEditorView, this.settings, this.app);
+      InlineModeService.filterErrorsByCurrentDocument(targetText);
+      const hasCurrentDocumentErrors = InlineModeService.hasErrors();
+      Logger.log(`\u{1F50D} \uD604\uC7AC \uBB38\uC11C\uC758 \uC624\uB958 \uC874\uC7AC \uC5EC\uBD80: ${hasCurrentDocumentErrors}`);
+      if (hasCurrentDocumentErrors) {
+        Logger.log("\u{1F50D} \uCF00\uC774\uC2A4 1: \uD604\uC7AC \uBB38\uC11C\uC5D0 \uC624\uB958\uAC00 \uC788\uC5B4\uC11C AI \uBD84\uC11D \uC2E4\uD589");
         if (isSelection) {
+          Logger.log("\u{1F50D} \uC120\uD0DD \uC601\uC5ED AI \uBD84\uC11D \uC2E4\uD589");
           await this.analyzeExistingInlineErrorsInSelection(selectedText);
         } else {
+          Logger.log("\u{1F50D} \uC804\uCCB4 \uC624\uB958 AI \uBD84\uC11D \uC2E4\uD589");
           await this.analyzeExistingInlineErrors();
         }
       } else {
+        Logger.log("\u{1F50D} \uCF00\uC774\uC2A4 2: \uD604\uC7AC \uBB38\uC11C\uC5D0 \uC624\uB958\uAC00 \uC5C6\uC5B4\uC11C \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uD6C4 AI \uBD84\uC11D \uC2E4\uD589");
         await this.analyzeTextWithSpellCheckAndAI(targetText, isSelection);
       }
     } catch (error) {
@@ -14268,6 +14663,13 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
     try {
       const errorCount = InlineModeService.getErrorCount();
       analysisNotice.setMessage(`\u{1F522} ${errorCount}\uAC1C \uC624\uB958 \uBD84\uC11D \uC900\uBE44 \uC911...`);
+      Logger.log(`\u{1F50D} \uD1A0\uD070 \uACBD\uACE0 \uD655\uC778 \uC2DC\uC791 - \uC624\uB958 \uAC1C\uC218: ${errorCount}`);
+      const shouldProceed = await this.checkInlineTokenUsageWarning();
+      Logger.log(`\u{1F50D} \uD1A0\uD070 \uACBD\uACE0 \uACB0\uACFC: ${shouldProceed ? "\uC9C4\uD589" : "\uCDE8\uC18C"}`);
+      if (!shouldProceed) {
+        analysisNotice.hide();
+        return;
+      }
       await new Promise((resolve) => setTimeout(resolve, 500));
       analysisNotice.setMessage(`\u{1F9E0} AI \uBD84\uC11D \uC911 (${modelInfo.model})... \uC218\uC2ED \uCD08 \uC18C\uC694\uB420 \uC218 \uC788\uC2B5\uB2C8\uB2E4`);
       await InlineModeService.runAIAnalysisOnExistingErrors((current, total) => {
@@ -14317,6 +14719,24 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       const { getCurrentModelInfo: getCurrentModelInfo2 } = await Promise.resolve().then(() => (init_aiModels(), aiModels_exports));
       const modelInfo = getCurrentModelInfo2(this.settings.ai);
       processNotice.setMessage(`\u{1F916} ${errorCount}\uAC1C \uC624\uB958 AI \uBD84\uC11D \uC2DC\uC791 (${modelInfo.displayName})...`);
+      Logger.log(`\u{1F50D} \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uD6C4 \uD1A0\uD070 \uACBD\uACE0 \uD655\uC778 \uC2DC\uC791 - \uC624\uB958 \uAC1C\uC218: ${errorCount}`);
+      Logger.log(`\u{1F50D} AI \uC124\uC815 \uD655\uC778:`, {
+        enabled: this.settings.ai.enabled,
+        provider: this.settings.ai.provider,
+        showTokenWarning: this.settings.ai.showTokenWarning,
+        threshold: this.settings.ai.tokenWarningThreshold,
+        maxTokens: this.settings.ai.maxTokens
+      });
+      try {
+        const shouldProceed = await this.checkInlineTokenUsageWarning();
+        Logger.log(`\u{1F50D} \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uD6C4 \uD1A0\uD070 \uACBD\uACE0 \uACB0\uACFC: ${shouldProceed ? "\uC9C4\uD589" : "\uCDE8\uC18C"}`);
+        if (!shouldProceed) {
+          processNotice.hide();
+          return;
+        }
+      } catch (error) {
+        Logger.error("\u{1F50D} \uD1A0\uD070 \uACBD\uACE0 \uD655\uC778 \uC911 \uC608\uC678 \uBC1C\uC0DD:", error);
+      }
       await new Promise((resolve) => setTimeout(resolve, 500));
       processNotice.setMessage(`\u{1F9E0} AI \uBD84\uC11D \uC911 (${modelInfo.model})... \uC218\uC2ED \uCD08 \uC18C\uC694\uB420 \uC218 \uC788\uC2B5\uB2C8\uB2E4`);
       await InlineModeService.runAIAnalysisOnExistingErrors((current, total) => {
@@ -14367,5 +14787,146 @@ var KoreanGrammarPlugin = class extends import_obsidian15.Plugin {
       Logger.error("\uC778\uB77C\uC778 \uC624\uB958 \uC77C\uAD04 \uC801\uC6A9 \uC2E4\uD328:", error);
       new import_obsidian15.Notice("\u274C \uC77C\uAD04 \uC801\uC6A9 \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", 4e3);
     }
+  }
+  /**
+   * 인라인 분석 결과 표시 일괄 취소 실행
+   */
+  async executeInlineClearAll() {
+    var _a;
+    const activeLeaf = this.app.workspace.activeLeaf;
+    if (!activeLeaf || !activeLeaf.view || !activeLeaf.view.editor) {
+      new import_obsidian15.Notice("\uD65C\uC131\uD654\uB41C \uD3B8\uC9D1\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
+    const errorCount = InlineModeService.getErrorCount();
+    if (errorCount === 0) {
+      new import_obsidian15.Notice("\uCDE8\uC18C\uD560 \uC778\uB77C\uC778 \uBD84\uC11D \uACB0\uACFC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
+    const processNotice = new import_obsidian15.Notice(`\u{1F5D1}\uFE0F ${errorCount}\uAC1C \uBD84\uC11D \uACB0\uACFC \uD45C\uC2DC \uC77C\uAD04 \uCDE8\uC18C \uC911...`, 2e3);
+    try {
+      const editorView = (_a = activeLeaf.view.editor) == null ? void 0 : _a.cm;
+      if (editorView) {
+        InlineModeService.setEditorView(editorView, this.settings, this.app);
+        InlineModeService.clearErrors(editorView);
+      }
+      processNotice.hide();
+      new import_obsidian15.Notice(`\u2705 ${errorCount}\uAC1C \uBD84\uC11D \uACB0\uACFC \uD45C\uC2DC\uAC00 \uBAA8\uB450 \uC81C\uAC70\uB418\uC5C8\uC2B5\uB2C8\uB2E4!`, 3e3);
+    } catch (error) {
+      processNotice.hide();
+      Logger.error("\uC778\uB77C\uC778 \uBD84\uC11D \uACB0\uACFC \uD45C\uC2DC \uC77C\uAD04 \uCDE8\uC18C \uC2E4\uD328:", error);
+      new import_obsidian15.Notice("\u274C \uBD84\uC11D \uACB0\uACFC \uD45C\uC2DC \uC77C\uAD04 \uCDE8\uC18C \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", 4e3);
+    }
+  }
+  /**
+   * 인라인 모드 AI 분석 토큰 경고 확인
+   */
+  async checkInlineTokenUsageWarning() {
+    var _a;
+    try {
+      Logger.log("\u{1F50D} \uC778\uB77C\uC778 \uD1A0\uD070 \uACBD\uACE0 \uD655\uC778 \uC2DC\uC791");
+      const { TokenWarningModal: TokenWarningModal2 } = await Promise.resolve().then(() => (init_tokenWarningModal(), tokenWarningModal_exports));
+      Logger.log("\u{1F50D} TokenWarningModal \uC784\uD3EC\uD2B8 \uC644\uB8CC");
+      const activeView = this.app.workspace.getActiveViewOfType(import_obsidian15.MarkdownView);
+      if (!(activeView == null ? void 0 : activeView.editor)) {
+        Logger.warn("\uD65C\uC131 \uB9C8\uD06C\uB2E4\uC6B4 \uC5D0\uB514\uD130\uAC00 \uC5C6\uC5B4\uC11C \uD1A0\uD070 \uACBD\uACE0 \uAC74\uB108\uB700");
+        return true;
+      }
+      const currentEditorView = (_a = activeView.editor) == null ? void 0 : _a.cm;
+      if (!currentEditorView || !InlineModeService.isCurrentView(currentEditorView)) {
+        Logger.warn("\uD604\uC7AC \uC5D0\uB514\uD130\uBDF0\uAC00 InlineModeService\uC640 \uC77C\uCE58\uD558\uC9C0 \uC54A\uC544\uC11C \uD1A0\uD070 \uACBD\uACE0 \uAC74\uB108\uB700");
+        return true;
+      }
+      const errorCount = InlineModeService.getErrorCount();
+      Logger.log(`\u{1F50D} \uD604\uC7AC \uBB38\uC11C\uC758 \uC720\uD6A8\uD55C \uC624\uB958 \uAC1C\uC218: ${errorCount}`);
+      if (errorCount === 0) {
+        Logger.log("\u{1F50D} \uC720\uD6A8\uD55C \uC624\uB958\uAC00 \uC5C6\uC5B4\uC11C \uBC14\uB85C \uC9C4\uD589");
+        return true;
+      }
+      const sampleErrors = Array.from({ length: errorCount }, (_, i) => ({
+        original: `\uC0D8\uD50C\uC624\uB958${i + 1}`,
+        corrected: [`\uC218\uC815\uC548${i + 1}`],
+        help: `\uC0D8\uD50C \uB3C4\uC6C0\uB9D0 ${i + 1}`
+      }));
+      Logger.log(`\u{1F50D} \uD1A0\uD070 \uCD94\uC815\uC6A9 \uC0D8\uD50C \uC624\uB958 \uC0DD\uC131: ${sampleErrors.length}\uAC1C (\uC2E4\uC81C \uC624\uB958 \uAC1C\uC218: ${errorCount})`);
+      const request = {
+        originalText: "",
+        // 인라인 모드에서는 전체 텍스트 불필요
+        corrections: sampleErrors,
+        contextWindow: errorCount > 1 ? 30 : 100,
+        // 복수 오류 시 최적화
+        currentStates: {},
+        enhancedContext: false
+        // 인라인 모드에서는 단순한 컨텍스트
+      };
+      const { AIAnalysisService: AIAnalysisService2 } = await Promise.resolve().then(() => (init_aiAnalysisService(), aiAnalysisService_exports));
+      const aiService = new AIAnalysisService2(this.settings.ai);
+      const tokenWarningSettings = {
+        showTokenWarning: this.settings.ai.showTokenWarning,
+        tokenWarningThreshold: this.settings.ai.tokenWarningThreshold,
+        maxTokens: this.settings.ai.maxTokens
+      };
+      Logger.log("\u{1F50D} \uD1A0\uD070 \uACBD\uACE0 \uC124\uC815:", {
+        showTokenWarning: tokenWarningSettings.showTokenWarning,
+        threshold: tokenWarningSettings.tokenWarningThreshold,
+        maxTokens: tokenWarningSettings.maxTokens,
+        aiEnabled: this.settings.ai.enabled,
+        provider: this.settings.ai.provider
+      });
+      const onSettingsUpdate = (newMaxTokens) => {
+        this.settings.ai.maxTokens = newMaxTokens;
+        this.saveSettings();
+        Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uCD5C\uB300 \uD1A0\uD070\uC744 ${newMaxTokens}\uC73C\uB85C \uC5C5\uB370\uC774\uD2B8\uD588\uC2B5\uB2C8\uB2E4.`);
+        new import_obsidian15.Notice(`\u2699\uFE0F \uCD5C\uB300 \uD1A0\uD070\uC774 ${newMaxTokens.toLocaleString()}\uC73C\uB85C \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`, 3e3);
+      };
+      Logger.log("\u{1F50D} TokenWarningModal.checkTokenUsageWarning \uD638\uCD9C \uC2DC\uC791");
+      const result = await TokenWarningModal2.checkTokenUsageWarning(
+        request,
+        aiService,
+        tokenWarningSettings,
+        onSettingsUpdate
+      );
+      Logger.log(`\u{1F50D} TokenWarningModal.checkTokenUsageWarning \uACB0\uACFC: ${result}`);
+      return result;
+    } catch (error) {
+      Logger.error("\uC778\uB77C\uC778 \uD1A0\uD070 \uACBD\uACE0 \uD655\uC778 \uC911 \uC624\uB958:", error);
+      return true;
+    }
+  }
+  /**
+   * 🔧 문서 전환 감지 이벤트 리스너 설정
+   * 파일이나 리프가 변경될 때마다 InlineModeService 상태를 자동으로 정리
+   */
+  setupDocumentChangeListeners() {
+    Logger.log("\u{1F527} \uBB38\uC11C \uC804\uD658 \uAC10\uC9C0 \uC774\uBCA4\uD2B8 \uB9AC\uC2A4\uB108 \uC124\uC815 \uC911...");
+    this.fileOpenListener = this.app.workspace.on("file-open", (file) => {
+      var _a, _b, _c;
+      Logger.debug(`\u{1F527} file-open \uC774\uBCA4\uD2B8: ${(file == null ? void 0 : file.path) || "null"}`);
+      if (((_b = (_a = this.settings) == null ? void 0 : _a.inlineMode) == null ? void 0 : _b.enabled) && InlineModeService.hasErrors()) {
+        Logger.log("\u{1F527} file-open: InlineModeService \uC0C1\uD0DC \uC815\uB9AC \uC911");
+        const activeView = this.app.workspace.getActiveViewOfType(import_obsidian15.MarkdownView);
+        if (activeView == null ? void 0 : activeView.editor) {
+          const currentEditorView = (_c = activeView.editor) == null ? void 0 : _c.cm;
+          if (currentEditorView) {
+            InlineModeService.setEditorView(currentEditorView, this.settings, this.app);
+          }
+        }
+      }
+    });
+    this.activeLeafChangeListener = this.app.workspace.on("active-leaf-change", (leaf) => {
+      var _a, _b, _c, _d, _e;
+      Logger.debug(`\u{1F527} active-leaf-change \uC774\uBCA4\uD2B8: ${((_a = leaf == null ? void 0 : leaf.getViewState()) == null ? void 0 : _a.type) || "null"}`);
+      if (((_b = leaf == null ? void 0 : leaf.view) == null ? void 0 : _b.getViewType()) === "markdown" && ((_d = (_c = this.settings) == null ? void 0 : _c.inlineMode) == null ? void 0 : _d.enabled)) {
+        const markdownView = leaf.view;
+        if ((markdownView == null ? void 0 : markdownView.editor) && InlineModeService.hasErrors()) {
+          Logger.log("\u{1F527} active-leaf-change: InlineModeService \uC0C1\uD0DC \uC815\uB9AC \uC911");
+          const currentEditorView = (_e = markdownView.editor) == null ? void 0 : _e.cm;
+          if (currentEditorView) {
+            InlineModeService.setEditorView(currentEditorView, this.settings, this.app);
+          }
+        }
+      }
+    });
+    Logger.log("\u{1F527} \uBB38\uC11C \uC804\uD658 \uAC10\uC9C0 \uC774\uBCA4\uD2B8 \uB9AC\uC2A4\uB108 \uC124\uC815 \uC644\uB8CC");
   }
 };

@@ -538,6 +538,13 @@ export class InlineModeService {
    * 에디터 뷰 및 설정 초기화
    */
   static setEditorView(view: EditorView, settings?: any, app?: App): void {
+    // 🔧 새로운 에디터뷰가 이전과 다르면 이전 상태 완전 정리
+    if (this.currentView && this.currentView !== view) {
+      Logger.debug('인라인 모드: 이전 에디터뷰와 다름 - 상태 정리 중');
+      this.clearErrors(this.currentView);
+      this.activeErrors.clear(); // 전역 오류 상태도 완전 정리
+    }
+    
     this.currentView = view;
     if (settings) {
       this.settings = settings;
@@ -2873,10 +2880,54 @@ export class InlineModeService {
   }
 
   /**
+   * 🔧 주어진 에디터뷰가 현재 InlineModeService가 관리하는 뷰인지 확인
+   */
+  static isCurrentView(editorView: any): boolean {
+    return this.currentView === editorView;
+  }
+
+  /**
    * 🤖 현재 오류 개수 반환
    */
   static getErrorCount(): number {
     return this.activeErrors.size;
+  }
+
+  /**
+   * 🔥 강제 오류 상태 완전 정리 (외부 호출용)
+   */
+  static forceCleanAllErrors(): void {
+    Logger.log('🔥 InlineModeService: 강제 오류 상태 완전 정리');
+    this.activeErrors.clear();
+    if (this.currentView) {
+      this.clearErrors(this.currentView);
+    }
+  }
+
+  /**
+   * 🔥 현재 문서 텍스트에 실제로 존재하는 오류만 유지 (기존 선택 영역 로직 활용)
+   */
+  static filterErrorsByCurrentDocument(currentDocumentText: string): void {
+    const originalCount = this.activeErrors.size;
+    Logger.log(`🔥 현재 문서 기준 오류 필터링 시작 - 전체 오류: ${originalCount}개`);
+    
+    // 기존 선택 영역 필터링과 동일한 로직 사용
+    const errorsToRemove: string[] = [];
+    this.activeErrors.forEach((error, errorId) => {
+      if (!currentDocumentText.includes(error.correction.original)) {
+        errorsToRemove.push(errorId);
+      }
+    });
+    
+    // 이전 문서의 오류들 제거
+    errorsToRemove.forEach(errorId => this.activeErrors.delete(errorId));
+    
+    // UI 새로고침
+    if (errorsToRemove.length > 0) {
+      this.refreshErrorWidgets();
+    }
+    
+    Logger.log(`🔥 오류 필터링 완료 - 제거: ${errorsToRemove.length}개, 유지: ${this.activeErrors.size}개`);
   }
 
   /**
