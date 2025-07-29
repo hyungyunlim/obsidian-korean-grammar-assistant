@@ -819,16 +819,19 @@ export default class KoreanGrammarPlugin extends Plugin {
     // 파일 변경 감지 - 다른 파일로 이동할 때 트리거
     this.fileOpenListener = this.app.workspace.on('file-open', (file) => {
       
-      // 인라인 모드가 활성화되어 있고 현재 뷰가 존재하면 상태 정리
+      // 인라인 모드가 활성화되어 있고 오류가 있으면 상태 완전 정리
       if (this.settings?.inlineMode?.enabled && InlineModeService.hasErrors()) {
-        Logger.log('🔧 file-open: InlineModeService 상태 정리 중');
-        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (activeView?.editor) {
-          // @ts-ignore - Obsidian 내부 API 사용
-          const currentEditorView = (activeView as any).editor?.cm;
-          if (currentEditorView) {
-            InlineModeService.setEditorView(currentEditorView, this.settings, this.app);
-          }
+        Logger.log('🔧 file-open: 이전 문서의 인라인 오류 상태 완전 정리');
+        InlineModeService.forceCleanAllErrors();
+      }
+      
+      // 새로운 문서에 인라인 모드 설정 (오류 상태는 깨끗한 상태에서 시작)
+      const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (activeView?.editor && this.settings?.inlineMode?.enabled) {
+        // @ts-ignore - Obsidian 내부 API 사용
+        const currentEditorView = (activeView as any).editor?.cm;
+        if (currentEditorView) {
+          InlineModeService.setEditorView(currentEditorView, this.settings, this.app);
         }
       }
     });
@@ -836,11 +839,16 @@ export default class KoreanGrammarPlugin extends Plugin {
     // 리프 변경 감지 - 탭 변경, 패널 변경 등을 포함한 더 광범위한 변경 감지
     this.activeLeafChangeListener = this.app.workspace.on('active-leaf-change', (leaf) => {
       
-      // 마크다운 뷰로 변경되었을 때만 처리
+      // 인라인 모드가 활성화되어 있고 오류가 있으면 먼저 상태 정리
+      if (this.settings?.inlineMode?.enabled && InlineModeService.hasErrors()) {
+        Logger.log('🔧 active-leaf-change: 이전 탭의 인라인 오류 상태 완전 정리');
+        InlineModeService.forceCleanAllErrors();
+      }
+      
+      // 마크다운 뷰로 변경되었을 때만 새로운 뷰 설정
       if (leaf?.view?.getViewType() === 'markdown' && this.settings?.inlineMode?.enabled) {
         const markdownView = leaf.view as MarkdownView;
-        if (markdownView?.editor && InlineModeService.hasErrors()) {
-          Logger.log('🔧 active-leaf-change: InlineModeService 상태 정리 중');
+        if (markdownView?.editor) {
           // @ts-ignore - Obsidian 내부 API 사용
           const currentEditorView = (markdownView as any).editor?.cm;
           if (currentEditorView) {

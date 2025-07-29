@@ -377,8 +377,7 @@ export class PreviewRenderer implements IPopupComponent {
       this.calculateCurrentCorrections();
       
       // HTML 생성 및 렌더링
-      const html = this.generateContentHTML();
-      this.contentElement.innerHTML = html;
+      this.renderContentElement();
       
       // 오류 클릭 이벤트 등록
       this.registerErrorClickEvents();
@@ -847,5 +846,92 @@ export class PreviewRenderer implements IPopupComponent {
         pageChange: this.pageChangeListeners.size
       }
     };
+  }
+
+  /**
+   * 콘텐츠 요소를 안전하게 렌더링합니다.
+   */
+  private renderContentElement(): void {
+    if (!this.contentElement) return;
+    
+    // 기존 내용 제거
+    this.contentElement.empty();
+    
+    // 텍스트 세그먼트 생성 및 렌더링
+    const segments = this.createTextSegments();
+    
+    segments.forEach(segment => {
+      const span = this.contentElement?.createSpan();
+      if (!span) return;
+      span.textContent = segment.text;
+      
+      if (segment.correctionIndex !== undefined) {
+        span.className = `clickable-error ${segment.className || ''}`;
+        span.dataset.correctionIndex = segment.correctionIndex.toString();
+        span.dataset.uniqueId = segment.uniqueId || '';
+        span.setAttribute('tabindex', '0');
+      }
+    });
+  }
+
+  /**
+   * 텍스트를 세그먼트로 분할합니다.
+   */
+  private createTextSegments(): Array<{
+    text: string;
+    correctionIndex?: number;
+    className?: string;
+    uniqueId?: string;
+  }> {
+    const segments: Array<{
+      text: string;
+      correctionIndex?: number;
+      className?: string;
+      uniqueId?: string;
+    }> = [];
+    
+    let lastEnd = 0;
+    
+    // 현재 페이지의 교정사항들을 위치 순으로 처리
+    this.currentCorrections.forEach((correction, index) => {
+      const positionInPage = correction.positionInPage || 0;
+      const originalText = correction.correction.original;
+      
+      // 교정 전 텍스트 추가
+      if (positionInPage > lastEnd) {
+        segments.push({
+          text: this.currentPageText.slice(lastEnd, positionInPage)
+        });
+      }
+      
+      // 교정 세그먼트 추가
+      segments.push({
+        text: originalText, // 여기서는 원본 텍스트를 보여주고, 상태에 따라 클래스 적용
+        correctionIndex: correction.originalIndex,
+        className: this.getDisplayClass(correction.originalIndex || 0),
+        uniqueId: correction.uniqueId
+      });
+      
+      lastEnd = positionInPage + originalText.length;
+    });
+    
+    // 남은 텍스트 추가
+    if (lastEnd < this.currentPageText.length) {
+      segments.push({
+        text: this.currentPageText.slice(lastEnd)
+      });
+    }
+    
+    return segments;
+  }
+
+  /**
+   * 교정 인덱스에 대한 표시 클래스를 반환합니다.
+   * (실제 구현에서는 상태 관리자에서 가져와야 함)
+   */
+  private getDisplayClass(correctionIndex: number): string {
+    // 실제 구현에서는 CorrectionStateManager에서 가져와야 함
+    // 여기서는 기본값 반환
+    return 'error-state';
   }
 }

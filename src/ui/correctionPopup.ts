@@ -1,4 +1,4 @@
-import { Editor, EditorPosition, App, Platform, Scope, Notice, MarkdownView } from 'obsidian';
+import { Editor, EditorPosition, App, Platform, Scope, Notice, MarkdownView, Setting } from 'obsidian';
 import { Correction, PopupConfig, AIAnalysisResult, AIAnalysisRequest, PageCorrection } from '../types/interfaces';
 import { BaseComponent } from './baseComponent';
 import { CorrectionStateManager } from '../state/correctionState';
@@ -571,7 +571,7 @@ export class CorrectionPopup extends BaseComponent {
     
     // Header
     const header = content.createDiv('header');
-    header.createEl('h2', { text: '한국어 맞춤법 검사' });
+    new Setting(header).setName('한국어 맞춤법 검사').setHeading();
     
     const headerTop = header.createDiv('preview-header-top');
     
@@ -612,9 +612,9 @@ export class CorrectionPopup extends BaseComponent {
       legendItem.createSpan({ text: item.text });
     });
     
-    // Pagination (temporarily use innerHTML - should be improved later)
+    // Pagination
     const paginationDiv = previewHeader.createDiv();
-    paginationDiv.innerHTML = this.createPaginationHTML();
+    this.createPaginationElement(paginationDiv);
     
     // Preview content
     const previewContent = previewSection.createDiv('preview-text');
@@ -638,8 +638,8 @@ export class CorrectionPopup extends BaseComponent {
     
     const errorContent = errorSummary.createDiv('error-summary-content');
     errorContent.id = 'errorSummaryContent';
-    // Temporarily use innerHTML for complex error summary (should be improved later)
-    errorContent.innerHTML = this.generateErrorSummaryHTML();
+    // Error summary content
+    this.createErrorSummaryElement(errorContent);
     
     // Button area
     const buttonArea = content.createDiv('button-area');
@@ -652,7 +652,55 @@ export class CorrectionPopup extends BaseComponent {
   }
 
   /**
-   * 페이지네이션 HTML을 생성합니다.
+   * 페이지네이션 요소를 생성합니다.
+   */
+  private createPaginationElement(container: HTMLElement): void {
+    // Clear existing content
+    container.empty();
+    
+    if (!this.isLongText || this.totalPreviewPages <= 1) {
+      const hiddenContainer = container.createDiv('pagination-container-hidden');
+      hiddenContainer.id = 'paginationContainer';
+      return;
+    }
+
+    const paginationControls = container.createDiv('pagination-controls');
+    paginationControls.id = 'paginationContainer';
+    
+    // Previous button
+    const prevBtn = paginationControls.createEl('button', { 
+      cls: 'pagination-btn',
+      text: '이전'
+    });
+    prevBtn.id = 'prevPreviewPage';
+    if (this.currentPreviewPage === 0) {
+      prevBtn.disabled = true;
+    }
+    
+    // Page info
+    const pageInfo = paginationControls.createSpan('page-info');
+    pageInfo.id = 'previewPageInfo';
+    pageInfo.textContent = `${this.currentPreviewPage + 1} / ${this.totalPreviewPages}`;
+    
+    // Next button
+    const nextBtn = paginationControls.createEl('button', { 
+      cls: 'pagination-btn',
+      text: '다음'
+    });
+    nextBtn.id = 'nextPreviewPage';
+    if (this.currentPreviewPage === this.totalPreviewPages - 1) {
+      nextBtn.disabled = true;
+    }
+    
+    // Page chars info
+    const pageCharsInfo = paginationControls.createSpan('page-chars-info');
+    pageCharsInfo.id = 'pageCharsInfo';
+    pageCharsInfo.textContent = `${this.charsPerPage}자`;
+  }
+
+  /**
+   * 페이지네이션 HTML을 생성합니다. (하위 호환성을 위해 유지)
+   * @deprecated createPaginationElement 사용 권장
    */
   private createPaginationHTML(): string {
     if (!this.isLongText || this.totalPreviewPages <= 1) {
@@ -989,8 +1037,7 @@ export class CorrectionPopup extends BaseComponent {
    * 미리보기 콘텐츠를 업데이트합니다 (DOM API 사용).
    */
   private updatePreviewContent(previewElement: HTMLElement): void {
-    // 임시로 innerHTML 사용 (향후 개선 예정)
-    previewElement.innerHTML = this.generatePreviewHTML();
+    this.createPreviewElement(previewElement);
   }
 
   /**
@@ -3344,5 +3391,144 @@ export class CorrectionPopup extends BaseComponent {
     
     document.body.classList.remove('spell-popup-open');
     this.destroy();
+  }
+
+  /**
+   * 오류 요약 요소를 생성합니다.
+   */
+  private createErrorSummaryElement(container: HTMLElement): void {
+    // Clear existing content
+    container.empty();
+    
+    const rawCorrections = this.getCurrentCorrections();
+    const currentCorrections = this.removeDuplicateCorrections(rawCorrections);
+    
+    if (currentCorrections.length === 0) {
+      const placeholder = container.createDiv('error-placeholder');
+      placeholder.textContent = '현재 페이지에 오류가 없습니다.';
+      return;
+    }
+
+    currentCorrections.forEach((pageCorrection, index) => {
+      const actualIndex = pageCorrection.originalIndex;
+      if (actualIndex === undefined) return;
+
+      const errorCard = container.createDiv('error-card-compact');
+      errorCard.dataset.correctionIndex = actualIndex.toString();
+      
+      // Error header
+      const errorHeader = errorCard.createDiv('error-header');
+      const errorNumber = errorHeader.createSpan('error-number');
+      errorNumber.textContent = (index + 1).toString();
+      
+      const errorOriginal = errorHeader.createSpan('error-original-compact');
+      errorOriginal.textContent = pageCorrection.correction.original;
+      
+      const errorArrow = errorHeader.createSpan('error-arrow');
+      errorArrow.textContent = '→';
+      
+      const errorCorrected = errorHeader.createSpan('error-corrected-compact');
+      const currentValue = this.stateManager.getValue(actualIndex);
+      const displayClass = this.stateManager.getDisplayClass(actualIndex);
+      
+      errorCorrected.textContent = currentValue || pageCorrection.correction.original;
+      errorCorrected.className = `error-corrected-compact ${displayClass}`;
+      
+      // Help text
+      if (pageCorrection.correction.help) {
+        const helpDiv = errorCard.createDiv('error-help-compact');
+        helpDiv.textContent = pageCorrection.correction.help;
+      }
+      
+      // AI analysis result
+      const aiResult = this.aiAnalysisResults?.find(result => result.correctionIndex === actualIndex);
+      if (aiResult) {
+        const aiDiv = errorCard.createDiv('ai-analysis-compact');
+        const confidenceBadge = aiDiv.createSpan('ai-confidence-badge');
+        confidenceBadge.textContent = `${aiResult.confidence}%`;
+        
+        if (aiResult.reasoning) {
+          const reasoningSpan = aiDiv.createSpan('ai-reasoning-compact');
+          reasoningSpan.textContent = aiResult.reasoning;
+        }
+      }
+    });
+  }
+
+  /**
+   * 미리보기 요소를 생성합니다.
+   */
+  private createPreviewElement(container: HTMLElement): void {
+    // Clear existing content
+    container.empty();
+    
+    const previewText = this.isLongText ? this.getCurrentPreviewText() : this.config.selectedText.trim();
+    const rawCorrections = this.getCurrentCorrections();
+    const currentCorrections = this.removeDuplicateCorrections(rawCorrections);
+    
+    // Create text segments with corrections
+    const segments = this.createTextSegments(previewText, currentCorrections);
+    
+    // Render segments
+    segments.forEach(segment => {
+      const span = container.createSpan();
+      span.textContent = segment.text;
+      
+      if (segment.correctionIndex !== undefined) {
+        const actualIndex = segment.correctionIndex;
+        const displayClass = this.stateManager.getDisplayClass(actualIndex);
+        const uniqueId = currentCorrections[segment.correctionIndex]?.uniqueId || 'unknown';
+        
+        span.className = `clickable-error ${displayClass}`;
+        span.dataset.correctionIndex = actualIndex.toString();
+        span.dataset.uniqueId = uniqueId;
+        span.setAttribute('tabindex', '0');
+      }
+    });
+  }
+
+  /**
+   * 텍스트를 세그먼트로 분할합니다.
+   */
+  private createTextSegments(previewText: string, currentCorrections: PageCorrection[]): Array<{
+    text: string;
+    correctionIndex?: number;
+  }> {
+    const segments: Array<{text: string; correctionIndex?: number}> = [];
+    let lastEnd = 0;
+    
+    // Process each correction
+    currentCorrections.forEach((pageCorrection, index) => {
+      const actualIndex = pageCorrection.originalIndex;
+      if (actualIndex === undefined) return;
+      
+      const positionInPage = pageCorrection.positionInPage || 0;
+      const originalText = pageCorrection.correction.original;
+      const currentValue = this.stateManager.getValue(actualIndex);
+      
+      // Add text before this correction
+      if (positionInPage > lastEnd) {
+        segments.push({
+          text: previewText.slice(lastEnd, positionInPage)
+        });
+      }
+      
+      // Add the correction segment
+      segments.push({
+        text: currentValue || originalText,
+        correctionIndex: index
+      });
+      
+      lastEnd = positionInPage + originalText.length;
+    });
+    
+    // Add remaining text
+    if (lastEnd < previewText.length) {
+      segments.push({
+        text: previewText.slice(lastEnd)
+      });
+    }
+    
+    return segments;
   }
 }

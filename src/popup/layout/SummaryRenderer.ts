@@ -275,8 +275,8 @@ export class SummaryRenderer implements IPopupComponent {
       color: 'var(--text-muted)'
     });
     
-    // 제목
-    const titleElement = createEl('h3', {
+    // 제목 (텍스트로 대체)
+    const titleElement = createEl('div', {
       cls: 'korean-grammar-popup-summary-title',
       text: '오류 요약',
       parent: titleContainer
@@ -744,7 +744,7 @@ export class SummaryRenderer implements IPopupComponent {
     
     // 토글 버튼 아이콘 업데이트
     const iconName = this.isExpanded ? 'chevron-up' : 'chevron-down';
-    this.toggleButtonElement.innerHTML = '';
+    this.toggleButtonElement.empty();
     
     const iconElement = createEl('div', {
       parent: this.toggleButtonElement
@@ -793,7 +793,7 @@ export class SummaryRenderer implements IPopupComponent {
     if (!this.errorListElement) return;
     
     // 기존 오류 카드들 제거
-    this.errorListElement.innerHTML = '';
+    this.errorListElement.empty();
     
     if (this.currentCorrections.length === 0) {
       // 오류가 없는 경우 플레이스홀더 표시

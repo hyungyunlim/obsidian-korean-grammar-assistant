@@ -228,8 +228,8 @@ export class HeaderRenderer implements IPopupComponent {
       color: 'var(--text-accent)'
     });
     
-    // 제목 텍스트
-    this.titleElement = createEl('h2', {
+    // 제목 텍스트 (div로 변경)
+    this.titleElement = createEl('div', {
       cls: 'korean-grammar-popup-title',
       text: this.getTitleText(),
       parent: titleContainer

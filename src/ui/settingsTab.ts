@@ -691,12 +691,10 @@ export class ModernSettingsTab extends PluginSettingTab {
   private createHeader(containerEl: HTMLElement): void {
     const header = containerEl.createEl('div', { cls: 'ksc-header' });
 
-    const title = header.createEl('h1', { 
-      cls: 'ksc-header-title'
-    });
-    
-    title.createEl('span', { text: '📝' });
-    title.createEl('span', { text: '한국어 맞춤법 검사 설정' });
+    const titleSetting = new Setting(header)
+      .setName('📝 한국어 맞춤법 검사 설정')
+      .setHeading();
+    titleSetting.settingEl.addClasses(['ksc-header-title']);
 
     header.createEl('p', {
       text: '플러그인 동작을 커스터마이징하고 AI 기능을 설정하세요',
@@ -2166,10 +2164,10 @@ export class ModernSettingsTab extends PluginSettingTab {
   private createBetaWarningSection(containerEl: HTMLElement): void {
     const section = containerEl.createEl('div', { cls: 'ksc-section' });
     
-    section.createEl('h3', { 
-      text: '⚠️ 베타 기능 안내',
-      cls: 'ksc-section-title'
-    });
+    const warningHeading = new Setting(section)
+      .setName('⚠️ 베타 기능 안내')
+      .setHeading();
+    warningHeading.settingEl.addClasses(['ksc-section-title']);
 
     const warningBox = section.createEl('div', { 
       cls: 'ksc-warning-box',
@@ -2204,10 +2202,10 @@ export class ModernSettingsTab extends PluginSettingTab {
   private createInlineModeSection(containerEl: HTMLElement): void {
     const section = containerEl.createEl('div', { cls: 'ksc-section' });
     
-    section.createEl('h3', { 
-      text: '📝 인라인 모드',
-      cls: 'ksc-section-title'
-    });
+    const inlineHeading = new Setting(section)
+      .setName('📝 인라인 모드')
+      .setHeading();
+    inlineHeading.settingEl.addClasses(['ksc-section-title']);
 
     // 기능 설명
     const descBox = section.createEl('div', { 

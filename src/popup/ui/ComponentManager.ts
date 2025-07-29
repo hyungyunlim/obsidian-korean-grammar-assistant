@@ -372,11 +372,11 @@ export class ComponentManager {
       html = html.replace(new RegExp(placeholder, 'g'), String(value));
     });
 
-    // DOM 요소 생성
-    const wrapper = createEl('div');
-    wrapper.innerHTML = html;
+    // DOM 요소 생성 (안전한 방법 사용)
+    const templateElement = document.createElement('template');
+    templateElement.innerHTML = html;
     
-    return wrapper.firstElementChild as HTMLElement;
+    return templateElement.content.firstElementChild as HTMLElement;
   }
 
   /**
@@ -597,10 +597,10 @@ export class ComponentManager {
    */
   private clearContainers(): void {
     if (this.previewContainer) {
-      this.previewContainer.innerHTML = '';
+      this.previewContainer.empty();
     }
     if (this.summaryContainer) {
-      this.summaryContainer.innerHTML = '';
+      this.summaryContainer.empty();
     }
   }
 

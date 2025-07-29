@@ -965,7 +965,7 @@ export class InlineTooltip {
 
     // ❌ 병합된 오류 전체 무시 버튼 - 체크박스와 일관된 스타일
     const ignoreAllButton = actionButtons.createEl('button', { cls: 'ignore-all-button' });
-    ignoreAllButton.innerHTML = '✕'; // X 표시
+    ignoreAllButton.textContent = '✕'; // X 표시
     ignoreAllButton.title = '이 오류들 모두 무시';
     ignoreAllButton.style.cssText = `
       background: #ef4444;
@@ -1228,9 +1228,9 @@ export class InlineTooltip {
     const latestError = InlineModeService.getErrorWithAIData(error.uniqueId);
     if (latestError) {
       error = latestError;
-      console.debug(`🤖 툴팁 오류 정보 업데이트: ${error.correction.original} - AI 상태: ${error.aiStatus || 'none'}`);
+      Logger.debug(`🤖 툴팁 오류 정보 업데이트: ${error.correction.original} - AI 상태: ${error.aiStatus || 'none'}`);
     } else {
-      console.debug(`🤖 툴팁 생성: ${error.correction.original} - 기존 AI 상태: ${error.aiStatus || 'none'}`);
+      Logger.debug(`🤖 툴팁 생성: ${error.correction.original} - 기존 AI 상태: ${error.aiStatus || 'none'}`);
     }
 
     // 모바일 최적화를 위한 플랫폼 감지 (메서드 전체에서 사용)
@@ -1468,7 +1468,7 @@ export class InlineTooltip {
 
     // 📚 예외 단어 추가 버튼 (책 아이콘) - 모바일 최적화
     const exceptionButton = actionsContainer.createEl('button', { cls: 'exception-button' });
-    exceptionButton.innerHTML = '📚'; // 책 아이콘
+    exceptionButton.textContent = '📚'; // 책 아이콘
     exceptionButton.title = '예외 단어로 추가';
     
     exceptionButton.style.cssText = `
@@ -1525,7 +1525,7 @@ export class InlineTooltip {
 
     // ❌ 오류 무시 버튼 (일시적 무시) - 모바일 최적화
     const ignoreButton = actionsContainer.createEl('button', { cls: 'ignore-button' });
-    ignoreButton.innerHTML = '❌'; // X 표시
+    ignoreButton.textContent = '❌'; // X 표시
     ignoreButton.title = '이 오류 무시 (일시적)';
     ignoreButton.style.cssText = `
       background: var(--interactive-normal);

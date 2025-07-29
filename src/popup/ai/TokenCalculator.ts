@@ -197,7 +197,9 @@ export class TokenCalculator implements IPopupServiceManager {
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
       `;
 
-      content.innerHTML = `
+      // 안전한 템플릿 방식 사용
+      const template = document.createElement('template');
+      template.innerHTML = `
         <div class="modal-title" style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: var(--text-normal);">
           🚨 토큰 사용량 경고
         </div>
@@ -219,7 +221,8 @@ export class TokenCalculator implements IPopupServiceManager {
           </button>
         </div>
       `;
-
+      
+      content.appendChild(template.content);
       modal.appendChild(content);
       document.body.appendChild(modal);
 

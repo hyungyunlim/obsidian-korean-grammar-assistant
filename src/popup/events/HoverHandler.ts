@@ -523,7 +523,7 @@ export class HoverHandler {
       transition: opacity 0.2s ease, transform 0.2s ease;
     `;
     
-    tooltip.innerHTML = config.content;
+    tooltip.textContent = config.content;
     
     // 애니메이션으로 나타나기
     setTimeout(() => {

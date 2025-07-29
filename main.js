@@ -5577,7 +5577,7 @@ var CorrectionPopup = class extends BaseComponent {
     const overlay = this.element.createDiv("popup-overlay");
     const content = this.element.createDiv("popup-content");
     const header = content.createDiv("header");
-    header.createEl("h2", { text: "\uD55C\uAD6D\uC5B4 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC" });
+    new import_obsidian2.Setting(header).setName("\uD55C\uAD6D\uC5B4 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC").setHeading();
     const headerTop = header.createDiv("preview-header-top");
     const aiBtn = headerTop.createEl("button", {
       cls: "ai-analyze-btn",
@@ -5605,7 +5605,7 @@ var CorrectionPopup = class extends BaseComponent {
       legendItem.createSpan({ text: item.text });
     });
     const paginationDiv = previewHeader.createDiv();
-    paginationDiv.innerHTML = this.createPaginationHTML();
+    this.createPaginationElement(paginationDiv);
     const previewContent = previewSection.createDiv("preview-text");
     previewContent.id = "resultPreview";
     previewContent.createEl("span", { text: this.config.selectedText.trim() });
@@ -5622,7 +5622,7 @@ var CorrectionPopup = class extends BaseComponent {
     errorToggle.createSpan({ cls: "toggle-icon", text: "\u25BC" });
     const errorContent = errorSummary.createDiv("error-summary-content");
     errorContent.id = "errorSummaryContent";
-    errorContent.innerHTML = this.generateErrorSummaryHTML();
+    this.createErrorSummaryElement(errorContent);
     const buttonArea = content.createDiv("button-area");
     buttonArea.createEl("button", { cls: "cancel-btn", text: "\uCDE8\uC18C" });
     buttonArea.createEl("button", {
@@ -5632,7 +5632,43 @@ var CorrectionPopup = class extends BaseComponent {
     });
   }
   /**
-   * 페이지네이션 HTML을 생성합니다.
+   * 페이지네이션 요소를 생성합니다.
+   */
+  createPaginationElement(container) {
+    container.empty();
+    if (!this.isLongText || this.totalPreviewPages <= 1) {
+      const hiddenContainer = container.createDiv("pagination-container-hidden");
+      hiddenContainer.id = "paginationContainer";
+      return;
+    }
+    const paginationControls = container.createDiv("pagination-controls");
+    paginationControls.id = "paginationContainer";
+    const prevBtn = paginationControls.createEl("button", {
+      cls: "pagination-btn",
+      text: "\uC774\uC804"
+    });
+    prevBtn.id = "prevPreviewPage";
+    if (this.currentPreviewPage === 0) {
+      prevBtn.disabled = true;
+    }
+    const pageInfo = paginationControls.createSpan("page-info");
+    pageInfo.id = "previewPageInfo";
+    pageInfo.textContent = `${this.currentPreviewPage + 1} / ${this.totalPreviewPages}`;
+    const nextBtn = paginationControls.createEl("button", {
+      cls: "pagination-btn",
+      text: "\uB2E4\uC74C"
+    });
+    nextBtn.id = "nextPreviewPage";
+    if (this.currentPreviewPage === this.totalPreviewPages - 1) {
+      nextBtn.disabled = true;
+    }
+    const pageCharsInfo = paginationControls.createSpan("page-chars-info");
+    pageCharsInfo.id = "pageCharsInfo";
+    pageCharsInfo.textContent = `${this.charsPerPage}\uC790`;
+  }
+  /**
+   * 페이지네이션 HTML을 생성합니다. (하위 호환성을 위해 유지)
+   * @deprecated createPaginationElement 사용 권장
    */
   createPaginationHTML() {
     if (!this.isLongText || this.totalPreviewPages <= 1) {
@@ -5899,7 +5935,7 @@ var CorrectionPopup = class extends BaseComponent {
    * 미리보기 콘텐츠를 업데이트합니다 (DOM API 사용).
    */
   updatePreviewContent(previewElement) {
-    previewElement.innerHTML = this.generatePreviewHTML();
+    this.createPreviewElement(previewElement);
   }
   /**
    * 미리보기 HTML을 생성합니다.
@@ -7663,6 +7699,108 @@ var CorrectionPopup = class extends BaseComponent {
     document.body.classList.remove("spell-popup-open");
     this.destroy();
   }
+  /**
+   * 오류 요약 요소를 생성합니다.
+   */
+  createErrorSummaryElement(container) {
+    container.empty();
+    const rawCorrections = this.getCurrentCorrections();
+    const currentCorrections = this.removeDuplicateCorrections(rawCorrections);
+    if (currentCorrections.length === 0) {
+      const placeholder = container.createDiv("error-placeholder");
+      placeholder.textContent = "\uD604\uC7AC \uD398\uC774\uC9C0\uC5D0 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.";
+      return;
+    }
+    currentCorrections.forEach((pageCorrection, index) => {
+      var _a;
+      const actualIndex = pageCorrection.originalIndex;
+      if (actualIndex === void 0)
+        return;
+      const errorCard = container.createDiv("error-card-compact");
+      errorCard.dataset.correctionIndex = actualIndex.toString();
+      const errorHeader = errorCard.createDiv("error-header");
+      const errorNumber = errorHeader.createSpan("error-number");
+      errorNumber.textContent = (index + 1).toString();
+      const errorOriginal = errorHeader.createSpan("error-original-compact");
+      errorOriginal.textContent = pageCorrection.correction.original;
+      const errorArrow = errorHeader.createSpan("error-arrow");
+      errorArrow.textContent = "\u2192";
+      const errorCorrected = errorHeader.createSpan("error-corrected-compact");
+      const currentValue = this.stateManager.getValue(actualIndex);
+      const displayClass = this.stateManager.getDisplayClass(actualIndex);
+      errorCorrected.textContent = currentValue || pageCorrection.correction.original;
+      errorCorrected.className = `error-corrected-compact ${displayClass}`;
+      if (pageCorrection.correction.help) {
+        const helpDiv = errorCard.createDiv("error-help-compact");
+        helpDiv.textContent = pageCorrection.correction.help;
+      }
+      const aiResult = (_a = this.aiAnalysisResults) == null ? void 0 : _a.find((result) => result.correctionIndex === actualIndex);
+      if (aiResult) {
+        const aiDiv = errorCard.createDiv("ai-analysis-compact");
+        const confidenceBadge = aiDiv.createSpan("ai-confidence-badge");
+        confidenceBadge.textContent = `${aiResult.confidence}%`;
+        if (aiResult.reasoning) {
+          const reasoningSpan = aiDiv.createSpan("ai-reasoning-compact");
+          reasoningSpan.textContent = aiResult.reasoning;
+        }
+      }
+    });
+  }
+  /**
+   * 미리보기 요소를 생성합니다.
+   */
+  createPreviewElement(container) {
+    container.empty();
+    const previewText = this.isLongText ? this.getCurrentPreviewText() : this.config.selectedText.trim();
+    const rawCorrections = this.getCurrentCorrections();
+    const currentCorrections = this.removeDuplicateCorrections(rawCorrections);
+    const segments = this.createTextSegments(previewText, currentCorrections);
+    segments.forEach((segment) => {
+      var _a;
+      const span = container.createSpan();
+      span.textContent = segment.text;
+      if (segment.correctionIndex !== void 0) {
+        const actualIndex = segment.correctionIndex;
+        const displayClass = this.stateManager.getDisplayClass(actualIndex);
+        const uniqueId = ((_a = currentCorrections[segment.correctionIndex]) == null ? void 0 : _a.uniqueId) || "unknown";
+        span.className = `clickable-error ${displayClass}`;
+        span.dataset.correctionIndex = actualIndex.toString();
+        span.dataset.uniqueId = uniqueId;
+        span.setAttribute("tabindex", "0");
+      }
+    });
+  }
+  /**
+   * 텍스트를 세그먼트로 분할합니다.
+   */
+  createTextSegments(previewText, currentCorrections) {
+    const segments = [];
+    let lastEnd = 0;
+    currentCorrections.forEach((pageCorrection, index) => {
+      const actualIndex = pageCorrection.originalIndex;
+      if (actualIndex === void 0)
+        return;
+      const positionInPage = pageCorrection.positionInPage || 0;
+      const originalText = pageCorrection.correction.original;
+      const currentValue = this.stateManager.getValue(actualIndex);
+      if (positionInPage > lastEnd) {
+        segments.push({
+          text: previewText.slice(lastEnd, positionInPage)
+        });
+      }
+      segments.push({
+        text: currentValue || originalText,
+        correctionIndex: index
+      });
+      lastEnd = positionInPage + originalText.length;
+    });
+    if (lastEnd < previewText.length) {
+      segments.push({
+        text: previewText.slice(lastEnd)
+      });
+    }
+    return segments;
+  }
 };
 
 // src/orchestrator.ts
@@ -9045,11 +9183,8 @@ var ModernSettingsTab = class extends import_obsidian9.PluginSettingTab {
    */
   createHeader(containerEl) {
     const header = containerEl.createEl("div", { cls: "ksc-header" });
-    const title = header.createEl("h1", {
-      cls: "ksc-header-title"
-    });
-    title.createEl("span", { text: "\u{1F4DD}" });
-    title.createEl("span", { text: "\uD55C\uAD6D\uC5B4 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC124\uC815" });
+    const titleSetting = new import_obsidian9.Setting(header).setName("\u{1F4DD} \uD55C\uAD6D\uC5B4 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC124\uC815").setHeading();
+    titleSetting.settingEl.addClasses(["ksc-header-title"]);
     header.createEl("p", {
       text: "\uD50C\uB7EC\uADF8\uC778 \uB3D9\uC791\uC744 \uCEE4\uC2A4\uD130\uB9C8\uC774\uC9D5\uD558\uACE0 AI \uAE30\uB2A5\uC744 \uC124\uC815\uD558\uC138\uC694",
       cls: "ksc-header-subtitle"
@@ -10078,10 +10213,8 @@ var ModernSettingsTab = class extends import_obsidian9.PluginSettingTab {
    */
   createBetaWarningSection(containerEl) {
     const section = containerEl.createEl("div", { cls: "ksc-section" });
-    section.createEl("h3", {
-      text: "\u26A0\uFE0F \uBCA0\uD0C0 \uAE30\uB2A5 \uC548\uB0B4",
-      cls: "ksc-section-title"
-    });
+    const warningHeading = new import_obsidian9.Setting(section).setName("\u26A0\uFE0F \uBCA0\uD0C0 \uAE30\uB2A5 \uC548\uB0B4").setHeading();
+    warningHeading.settingEl.addClasses(["ksc-section-title"]);
     const warningBox = section.createEl("div", {
       cls: "ksc-warning-box",
       attr: {
@@ -10110,10 +10243,8 @@ var ModernSettingsTab = class extends import_obsidian9.PluginSettingTab {
    */
   createInlineModeSection(containerEl) {
     const section = containerEl.createEl("div", { cls: "ksc-section" });
-    section.createEl("h3", {
-      text: "\u{1F4DD} \uC778\uB77C\uC778 \uBAA8\uB4DC",
-      cls: "ksc-section-title"
-    });
+    const inlineHeading = new import_obsidian9.Setting(section).setName("\u{1F4DD} \uC778\uB77C\uC778 \uBAA8\uB4DC").setHeading();
+    inlineHeading.settingEl.addClasses(["ksc-section-title"]);
     const descBox = section.createEl("div", {
       cls: "ksc-info-box",
       attr: {
@@ -10954,7 +11085,7 @@ var InlineTooltip = class {
       min-height: ${isMobile ? isPhone ? "32px" : "30px" : "auto"};
     `;
     const ignoreAllButton = actionButtons.createEl("button", { cls: "ignore-all-button" });
-    ignoreAllButton.innerHTML = "\u2715";
+    ignoreAllButton.textContent = "\u2715";
     ignoreAllButton.title = "\uC774 \uC624\uB958\uB4E4 \uBAA8\uB450 \uBB34\uC2DC";
     ignoreAllButton.style.cssText = `
       background: #ef4444;
@@ -11172,9 +11303,9 @@ var InlineTooltip = class {
     const latestError = InlineModeService.getErrorWithAIData(error.uniqueId);
     if (latestError) {
       error = latestError;
-      console.debug(`\u{1F916} \uD234\uD301 \uC624\uB958 \uC815\uBCF4 \uC5C5\uB370\uC774\uD2B8: ${error.correction.original} - AI \uC0C1\uD0DC: ${error.aiStatus || "none"}`);
+      Logger.debug(`\u{1F916} \uD234\uD301 \uC624\uB958 \uC815\uBCF4 \uC5C5\uB370\uC774\uD2B8: ${error.correction.original} - AI \uC0C1\uD0DC: ${error.aiStatus || "none"}`);
     } else {
-      console.debug(`\u{1F916} \uD234\uD301 \uC0DD\uC131: ${error.correction.original} - \uAE30\uC874 AI \uC0C1\uD0DC: ${error.aiStatus || "none"}`);
+      Logger.debug(`\u{1F916} \uD234\uD301 \uC0DD\uC131: ${error.correction.original} - \uAE30\uC874 AI \uC0C1\uD0DC: ${error.aiStatus || "none"}`);
     }
     const isMobile = import_obsidian10.Platform.isMobile;
     const isPhone = import_obsidian10.Platform.isPhone || window.innerWidth <= 480;
@@ -11360,7 +11491,7 @@ var InlineTooltip = class {
       min-height: ${isMobile ? isPhone ? "28px" : "26px" : "auto"};
     `;
     const exceptionButton = actionsContainer.createEl("button", { cls: "exception-button" });
-    exceptionButton.innerHTML = "\u{1F4DA}";
+    exceptionButton.textContent = "\u{1F4DA}";
     exceptionButton.title = "\uC608\uC678 \uB2E8\uC5B4\uB85C \uCD94\uAC00";
     exceptionButton.style.cssText = `
       background: var(--interactive-normal);
@@ -11406,7 +11537,7 @@ var InlineTooltip = class {
       await this.addToExceptionWords(error);
     });
     const ignoreButton = actionsContainer.createEl("button", { cls: "ignore-button" });
-    ignoreButton.innerHTML = "\u274C";
+    ignoreButton.textContent = "\u274C";
     ignoreButton.title = "\uC774 \uC624\uB958 \uBB34\uC2DC (\uC77C\uC2DC\uC801)";
     ignoreButton.style.cssText = `
       background: var(--interactive-normal);
@@ -15283,25 +15414,29 @@ var KoreanGrammarPlugin = class extends import_obsidian16.Plugin {
   setupDocumentChangeListeners() {
     Logger.log("\u{1F527} \uBB38\uC11C \uC804\uD658 \uAC10\uC9C0 \uC774\uBCA4\uD2B8 \uB9AC\uC2A4\uB108 \uC124\uC815 \uC911...");
     this.fileOpenListener = this.app.workspace.on("file-open", (file) => {
-      var _a, _b, _c;
+      var _a, _b, _c, _d, _e;
       if (((_b = (_a = this.settings) == null ? void 0 : _a.inlineMode) == null ? void 0 : _b.enabled) && InlineModeService.hasErrors()) {
-        Logger.log("\u{1F527} file-open: InlineModeService \uC0C1\uD0DC \uC815\uB9AC \uC911");
-        const activeView = this.app.workspace.getActiveViewOfType(import_obsidian16.MarkdownView);
-        if (activeView == null ? void 0 : activeView.editor) {
-          const currentEditorView = (_c = activeView.editor) == null ? void 0 : _c.cm;
-          if (currentEditorView) {
-            InlineModeService.setEditorView(currentEditorView, this.settings, this.app);
-          }
+        Logger.log("\u{1F527} file-open: \uC774\uC804 \uBB38\uC11C\uC758 \uC778\uB77C\uC778 \uC624\uB958 \uC0C1\uD0DC \uC644\uC804 \uC815\uB9AC");
+        InlineModeService.forceCleanAllErrors();
+      }
+      const activeView = this.app.workspace.getActiveViewOfType(import_obsidian16.MarkdownView);
+      if ((activeView == null ? void 0 : activeView.editor) && ((_d = (_c = this.settings) == null ? void 0 : _c.inlineMode) == null ? void 0 : _d.enabled)) {
+        const currentEditorView = (_e = activeView.editor) == null ? void 0 : _e.cm;
+        if (currentEditorView) {
+          InlineModeService.setEditorView(currentEditorView, this.settings, this.app);
         }
       }
     });
     this.activeLeafChangeListener = this.app.workspace.on("active-leaf-change", (leaf) => {
-      var _a, _b, _c, _d;
-      if (((_a = leaf == null ? void 0 : leaf.view) == null ? void 0 : _a.getViewType()) === "markdown" && ((_c = (_b = this.settings) == null ? void 0 : _b.inlineMode) == null ? void 0 : _c.enabled)) {
+      var _a, _b, _c, _d, _e, _f;
+      if (((_b = (_a = this.settings) == null ? void 0 : _a.inlineMode) == null ? void 0 : _b.enabled) && InlineModeService.hasErrors()) {
+        Logger.log("\u{1F527} active-leaf-change: \uC774\uC804 \uD0ED\uC758 \uC778\uB77C\uC778 \uC624\uB958 \uC0C1\uD0DC \uC644\uC804 \uC815\uB9AC");
+        InlineModeService.forceCleanAllErrors();
+      }
+      if (((_c = leaf == null ? void 0 : leaf.view) == null ? void 0 : _c.getViewType()) === "markdown" && ((_e = (_d = this.settings) == null ? void 0 : _d.inlineMode) == null ? void 0 : _e.enabled)) {
         const markdownView = leaf.view;
-        if ((markdownView == null ? void 0 : markdownView.editor) && InlineModeService.hasErrors()) {
-          Logger.log("\u{1F527} active-leaf-change: InlineModeService \uC0C1\uD0DC \uC815\uB9AC \uC911");
-          const currentEditorView = (_d = markdownView.editor) == null ? void 0 : _d.cm;
+        if (markdownView == null ? void 0 : markdownView.editor) {
+          const currentEditorView = (_f = markdownView.editor) == null ? void 0 : _f.cm;
           if (currentEditorView) {
             InlineModeService.setEditorView(currentEditorView, this.settings, this.app);
           }
