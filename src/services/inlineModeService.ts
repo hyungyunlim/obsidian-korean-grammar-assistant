@@ -1679,16 +1679,32 @@ export class InlineModeService {
       }
     }
 
-    // 🔧 해당 오류 제거 먼저 실행 (중복 방지)
-    this.removeError(this.currentView, error.uniqueId);
+    // 🔧 텍스트 길이 변화량 계산 (다른 오류들의 위치 업데이트를 위해)
+    const lengthDifference = suggestion.length - (toPos - fromPos);
 
-    // 텍스트 교체 (확실한 범위로)
+    // 🔧 하나의 트랜잭션으로 데코레이션 제거 + 텍스트 교체 + 위치 업데이트 실행
+    this.activeErrors.delete(error.uniqueId);
+    
+    // 영향받는 다른 오류들의 위치 미리 업데이트
+    if (lengthDifference !== 0) {
+      this.activeErrors.forEach((otherError, errorId) => {
+        if (otherError.start > toPos) {
+          // 교체 지점 이후의 오류들은 위치 조정
+          otherError.start += lengthDifference;
+          otherError.end += lengthDifference;
+          Logger.debug(`다른 오류 위치 업데이트: ${errorId} [${otherError.start}-${otherError.end}]`);
+        }
+      });
+    }
+
+    // 데코레이션 제거와 텍스트 교체를 하나의 트랜잭션으로 처리
     this.currentView.dispatch({
       changes: {
         from: fromPos,
         to: toPos,
         insert: suggestion
-      }
+      },
+      effects: [removeErrorDecorations.of([error.uniqueId])]
     });
 
     // 툴팁 유지 모드가 아닐 때만 툴팁 숨기기

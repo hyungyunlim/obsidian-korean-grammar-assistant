@@ -13614,13 +13614,24 @@ var InlineModeService = class {
         return;
       }
     }
-    this.removeError(this.currentView, error.uniqueId);
+    const lengthDifference = suggestion.length - (toPos - fromPos);
+    this.activeErrors.delete(error.uniqueId);
+    if (lengthDifference !== 0) {
+      this.activeErrors.forEach((otherError, errorId) => {
+        if (otherError.start > toPos) {
+          otherError.start += lengthDifference;
+          otherError.end += lengthDifference;
+          Logger.debug(`\uB2E4\uB978 \uC624\uB958 \uC704\uCE58 \uC5C5\uB370\uC774\uD2B8: ${errorId} [${otherError.start}-${otherError.end}]`);
+        }
+      });
+    }
     this.currentView.dispatch({
       changes: {
         from: fromPos,
         to: toPos,
         insert: suggestion
-      }
+      },
+      effects: [removeErrorDecorations.of([error.uniqueId])]
     });
     const isKeepOpenMode = window.tooltipKeepOpenMode;
     if (!isKeepOpenMode) {
