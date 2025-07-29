@@ -5220,7 +5220,12 @@ var CorrectionPopup = class extends BaseComponent {
         return;
       }
       evt.preventDefault();
+      evt.stopPropagation();
+      evt.stopImmediatePropagation();
       this.cycleCurrentCorrectionNext();
+      setTimeout(() => {
+        this.updateFocusHighlight();
+      }, 50);
       return false;
     });
     this.keyboardScope.register([], "ArrowLeft", (evt) => {
@@ -5229,7 +5234,12 @@ var CorrectionPopup = class extends BaseComponent {
         return;
       }
       evt.preventDefault();
+      evt.stopPropagation();
+      evt.stopImmediatePropagation();
       this.cycleCurrentCorrectionPrev();
+      setTimeout(() => {
+        this.updateFocusHighlight();
+      }, 50);
       return false;
     });
     this.keyboardScope.register(["Shift", "Mod"], "KeyA", (evt) => {
@@ -6217,6 +6227,7 @@ var CorrectionPopup = class extends BaseComponent {
         if (this.currentPreviewPage > 0) {
           this.currentPreviewPage--;
           this.updateDisplay();
+          this.resetFocusToFirstError();
         }
       });
     }
@@ -6225,6 +6236,7 @@ var CorrectionPopup = class extends BaseComponent {
         if (this.currentPreviewPage < this.totalPreviewPages - 1) {
           this.currentPreviewPage++;
           this.updateDisplay();
+          this.resetFocusToFirstError();
         }
       });
     }
@@ -7756,17 +7768,20 @@ var CorrectionPopup = class extends BaseComponent {
     const currentCorrections = this.removeDuplicateCorrections(rawCorrections);
     const segments = this.createTextSegments(previewText, currentCorrections);
     segments.forEach((segment) => {
-      var _a;
       const span = container.createSpan();
-      span.textContent = segment.text;
       if (segment.correctionIndex !== void 0) {
         const actualIndex = segment.correctionIndex;
         const displayClass = this.stateManager.getDisplayClass(actualIndex);
-        const uniqueId = ((_a = currentCorrections[segment.correctionIndex]) == null ? void 0 : _a.uniqueId) || "unknown";
+        const currentValue = this.stateManager.getValue(actualIndex);
+        const pageCorrection = currentCorrections.find((pc) => pc.originalIndex === actualIndex);
+        const uniqueId = (pageCorrection == null ? void 0 : pageCorrection.uniqueId) || "unknown";
+        span.textContent = currentValue;
         span.className = `clickable-error ${displayClass}`;
         span.dataset.correctionIndex = actualIndex.toString();
         span.dataset.uniqueId = uniqueId;
         span.setAttribute("tabindex", "0");
+      } else {
+        span.textContent = segment.text;
       }
     });
   }
@@ -7790,7 +7805,7 @@ var CorrectionPopup = class extends BaseComponent {
       }
       segments.push({
         text: currentValue || originalText,
-        correctionIndex: index
+        correctionIndex: actualIndex
       });
       lastEnd = positionInPage + originalText.length;
     });

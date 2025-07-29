@@ -109,7 +109,16 @@ export class CorrectionPopup extends BaseComponent {
         return;
       }
       evt.preventDefault();
+      evt.stopPropagation();
+      evt.stopImmediatePropagation();
+      
       this.cycleCurrentCorrectionNext();
+      
+      // 포커스 유지를 위해 하이라이트 강제 업데이트
+      setTimeout(() => {
+        this.updateFocusHighlight();
+      }, 50);
+      
       return false;
     });
 
@@ -120,7 +129,16 @@ export class CorrectionPopup extends BaseComponent {
         return;
       }
       evt.preventDefault();
+      evt.stopPropagation();
+      evt.stopImmediatePropagation();
+      
       this.cycleCurrentCorrectionPrev();
+      
+      // 포커스 유지를 위해 하이라이트 강제 업데이트
+      setTimeout(() => {
+        this.updateFocusHighlight();
+      }, 50);
+      
       return false;
     });
 
@@ -1425,6 +1443,7 @@ export class CorrectionPopup extends BaseComponent {
         if (this.currentPreviewPage > 0) {
           this.currentPreviewPage--;
           this.updateDisplay();
+          this.resetFocusToFirstError();
         }
       });
     }
@@ -1434,6 +1453,7 @@ export class CorrectionPopup extends BaseComponent {
         if (this.currentPreviewPage < this.totalPreviewPages - 1) {
           this.currentPreviewPage++;
           this.updateDisplay();
+          this.resetFocusToFirstError();
         }
       });
     }
@@ -3472,17 +3492,23 @@ export class CorrectionPopup extends BaseComponent {
     // Render segments
     segments.forEach(segment => {
       const span = container.createSpan();
-      span.textContent = segment.text;
       
       if (segment.correctionIndex !== undefined) {
         const actualIndex = segment.correctionIndex;
         const displayClass = this.stateManager.getDisplayClass(actualIndex);
-        const uniqueId = currentCorrections[segment.correctionIndex]?.uniqueId || 'unknown';
+        const currentValue = this.stateManager.getValue(actualIndex);
         
+        // uniqueId는 actualIndex로 currentCorrections에서 찾기
+        const pageCorrection = currentCorrections.find(pc => pc.originalIndex === actualIndex);
+        const uniqueId = pageCorrection?.uniqueId || 'unknown';
+        
+        span.textContent = currentValue;
         span.className = `clickable-error ${displayClass}`;
         span.dataset.correctionIndex = actualIndex.toString();
         span.dataset.uniqueId = uniqueId;
         span.setAttribute('tabindex', '0');
+      } else {
+        span.textContent = segment.text;
       }
     });
   }
@@ -3516,7 +3542,7 @@ export class CorrectionPopup extends BaseComponent {
       // Add the correction segment
       segments.push({
         text: currentValue || originalText,
-        correctionIndex: index
+        correctionIndex: actualIndex
       });
       
       lastEnd = positionInPage + originalText.length;
