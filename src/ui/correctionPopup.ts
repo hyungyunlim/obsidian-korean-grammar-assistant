@@ -286,11 +286,19 @@ export class CorrectionPopup extends BaseComponent {
       return;
     }
 
-    const pageCorrection = this.currentCorrections[this.currentFocusIndex];
+    const pageCorrection = this.currentCorrections[this.currentFocusIndex || 0];
     if (!pageCorrection) return;
 
     const actualIndex = pageCorrection.originalIndex;
+    if (actualIndex === undefined) {
+        Logger.warn('pageCorrection.originalIndex is undefined');
+        return;
+    }
     const currentState = this.stateManager.getValue(actualIndex);
+    if (currentState === undefined) {
+        Logger.warn(`stateManager.getValue(${actualIndex}) returned undefined`);
+        return;
+    }
     // 현재 선택된 수정사항을 적용 처리
     Logger.debug(`키보드로 수정사항 적용: ${currentState}`);
   }
@@ -301,10 +309,14 @@ export class CorrectionPopup extends BaseComponent {
   private cycleCurrentCorrectionNext(): void {
     if (this.currentCorrections.length === 0) return;
 
-    const pageCorrection = this.currentCorrections[this.currentFocusIndex];
+    const pageCorrection = this.currentCorrections[this.currentFocusIndex || 0];
     if (!pageCorrection) return;
 
     const actualIndex = pageCorrection.originalIndex;
+    if (actualIndex === undefined) {
+        Logger.warn('pageCorrection.originalIndex is undefined');
+        return;
+    }
     this.cycleCorrectionState(actualIndex, 'next');
   }
 
@@ -314,10 +326,14 @@ export class CorrectionPopup extends BaseComponent {
   private cycleCurrentCorrectionPrev(): void {
     if (this.currentCorrections.length === 0) return;
 
-    const pageCorrection = this.currentCorrections[this.currentFocusIndex];
+    const pageCorrection = this.currentCorrections[this.currentFocusIndex || 0];
     if (!pageCorrection) return;
 
     const actualIndex = pageCorrection.originalIndex;
+    if (actualIndex === undefined) {
+        Logger.warn('pageCorrection.originalIndex is undefined');
+        return;
+    }
     this.cycleCorrectionState(actualIndex, 'prev');
   }
 
@@ -664,12 +680,17 @@ export class CorrectionPopup extends BaseComponent {
     
     if (!this.isLongText) {
       // 짧은 텍스트인 경우 전체 오류 위치 배열을 그대로 사용
-      const result = this.allErrorPositions.map(errorPos => ({
+      const result = this.allErrorPositions.map((errorPos, index) => ({
         correction: errorPos.correction,
-        originalIndex: errorPos.originalIndex,
-        positionInPage: errorPos.absolutePosition,
-        absolutePosition: errorPos.absolutePosition,
-        uniqueId: errorPos.uniqueId
+        originalIndex: errorPos.originalIndex || index,
+        positionInPage: errorPos.absolutePosition || 0,
+        absolutePosition: errorPos.absolutePosition || 0,
+        uniqueId: errorPos.uniqueId || `fallback_${index}`,
+        // Phase 3에서 추가된 필수 필드들
+        pageIndex: 0,
+        absoluteIndex: errorPos.originalIndex || index,
+        relativeIndex: index,
+        isVisible: true
       }));
       
       Logger.debug(`짧은 텍스트 모드: 전체 ${result.length}개 오류 반환`);
@@ -695,15 +716,20 @@ export class CorrectionPopup extends BaseComponent {
     this.allErrorPositions.forEach((errorPos, index) => {
       Logger.debug(`[${index}] 오류 위치 검사: "${errorPos.correction.original}" at ${errorPos.absolutePosition} (고유ID: ${errorPos.uniqueId})`);
       
-      if (errorPos.absolutePosition >= previewStartIndex && 
-          errorPos.absolutePosition < previewEndIndex) {
+      if ((errorPos.absolutePosition || 0) >= previewStartIndex && 
+          (errorPos.absolutePosition || 0) < previewEndIndex) {
         
         const pageCorrection = {
           correction: errorPos.correction,
-          originalIndex: errorPos.originalIndex,
-          positionInPage: errorPos.absolutePosition - previewStartIndex,
-          absolutePosition: errorPos.absolutePosition,
-          uniqueId: errorPos.uniqueId
+          originalIndex: errorPos.originalIndex || index,
+          positionInPage: (errorPos.absolutePosition || 0) - previewStartIndex,
+          absolutePosition: errorPos.absolutePosition || 0,
+          uniqueId: errorPos.uniqueId || `fallback_${index}`,
+          // Phase 3에서 추가된 필수 필드들
+          pageIndex: this.currentPreviewPage || 0,
+          absoluteIndex: errorPos.originalIndex || index,
+          relativeIndex: pageCorrections.length,
+          isVisible: true
         };
         
         pageCorrections.push(pageCorrection);
@@ -714,7 +740,7 @@ export class CorrectionPopup extends BaseComponent {
     });
     
     // 절대 위치 순서로 정렬 (이미 정렬된 상태이지만 안전성을 위해)
-    pageCorrections.sort((a, b) => a.absolutePosition - b.absolutePosition);
+    pageCorrections.sort((a, b) => (a.absolutePosition || 0) - (b.absolutePosition || 0));
     
     Logger.debug(`getCurrentCorrections: 페이지 ${this.currentPreviewPage + 1}, 오류 ${pageCorrections.length}개`);
     Logger.debug('최종 오류 위치 순서:', pageCorrections.map(pc => ({ 
@@ -803,10 +829,10 @@ export class CorrectionPopup extends BaseComponent {
         uniqueMap.set(originalText, representative);
         
         Logger.debug(`[중복 항목] "${originalText}", ${group.length}개 항목 → 대표 항목 선택 (uniqueId: ${representative.uniqueId}, originalIndex: ${representative.originalIndex})`);
-        Logger.debug(`제외된 항목들:`, group.filter(pc => pc.uniqueId !== representative.uniqueId).map(pc => ({ 
-          uniqueId: pc.uniqueId,
-          originalIndex: pc.originalIndex,
-          absolutePosition: pc.absolutePosition
+        Logger.debug(`제외된 항목들:`, group.filter(pc => pc.uniqueId !== representative?.uniqueId).map(pc => ({ 
+          uniqueId: pc.uniqueId || 'undefined',
+          originalIndex: pc.originalIndex || -1,
+          absolutePosition: pc.absolutePosition || -1
         })));
       }
     });
@@ -815,7 +841,7 @@ export class CorrectionPopup extends BaseComponent {
     
     // 절대 위치 순서로 정렬하여 반환
     const result = Array.from(uniqueMap.values())
-      .sort((a, b) => a.absolutePosition - b.absolutePosition);
+      .sort((a, b) => (a.absolutePosition || 0) - (b.absolutePosition || 0));
     
     Logger.debug(`중복 제거 결과: ${corrections.length}개 → ${result.length}개`);
     Logger.debug('최종 중복 제거 후 항목들:', result.map(pc => ({ 
@@ -847,8 +873,8 @@ export class CorrectionPopup extends BaseComponent {
     }
     
     // 우선순위 1: 가장 앞에 위치한 항목
-    const minPosition = Math.min(...corrections.map(c => c.absolutePosition));
-    const frontmostCorrections = corrections.filter(c => c.absolutePosition === minPosition);
+    const minPosition = Math.min(...corrections.map(c => c.absolutePosition || 0));
+    const frontmostCorrections = corrections.filter(c => (c.absolutePosition || 0) === minPosition);
     
     if (frontmostCorrections.length === 1) {
       Logger.debug(`대표 항목 선택: 가장 앞 위치 기준 (위치: ${minPosition})`);
@@ -940,6 +966,10 @@ export class CorrectionPopup extends BaseComponent {
     
     uniqueCorrections.forEach(pageCorrection => {
       const actualIndex = pageCorrection.originalIndex;
+      if (actualIndex === undefined) {
+        Logger.warn('pageCorrection.originalIndex is undefined in getErrorStateCount');
+        return;
+      }
       const correction = pageCorrection.correction;
       
       const currentValue = this.stateManager.getValue(actualIndex);
@@ -996,11 +1026,19 @@ export class CorrectionPopup extends BaseComponent {
     currentCorrections.forEach(pageCorrection => {
       const correction = pageCorrection.correction;
       const actualIndex = pageCorrection.originalIndex;
-      const uniqueId = pageCorrection.uniqueId;
-      const positionInPage = pageCorrection.positionInPage;
+      if (actualIndex === undefined) {
+        Logger.warn('pageCorrection.originalIndex is undefined in renderPreview');
+        return;
+      }
+      const uniqueId = pageCorrection.uniqueId || 'unknown';
+      const positionInPage = pageCorrection.positionInPage || 0;
 
       const displayClass = this.stateManager.getDisplayClass(actualIndex);
       const currentValue = this.stateManager.getValue(actualIndex);
+      if (currentValue === undefined) {
+        Logger.warn(`stateManager.getValue(${actualIndex}) returned undefined in renderPreview`);
+        return;
+      }
       const escapedValue = escapeHtml(currentValue);
       
       // 사용자 편집 상태일 때 디버깅
@@ -1012,8 +1050,8 @@ export class CorrectionPopup extends BaseComponent {
       const replacementHtml = `<span class="${displayClass} clickable-error" data-correction-index="${actualIndex}" data-unique-id="${uniqueId}">${escapedValue}</span>`;
       
       // 정확한 위치에서 오류 텍스트 찾기
-      const expectedText = correction.original;
-      const expectedEnd = positionInPage + expectedText.length;
+      const expectedText = correction.original || '';
+      const expectedEnd = positionInPage + (expectedText?.length || 0);
       
       // 위치 범위 검증
       if (positionInPage >= 0 && expectedEnd <= previewText.length) {

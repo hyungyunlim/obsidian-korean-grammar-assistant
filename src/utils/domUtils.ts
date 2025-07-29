@@ -3,6 +3,50 @@
  */
 
 /**
+ * HTML 요소를 생성합니다.
+ * @param tag 요소 태그명
+ * @param options 요소 옵션 (클래스, 텍스트, 부모 등)
+ * @returns 생성된 HTML 요소
+ */
+export function createEl<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  options?: {
+    cls?: string | string[];
+    text?: string;
+    parent?: HTMLElement;
+    attr?: Record<string, string>;
+  }
+): HTMLElementTagNameMap[K] {
+  const el = document.createElement(tag);
+  
+  if (options) {
+    if (options.cls) {
+      if (Array.isArray(options.cls)) {
+        el.classList.add(...options.cls);
+      } else {
+        el.classList.add(options.cls);
+      }
+    }
+    
+    if (options.text) {
+      el.textContent = options.text;
+    }
+    
+    if (options.attr) {
+      for (const [key, value] of Object.entries(options.attr)) {
+        el.setAttribute(key, value);
+      }
+    }
+    
+    if (options.parent) {
+      options.parent.appendChild(el);
+    }
+  }
+  
+  return el;
+}
+
+/**
  * 안전하게 HTML 콘텐츠를 설정합니다. (보안상 innerHTML 사용 제한됨)
  * 대신 createSafeElement나 textContent를 사용하세요.
  * @deprecated innerHTML 사용으로 인한 보안 위험

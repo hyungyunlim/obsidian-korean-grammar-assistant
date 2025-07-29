@@ -672,4 +672,50 @@ export class CorrectionStateManager {
     
     return exceptionWords;
   }
+
+  /**
+   * 최종 교정된 텍스트를 가져옵니다.
+   * @param originalText 원본 텍스트
+   * @returns 교정된 텍스트
+   */
+  getFinalText(originalText: string): string {
+    const { finalText } = this.applyCorrections(originalText);
+    return finalText;
+  }
+
+  /**
+   * 사용자가 편집한 값들을 가져옵니다.
+   * @returns 사용자 편집 값들의 맵
+   */
+  getUserEditedValues(): Map<number, string> {
+    return new Map(this.userEditedValues);
+  }
+
+  /**
+   * 디버그 정보를 가져옵니다.
+   * @returns 디버그 정보 객체
+   */
+  getDebugInfo(): any {
+    // 예외 상태와 원본 유지 상태 개수 계산
+    let exceptionStatesCount = 0;
+    let originalKeptStatesCount = 0;
+    
+    for (let i = 0; i < this.corrections.length; i++) {
+      if (this.isExceptionState(i)) {
+        exceptionStatesCount++;
+      }
+      if (this.isOriginalKeptState(i)) {
+        originalKeptStatesCount++;
+      }
+    }
+    
+    return {
+      correctionCount: this.corrections.length,
+      statesCount: this.states.size,
+      exceptionStatesCount,
+      originalKeptStatesCount,
+      userEditedValuesCount: this.userEditedValues.size,
+      ignoredWordsCount: this.ignoredWords.length
+    };
+  }
 }

@@ -7,17 +7,29 @@ export interface Correction {
   original: string;
   corrected: string[];
   help: string;
+  // Phase 7: UI System 지원 추가
+  suggestions?: { value: string; confidence?: number }[];
+  userEditedValue?: string;
 }
 
 /**
  * 페이지별 교정 정보 (원본 인덱스 포함)
+ * Phase 3 페이지네이션 시스템과 호환성을 위해 확장
  */
 export interface PageCorrection {
   correction: Correction;
+  
+  // 기존 필드들 (하위 호환성 유지)
   originalIndex: number;
   positionInPage: number;
-  absolutePosition: number;  // 전체 텍스트에서의 절대 위치
-  uniqueId: string;          // 고유 식별자 (originalIndex_occurrenceCount)
+  absolutePosition: number;
+  uniqueId: string;
+  
+  // Phase 3 페이지네이션 시스템 필드들
+  pageIndex: number;         // 현재 페이지 인덱스
+  absoluteIndex: number;     // 전체 교정 목록에서의 인덱스
+  relativeIndex: number;     // 페이지 내에서의 상대 인덱스
+  isVisible: boolean;        // 현재 보이는 상태 여부
 }
 
 /**
@@ -54,14 +66,31 @@ export interface PopupConfig {
   morphemeInfo?: any; // 형태소 분석 정보 (AI 분석용)
   ignoredWords: string[];
   onExceptionWordsAdded?: (words: string[]) => void;
+  
+  // Phase 5: AI 통합 관련 설정
+  enableAI?: boolean;
+  aiProvider?: string;
+  openaiApiKey?: string;
+  anthropicApiKey?: string;
+  googleApiKey?: string;
+  ollamaEndpoint?: string;
+  contextWindow?: number;
+  showTokenWarning?: boolean;
+  tokenWarningThreshold?: number;
+  maxTokens?: number;
 }
+
+/**
+ * 교정 상태 타입 (Phase 7: union 타입으로 변경)
+ */
+export type CorrectionState = 'error' | 'corrected' | 'exception-processed' | 'original-kept' | 'user-edited';
 
 /**
  * 교정 상태 관리 인터페이스
  */
-export interface CorrectionState {
+export interface CorrectionStateInfo {
   correctionIndex: number;
-  currentState: 'error' | 'corrected' | 'exception-processed' | 'original-kept' | 'user-edited';
+  currentState: CorrectionState;
   selectedValue: string;
   isExceptionState?: boolean;
   isUserEdited?: boolean;
@@ -138,6 +167,7 @@ export interface AISettings {
   temperature: number;
   showTokenWarning: boolean; // 토큰 사용량 경고 표시 여부
   tokenWarningThreshold: number; // 경고를 표시할 토큰 임계값
+  contextWindow?: number; // Phase 5: AI 분석 시 컨텍스트 윈도우 크기
 }
 
 /**
@@ -172,6 +202,7 @@ export interface AIAnalysisRequest {
   editor?: any; // Obsidian Editor 인스턴스 (구조화된 컨텍스트 추출용)
   file?: any; // TFile 인스턴스 (메타데이터 정보용)
   enhancedContext?: boolean; // 향상된 컨텍스트 추출 활성화 여부
+  morphemeData?: any; // Phase 5: 형태소 분석 데이터
 }
 
 /**
@@ -232,4 +263,38 @@ export interface InlineError {
   aiSelectedValue?: string; // AI가 선택한 수정값
   aiConfidence?: number; // AI 신뢰도 (0-100)
   aiReasoning?: string; // AI 추론 이유
+}
+
+/**
+ * Phase 7: UI System 타입 정의
+ */
+
+/**
+ * 렌더링 컨텍스트 인터페이스
+ */
+export interface RenderContext {
+  state: CorrectionState;
+  isActive: boolean;
+  isFocused: boolean;
+  isVisible?: boolean;
+  index?: number;
+  container?: HTMLElement;
+  pagination?: {
+    pageBreaks: number[];
+    charsPerPage: number;
+    currentPage: number;
+    totalPages: number;
+  };
+}
+
+/**
+ * 이벤트 컨텍스트 인터페이스
+ */
+export interface EventContext {
+  type: string;
+  target: HTMLElement;
+  correctionIndex?: number;
+  eventData?: any;
+  timestamp?: number;
+  platform?: 'desktop' | 'mobile';
 }

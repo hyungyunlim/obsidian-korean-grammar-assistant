@@ -4881,6 +4881,46 @@ var CorrectionStateManager = class {
     }
     return exceptionWords;
   }
+  /**
+   * 최종 교정된 텍스트를 가져옵니다.
+   * @param originalText 원본 텍스트
+   * @returns 교정된 텍스트
+   */
+  getFinalText(originalText) {
+    const { finalText } = this.applyCorrections(originalText);
+    return finalText;
+  }
+  /**
+   * 사용자가 편집한 값들을 가져옵니다.
+   * @returns 사용자 편집 값들의 맵
+   */
+  getUserEditedValues() {
+    return new Map(this.userEditedValues);
+  }
+  /**
+   * 디버그 정보를 가져옵니다.
+   * @returns 디버그 정보 객체
+   */
+  getDebugInfo() {
+    let exceptionStatesCount = 0;
+    let originalKeptStatesCount = 0;
+    for (let i = 0; i < this.corrections.length; i++) {
+      if (this.isExceptionState(i)) {
+        exceptionStatesCount++;
+      }
+      if (this.isOriginalKeptState(i)) {
+        originalKeptStatesCount++;
+      }
+    }
+    return {
+      correctionCount: this.corrections.length,
+      statesCount: this.states.size,
+      exceptionStatesCount,
+      originalKeptStatesCount,
+      userEditedValuesCount: this.userEditedValues.size,
+      ignoredWordsCount: this.ignoredWords.length
+    };
+  }
 };
 
 // src/utils/textUtils.ts
@@ -5318,11 +5358,19 @@ var CorrectionPopup = class extends BaseComponent {
       this.close();
       return;
     }
-    const pageCorrection = this.currentCorrections[this.currentFocusIndex];
+    const pageCorrection = this.currentCorrections[this.currentFocusIndex || 0];
     if (!pageCorrection)
       return;
     const actualIndex = pageCorrection.originalIndex;
+    if (actualIndex === void 0) {
+      Logger.warn("pageCorrection.originalIndex is undefined");
+      return;
+    }
     const currentState = this.stateManager.getValue(actualIndex);
+    if (currentState === void 0) {
+      Logger.warn(`stateManager.getValue(${actualIndex}) returned undefined`);
+      return;
+    }
     Logger.debug(`\uD0A4\uBCF4\uB4DC\uB85C \uC218\uC815\uC0AC\uD56D \uC801\uC6A9: ${currentState}`);
   }
   /**
@@ -5331,10 +5379,14 @@ var CorrectionPopup = class extends BaseComponent {
   cycleCurrentCorrectionNext() {
     if (this.currentCorrections.length === 0)
       return;
-    const pageCorrection = this.currentCorrections[this.currentFocusIndex];
+    const pageCorrection = this.currentCorrections[this.currentFocusIndex || 0];
     if (!pageCorrection)
       return;
     const actualIndex = pageCorrection.originalIndex;
+    if (actualIndex === void 0) {
+      Logger.warn("pageCorrection.originalIndex is undefined");
+      return;
+    }
     this.cycleCorrectionState(actualIndex, "next");
   }
   /**
@@ -5343,10 +5395,14 @@ var CorrectionPopup = class extends BaseComponent {
   cycleCurrentCorrectionPrev() {
     if (this.currentCorrections.length === 0)
       return;
-    const pageCorrection = this.currentCorrections[this.currentFocusIndex];
+    const pageCorrection = this.currentCorrections[this.currentFocusIndex || 0];
     if (!pageCorrection)
       return;
     const actualIndex = pageCorrection.originalIndex;
+    if (actualIndex === void 0) {
+      Logger.warn("pageCorrection.originalIndex is undefined");
+      return;
+    }
     this.cycleCorrectionState(actualIndex, "prev");
   }
   /**
@@ -5600,12 +5656,17 @@ var CorrectionPopup = class extends BaseComponent {
     Logger.debug(`currentPreviewPage: ${this.currentPreviewPage}`);
     Logger.debug(`allErrorPositions \uAC1C\uC218: ${this.allErrorPositions.length}`);
     if (!this.isLongText) {
-      const result = this.allErrorPositions.map((errorPos) => ({
+      const result = this.allErrorPositions.map((errorPos, index) => ({
         correction: errorPos.correction,
-        originalIndex: errorPos.originalIndex,
-        positionInPage: errorPos.absolutePosition,
-        absolutePosition: errorPos.absolutePosition,
-        uniqueId: errorPos.uniqueId
+        originalIndex: errorPos.originalIndex || index,
+        positionInPage: errorPos.absolutePosition || 0,
+        absolutePosition: errorPos.absolutePosition || 0,
+        uniqueId: errorPos.uniqueId || `fallback_${index}`,
+        // Phase 3에서 추가된 필수 필드들
+        pageIndex: 0,
+        absoluteIndex: errorPos.originalIndex || index,
+        relativeIndex: index,
+        isVisible: true
       }));
       Logger.debug(`\uC9E7\uC740 \uD14D\uC2A4\uD2B8 \uBAA8\uB4DC: \uC804\uCCB4 ${result.length}\uAC1C \uC624\uB958 \uBC18\uD658`);
       Logger.debug("\uBC18\uD658 \uC624\uB958 \uBAA9\uB85D:", result.map((pc) => ({
@@ -5623,13 +5684,18 @@ var CorrectionPopup = class extends BaseComponent {
     const pageCorrections = [];
     this.allErrorPositions.forEach((errorPos, index) => {
       Logger.debug(`[${index}] \uC624\uB958 \uC704\uCE58 \uAC80\uC0AC: "${errorPos.correction.original}" at ${errorPos.absolutePosition} (\uACE0\uC720ID: ${errorPos.uniqueId})`);
-      if (errorPos.absolutePosition >= previewStartIndex && errorPos.absolutePosition < previewEndIndex) {
+      if ((errorPos.absolutePosition || 0) >= previewStartIndex && (errorPos.absolutePosition || 0) < previewEndIndex) {
         const pageCorrection = {
           correction: errorPos.correction,
-          originalIndex: errorPos.originalIndex,
-          positionInPage: errorPos.absolutePosition - previewStartIndex,
-          absolutePosition: errorPos.absolutePosition,
-          uniqueId: errorPos.uniqueId
+          originalIndex: errorPos.originalIndex || index,
+          positionInPage: (errorPos.absolutePosition || 0) - previewStartIndex,
+          absolutePosition: errorPos.absolutePosition || 0,
+          uniqueId: errorPos.uniqueId || `fallback_${index}`,
+          // Phase 3에서 추가된 필수 필드들
+          pageIndex: this.currentPreviewPage || 0,
+          absoluteIndex: errorPos.originalIndex || index,
+          relativeIndex: pageCorrections.length,
+          isVisible: true
         };
         pageCorrections.push(pageCorrection);
         Logger.debug(`[${index}] \uD398\uC774\uC9C0 \uBC94\uC704 \uB0B4 \uC624\uB958 \uCD94\uAC00: positionInPage=${pageCorrection.positionInPage}`);
@@ -5637,7 +5703,7 @@ var CorrectionPopup = class extends BaseComponent {
         Logger.debug(`[${index}] \uD398\uC774\uC9C0 \uBC94\uC704 \uBC16 \uC624\uB958 \uC81C\uC678`);
       }
     });
-    pageCorrections.sort((a, b) => a.absolutePosition - b.absolutePosition);
+    pageCorrections.sort((a, b) => (a.absolutePosition || 0) - (b.absolutePosition || 0));
     Logger.debug(`getCurrentCorrections: \uD398\uC774\uC9C0 ${this.currentPreviewPage + 1}, \uC624\uB958 ${pageCorrections.length}\uAC1C`);
     Logger.debug("\uCD5C\uC885 \uC624\uB958 \uC704\uCE58 \uC21C\uC11C:", pageCorrections.map((pc) => ({
       original: pc.correction.original,
@@ -5705,15 +5771,15 @@ var CorrectionPopup = class extends BaseComponent {
         const representative = this.selectRepresentativeCorrection(group);
         uniqueMap.set(originalText, representative);
         Logger.debug(`[\uC911\uBCF5 \uD56D\uBAA9] "${originalText}", ${group.length}\uAC1C \uD56D\uBAA9 \u2192 \uB300\uD45C \uD56D\uBAA9 \uC120\uD0DD (uniqueId: ${representative.uniqueId}, originalIndex: ${representative.originalIndex})`);
-        Logger.debug(`\uC81C\uC678\uB41C \uD56D\uBAA9\uB4E4:`, group.filter((pc) => pc.uniqueId !== representative.uniqueId).map((pc) => ({
-          uniqueId: pc.uniqueId,
-          originalIndex: pc.originalIndex,
-          absolutePosition: pc.absolutePosition
+        Logger.debug(`\uC81C\uC678\uB41C \uD56D\uBAA9\uB4E4:`, group.filter((pc) => pc.uniqueId !== (representative == null ? void 0 : representative.uniqueId)).map((pc) => ({
+          uniqueId: pc.uniqueId || "undefined",
+          originalIndex: pc.originalIndex || -1,
+          absolutePosition: pc.absolutePosition || -1
         })));
       }
     });
     Logger.debug(`\uB300\uD45C \uD56D\uBAA9 \uC120\uD0DD \uC644\uB8CC. uniqueMap \uD06C\uAE30: ${uniqueMap.size}`);
-    const result = Array.from(uniqueMap.values()).sort((a, b) => a.absolutePosition - b.absolutePosition);
+    const result = Array.from(uniqueMap.values()).sort((a, b) => (a.absolutePosition || 0) - (b.absolutePosition || 0));
     Logger.debug(`\uC911\uBCF5 \uC81C\uAC70 \uACB0\uACFC: ${corrections.length}\uAC1C \u2192 ${result.length}\uAC1C`);
     Logger.debug("\uCD5C\uC885 \uC911\uBCF5 \uC81C\uAC70 \uD6C4 \uD56D\uBAA9\uB4E4:", result.map((pc) => ({
       original: pc.correction.original,
@@ -5739,8 +5805,8 @@ var CorrectionPopup = class extends BaseComponent {
     if (corrections.length === 1) {
       return corrections[0];
     }
-    const minPosition = Math.min(...corrections.map((c) => c.absolutePosition));
-    const frontmostCorrections = corrections.filter((c) => c.absolutePosition === minPosition);
+    const minPosition = Math.min(...corrections.map((c) => c.absolutePosition || 0));
+    const frontmostCorrections = corrections.filter((c) => (c.absolutePosition || 0) === minPosition);
     if (frontmostCorrections.length === 1) {
       Logger.debug(`\uB300\uD45C \uD56D\uBAA9 \uC120\uD0DD: \uAC00\uC7A5 \uC55E \uC704\uCE58 \uAE30\uC900 (\uC704\uCE58: ${minPosition})`);
       return frontmostCorrections[0];
@@ -5815,6 +5881,10 @@ var CorrectionPopup = class extends BaseComponent {
     let errorCount = 0;
     uniqueCorrections.forEach((pageCorrection) => {
       const actualIndex = pageCorrection.originalIndex;
+      if (actualIndex === void 0) {
+        Logger.warn("pageCorrection.originalIndex is undefined in getErrorStateCount");
+        return;
+      }
       const correction = pageCorrection.correction;
       const currentValue = this.stateManager.getValue(actualIndex);
       const isException = this.stateManager.isExceptionState(actualIndex);
@@ -5856,18 +5926,26 @@ var CorrectionPopup = class extends BaseComponent {
     currentCorrections.forEach((pageCorrection) => {
       const correction = pageCorrection.correction;
       const actualIndex = pageCorrection.originalIndex;
-      const uniqueId = pageCorrection.uniqueId;
-      const positionInPage = pageCorrection.positionInPage;
+      if (actualIndex === void 0) {
+        Logger.warn("pageCorrection.originalIndex is undefined in renderPreview");
+        return;
+      }
+      const uniqueId = pageCorrection.uniqueId || "unknown";
+      const positionInPage = pageCorrection.positionInPage || 0;
       const displayClass = this.stateManager.getDisplayClass(actualIndex);
       const currentValue = this.stateManager.getValue(actualIndex);
+      if (currentValue === void 0) {
+        Logger.warn(`stateManager.getValue(${actualIndex}) returned undefined in renderPreview`);
+        return;
+      }
       const escapedValue = escapeHtml(currentValue);
       const isUserEdited = this.stateManager.isUserEditedState(actualIndex);
       if (isUserEdited) {
         Logger.debug(`\u{1F3A8} \uBBF8\uB9AC\uBCF4\uAE30 \uC0AC\uC6A9\uC790\uD3B8\uC9D1: index=${actualIndex}, original="${correction.original}", currentValue="${currentValue}", displayClass="${displayClass}"`);
       }
       const replacementHtml = `<span class="${displayClass} clickable-error" data-correction-index="${actualIndex}" data-unique-id="${uniqueId}">${escapedValue}</span>`;
-      const expectedText = correction.original;
-      const expectedEnd = positionInPage + expectedText.length;
+      const expectedText = correction.original || "";
+      const expectedEnd = positionInPage + ((expectedText == null ? void 0 : expectedText.length) || 0);
       if (positionInPage >= 0 && expectedEnd <= previewText.length) {
         const actualText = previewText.slice(positionInPage, expectedEnd);
         if (actualText === expectedText) {
