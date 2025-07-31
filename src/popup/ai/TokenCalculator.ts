@@ -197,38 +197,53 @@ export class TokenCalculator implements IPopupServiceManager {
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
       `;
 
-      // 안전한 템플릿 방식 사용
-      const template = document.createElement('template');
-      template.innerHTML = `
-        <div class="modal-title" style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: var(--text-normal);">
-          🚨 토큰 사용량 경고
-        </div>
-        <div class="modal-content" style="margin-bottom: 20px; color: var(--text-normal);">
-          <p>AI 분석에 많은 토큰이 사용될 예정입니다:</p>
-          <div style="background: var(--background-secondary); padding: 12px; border-radius: 4px; margin: 12px 0;">
-            <div><strong>예상 토큰:</strong> ${tokenUsage.totalEstimated.toLocaleString()}개</div>
-            <div><strong>예상 비용:</strong> ${tokenUsage.estimatedCost}</div>
-            ${tokenUsage.morphemeOptimized ? '<div style="color: var(--text-accent);"><strong>✓ 형태소 최적화 적용됨</strong></div>' : ''}
-          </div>
-          <p>계속 진행하시겠습니까?</p>
-        </div>
-        <div class="modal-button-container" style="display: flex; gap: 8px; justify-content: flex-end;">
-          <button class="mod-cta token-warning-proceed" style="background: var(--interactive-accent); color: var(--text-on-accent);">
-            진행
-          </button>
-          <button class="token-warning-cancel">
-            취소
-          </button>
-        </div>
-      `;
-      
-      content.appendChild(template.content);
+      // DOM API를 사용한 안전한 모달 생성
+      const title = content.createDiv({ cls: 'modal-title' });
+      title.style.cssText = 'font-size: 18px; font-weight: 600; margin-bottom: 16px; color: var(--text-normal);';
+      title.textContent = '🚨 토큰 사용량 경고';
+
+      const modalContent = content.createDiv({ cls: 'modal-content' });
+      modalContent.style.cssText = 'margin-bottom: 20px; color: var(--text-normal);';
+
+      const p1 = modalContent.createEl('p');
+      p1.textContent = 'AI 분석에 많은 토큰이 사용될 예정입니다:';
+
+      const infoBox = modalContent.createDiv();
+      infoBox.style.cssText = 'background: var(--background-secondary); padding: 12px; border-radius: 4px; margin: 12px 0;';
+
+      const tokenInfo = infoBox.createDiv();
+      const tokenStrong = tokenInfo.createEl('strong');
+      tokenStrong.textContent = '예상 토큰:';
+      tokenInfo.appendChild(document.createTextNode(` ${tokenUsage.totalEstimated.toLocaleString()}개`));
+
+      const costInfo = infoBox.createDiv();
+      const costStrong = costInfo.createEl('strong');
+      costStrong.textContent = '예상 비용:';
+      costInfo.appendChild(document.createTextNode(` ${tokenUsage.estimatedCost}`));
+
+      if (tokenUsage.morphemeOptimized) {
+        const optimizedInfo = infoBox.createDiv();
+        optimizedInfo.style.cssText = 'color: var(--text-accent);';
+        const optimizedStrong = optimizedInfo.createEl('strong');
+        optimizedStrong.textContent = '✓ 형태소 최적화 적용됨';
+      }
+
+      const p2 = modalContent.createEl('p');
+      p2.textContent = '계속 진행하시겠습니까?';
+
+      const buttonContainer = content.createDiv({ cls: 'modal-button-container' });
+      buttonContainer.style.cssText = 'display: flex; gap: 8px; justify-content: flex-end;';
+
+      const proceedBtn = buttonContainer.createEl('button', { cls: 'mod-cta token-warning-proceed' });
+      proceedBtn.style.cssText = 'background: var(--interactive-accent); color: var(--text-on-accent);';
+      proceedBtn.textContent = '진행';
+
+      const cancelBtn = buttonContainer.createEl('button', { cls: 'token-warning-cancel' });
+      cancelBtn.textContent = '취소';
       modal.appendChild(content);
       document.body.appendChild(modal);
 
       // 버튼 이벤트
-      const proceedBtn = content.querySelector('.token-warning-proceed') as HTMLButtonElement;
-      const cancelBtn = content.querySelector('.token-warning-cancel') as HTMLButtonElement;
 
       const cleanup = () => {
         document.body.removeChild(modal);

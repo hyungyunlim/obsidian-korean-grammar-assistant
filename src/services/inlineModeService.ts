@@ -32,16 +32,6 @@ class AITextWidget extends WidgetType {
     
     // 🎨 AI 교정 스타일 적용 (Widget 전용 클래스)
     span.className = 'korean-grammar-ai-widget';
-    span.style.cssText = `
-      color: #10b981 !important;
-      text-decoration: wavy underline #10b981 2px !important;
-      background-color: rgba(16, 185, 129, 0.1) !important;
-      cursor: pointer !important;
-      display: inline !important;
-      font-family: inherit !important;
-      font-size: inherit !important;
-      line-height: inherit !important;
-    `;
     
     // 🔧 데이터 속성 설정 (툴팁 및 클릭 처리용)
     span.setAttribute('data-error-id', this.errorId);
@@ -53,7 +43,6 @@ class AITextWidget extends WidgetType {
     
     // 🖱️ 호버 효과 + 툴팁 표시
     span.addEventListener('mouseenter', (e) => {
-      span.style.backgroundColor = 'rgba(16, 185, 129, 0.2) !important';
       
       // 🔍 툴팁 표시 - AI 분석 결과 포함
       const mockError: InlineError = {
@@ -86,8 +75,6 @@ class AITextWidget extends WidgetType {
     });
     
     span.addEventListener('mouseleave', () => {
-      span.style.backgroundColor = 'rgba(16, 185, 129, 0.1) !important';
-      
       // 🔍 툴팁 숨기기 (더 긴 딜레이 - 툴팁으로 마우스 이동할 충분한 시간 확보)
       setTimeout(() => {
         if ((window as any).globalInlineTooltip && !(window as any).globalInlineTooltip.isHovered) {
@@ -152,18 +139,7 @@ class AITextWidget extends WidgetType {
     const input = document.createElement('input');
     input.type = 'text';
     input.value = this.aiText;
-    input.style.cssText = `
-      color: #10b981 !important;
-      background-color: rgba(16, 185, 129, 0.1) !important;
-      border: 2px solid #10b981 !important;
-      border-radius: 3px !important;
-      padding: 2px 4px !important;
-      font-family: inherit !important;
-      font-size: inherit !important;
-      line-height: inherit !important;
-      margin: 0 !important;
-      outline: none !important;
-    `;
+    input.className = 'korean-grammar-ai-widget-edit';
     
     // span과 input 교체
     span.parentNode?.replaceChild(input, span);
@@ -209,16 +185,6 @@ class AITextWidget extends WidgetType {
     const span = document.createElement('span');
     span.textContent = this.aiText;
     span.className = 'korean-grammar-ai-widget';
-    span.style.cssText = `
-      color: #10b981 !important;
-      text-decoration: wavy underline #10b981 2px !important;
-      background-color: rgba(16, 185, 129, 0.1) !important;
-      cursor: pointer !important;
-      display: inline !important;
-      font-family: inherit !important;
-      font-size: inherit !important;
-      line-height: inherit !important;
-    `;
     
     // 이벤트 리스너들도 다시 등록해야 함
     // (간단화를 위해 생략 - 실제로는 toDOM()에서 복사해야 함)
@@ -247,25 +213,10 @@ class ErrorWidget extends WidgetType {
     span.className = 'korean-grammar-error-inline';
     span.textContent = this.error.correction.original;
     
-    // 강제로 스타일 적용 (text-decoration-line 사용)
-    span.style.cssText = `
-      display: inline !important;
-      position: relative !important;
-      cursor: pointer !important;
-      text-decoration-line: underline !important;
-      text-decoration-style: wavy !important;
-      text-decoration-color: var(--color-red) !important;
-      text-decoration-thickness: 2px !important;
-      background-color: rgba(255, 0, 0, 0.05) !important;
-      user-select: none !important;
-      -webkit-user-select: none !important;
-      -webkit-touch-callout: none !important;
-    `;
-    
     // 설정에 따른 오버라이드
     if (this.underlineStyle !== 'wavy' || this.underlineColor !== 'var(--color-red)') {
-      span.style.textDecorationStyle = this.underlineStyle;
-      span.style.textDecorationColor = this.underlineColor;
+      span.style.setProperty('text-decoration-style', this.underlineStyle, 'important');
+      span.style.setProperty('text-decoration-color', this.underlineColor, 'important');
     }
     
     // 호버 이벤트 (300ms 딜레이)
@@ -315,7 +266,7 @@ class ErrorWidget extends WidgetType {
   updateDOM(dom: HTMLElement, view: EditorView): boolean {
     // 상태가 변경된 경우 DOM 업데이트
     if (!this.error.isActive) {
-      dom.style.display = 'none';
+      dom.classList.add('korean-grammar-inline-hidden');
       return true;
     }
     return false;
@@ -2856,17 +2807,7 @@ export class InlineModeService {
 
     // 새로운 확장 감지 영역 생성 (가상)
     const expandedZone = document.createElement('span');
-    expandedZone.className = 'korean-grammar-expanded-hover';
-    expandedZone.style.cssText = `
-      position: absolute;
-      left: -8px;
-      right: -8px;
-      top: -3px;
-      bottom: -3px;
-      pointer-events: auto;
-      z-index: 1;
-      opacity: 0;
-    `;
+    expandedZone.className = 'korean-grammar-expanded-hover korean-grammar-expanded-zone';
     
     // 확장 영역에 호버 이벤트 추가
     expandedZone.addEventListener('mouseenter', () => {
@@ -2890,7 +2831,7 @@ export class InlineModeService {
 
     // DOM에 추가 (상대 위치)
     if (originalElement.parentElement) {
-      originalElement.style.position = 'relative';
+      originalElement.classList.add('korean-grammar-relative');
       originalElement.appendChild(expandedZone);
     }
   }

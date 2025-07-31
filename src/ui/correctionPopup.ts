@@ -1773,7 +1773,7 @@ export class CorrectionPopup extends BaseComponent {
     const correctionIndex = parseInt(target.dataset.correctionIndex || '0');
     Logger.debug(`🔧 handleCardTextClick 호출: index=${correctionIndex}, text="${target.textContent}"`);
     Logger.debug(`🔧 target.dataset: ${JSON.stringify(target.dataset)}`);
-    Logger.debug(`🔧 target HTML: ${target.outerHTML}`);
+    Logger.debug(`🔧 target 클래스: ${target.className}`);
     
     if (isNaN(correctionIndex) || correctionIndex < 0 || correctionIndex >= this.config.corrections.length) {
       Logger.debug('Invalid correction index for card text click:', correctionIndex);

@@ -115,9 +115,13 @@ export function createLink(text: string, href: string, target: string = '_blank'
  * @returns 파싱된 DOM 요소들
  */
 export function parseHTMLSafely(htmlString: string): DocumentFragment {
-  const template = document.createElement('template');
-  template.innerHTML = htmlString;
-  return template.content;
+  // Obsidian의 sanitizeHTMLToDom 사용
+  const sanitized = (window as any).sanitizeHTMLToDom(htmlString);
+  const fragment = document.createDocumentFragment();
+  if (sanitized) {
+    fragment.appendChild(sanitized);
+  }
+  return fragment;
 }
 
 /**

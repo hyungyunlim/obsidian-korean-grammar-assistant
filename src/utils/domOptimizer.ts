@@ -7,7 +7,7 @@ interface DOMUpdate {
   element: HTMLElement;
   property: string;
   value: any;
-  type: 'style' | 'attribute' | 'textContent' | 'innerHTML' | 'className';
+  type: 'style' | 'attribute' | 'textContent' | 'className';
 }
 
 /**
@@ -70,7 +70,6 @@ export class DOMOptimizer {
       style?: Record<string, string>;
       attributes?: Record<string, string>;
       textContent?: string;
-      innerHTML?: string;
       className?: string;
     }
   ): void {
@@ -124,10 +123,9 @@ export class DOMOptimizer {
 
   /**
    * HTML 콘텐츠를 업데이트합니다
+   * @deprecated innerHTML 사용으로 인한 보안 위험
    */
-  updateHTML(element: HTMLElement, html: string): void {
-    this.scheduleUpdate(element, { innerHTML: html });
-  }
+  // updateHTML 메서드 제거됨 - Obsidian 가이드라인 준수
 
   /**
    * 클래스명을 업데이트합니다
@@ -308,9 +306,6 @@ export class DOMOptimizer {
           break;
         case 'textContent':
           element.textContent = value;
-          break;
-        case 'innerHTML':
-          element.innerHTML = value;
           break;
         case 'className':
           element.className = value;

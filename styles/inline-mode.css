@@ -1,0 +1,313 @@
+/* =================================================================
+   Korean Grammar Assistant - 인라인 모드 JavaScript 스타일 대체
+   ================================================================= */
+
+/* 인라인 에러 스팬 기본 스타일 */
+.korean-grammar-inline-error {
+  background-color: rgba(255, 99, 71, 0.15) !important;
+  text-decoration: wavy underline var(--color-red) 2px !important;
+  text-underline-offset: 3px !important;
+  text-decoration-skip-ink: none !important;
+  text-decoration-thickness: 2px !important;
+  cursor: pointer !important;
+  position: relative !important;
+  transition: background-color 0.2s ease !important;
+}
+
+/* 인라인 에러 호버 스타일 */
+.korean-grammar-inline-error-hover {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+/* 인라인 편집 인풋 스타일 */
+.korean-grammar-inline-input {
+  min-width: 100px !important;
+  padding: 2px 6px !important;
+  background: var(--background-primary) !important;
+  border: 1px solid var(--interactive-accent) !important;
+  border-radius: 4px !important;
+  color: var(--text-normal) !important;
+  font-size: inherit !important;
+  font-family: inherit !important;
+  outline: 2px solid var(--interactive-accent) !important;
+  outline-offset: 1px !important;
+}
+
+/* 호버 배경 하이라이트 */
+.korean-grammar-inline-hover-bg {
+  background-color: rgba(var(--interactive-accent-rgb), 0.1);
+}
+
+/* 문서 스위칭 시 숨김 처리 */
+.korean-grammar-inline-hidden {
+  display: none;
+}
+
+/* 확장 구역 스타일 */
+.korean-grammar-expanded-zone {
+  position: absolute !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 4px !important;
+  z-index: 10 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  transition: transform 0.2s ease !important;
+}
+
+/* AI 데코레이션 컨테이너 */
+.korean-grammar-ai-container {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 2px 6px !important;
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  border-radius: 4px !important;
+  transition: background-color 0.2s ease !important;
+}
+
+/* AI 컨피던스 스타일 */
+.korean-grammar-ai-confidence {
+  font-weight: 600;
+}
+
+/* AI 위젯 스타일 */
+.korean-grammar-ai-widget {
+  color: #10b981 !important;
+  text-decoration: wavy underline #10b981 2px !important;
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  cursor: pointer !important;
+  display: inline !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+.korean-grammar-ai-widget:hover {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+/* AI 위젯 편집 모드 */
+.korean-grammar-ai-widget-edit {
+  color: #10b981 !important;
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  border: 2px solid #10b981 !important;
+  border-radius: 3px !important;
+  padding: 2px 4px !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  margin: 0 !important;
+  outline: none !important;
+}
+
+/* 교정된 텍스트 스타일 */
+.korean-grammar-corrected-text {
+  color: var(--text-success) !important;
+  font-weight: 500 !important;
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  text-decoration: none !important;
+  padding: 2px 4px !important;
+  border-radius: 4px !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+/* 교정된 텍스트 호버 */
+.korean-grammar-corrected-text:hover {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+/* 에러 영역 상대 위치 */
+.korean-grammar-relative {
+  position: relative;
+}
+
+/* 토큰 경고 모달 */
+.korean-grammar-token-modal {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 10000 !important;
+  animation: fadeIn 0.15s ease !important;
+}
+
+.korean-grammar-token-content {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.korean-grammar-token-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.korean-grammar-token-title {
+  margin: 0 0 8px 0;
+  color: var(--text-normal);
+}
+
+.korean-grammar-token-description {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.korean-grammar-token-details {
+  background: var(--background-secondary);
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.korean-grammar-token-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.korean-grammar-token-item {
+  text-align: center;
+}
+
+.korean-grammar-token-number {
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--text-accent);
+}
+
+.korean-grammar-token-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.korean-grammar-token-recommendation {
+  border-top: 1px solid var(--background-modifier-border);
+  padding-top: 12px;
+  margin-top: 12px;
+}
+
+.korean-grammar-token-recommendation-text {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.korean-grammar-token-overlimit {
+  background: var(--background-secondary);
+  border: 1px solid var(--text-error);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.korean-grammar-token-overlimit-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.korean-grammar-token-overlimit-text {
+  flex: 1;
+}
+
+.korean-grammar-token-overlimit-title {
+  font-weight: bold;
+  color: var(--text-error);
+  margin-bottom: 4px;
+}
+
+.korean-grammar-token-overlimit-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.korean-grammar-token-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.korean-grammar-token-cancel {
+  background: var(--interactive-normal);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-normal);
+}
+
+.korean-grammar-token-update,
+.korean-grammar-token-proceed {
+  background: var(--interactive-accent);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: white;
+}
+
+/* 애니메이션 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* AI 상태 표시 */
+.korean-grammar-ai-status {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  font-size: 10px !important;
+  padding: 1px 4px !important;
+  border-radius: 3px !important;
+  margin-left: 2px !important;
+  vertical-align: baseline !important;
+}
+
+.korean-grammar-ai-status-icon {
+  font-size: 8px !important;
+}
+
+.korean-grammar-ai-status-confidence {
+  font-weight: 600 !important;
+}
+
+/* AI 상태별 색상 */
+.korean-grammar-ai-status-exception {
+  background: rgba(59, 130, 246, 0.15) !important;
+  color: #3b82f6 !important;
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+}
+
+.korean-grammar-ai-status-keep {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #f59e0b !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+}
+
+.korean-grammar-ai-status-corrected {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #10b981 !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}

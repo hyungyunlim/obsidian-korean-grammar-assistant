@@ -7,7 +7,17 @@
 /* 인라인 오류 밑줄 - 인라인 스타일로 완전 이전 */
 /* CSS는 더 이상 사용하지 않고 JavaScript 인라인 스타일만 사용 */
 .korean-grammar-error-inline {
-  /* 빈 규칙 - 모든 스타일은 JavaScript에서 인라인으로 처리 */
+  display: inline !important;
+  position: relative !important;
+  cursor: pointer !important;
+  text-decoration-line: underline !important;
+  text-decoration-style: wavy !important;
+  text-decoration-color: var(--color-red) !important;
+  text-decoration-thickness: 2px !important;
+  background-color: rgba(255, 0, 0, 0.05) !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
 }
 
 /* 🔴 기본 오류 스타일 (AI 분석 전) */

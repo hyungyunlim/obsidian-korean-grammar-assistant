@@ -2585,20 +2585,7 @@ var init_tokenWarningModal = __esm({
         return new Promise((resolve) => {
           var _a, _b, _c;
           const modal = document.createElement("div");
-          modal.className = "modal-overlay token-warning-overlay";
-          modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.8);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 10000;
-        backdrop-filter: blur(2px);
-      `;
+          modal.className = "modal-overlay token-warning-overlay korean-grammar-token-modal";
           const modalContent = this.createTokenWarningModal(tokenUsage, isOverMaxTokens, maxTokens);
           modal.appendChild(modalContent);
           if (import_obsidian15.Platform.isMobile) {
@@ -4175,9 +4162,7 @@ var import_obsidian2 = require("obsidian");
 
 // src/utils/htmlUtils.ts
 function escapeHtml(text) {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 function safeRemoveElement(element) {
   if (element && element.parentNode) {
@@ -4191,9 +4176,12 @@ function addEventListenerWithCleanup(element, event, handler) {
 
 // src/utils/domUtils.ts
 function parseHTMLSafely(htmlString) {
-  const template = document.createElement("template");
-  template.innerHTML = htmlString;
-  return template.content;
+  const sanitized = window.sanitizeHTMLToDom(htmlString);
+  const fragment = document.createDocumentFragment();
+  if (sanitized) {
+    fragment.appendChild(sanitized);
+  }
+  return fragment;
 }
 function clearElement(element) {
   try {
@@ -6488,7 +6476,7 @@ var CorrectionPopup = class extends BaseComponent {
     const correctionIndex = parseInt(target.dataset.correctionIndex || "0");
     Logger.debug(`\u{1F527} handleCardTextClick \uD638\uCD9C: index=${correctionIndex}, text="${target.textContent}"`);
     Logger.debug(`\u{1F527} target.dataset: ${JSON.stringify(target.dataset)}`);
-    Logger.debug(`\u{1F527} target HTML: ${target.outerHTML}`);
+    Logger.debug(`\u{1F527} target \uD074\uB798\uC2A4: ${target.className}`);
     if (isNaN(correctionIndex) || correctionIndex < 0 || correctionIndex >= this.config.corrections.length) {
       Logger.debug("Invalid correction index for card text click:", correctionIndex);
       return false;
@@ -12495,16 +12483,6 @@ var AITextWidget = class extends import_view.WidgetType {
     const span = document.createElement("span");
     span.textContent = this.aiText;
     span.className = "korean-grammar-ai-widget";
-    span.style.cssText = `
-      color: #10b981 !important;
-      text-decoration: wavy underline #10b981 2px !important;
-      background-color: rgba(16, 185, 129, 0.1) !important;
-      cursor: pointer !important;
-      display: inline !important;
-      font-family: inherit !important;
-      font-size: inherit !important;
-      line-height: inherit !important;
-    `;
     span.setAttribute("data-error-id", this.errorId);
     span.setAttribute("data-original", this.originalText);
     span.setAttribute("data-ai-status", "corrected");
@@ -12512,7 +12490,6 @@ var AITextWidget = class extends import_view.WidgetType {
     span.setAttribute("role", "button");
     span.setAttribute("tabindex", "0");
     span.addEventListener("mouseenter", (e) => {
-      span.style.backgroundColor = "rgba(16, 185, 129, 0.2) !important";
       const mockError = {
         uniqueId: this.errorId,
         correction: {
@@ -12545,7 +12522,6 @@ var AITextWidget = class extends import_view.WidgetType {
       }
     });
     span.addEventListener("mouseleave", () => {
-      span.style.backgroundColor = "rgba(16, 185, 129, 0.1) !important";
       setTimeout(() => {
         if (window.globalInlineTooltip && !window.globalInlineTooltip.isHovered) {
           window.globalInlineTooltip.hide();
@@ -12589,18 +12565,7 @@ var AITextWidget = class extends import_view.WidgetType {
     const input = document.createElement("input");
     input.type = "text";
     input.value = this.aiText;
-    input.style.cssText = `
-      color: #10b981 !important;
-      background-color: rgba(16, 185, 129, 0.1) !important;
-      border: 2px solid #10b981 !important;
-      border-radius: 3px !important;
-      padding: 2px 4px !important;
-      font-family: inherit !important;
-      font-size: inherit !important;
-      line-height: inherit !important;
-      margin: 0 !important;
-      outline: none !important;
-    `;
+    input.className = "korean-grammar-ai-widget-edit";
     (_a = span.parentNode) == null ? void 0 : _a.replaceChild(input, span);
     input.focus();
     input.select();
@@ -12636,16 +12601,6 @@ var AITextWidget = class extends import_view.WidgetType {
     const span = document.createElement("span");
     span.textContent = this.aiText;
     span.className = "korean-grammar-ai-widget";
-    span.style.cssText = `
-      color: #10b981 !important;
-      text-decoration: wavy underline #10b981 2px !important;
-      background-color: rgba(16, 185, 129, 0.1) !important;
-      cursor: pointer !important;
-      display: inline !important;
-      font-family: inherit !important;
-      font-size: inherit !important;
-      line-height: inherit !important;
-    `;
     return span;
   }
 };
@@ -14288,17 +14243,7 @@ var InlineModeService = class {
       existingZone.remove();
     }
     const expandedZone = document.createElement("span");
-    expandedZone.className = "korean-grammar-expanded-hover";
-    expandedZone.style.cssText = `
-      position: absolute;
-      left: -8px;
-      right: -8px;
-      top: -3px;
-      bottom: -3px;
-      pointer-events: auto;
-      z-index: 1;
-      opacity: 0;
-    `;
+    expandedZone.className = "korean-grammar-expanded-hover korean-grammar-expanded-zone";
     expandedZone.addEventListener("mouseenter", () => {
       Logger.debug(`\u{1F3AF} \uD655\uC7A5 \uD638\uBC84 \uC601\uC5ED \uC9C4\uC785: ${error.correction.original}`);
       if (!this.currentHoveredError || this.currentHoveredError.uniqueId !== error.uniqueId) {
@@ -14316,7 +14261,7 @@ var InlineModeService = class {
       }, 200);
     });
     if (originalElement.parentElement) {
-      originalElement.style.position = "relative";
+      originalElement.classList.add("korean-grammar-relative");
       originalElement.appendChild(expandedZone);
     }
   }

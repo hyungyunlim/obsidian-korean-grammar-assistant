@@ -82,20 +82,7 @@ export class TokenWarningModal {
     // 확인 모달 표시
     return new Promise((resolve) => {
       const modal = document.createElement('div');
-      modal.className = 'modal-overlay token-warning-overlay';
-      modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.8);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 10000;
-        backdrop-filter: blur(2px);
-      `;
+      modal.className = 'modal-overlay token-warning-overlay korean-grammar-token-modal';
 
       const modalContent = this.createTokenWarningModal(tokenUsage, isOverMaxTokens, maxTokens);
       modal.appendChild(modalContent);

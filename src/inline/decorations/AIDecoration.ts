@@ -28,31 +28,23 @@ export class AIStatusWidget extends WidgetType {
     // 상태에 따른 스타일 적용
     const statusConfig = this.getStatusConfig(this.aiStatus);
     
-    container.style.cssText = `
-      display: inline-flex;
-      align-items: center;
-      gap: 2px;
-      font-size: 10px;
-      padding: 1px 4px;
-      border-radius: 3px;
-      background: ${statusConfig.background};
-      color: ${statusConfig.color};
-      border: 1px solid ${statusConfig.border};
-      margin-left: 2px;
-      vertical-align: baseline;
-    `;
+    // AI 상태별 클래스 추가
+    const statusClass = this.getStatusClass(this.aiStatus);
+    if (statusClass) {
+      container.classList.add(statusClass);
+    }
     
     // 상태 아이콘
     const icon = document.createElement('span');
+    icon.className = 'korean-grammar-ai-status-icon';
     icon.textContent = statusConfig.icon;
-    icon.style.fontSize = '8px';
     container.appendChild(icon);
     
     // 신뢰도 표시 (있는 경우)
     if (this.confidence > 0) {
       const confidenceSpan = document.createElement('span');
+      confidenceSpan.className = 'korean-grammar-ai-status-confidence';
       confidenceSpan.textContent = `${this.confidence}%`;
-      confidenceSpan.style.fontWeight = '600';
       container.appendChild(confidenceSpan);
     }
     
@@ -99,6 +91,19 @@ export class AIStatusWidget extends WidgetType {
           color: '#7c3aed',
           border: '#8b5cf6'
         };
+    }
+  }
+  
+  private getStatusClass(status: string): string | null {
+    switch (status) {
+      case 'corrected':
+        return 'korean-grammar-ai-status-corrected';
+      case 'exception-processed':
+        return 'korean-grammar-ai-status-exception';
+      case 'original-kept':
+        return 'korean-grammar-ai-status-keep';
+      default:
+        return null;
     }
   }
   
@@ -288,16 +293,6 @@ class AITextWidget extends WidgetType {
     
     // AI 교정 스타일 적용
     span.className = 'korean-grammar-ai-widget';
-    span.style.cssText = `
-      color: #10b981 !important;
-      text-decoration: wavy underline #10b981 2px !important;
-      background-color: rgba(16, 185, 129, 0.1) !important;
-      cursor: pointer !important;
-      display: inline !important;
-      font-family: inherit !important;
-      font-size: inherit !important;
-      line-height: inherit !important;
-    `;
     
     // 데이터 속성 설정
     span.setAttribute('data-error-id', this.errorId);
@@ -316,12 +311,10 @@ class AITextWidget extends WidgetType {
   private addEventHandlers(span: HTMLElement): void {
     // 호버 효과
     span.addEventListener('mouseenter', (e) => {
-      span.style.backgroundColor = 'rgba(16, 185, 129, 0.2) !important';
       this.showTooltip(e, span);
     });
     
     span.addEventListener('mouseleave', () => {
-      span.style.backgroundColor = 'rgba(16, 185, 129, 0.1) !important';
       setTimeout(() => {
         if ((window as any).globalInlineTooltip && !(window as any).globalInlineTooltip.isHovered) {
           (window as any).globalInlineTooltip.hide();

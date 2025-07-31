@@ -201,7 +201,7 @@ export class HoverHandler {
         
         // 인접한 요소들을 호버 영역에 포함
         if (distance <= expandDistance) {
-          htmlElement.style.backgroundColor = 'rgba(var(--interactive-accent-rgb), 0.1)';
+          htmlElement.classList.add('korean-grammar-inline-hover-bg');
           this.expandedElements.add(htmlElement);
           
           Logger.debug('HoverHandler: 호버 영역 확장', {
@@ -222,7 +222,7 @@ export class HoverHandler {
    */
   private clearExpandedHoverArea(): void {
     for (const element of this.expandedElements) {
-      element.style.backgroundColor = '';
+      element.classList.remove('korean-grammar-inline-hover-bg');
     }
     this.expandedElements.clear();
     

@@ -372,11 +372,15 @@ export class ComponentManager {
       html = html.replace(new RegExp(placeholder, 'g'), String(value));
     });
 
-    // DOM 요소 생성 (안전한 방법 사용)
-    const templateElement = document.createElement('template');
-    templateElement.innerHTML = html;
+    // DOM 요소 생성 (Obsidian API 사용)
+    const container = createEl('div');
+    // sanitizeHTMLToDom을 사용하여 안전하게 HTML 파싱
+    const sanitized = (window as any).sanitizeHTMLToDom(html);
+    if (sanitized) {
+      container.appendChild(sanitized);
+    }
     
-    return templateElement.content.firstElementChild as HTMLElement;
+    return container.firstElementChild as HTMLElement || container;
   }
 
   /**
