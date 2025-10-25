@@ -8,6 +8,12 @@ import { AIAnalysisService } from '../services/aiAnalysisService';
 import { Logger } from '../utils/logger';
 import { clearElement, appendChildren } from '../utils/domUtils';
 
+const HIDDEN_CLASS = 'kga-hidden';
+const FORCE_HIDDEN_CLASS = 'kga-force-hidden';
+const ERROR_SUMMARY_EXPANDED_CLASS = 'kga-error-summary-expanded';
+const NO_OUTLINE_CLASS = 'kga-no-outline';
+const FADE_OUT_CLASS = 'kga-fade-out';
+
 /**
  * 맞춤법 교정 팝업 관리 클래스
  */
@@ -1816,26 +1822,29 @@ export class CorrectionPopup extends BaseComponent {
    * 데스크톱용 편집 모드를 생성합니다.
    */
   private createDesktopEditMode(originalElement: HTMLElement, input: HTMLInputElement, correctionIndex: number, getIsFinished: () => boolean, setIsFinished: (flag: boolean) => void): void {
-    // 해당 오류 카드 찾기 및 수정 제안 버튼들 숨기기
     const errorCard = originalElement.closest('.error-card');
-    let hiddenElements: HTMLElement[] = [];
-    
+    const hiddenElements: Array<{ element: HTMLElement; className: string }> = [];
+
+    const hideElement = (element: HTMLElement | null, className: string = HIDDEN_CLASS, logMessage?: string) => {
+      if (!element) return;
+      element.classList.add(className);
+      hiddenElements.push({ element, className });
+      if (logMessage) {
+        Logger.debug(logMessage);
+      }
+    };
+
     if (errorCard) {
-      // 수정 제안 버튼들 찾아서 숨기기 (데스크톱에서는 선택사항)
-      const suggestions = errorCard.querySelector('.error-suggestions-compact') as HTMLElement;
-      const exceptionBtn = errorCard.querySelector('.error-exception-btn') as HTMLElement;
-      
-      if (suggestions) {
-        suggestions.style.display = 'none';
-        hiddenElements.push(suggestions);
-        Logger.debug(`🖥️ 수정 제안 버튼 숨김: index=${correctionIndex}`);
-      }
-      
-      if (exceptionBtn) {
-        exceptionBtn.style.display = 'none';
-        hiddenElements.push(exceptionBtn);
-        Logger.debug(`🖥️ 예외 처리 버튼 숨김: index=${correctionIndex}`);
-      }
+      hideElement(
+        errorCard.querySelector('.error-suggestions-compact') as HTMLElement,
+        HIDDEN_CLASS,
+        `🖥️ 수정 제안 버튼 숨김: index=${correctionIndex}`
+      );
+      hideElement(
+        errorCard.querySelector('.error-exception-btn') as HTMLElement,
+        HIDDEN_CLASS,
+        `🖥️ 예외 처리 버튼 숨김: index=${correctionIndex}`
+      );
     }
     
     // 편집 완료 함수 (중복 호출 방지)
@@ -1843,9 +1852,9 @@ export class CorrectionPopup extends BaseComponent {
       if (getIsFinished()) return;
       setIsFinished(true);
       // 숨겨둔 요소들 다시 표시
-      hiddenElements.forEach(el => {
-        el.style.display = '';
-        Logger.debug(`🖥️ 숨겨진 요소 복원: ${el.className}`);
+      hiddenElements.forEach(({ element, className }) => {
+        element.classList.remove(className);
+        Logger.debug(`🖥️ 숨겨진 요소 복원: ${element.className}`);
       });
       this.finishCardEdit(input, correctionIndex);
     };
@@ -1855,9 +1864,9 @@ export class CorrectionPopup extends BaseComponent {
       if (getIsFinished()) return;
       setIsFinished(true);
       // 숨겨둔 요소들 다시 표시
-      hiddenElements.forEach(el => {
-        el.style.display = '';
-        Logger.debug(`🖥️ 숨겨진 요소 복원 (취소): ${el.className}`);
+      hiddenElements.forEach(({ element, className }) => {
+        element.classList.remove(className);
+        Logger.debug(`🖥️ 숨겨진 요소 복원 (취소): ${element.className}`);
       });
       this.cancelCardEdit(input, correctionIndex);
     };
@@ -1898,9 +1907,7 @@ export class CorrectionPopup extends BaseComponent {
     
     // 오류 상세 영역 전체 확장 (미리보기는 유지)
     if (errorSummary) {
-      errorSummary.style.height = 'auto';
-      errorSummary.style.maxHeight = 'none';
-      errorSummary.style.flex = '1';
+      errorSummary.classList.add(ERROR_SUMMARY_EXPANDED_CLASS);
       errorSummary.classList.remove('collapsed');
       Logger.debug(`📱 오류 상세 영역 전체 확장 (편집 모드)`);
     }
@@ -1916,9 +1923,7 @@ export class CorrectionPopup extends BaseComponent {
     
     // 오류 상세 영역 원래 크기로 복원
     if (errorSummary) {
-      errorSummary.style.height = '';
-      errorSummary.style.maxHeight = '';
-      errorSummary.style.flex = '';
+      errorSummary.classList.remove(ERROR_SUMMARY_EXPANDED_CLASS);
       Logger.debug(`📱 오류 상세 영역 원래 크기로 복원`);
     }
   }
@@ -1927,7 +1932,16 @@ export class CorrectionPopup extends BaseComponent {
    * 모바일용 편집 컨테이너를 생성합니다.
    */
   private createMobileEditContainer(originalElement: HTMLElement, input: HTMLInputElement, correctionIndex: number, getIsFinished: () => boolean, setIsFinished: (flag: boolean) => void): void {
-    let hiddenElements: HTMLElement[] = [];
+    const hiddenElements: Array<{ element: HTMLElement; className: string }> = [];
+
+    const stashElement = (element: HTMLElement | null, className: string = FORCE_HIDDEN_CLASS, logMessage?: string) => {
+      if (!element) return;
+      element.classList.add(className);
+      hiddenElements.push({ element, className });
+      if (logMessage) {
+        Logger.debug(logMessage);
+      }
+    };
     
     // 해당 오류 카드 찾기 및 수정 제안 버튼들 숨기기
     const errorCard = originalElement.closest('.error-card');
@@ -1945,39 +1959,27 @@ export class CorrectionPopup extends BaseComponent {
       
       // 개별 수정 제안 버튼들 강제 숨기기
       suggestions.forEach((btn) => {
-        const button = btn as HTMLElement;
-        button.style.display = 'none';
-        button.style.visibility = 'hidden';
-        button.style.opacity = '0';
-        hiddenElements.push(button);
+        stashElement(btn as HTMLElement);
       });
       
       // 원본 유지 버튼들 강제 숨기기
       keepOriginals.forEach((btn) => {
-        const button = btn as HTMLElement;
-        button.style.display = 'none';
-        button.style.visibility = 'hidden';
-        button.style.opacity = '0';
-        hiddenElements.push(button);
+        stashElement(btn as HTMLElement);
       });
       
       // 수정 제안 컨테이너 강제 숨기기
-      if (suggestionsContainer) {
-        suggestionsContainer.style.display = 'none';
-        suggestionsContainer.style.visibility = 'hidden';
-        suggestionsContainer.style.opacity = '0';
-        hiddenElements.push(suggestionsContainer);
-        Logger.debug(`📱 수정 제안 컨테이너 강제 숨김: index=${correctionIndex}`);
-      }
+      stashElement(
+        suggestionsContainer,
+        FORCE_HIDDEN_CLASS,
+        `📱 수정 제안 컨테이너 강제 숨김: index=${correctionIndex}`
+      );
       
       // 예외 처리 버튼 강제 숨기기
-      if (exceptionBtn) {
-        exceptionBtn.style.display = 'none';
-        exceptionBtn.style.visibility = 'hidden';
-        exceptionBtn.style.opacity = '0';
-        hiddenElements.push(exceptionBtn);
-        Logger.debug(`📱 예외 처리 버튼 강제 숨김: index=${correctionIndex}`);
-      }
+      stashElement(
+        exceptionBtn,
+        FORCE_HIDDEN_CLASS,
+        `📱 예외 처리 버튼 강제 숨김: index=${correctionIndex}`
+      );
     }
     
     // 컨테이너 생성 (Obsidian createEl 사용)
@@ -2011,11 +2013,9 @@ export class CorrectionPopup extends BaseComponent {
       }
       
       // 숨겨둔 요소들 다시 표시
-      hiddenElements.forEach(el => {
-        el.style.display = '';
-        el.style.visibility = '';
-        el.style.opacity = '';
-        Logger.debug(`📱 숨겨진 요소 복원: ${el.className}`);
+      hiddenElements.forEach(({ element, className }) => {
+        element.classList.remove(className);
+        Logger.debug(`📱 숨겨진 요소 복원: ${element.className}`);
       });
       
       Logger.debug(`📱 모바일 편집 모드 종료 - 레이아웃 복원`);
@@ -2037,11 +2037,9 @@ export class CorrectionPopup extends BaseComponent {
       }
       
       // 숨겨진 요소들 다시 표시
-      hiddenElements.forEach(el => {
-        el.style.display = '';
-        el.style.visibility = '';
-        el.style.opacity = '';
-        Logger.debug(`📱 숨겨진 요소 복원 (취소): ${el.className}`);
+      hiddenElements.forEach(({ element, className }) => {
+        element.classList.remove(className);
+        Logger.debug(`📱 숨겨진 요소 복원 (취소): ${element.className}`);
       });
       
       Logger.debug(`📱 모바일 편집 모드 취소 - 레이아웃 복원`);
@@ -2994,10 +2992,10 @@ export class CorrectionPopup extends BaseComponent {
       modal.appendChild(modalContent);
 
       document.body.appendChild(modal);
-
+      
       // 모달에 포커스 설정 (강화된 접근법)
       modal.setAttribute('tabindex', '-1');
-      modal.style.outline = 'none';
+      modal.classList.add(NO_OUTLINE_CLASS);
       
       // 강제로 포커스 설정 (지연 처리)
       setTimeout(() => {
@@ -3171,7 +3169,7 @@ export class CorrectionPopup extends BaseComponent {
     closeBtn.textContent = '×';
     closeBtn.title = '단축키 가이드 닫기';
     closeBtn.addEventListener('click', () => {
-      hint.style.opacity = '0';
+      hint.classList.add(FADE_OUT_CLASS);
       setTimeout(() => hint.remove(), 200);
     });
     header.appendChild(closeBtn);

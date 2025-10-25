@@ -8,6 +8,12 @@
     flex-shrink: 0;
 }
 
+#correctionPopup #errorSummary.kga-error-summary-expanded {
+    height: auto !important;
+    max-height: none !important;
+    flex: 1 1 auto !important;
+}
+
 #correctionPopup .error-summary.collapsed .error-summary-content {
     height: 0;
     overflow: hidden;

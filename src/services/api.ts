@@ -1,3 +1,4 @@
+import { requestUrl } from 'obsidian';
 import { PluginSettings, Correction, SpellCheckResult } from '../types/interfaces';
 import { Logger } from '../utils/logger';
 import { ErrorHandlerService } from './errorHandler';
@@ -122,47 +123,36 @@ export class SpellCheckApiService {
     // 재시도 로직 적용 + 타임아웃 설정
     return await ErrorHandlerService.withRetry(
       async () => {
-        // AbortController를 사용한 타임아웃 처리
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10초 타임아웃
-
-        try {
-          const response = await fetch(apiUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "api-key": settings.apiKey
-            },
+        const response = await this.requestWithTimeout(
+          requestUrl({
+            url: apiUrl,
+            method: 'POST',
             body: JSON.stringify(requestBody),
-            signal: controller.signal
+            contentType: 'application/json',
+            headers: {
+              'api-key': settings.apiKey
+            },
+            throw: false
+          }),
+          10000,
+          '형태소 분석 요청 타임아웃 (10초)'
+        );
+
+        if (response.status < 200 || response.status >= 300) {
+          Logger.error('형태소 분석 API 오류:', {
+            status: response.status,
+            errorBody: response.text
           });
-
-          clearTimeout(timeoutId);
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            Logger.error('형태소 분석 API 오류:', {
-              status: response.status,
-              statusText: response.statusText,
-              errorBody: errorText
-            });
-            throw new Error(`형태소 분석 API 요청 실패: ${response.status} ${response.statusText}`);
-          }
-
-          const data = await response.json();
-          Logger.debug('형태소 분석 API 응답 성공:', { 
-            textLength: text.length,
-            tokensCount: data.sentences?.reduce((count: number, sentence: any) => count + sentence.tokens.length, 0) || 0,
-            sentencesCount: data.sentences?.length || 0
-          });
-          return data;
-        } catch (error) {
-          clearTimeout(timeoutId);
-          if (error.name === 'AbortError') {
-            throw new Error('형태소 분석 요청 타임아웃 (10초)');
-          }
-          throw error;
+          throw new Error(`형태소 분석 API 요청 실패: ${response.status}`);
         }
+
+        const data = response.json ?? JSON.parse(response.text || '{}');
+        Logger.debug('형태소 분석 API 응답 성공:', { 
+          textLength: text.length,
+          tokensCount: data.sentences?.reduce((count: number, sentence: any) => count + sentence.tokens.length, 0) || 0,
+          sentencesCount: data.sentences?.length || 0
+        });
+        return data;
       },
       `morpheme-analysis-${text.substring(0, 50)}`,
       {
@@ -240,21 +230,49 @@ export class SpellCheckApiService {
       auto_split: false  // 🔧 자동 분할 비활성화하여 불필요한 교정 방지
     };
 
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "api-key": settings.apiKey
-      },
-      body: JSON.stringify(requestBody)
-    });
+    const response = await this.requestWithTimeout(
+      requestUrl({
+        url: apiUrl,
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+        contentType: 'application/json',
+        headers: {
+          'api-key': settings.apiKey
+        },
+        throw: false
+      }),
+      15000,
+      '맞춤법 검사 요청 타임아웃 (15초)'
+    );
 
-    if (!response.ok) {
-      throw new Error(`API 요청 실패: ${response.status} ${response.statusText}`);
+    if (response.status < 200 || response.status >= 300) {
+      Logger.error('맞춤법 검사 API 오류:', {
+        status: response.status,
+        errorBody: response.text
+      });
+      throw new Error(`API 요청 실패: ${response.status}`);
     }
 
-    const data: BareunResponse = await response.json();
+    const data: BareunResponse = response.json ?? JSON.parse(response.text || '{}');
     return this.parseBareunResults(data, text, settings);
+  }
+
+  /**
+   * requestUrl 호출에 대한 타임아웃 래퍼
+   */
+  private async requestWithTimeout<T>(requestPromise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+    let timeoutId: NodeJS.Timeout | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+    });
+
+    try {
+      return await Promise.race([requestPromise, timeoutPromise]);
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    }
   }
 
   /**

@@ -90,6 +90,28 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: none;
 }
+.kga-hidden {
+  display: none !important;
+}
+.kga-force-hidden {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.kga-no-outline {
+  outline: none !important;
+}
+.kga-fade-out {
+  opacity: 0 !important;
+}
+.kga-stealth-input {
+  position: absolute !important;
+  left: -9999px !important;
+  top: -9999px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
 
 /* styles/header.css */
 #correctionPopup .header {
@@ -340,6 +362,11 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   border-top: 1px solid var(--background-modifier-border);
   transition: all 0.3s ease;
   flex-shrink: 0;
+}
+#correctionPopup #errorSummary.kga-error-summary-expanded {
+  height: auto !important;
+  max-height: none !important;
+  flex: 1 1 auto !important;
 }
 #correctionPopup .error-summary.collapsed .error-summary-content {
   height: 0;
@@ -847,21 +874,23 @@ body.spell-popup-open #correctionPopup [contenteditable] {
 }
 .token-warning-content {
   background: var(--background-primary);
-  border-radius: 16px;
-  padding: 0;
-  max-width: 600px;
-  width: 90%;
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 500px;
+  width: min(90vw, 500px);
+  min-width: 360px;
   max-height: 80vh;
-  overflow: hidden;
+  overflow-y: auto;
   box-shadow: 0 12px 60px rgba(0, 0, 0, 0.4);
   border: 1px solid var(--background-modifier-border);
 }
 .token-warning-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  padding: 24px;
-  margin-bottom: 24px;
+  text-align: center;
+  margin-bottom: 16px;
+  gap: 8px;
 }
 .token-warning-header-icon {
   width: 40px;
@@ -883,31 +912,33 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   line-height: 1.2;
 }
 .token-warning-description {
-  margin: 2px 0 0 0;
+  margin: 0;
   color: var(--text-muted);
   font-size: 14px;
   line-height: 1.4;
 }
 .token-warning-details {
   background: var(--background-secondary);
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 20px;
-  margin: 0 24px 24px 24px;
+  margin-bottom: 16px;
   border: 1px solid var(--background-modifier-border);
 }
 .token-warning-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
   gap: 16px;
-  margin-bottom: 16px;
+  justify-content: space-between;
+  margin-bottom: 12px;
 }
 .token-stat-item {
   text-align: center;
+  flex: 1;
 }
 .token-stat-number {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   line-height: 1;
+  color: var(--text-accent);
 }
 .token-stat-number.orange {
   color: var(--color-orange);
@@ -918,10 +949,9 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   margin-top: 4px;
 }
 .token-warning-recommendation {
-  background: var(--background-primary);
-  border-radius: 8px;
-  padding: 16px;
-  border: 1px solid var(--background-modifier-border);
+  border-top: 1px solid var(--background-modifier-border);
+  padding-top: 12px;
+  margin-top: 12px;
 }
 .token-warning-recommendation-header {
   display: flex;
@@ -942,90 +972,60 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   font-size: 13px;
   color: var(--text-muted);
   line-height: 1.4;
-}
-.token-warning-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  padding: 20px 24px;
-  border-top: 1px solid var(--background-modifier-border);
-  flex-wrap: wrap;
-}
-.token-warning-btn {
-  padding: 12px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  border: 1px solid var(--background-modifier-border);
-}
-.token-warning-btn-cancel {
-  background: var(--background-secondary);
-  color: var(--text-normal);
-}
-.token-warning-btn-cancel:hover {
-  background: var(--background-modifier-hover);
-}
-.token-warning-btn-settings {
-  background: var(--background-primary);
-  color: var(--interactive-accent);
-  border: 1px solid var(--interactive-accent);
-}
-.token-warning-btn-settings:hover {
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-}
-.token-warning-btn-proceed {
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-  border: 1px solid var(--interactive-accent);
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(var(--interactive-accent-rgb), 0.3);
-}
-.token-warning-btn-proceed:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(var(--interactive-accent-rgb), 0.4);
+  text-align: center;
 }
 .token-warning-over-limit {
-  background: linear-gradient(135deg, #fff3cd, #ffeaa7);
-  border: 1px solid #ffd93d;
-  border-radius: 8px;
-  padding: 16px;
-  margin: 0 24px 24px 24px;
-  position: relative;
-}
-.token-warning-over-limit-content {
+  background: var(--background-modifier-error);
+  border: 1px solid var(--text-error);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 16px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
 }
 .token-warning-over-limit-icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #ffd93d;
-  color: #8b4513;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 14px;
+  font-size: 20px;
   flex-shrink: 0;
 }
 .token-warning-over-limit-text {
   flex: 1;
 }
 .token-warning-over-limit-title {
-  font-weight: 600;
-  color: #8b4513;
-  margin-bottom: 6px;
-  font-size: 14px;
+  font-weight: bold;
+  color: var(--text-error);
+  margin-bottom: 4px;
 }
 .token-warning-over-limit-description {
-  font-size: 13px;
-  color: #8b4513;
-  line-height: 1.4;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.token-warning-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 8px;
+}
+.token-warning-btn {
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: none;
+}
+.token-warning-btn-cancel {
+  background: var(--interactive-normal);
+  color: var(--text-normal);
+}
+.token-warning-btn-settings,
+.token-warning-btn-proceed {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+.token-warning-btn-settings {
+  border: 1px solid var(--interactive-accent);
 }
 
 /* styles/keyboard.css */

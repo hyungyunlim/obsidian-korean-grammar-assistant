@@ -692,7 +692,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     const header = containerEl.createEl('div', { cls: 'ksc-header' });
 
     const titleSetting = new Setting(header)
-      .setName('📝 한국어 맞춤법 검사 설정')
+      .setName('📝 한국어 맞춤법 도우미')
       .setHeading();
     titleSetting.settingEl.addClasses(['ksc-header-title']);
 
@@ -821,7 +821,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     
     // API 설정 헤딩
     new Setting(section)
-      .setName('🌐 API 설정')
+      .setName('🌐 API 연결')
       .setDesc('Bareun.ai 맞춤법 검사 서비스 연결을 위한 설정입니다.')
       .setHeading();
 
@@ -1037,7 +1037,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     
     // 모델 설정 헤딩
     new Setting(modelSection)
-      .setName('🎯 모델 설정')
+      .setName('🎯 모델 선택')
       .setDesc('사용할 AI 모델과 세부 설정을 구성하세요.')
       .setHeading();
 
@@ -1102,7 +1102,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     
     // 고급 설정 헤딩
     new Setting(advancedSection)
-      .setName('⚙️ 고급 설정')
+      .setName('⚙️ 고급 옵션')
       .setDesc('AI 모델의 상세한 동작을 조정할 수 있습니다.')
       .setHeading();
 
@@ -1328,7 +1328,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     
     // 설정 검증 헤딩
     new Setting(validationSection)
-      .setName('✅ 설정 검증')
+      .setName('✅ 구성 검증')
       .setDesc('현재 설정의 유효성을 검사하고 최적화 제안을 받습니다.')
       .setHeading();
 

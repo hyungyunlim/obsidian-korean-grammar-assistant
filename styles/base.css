@@ -106,3 +106,31 @@ body.spell-popup-open #correctionPopup [contenteditable] {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: none;
 }
+
+/* Utility helpers to replace inline styles */
+.kga-hidden {
+    display: none !important;
+}
+
+.kga-force-hidden {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.kga-no-outline {
+    outline: none !important;
+}
+
+.kga-fade-out {
+    opacity: 0 !important;
+}
+
+.kga-stealth-input {
+    position: absolute !important;
+    left: -9999px !important;
+    top: -9999px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
