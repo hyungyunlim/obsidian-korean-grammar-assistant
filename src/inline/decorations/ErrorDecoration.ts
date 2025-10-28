@@ -23,23 +23,13 @@ export class AITextWidget extends WidgetType {
 
   toDOM(): HTMLElement {
     const span = document.createElement('span');
-    
+
     // 텍스트 내용 안전하게 설정
     span.textContent = this.aiText;
-    
-    // AI 교정 스타일 적용
+
+    // 클래스 기반 스타일 적용 (인라인 스타일 제거)
     span.className = 'korean-grammar-ai-widget';
-    span.style.cssText = `
-      color: #10b981 !important;
-      text-decoration: wavy underline #10b981 2px !important;
-      background-color: rgba(16, 185, 129, 0.1) !important;
-      cursor: pointer !important;
-      display: inline !important;
-      font-family: inherit !important;
-      font-size: inherit !important;
-      line-height: inherit !important;
-    `;
-    
+
     // 데이터 속성 설정
     span.setAttribute('data-error-id', this.errorId);
     span.setAttribute('data-original', this.originalText);
@@ -47,28 +37,26 @@ export class AITextWidget extends WidgetType {
     span.setAttribute('data-ai-selected-value', this.aiText);
     span.setAttribute('role', 'button');
     span.setAttribute('tabindex', '0');
-    
+
     // 호버 효과 추가
     this.addHoverEffects(span);
-    
+
     // 클릭 이벤트 추가
     this.addClickHandler(span);
-    
+
     return span;
   }
   
   private addHoverEffects(span: HTMLElement): void {
     span.addEventListener('mouseenter', (e) => {
-      span.style.backgroundColor = 'rgba(16, 185, 129, 0.2) !important';
-      
-      // 툴팁 표시 로직
+      // CSS :hover 상태는 자동으로 처리됨
+      // 툴팁 표시 로직만 실행
       this.showTooltip(e, span);
     });
-    
+
     span.addEventListener('mouseleave', () => {
-      span.style.backgroundColor = 'rgba(16, 185, 129, 0.1) !important';
-      
-      // 툴팁 숨기기 로직
+      // CSS :hover 상태는 자동으로 처리됨
+      // 툴팁 숨기기 로직만 실행
       this.hideTooltip();
     });
   }

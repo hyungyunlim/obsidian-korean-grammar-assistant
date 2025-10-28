@@ -476,8 +476,9 @@ export class ComponentManager {
     // 하단 패딩
     const bottomPadding = totalHeight - visibleHeight;
 
-    this.containerElement.style.paddingTop = `${topPadding}px`;
-    this.containerElement.style.paddingBottom = `${bottomPadding}px`;
+    // CSS 변수 사용으로 인라인 스타일 제거
+    this.containerElement.style.setProperty('--scroll-padding-top', `${topPadding}px`);
+    this.containerElement.style.setProperty('--scroll-padding-bottom', `${bottomPadding}px`);
   }
 
   /**

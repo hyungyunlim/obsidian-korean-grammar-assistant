@@ -664,11 +664,11 @@ export class SummaryRenderer implements IPopupComponent {
     if (!this.contentElement) return;
 
     // 모바일에서 최대 높이 조정
-    // NOTE: 동적 계산이 필요하므로 인라인 스타일 유지
+    // CSS 변수 사용으로 인라인 스타일 제거
     if (Platform.isMobile) {
       const windowHeight = window.innerHeight;
       const maxHeight = Math.min(200, Math.floor(windowHeight * 0.3));
-      this.contentElement.style.maxHeight = `${maxHeight}px`;
+      this.contentElement.style.setProperty('--summary-content-max-height', `${maxHeight}px`);
     }
 
     Logger.debug('SummaryRenderer: 리사이즈 처리 완료');

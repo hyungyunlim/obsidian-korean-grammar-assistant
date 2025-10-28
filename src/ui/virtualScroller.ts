@@ -148,12 +148,12 @@ export class VirtualScroller {
   updateSize(newHeight?: number): void {
     if (newHeight) {
       this.config.containerHeight = newHeight;
-      this.viewport.style.height = `${newHeight}px`;
+      this.viewport.style.setProperty('--vs-viewport-height', `${newHeight}px`);
     }
-    
+
     this.calculateVisibleRange();
     this.renderVisibleItems();
-    
+
     Logger.debug('크기 업데이트:', { containerHeight: this.config.containerHeight });
   }
 
@@ -373,8 +373,8 @@ export class VirtualScroller {
    */
   private updateItemPosition(element: HTMLElement, index: number): void {
     const top = index * this.config.itemHeight;
-    element.style.transform = `translateY(${top}px)`;
-    element.style.height = `${this.config.itemHeight}px`;
+    element.style.setProperty('--vs-item-offset', `${top}px`);
+    element.style.setProperty('--vs-item-height', `${this.config.itemHeight}px`);
   }
 
   /**
@@ -412,7 +412,7 @@ export class VirtualScroller {
    */
   private updateContentHeight(): void {
     const totalHeight = this.getTotalHeight();
-    this.content.style.height = `${totalHeight}px`;
+    this.content.style.setProperty('--vs-content-height', `${totalHeight}px`);
   }
 
   /**

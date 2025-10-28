@@ -440,7 +440,8 @@
 }
 
 .korean-grammar-popup-summary-content.kga-mobile {
-    max-height: 200px;
+    /* Support dynamic max-height via CSS variable (set by handleResize) */
+    max-height: var(--summary-content-max-height, 200px);
 }
 
 .korean-grammar-popup-summary-content.kga-collapsed {

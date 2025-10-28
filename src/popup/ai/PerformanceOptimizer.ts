@@ -216,13 +216,15 @@ export class PerformanceOptimizer implements IPopupServiceManager {
    */
   private optimizeHiddenElement(element: HTMLElement): void {
     // 숨겨진 요소의 이벤트 리스너 임시 비활성화 등의 최적화
-    const existingPointerEvents = element.style.pointerEvents;
-    if (!existingPointerEvents || existingPointerEvents === 'auto') {
-      element.style.pointerEvents = 'none';
-      
+    // CSS 클래스 기반으로 pointer-events 제어
+    const hadPointerEventsClass = element.classList.contains('kga-pointer-events-none');
+
+    if (!hadPointerEventsClass) {
+      element.classList.add('kga-pointer-events-none');
+
       // 정리 콜백으로 원복
       this.addCleanupCallback(() => {
-        element.style.pointerEvents = existingPointerEvents || 'auto';
+        element.classList.remove('kga-pointer-events-none');
       });
     }
   }

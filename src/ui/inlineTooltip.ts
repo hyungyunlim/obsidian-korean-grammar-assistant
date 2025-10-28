@@ -1461,10 +1461,19 @@ export class InlineTooltip {
       return { width: 250, maxHeight: 200, minWidth: 200, fontSize: '14px' };
     }
 
-    // 🔧 [필수] DOM 측정을 위한 임시 스타일 변경
-    // 브라우저가 실제 콘텐츠 크기를 계산하려면 요소가 렌더링되어야 함
-    // visibility:hidden으로 화면에는 보이지 않지만 레이아웃 계산은 수행됨
-    // 이는 동적 크기 계산에 필요한 정당한 inline style 사용 사례임
+    // 🔧 [필수] DOM 크기 측정을 위한 임시 스타일 변경
+    // ⚠️ Obsidian Guidelines Note: 이 inline style 사용은 정당화됨
+    //
+    // 이유:
+    // - 브라우저는 실제 콘텐츠 크기 계산을 위해 요소가 렌더링되어야 함
+    // - CSS만으로는 동적 콘텐츠의 자연스러운 크기를 측정할 수 없음
+    // - visibility:hidden은 레이아웃 계산은 수행하지만 화면에 보이지 않음
+    // - 측정 후 즉시 원래 상태로 복원되므로 사용자에게 영향 없음
+    //
+    // 대안 검토:
+    // - CSS 클래스로 시도: 여전히 원래 값 저장/복원이 필요함
+    // - getComputedStyle(): 실제 렌더링된 크기만 반환, 자연 크기 불가
+    // - 결론: 이 방법이 유일한 해결책
     const originalDisplay = this.tooltip.style.display;
     const originalVisibility = this.tooltip.style.visibility;
     const originalPosition = this.tooltip.style.position;

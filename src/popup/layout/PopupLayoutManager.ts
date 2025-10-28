@@ -249,8 +249,8 @@ export class PopupLayoutManager implements IPopupComponent {
 
     // 동적 계산이 필요한 스타일만 JavaScript로 설정
     // (maxWidth, maxHeight는 브레이크포인트에 따라 달라짐)
-    container.style.maxWidth = this.getMaxWidth();
-    container.style.maxHeight = this.getMaxHeight();
+    container.style.setProperty('--kga-max-width', this.getMaxWidth());
+    container.style.setProperty('--kga-max-height', this.getMaxHeight());
 
     // 커스텀 클래스 추가
     if (this.layoutState.customClasses.length > 0) {
@@ -439,8 +439,8 @@ export class PopupLayoutManager implements IPopupComponent {
     if (!this.containerElement) return;
 
     // 동적 계산이 필요한 스타일만 JavaScript로 설정
-    this.containerElement.style.maxWidth = '100vw';
-    this.containerElement.style.maxHeight = '100vh';
+    this.containerElement.style.setProperty('--kga-max-width', '100vw');
+    this.containerElement.style.setProperty('--kga-max-height', '100vh');
 
     // 오류 요약 영역을 기본적으로 접힘
     if (this.context) {
@@ -455,8 +455,8 @@ export class PopupLayoutManager implements IPopupComponent {
     if (!this.containerElement) return;
 
     // 동적 계산이 필요한 스타일만 JavaScript로 설정
-    this.containerElement.style.maxWidth = '90vw';
-    this.containerElement.style.maxHeight = '90vh';
+    this.containerElement.style.setProperty('--kga-max-width', '90vw');
+    this.containerElement.style.setProperty('--kga-max-height', '90vh');
   }
   
   /**
@@ -466,8 +466,8 @@ export class PopupLayoutManager implements IPopupComponent {
     if (!this.containerElement) return;
 
     // 동적 계산이 필요한 스타일만 JavaScript로 설정
-    this.containerElement.style.maxWidth = '1200px';
-    this.containerElement.style.maxHeight = '800px';
+    this.containerElement.style.setProperty('--kga-max-width', '1200px');
+    this.containerElement.style.setProperty('--kga-max-height', '800px');
   }
   
   // =============================================================================
@@ -593,8 +593,8 @@ export class PopupLayoutManager implements IPopupComponent {
     const top = Math.max(0, (viewportHeight - rect.height) / 2);
 
     // 동적 계산이 필요한 위치 스타일만 JavaScript로 설정
-    this.containerElement.style.left = `${left}px`;
-    this.containerElement.style.top = `${top}px`;
+    this.containerElement.style.setProperty('--kga-pos-left', `${left}px`);
+    this.containerElement.style.setProperty('--kga-pos-top', `${top}px`);
   }
   
   /**

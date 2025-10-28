@@ -138,3 +138,26 @@
 }
 
 /* corrected 호버 효과도 Widget 내부에서 처리됨 */
+
+/* 🤖 AI Text Widget Styles */
+.korean-grammar-ai-widget {
+    color: #10b981;
+    text-decoration: wavy underline #10b981 2px;
+    background-color: rgba(16, 185, 129, 0.1);
+    cursor: pointer;
+    display: inline;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+}
+
+/* AI Widget 호버 상태 */
+.korean-grammar-ai-widget:hover {
+    background-color: rgba(16, 185, 129, 0.2);
+}
+
+/* AI Widget 포커스 상태 */
+.korean-grammar-ai-widget:focus {
+    outline: 2px solid #10b981;
+    outline-offset: 1px;
+}

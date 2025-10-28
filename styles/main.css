@@ -13,6 +13,7 @@
 @import url("inline-mode.css");
 @import url("inline-suggest.css");
 @import url("inline-tooltip.css");
+@import url("virtual-scroller.css");
 @import url("mobile.css");
 @import url("responsive.css");
 
@@ -43,6 +44,10 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  max-width: var(--kga-max-width, 100vw);
+  max-height: var(--kga-max-height, 100vh);
+  left: var(--kga-pos-left, 0);
+  top: var(--kga-pos-top, 0);
 }
 
 /* Header area */
