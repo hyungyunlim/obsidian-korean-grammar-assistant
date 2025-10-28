@@ -838,7 +838,78 @@
 }
 
 /* ========================================
-   13. Cursor Hidden State
+   13. AI Icon & Reasoning Text
+   ======================================== */
+
+.ai-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.ai-reasoning {
+  flex: 1;
+  font-style: italic;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Help icon - reusable class */
+.help-icon {
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--text-muted);
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: bold;
+  transition: all 0.2s;
+  background: var(--background-primary);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.help-icon.kga-mobile {
+  width: 18px;
+  height: 18px;
+  font-size: 9px;
+}
+
+.help-icon.kga-mobile-phone {
+  width: 16px;
+  height: 16px;
+  font-size: 8px;
+}
+
+.help-icon:hover {
+  background: var(--interactive-hover);
+  border-color: var(--text-normal);
+  color: var(--text-normal);
+  transform: scale(1.1);
+}
+
+/* ========================================
+   14. Hidden Input (Mobile Keyboard Hide)
+   ======================================== */
+
+.kga-hidden-input {
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+}
+
+/* ========================================
+   15. Cursor Hidden State
    ======================================== */
 
 .korean-tooltip-cursor-hidden .cm-cursor {

@@ -10411,22 +10411,13 @@ var InlineTooltip = class {
     this.tooltip = document.createElement("div");
     this.tooltip.className = "korean-grammar-inline-tooltip";
     const isMobile = import_obsidian11.Platform.isMobile;
-    this.tooltip.style.cssText = `
-      position: absolute;
-      background: var(--background-primary);
-      border: 1px solid var(--background-modifier-border);
-      border-radius: ${isMobile ? "12px" : "6px"};
-      padding: 0;
-      box-shadow: ${isMobile ? "0 8px 32px rgba(0, 0, 0, 0.3)" : "var(--shadow-s)"};
-      z-index: 1000;
-      font-size: ${isMobile ? "14px" : "13px"};
-      color: var(--text-normal);
-      display: flex;
-      flex-direction: column;
-      ${isMobile ? "max-height: 200px;" : "max-height: 300px;"}
-      overflow-y: auto;
-      ${isMobile ? "touch-action: manipulation;" : ""}
-    `;
+    const isMobilePhone = import_obsidian11.Platform.isMobileApp;
+    if (isMobile) {
+      this.tooltip.classList.add("kga-mobile");
+    }
+    if (isMobilePhone) {
+      this.tooltip.classList.add("kga-mobile-phone");
+    }
     if (isMobile) {
       this.tooltip.addEventListener("touchstart", (e) => {
         e.stopPropagation();
@@ -10531,23 +10522,18 @@ var InlineTooltip = class {
     const hasAIAnalysis = this.tooltip.querySelector(".tooltip-ai-area") !== null;
     const fixedWidth = viewportWidth - 16;
     const fixedHeight = hasAIAnalysis ? 110 : 85;
-    this.tooltip.style.width = `${fixedWidth}px`;
-    this.tooltip.style.height = `${fixedHeight}px`;
-    this.tooltip.style.maxHeight = `${fixedHeight}px`;
-    this.tooltip.style.minWidth = `${fixedWidth}px`;
-    this.tooltip.style.fontSize = "13px";
+    this.tooltip.classList.add("kga-fixed-position");
+    if (hasAIAnalysis) {
+      this.tooltip.classList.add("kga-has-ai");
+    }
+    this.tooltip.style.setProperty("--kga-width", `${fixedWidth}px`);
+    this.tooltip.style.setProperty("--kga-fixed-height", `${fixedHeight}px`);
     const safeBottomMargin = hasAIAnalysis ? 90 : 80;
     const bottomOffset = keyboardHeight > 0 ? keyboardHeight + 12 : safeBottomMargin;
     const finalLeft = (viewportWidth - fixedWidth) / 2;
     const finalTop = viewportHeight - fixedHeight - bottomOffset;
-    this.tooltip.style.position = "fixed";
-    this.tooltip.style.left = `${finalLeft}px`;
-    this.tooltip.style.top = `${finalTop}px`;
-    this.tooltip.style.zIndex = "1000";
-    this.tooltip.style.visibility = "visible";
-    this.tooltip.style.boxShadow = "0 -2px 12px rgba(0, 0, 0, 0.2)";
-    this.tooltip.style.borderRadius = "12px 12px 0 0";
-    this.tooltip.style.border = "1px solid var(--background-modifier-border)";
+    this.tooltip.style.setProperty("--kga-left", `${finalLeft}px`);
+    this.tooltip.style.setProperty("--kga-top", `${finalTop}px`);
     Logger.log(`\u{1F4F1} \uACE0\uC815 \uD234\uD301 (${hasAIAnalysis ? "AI+" : "\uAE30\uBCF8"}): ${fixedWidth}x${fixedHeight}px (${Math.round(fixedWidth / viewportWidth * 100)}% \uB108\uBE44)`, {
       position: `(${finalLeft}, ${finalTop})`,
       bottomMargin: `${safeBottomMargin}px (${hasAIAnalysis ? "AI \uD655\uC7A5" : "\uAE30\uBCF8"})`,
@@ -10574,10 +10560,11 @@ var InlineTooltip = class {
       editorWidth,
       editorHeight
     );
-    this.tooltip.style.width = `${adaptiveSize.width}px`;
-    this.tooltip.style.maxHeight = `${adaptiveSize.maxHeight}px`;
-    this.tooltip.style.minWidth = `${adaptiveSize.minWidth}px`;
-    this.tooltip.style.fontSize = adaptiveSize.fontSize;
+    this.tooltip.classList.add("kga-dynamic-position");
+    this.tooltip.style.setProperty("--kga-width", `${adaptiveSize.width}px`);
+    this.tooltip.style.setProperty("--kga-max-height", `${adaptiveSize.maxHeight}px`);
+    this.tooltip.style.setProperty("--kga-min-width", `${adaptiveSize.minWidth}px`);
+    this.tooltip.style.setProperty("--kga-font-size", adaptiveSize.fontSize);
     let referenceCenterX;
     let referenceCenterY;
     if (mousePosition) {
@@ -10651,13 +10638,8 @@ var InlineTooltip = class {
       Math.min(finalTop, effectiveViewportHeight - adaptiveSize.maxHeight - safeMargin)
     );
     finalLeft = Math.max(safeMargin, Math.min(finalLeft, viewportWidth - adaptiveSize.width - safeMargin));
-    this.tooltip.style.position = "fixed";
-    this.tooltip.style.left = `${finalLeft}px`;
-    this.tooltip.style.top = `${finalTop}px`;
-    this.tooltip.style.zIndex = "1000";
-    this.tooltip.style.visibility = "visible";
-    this.tooltip.style.boxShadow = "0 8px 32px rgba(0, 0, 0, 0.3)";
-    this.tooltip.style.borderRadius = "12px";
+    this.tooltip.style.setProperty("--kga-left", `${finalLeft}px`);
+    this.tooltip.style.setProperty("--kga-top", `${finalTop}px`);
     Logger.log(`\u{1F4F1} \uCD5C\uC885 \uBAA8\uBC14\uC77C \uD234\uD301 \uC704\uCE58: ${adaptiveSize.width}x${adaptiveSize.maxHeight} at (${finalLeft}, ${finalTop})`, {
       corners: { isLeftEdge, isRightEdge, isTopEdge, isBottomEdge },
       keyboard: { visible: keyboardHeight > 0, height: keyboardHeight },
@@ -10687,10 +10669,11 @@ var InlineTooltip = class {
       editorWidth,
       editorHeight
     );
-    this.tooltip.style.width = `${adaptiveSize.width}px`;
-    this.tooltip.style.maxHeight = `${adaptiveSize.maxHeight}px`;
-    this.tooltip.style.minWidth = `${adaptiveSize.minWidth}px`;
-    this.tooltip.style.fontSize = adaptiveSize.fontSize;
+    this.tooltip.classList.add("kga-dynamic-position");
+    this.tooltip.style.setProperty("--kga-width", `${adaptiveSize.width}px`);
+    this.tooltip.style.setProperty("--kga-max-height", `${adaptiveSize.maxHeight}px`);
+    this.tooltip.style.setProperty("--kga-min-width", `${adaptiveSize.minWidth}px`);
+    this.tooltip.style.setProperty("--kga-font-size", adaptiveSize.fontSize);
     const gap = 8;
     const minSpacing = 12;
     let referenceRect;
@@ -10760,11 +10743,9 @@ var InlineTooltip = class {
         Math.min(finalTop, Math.min(viewportHeight, editorTop + editorHeight) - adaptiveSize.maxHeight - minSpacing)
       );
     }
-    this.tooltip.style.position = "fixed";
-    this.tooltip.style.left = `${finalLeft}px`;
-    this.tooltip.style.top = `${finalTop}px`;
-    this.tooltip.style.zIndex = "1000";
-    this.tooltip.style.visibility = "visible";
+    this.tooltip.classList.add("kga-desktop");
+    this.tooltip.style.setProperty("--kga-left", `${finalLeft}px`);
+    this.tooltip.style.setProperty("--kga-top", `${finalTop}px`);
     Logger.log(`\u{1F5A5}\uFE0F \uB370\uC2A4\uD06C\uD1B1 \uD234\uD301 \uC704\uCE58: ${adaptiveSize.width}x${adaptiveSize.maxHeight} at (${finalLeft}, ${finalTop})`, {
       corners: { isLeftEdge, isRightEdge, isTopEdge, isBottomEdge },
       editor: editorContainerRect ? `${editorWidth}x${editorHeight} at (${editorLeft}, ${editorTop})` : "none",
@@ -10793,79 +10774,25 @@ var InlineTooltip = class {
       Logger.warn(`\u{1F527} \uC774\uAC83\uC774 \uD234\uD301\uC5D0\uC11C \uB3D9\uC77C\uD55C \uC81C\uC548\uC774 \uC5EC\uB7EC \uBC88 \uB098\uD0C0\uB098\uB294 \uC6D0\uC778\uC785\uB2C8\uB2E4!`);
     }
     const header = this.tooltip.createEl("div", { cls: "tooltip-header" });
-    header.style.cssText = `
-      padding: ${isMobile ? isPhone ? "10px 12px" : "11px 13px" : "8px 12px"};
-      border-bottom: 1px solid var(--background-modifier-border);
-      background: var(--background-secondary);
-      font-weight: 600;
-      font-size: ${isMobile ? isPhone ? "11px" : "12px" : "12px"};
-      color: var(--text-muted);
-      text-align: center;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    `;
+    if (isMobile)
+      header.classList.add("kga-mobile");
+    if (isPhone)
+      header.classList.add("kga-mobile-phone");
     const headerText = header.createEl("span", {
       text: `${uniqueOriginalErrors.length}\uAC1C \uC624\uB958 \uBCD1\uD569\uB428`,
       cls: "header-text"
     });
-    headerText.style.cssText = `
-      flex: 1;
-      text-align: center;
-    `;
     const headerCloseButton = header.createEl("button", {
       text: "\u2715",
       cls: "header-close-button"
     });
-    headerCloseButton.style.cssText = `
-      position: absolute;
-      right: ${isMobile ? isPhone ? "12px" : "10px" : "8px"};
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      outline: none;
-      box-shadow: none;
-      cursor: pointer;
-      font-size: ${isMobile ? isPhone ? "18px" : "16px" : "16px"};
-      color: var(--text-muted);
-      padding: 0;
-      margin: 0;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-width: auto;
-      min-height: auto;
-      width: auto;
-      height: auto;
-      z-index: 10;
-      font-weight: 500;
-      line-height: 1;
-      opacity: 0.7;
-      font-family: inherit;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      appearance: none;
-      ${isMobile ? "touch-action: manipulation;" : ""}
-    `;
-    headerCloseButton.addEventListener("mouseenter", () => {
-      headerCloseButton.style.opacity = "1";
-      headerCloseButton.style.color = "var(--text-normal)";
-      headerCloseButton.style.transform = "translateY(-50%) scale(1.2)";
-    });
-    headerCloseButton.addEventListener("mouseleave", () => {
-      headerCloseButton.style.opacity = "0.7";
-      headerCloseButton.style.color = "var(--text-muted)";
-      headerCloseButton.style.transform = "translateY(-50%) scale(1)";
-    });
+    if (isMobile)
+      headerCloseButton.classList.add("kga-mobile");
+    if (isPhone)
+      headerCloseButton.classList.add("kga-mobile-phone");
     if (isMobile) {
       headerCloseButton.addEventListener("touchstart", (e) => {
         e.preventDefault();
-        headerCloseButton.style.opacity = "1";
-        headerCloseButton.style.color = "var(--text-normal)";
-        headerCloseButton.style.transform = "translateY(-50%) scale(1.2)";
         if ("vibrate" in navigator) {
           navigator.vibrate(10);
         }
@@ -10873,9 +10800,6 @@ var InlineTooltip = class {
       headerCloseButton.addEventListener("touchend", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        headerCloseButton.style.opacity = "0.7";
-        headerCloseButton.style.color = "var(--text-muted)";
-        headerCloseButton.style.transform = "translateY(-50%) scale(1)";
         this.hide(true);
       }, { passive: false });
     }
@@ -10884,61 +10808,41 @@ var InlineTooltip = class {
       this.hide(true);
     });
     const scrollContainer = this.tooltip.createEl("div", { cls: "tooltip-scroll-container" });
-    scrollContainer.style.cssText = `
-      flex: 1;
-      overflow-y: auto;
-      max-height: ${isMobile ? isPhone ? "280px" : "320px" : "250px"};
-      min-height: ${isMobile ? isPhone ? "120px" : "140px" : "auto"};
-    `;
+    if (isMobile)
+      scrollContainer.classList.add("kga-mobile");
+    if (isPhone)
+      scrollContainer.classList.add("kga-mobile-phone");
     uniqueOriginalErrors.forEach((originalError, index) => {
       const errorSection = scrollContainer.createEl("div", { cls: "error-section" });
-      errorSection.style.cssText = `
-        padding: ${isMobile ? isPhone ? "10px 12px" : "11px 13px" : "8px 12px"};
-        ${index > 0 ? "border-top: 1px solid var(--background-modifier-border-hover);" : ""}
-      `;
+      if (isMobile)
+        errorSection.classList.add("kga-mobile");
+      if (isPhone)
+        errorSection.classList.add("kga-mobile-phone");
+      if (index > 0)
+        errorSection.classList.add("kga-bordered");
       const errorLine = errorSection.createEl("div", { cls: "error-line" });
-      errorLine.style.cssText = `
-        display: flex;
-        align-items: center;
-        gap: ${isMobile ? isPhone ? "6px" : "7px" : "8px"};
-        flex-wrap: nowrap;
-        min-height: ${isMobile ? isPhone ? "32px" : "34px" : "28px"};
-      `;
+      if (isMobile)
+        errorLine.classList.add("kga-mobile");
+      if (isPhone)
+        errorLine.classList.add("kga-mobile-phone");
       const errorWord = errorLine.createEl("span", {
         text: originalError.correction.original,
         cls: "error-word"
       });
-      errorWord.style.cssText = `
-        color: var(--text-error);
-        font-weight: 600;
-        background: rgba(255, 0, 0, 0.1);
-        padding: ${isMobile ? isPhone ? "3px 6px" : "4px 7px" : "4px 8px"};
-        border-radius: 3px;
-        font-size: ${isMobile ? isPhone ? "12px" : "13px" : "13px"};
-        white-space: nowrap;
-        flex-shrink: 0;
-        min-width: ${isMobile ? "70px" : "60px"};
-        max-width: ${isMobile ? isPhone ? "100px" : "110px" : "120px"};
-        overflow: hidden;
-        text-overflow: ellipsis;
-        line-height: ${isMobile ? "1.3" : "1.2"};
-      `;
-      const arrow = errorLine.createEl("span", { text: "\u2192" });
-      arrow.style.cssText = `
-        color: var(--text-muted);
-        font-weight: bold;
-        flex-shrink: 0;
-        font-size: ${isMobile ? isPhone ? "12px" : "13px" : "14px"};
-      `;
+      if (isMobile)
+        errorWord.classList.add("kga-mobile");
+      if (isPhone)
+        errorWord.classList.add("kga-mobile-phone");
+      const arrow = errorLine.createEl("span", { text: "\u2192", cls: "kga-arrow" });
+      if (isMobile)
+        arrow.classList.add("kga-mobile");
+      if (isPhone)
+        arrow.classList.add("kga-mobile-phone");
       const suggestionsList = errorLine.createEl("div", { cls: "suggestions-list" });
-      suggestionsList.style.cssText = `
-        display: flex;
-        align-items: center;
-        gap: ${isMobile ? isPhone ? "3px" : "4px" : "4px"};
-        flex: 1;
-        flex-wrap: wrap;
-        overflow: hidden;
-      `;
+      if (isMobile)
+        suggestionsList.classList.add("kga-mobile");
+      if (isPhone)
+        suggestionsList.classList.add("kga-mobile-phone");
       const uniqueSuggestions = [...new Set(originalError.correction.corrected)];
       Logger.debug(`\u{1F527} \uBCD1\uD569\uB41C \uD234\uD301 \uC81C\uC548 \uC911\uBCF5 \uC81C\uAC70: ${originalError.correction.corrected.length}\uAC1C \u2192 ${uniqueSuggestions.length}\uAC1C`);
       uniqueSuggestions.forEach((suggestion, index2) => {
@@ -10946,35 +10850,19 @@ var InlineTooltip = class {
           text: suggestion,
           cls: "suggestion-button"
         });
-        suggestionButton.style.cssText = `
-          color: var(--text-normal);
-          font-weight: 600;
-          background: rgba(59, 130, 246, 0.1);
-          padding: ${isMobile ? isPhone ? "3px 6px" : "4px 7px" : "4px 8px"};
-          border-radius: 3px;
-          font-size: ${isMobile ? isPhone ? "12px" : "13px" : "13px"};
-          cursor: pointer;
-          ${isMobile ? "touch-action: manipulation;" : ""}
-        `;
-        const onActivate = () => {
-          suggestionButton.style.background = "rgba(59, 130, 246, 0.15)";
-          if (isMobile && "vibrate" in navigator) {
-            navigator.vibrate(10);
-          }
-        };
-        const onDeactivate = () => {
-          suggestionButton.style.background = "rgba(59, 130, 246, 0.1)";
-        };
-        suggestionButton.addEventListener("mouseenter", onActivate);
-        suggestionButton.addEventListener("mouseleave", onDeactivate);
+        if (isMobile)
+          suggestionButton.classList.add("kga-mobile");
+        if (isPhone)
+          suggestionButton.classList.add("kga-mobile-phone");
         if (isMobile) {
           suggestionButton.addEventListener("touchstart", (e) => {
             e.preventDefault();
-            onActivate();
+            if ("vibrate" in navigator) {
+              navigator.vibrate(10);
+            }
           }, { passive: false });
           suggestionButton.addEventListener("touchend", (e) => {
             e.preventDefault();
-            onDeactivate();
             Logger.log(`\u{1F4F1} \uBAA8\uBC14\uC77C \uD130\uCE58\uB85C \uC81C\uC548 \uC801\uC6A9: "${suggestion}"`);
             this.applySuggestionKeepOpen(mergedError, suggestion, targetElement);
           }, { passive: false });
@@ -10986,33 +10874,19 @@ var InlineTooltip = class {
       });
       if (originalError.correction.help) {
         const helpContainer = errorLine.createEl("div", { cls: "help-container" });
-        helpContainer.style.cssText = `
-          display: flex;
-          align-items: center;
-          margin-left: 4px;
-          flex-shrink: 0;
-        `;
         this.createInlineHelpIcon(originalError.correction.help, helpContainer, () => {
           let helpArea = this.tooltip.querySelector(".tooltip-help-area");
           if (!helpArea) {
             helpArea = this.tooltip.createEl("div", { cls: "tooltip-help-area" });
-            helpArea.style.cssText = `
-              padding: ${isMobile ? isPhone ? "4px 8px" : "5px 9px" : "6px 10px"};
-              border-top: 1px solid var(--background-modifier-border);
-              background: var(--background-secondary);
-              font-size: ${isMobile ? isPhone ? "10px" : "11px" : "11px"};
-              color: var(--text-muted);
-              line-height: 1.3;
-              white-space: pre-wrap;
-              word-break: break-word;
-              min-height: ${isMobile ? isPhone ? "20px" : "22px" : "24px"};
-              flex-shrink: 0;
-            `;
+            if (isMobile)
+              helpArea.classList.add("kga-mobile");
+            if (isPhone)
+              helpArea.classList.add("kga-mobile-phone");
             helpArea.textContent = originalError.correction.help;
           } else {
-            const isHidden = helpArea.style.display === "none";
-            helpArea.style.display = isHidden ? "block" : "none";
-            if (!isHidden) {
+            const isHidden = helpArea.hasClass("kga-hidden");
+            helpArea.toggleClass("kga-hidden", !isHidden);
+            if (isHidden) {
               helpArea.textContent = originalError.correction.help;
             }
           }
@@ -11020,83 +10894,33 @@ var InlineTooltip = class {
       }
     });
     const actionsContainer = this.tooltip.createEl("div", { cls: "tooltip-actions" });
-    actionsContainer.style.cssText = `
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: ${isMobile ? isPhone ? "8px 12px 10px 12px" : "7px 11px 9px 11px" : "8px 12px"};
-      border-top: 1px solid var(--background-modifier-border);
-      background: var(--background-secondary);
-      gap: ${isMobile ? isPhone ? "8px" : "7px" : "6px"};
-      min-height: ${isMobile ? isPhone ? "48px" : "44px" : "auto"};
-      border-bottom-left-radius: 12px;
-      border-bottom-right-radius: 12px;
-    `;
+    if (isMobile)
+      actionsContainer.classList.add("kga-mobile");
+    if (isPhone)
+      actionsContainer.classList.add("kga-mobile-phone");
     const infoText = actionsContainer.createEl("span", {
       text: isMobile ? isPhone ? "\uAC1C\uBCC4 \uC218\uC815" : "\uAC1C\uBCC4 \uD074\uB9AD \uC218\uC815" : "\uAC1C\uBCC4 \uD074\uB9AD\uC73C\uB85C \uD558\uB098\uC529 \uC218\uC815",
       cls: "info-text"
     });
-    infoText.style.cssText = `
-      font-size: ${isMobile ? isPhone ? "11px" : "12px" : "11px"};
-      color: var(--text-muted);
-      flex: 1;
-      line-height: 1.3;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      padding-right: ${isMobile ? "4px" : "0"};
-    `;
+    if (isMobile)
+      infoText.classList.add("kga-mobile");
+    if (isPhone)
+      infoText.classList.add("kga-mobile-phone");
     const actionButtons = actionsContainer.createEl("div", { cls: "action-buttons" });
-    actionButtons.style.cssText = `
-      display: flex;
-      align-items: center;
-      gap: ${isMobile ? isPhone ? "6px" : "5px" : "6px"};
-      flex-shrink: 0;
-      min-height: ${isMobile ? isPhone ? "32px" : "30px" : "auto"};
-    `;
+    if (isMobile)
+      actionButtons.classList.add("kga-mobile");
+    if (isPhone)
+      actionButtons.classList.add("kga-mobile-phone");
     const ignoreAllButton = actionButtons.createEl("button", { cls: "ignore-all-button" });
     ignoreAllButton.textContent = "\u2715";
     ignoreAllButton.title = "\uC774 \uC624\uB958\uB4E4 \uBAA8\uB450 \uBB34\uC2DC";
-    ignoreAllButton.style.cssText = `
-      background: #ef4444;
-      color: white;
-      border: 1px solid #ef4444;
-      border-radius: ${isMobile ? "6px" : "4px"};
-      padding: ${isMobile ? isPhone ? "8px" : "7px" : "6px"};
-      cursor: pointer;
-      font-size: ${isMobile ? isPhone ? "16px" : "15px" : "16px"};
-      font-weight: 700;
-      transition: all 0.2s;
-      min-height: ${isMobile ? isPhone ? "32px" : "30px" : "auto"};
-      min-width: ${isMobile ? isPhone ? "32px" : "30px" : "auto"};
-      max-height: ${isMobile ? isPhone ? "32px" : "30px" : "none"};
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-      white-space: nowrap;
-      box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
-      ${isMobile ? "touch-action: manipulation;" : ""}
-    `;
-    ignoreAllButton.addEventListener("mouseenter", () => {
-      ignoreAllButton.style.background = "#dc2626";
-      ignoreAllButton.style.borderColor = "#dc2626";
-      ignoreAllButton.style.transform = "translateY(-1px)";
-      ignoreAllButton.style.boxShadow = "0 4px 8px rgba(239, 68, 68, 0.3)";
-    });
-    ignoreAllButton.addEventListener("mouseleave", () => {
-      ignoreAllButton.style.background = "#ef4444";
-      ignoreAllButton.style.borderColor = "#ef4444";
-      ignoreAllButton.style.transform = "translateY(0)";
-      ignoreAllButton.style.boxShadow = "0 2px 4px rgba(239, 68, 68, 0.2)";
-    });
+    if (isMobile)
+      ignoreAllButton.classList.add("kga-mobile");
+    if (isPhone)
+      ignoreAllButton.classList.add("kga-mobile-phone");
     if (import_obsidian11.Platform.isMobile) {
       ignoreAllButton.addEventListener("touchstart", (e) => {
         e.preventDefault();
-        ignoreAllButton.style.background = "#dc2626";
-        ignoreAllButton.style.borderColor = "#dc2626";
-        ignoreAllButton.style.transform = "translateY(-1px)";
-        ignoreAllButton.style.boxShadow = "0 4px 8px rgba(239, 68, 68, 0.3)";
         if ("vibrate" in navigator) {
           navigator.vibrate(15);
         }
@@ -11104,10 +10928,6 @@ var InlineTooltip = class {
       ignoreAllButton.addEventListener("touchend", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        ignoreAllButton.style.background = "#ef4444";
-        ignoreAllButton.style.borderColor = "#ef4444";
-        ignoreAllButton.style.transform = "translateY(0)";
-        ignoreAllButton.style.boxShadow = "0 2px 4px rgba(239, 68, 68, 0.2)";
         this.ignoreError(mergedError);
       }, { passive: false });
     }
@@ -11120,46 +10940,13 @@ var InlineTooltip = class {
       cls: "apply-all-button"
     });
     applyAllButton.title = "\uBAA8\uB4E0 \uC218\uC815 \uC0AC\uD56D \uC801\uC6A9";
-    applyAllButton.style.cssText = `
-      background: #10b981;
-      color: white;
-      border: 1px solid #10b981;
-      border-radius: ${isMobile ? "6px" : "4px"};
-      padding: ${isMobile ? isPhone ? "8px" : "7px" : "6px"};
-      cursor: pointer;
-      font-size: ${isMobile ? isPhone ? "16px" : "15px" : "16px"};
-      font-weight: 700;
-      transition: all 0.2s;
-      min-height: ${isMobile ? isPhone ? "32px" : "30px" : "auto"};
-      min-width: ${isMobile ? isPhone ? "32px" : "30px" : "auto"};
-      max-height: ${isMobile ? isPhone ? "32px" : "30px" : "none"};
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-      white-space: nowrap;
-      box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
-      ${isMobile ? "touch-action: manipulation;" : ""}
-    `;
-    applyAllButton.addEventListener("mouseenter", () => {
-      applyAllButton.style.background = "#059669";
-      applyAllButton.style.borderColor = "#059669";
-      applyAllButton.style.transform = "translateY(-1px)";
-      applyAllButton.style.boxShadow = "0 4px 8px rgba(16, 185, 129, 0.3)";
-    });
-    applyAllButton.addEventListener("mouseleave", () => {
-      applyAllButton.style.background = "#10b981";
-      applyAllButton.style.borderColor = "#10b981";
-      applyAllButton.style.transform = "translateY(0)";
-      applyAllButton.style.boxShadow = "0 2px 4px rgba(16, 185, 129, 0.2)";
-    });
+    if (isMobile)
+      applyAllButton.classList.add("kga-mobile");
+    if (isPhone)
+      applyAllButton.classList.add("kga-mobile-phone");
     if (isMobile) {
       applyAllButton.addEventListener("touchstart", (e) => {
         e.preventDefault();
-        applyAllButton.style.background = "#059669";
-        applyAllButton.style.borderColor = "#059669";
-        applyAllButton.style.transform = "translateY(-1px)";
-        applyAllButton.style.boxShadow = "0 4px 8px rgba(16, 185, 129, 0.3)";
         if ("vibrate" in navigator) {
           navigator.vibrate(15);
         }
@@ -11167,10 +10954,6 @@ var InlineTooltip = class {
       applyAllButton.addEventListener("touchend", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        applyAllButton.style.background = "#10b981";
-        applyAllButton.style.borderColor = "#10b981";
-        applyAllButton.style.transform = "translateY(0)";
-        applyAllButton.style.boxShadow = "0 2px 4px rgba(16, 185, 129, 0.2)";
         if (mergedError.originalErrors) {
           mergedError.originalErrors.forEach((originalError) => {
             if (originalError.correction.corrected.length > 0) {
@@ -11279,54 +11062,30 @@ var InlineTooltip = class {
     }
     const isMobile = import_obsidian11.Platform.isMobile;
     const isPhone = import_obsidian11.Platform.isPhone || window.innerWidth <= 480;
-    const header = this.tooltip.createEl("div", { cls: "tooltip-header" });
-    header.style.cssText = `
-      padding: ${isMobile ? isPhone ? "6px 10px" : "7px 11px" : "6px 10px"};
-      border-bottom: 1px solid var(--background-modifier-border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--background-secondary);
-      border-radius: 6px 6px 0 0;
-      font-size: ${isMobile ? isPhone ? "12px" : "13px" : "13px"};
-      font-weight: 500;
-      color: var(--text-muted);
-      min-height: 32px;
-    `;
+    const header = this.tooltip.createEl("div", { cls: "tooltip-header kga-single" });
+    if (isMobile)
+      header.classList.add("kga-mobile");
+    if (isPhone)
+      header.classList.add("kga-mobile-phone");
     const headerText = header.createEl("span", {
       text: "\uB9DE\uCDA4\uBC95 \uC624\uB958",
-      cls: "header-text"
+      cls: "header-text kga-single"
     });
-    headerText.style.cssText = `
-      font-size: ${isMobile ? isPhone ? "12px" : "13px" : "13px"};
-    `;
+    if (isMobile)
+      headerText.classList.add("kga-mobile");
+    if (isPhone)
+      headerText.classList.add("kga-mobile-phone");
     const headerCloseButton = header.createEl("button", {
       text: "\u2715",
-      cls: "header-close-button"
+      cls: "header-close-button kga-single"
     });
-    headerCloseButton.style.cssText = `
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      font-size: ${isMobile ? isPhone ? "14px" : "15px" : "14px"};
-      font-weight: bold;
-      cursor: pointer;
-      padding: 0;
-      width: ${isMobile ? isPhone ? "20px" : "22px" : "20px"};
-      height: ${isMobile ? isPhone ? "20px" : "22px" : "20px"};
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0.7;
-      transition: all 0.2s ease;
-    `;
+    if (isMobile)
+      headerCloseButton.classList.add("kga-mobile");
+    if (isPhone)
+      headerCloseButton.classList.add("kga-mobile-phone");
     if (isMobile) {
       headerCloseButton.addEventListener("touchstart", (e) => {
         e.preventDefault();
-        headerCloseButton.style.opacity = "1";
-        headerCloseButton.style.color = "var(--text-normal)";
-        headerCloseButton.style.background = "var(--interactive-hover)";
         if ("vibrate" in navigator) {
           navigator.vibrate(10);
         }
@@ -11334,9 +11093,6 @@ var InlineTooltip = class {
       headerCloseButton.addEventListener("touchend", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        headerCloseButton.style.opacity = "0.7";
-        headerCloseButton.style.color = "var(--text-muted)";
-        headerCloseButton.style.background = "none";
         this.hide(true);
       }, { passive: false });
     }
@@ -11345,65 +11101,47 @@ var InlineTooltip = class {
       this.hide(true);
     });
     const mainContent = this.tooltip.createEl("div", { cls: "tooltip-main-content" });
-    mainContent.style.cssText = `
-      display: flex;
-      align-items: center;
-      gap: ${isMobile ? isPhone ? "4px" : "5px" : "6px"};
-      padding: ${isMobile ? isPhone ? "4px 8px" : "5px 9px" : "6px 10px"};
-      white-space: nowrap;
-      flex: 1;
-      min-height: 0;
-    `;
+    if (isMobile)
+      mainContent.classList.add("kga-mobile");
+    if (isPhone)
+      mainContent.classList.add("kga-mobile-phone");
     const errorWordContainer = mainContent.createEl("div", { cls: "error-word-container" });
-    errorWordContainer.style.cssText = `
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-    `;
     const errorWord = errorWordContainer.createEl("span", {
       text: error.correction.original,
       cls: "error-word"
     });
-    const { color, backgroundColor, cursor } = this.getErrorWordStyle(error);
-    errorWord.style.cssText = `
-      color: ${color};
-      font-weight: 600;
-      background: ${backgroundColor};
-      padding: ${isMobile ? isPhone ? "3px 6px" : "4px 7px" : "4px 8px"};
-      border-radius: 3px;
-      font-size: ${isMobile ? isPhone ? "12px" : "13px" : "13px"};
-      cursor: ${cursor};
-      transition: opacity 0.2s ease;
-    `;
+    if (error.aiStatus) {
+      errorWord.classList.add(`kga-ai-${error.aiStatus}`);
+    }
+    if (isMobile) {
+      errorWord.classList.add("kga-mobile");
+    }
+    if (isPhone) {
+      errorWord.classList.add("kga-mobile-phone");
+    }
     if (error.morphemeInfo && this.isImportantPos(error.morphemeInfo.mainPos, error.morphemeInfo.tags)) {
       const posInfo = errorWordContainer.createEl("span", {
         text: error.morphemeInfo.mainPos,
         cls: "pos-info"
       });
-      posInfo.style.cssText = `
-        color: var(--text-accent);
-        font-size: ${isMobile ? "9px" : "10px"};
-        font-weight: 500;
-        opacity: 0.9;
-        background: rgba(59, 130, 246, 0.1);
-        padding: 1px 4px;
-        border-radius: 3px;
-      `;
+      if (isMobile) {
+        posInfo.classList.add("kga-mobile");
+      }
     }
-    const arrow = mainContent.createEl("span", { text: "\u2192" });
-    arrow.style.cssText = `
-      color: var(--text-muted);
-      font-weight: bold;
-      font-size: ${isMobile ? isPhone ? "11px" : "12px" : "12px"};
-    `;
+    const arrow = mainContent.createEl("span", { text: "\u2192", cls: "kga-arrow" });
+    if (isMobile) {
+      arrow.classList.add("kga-mobile");
+    }
+    if (isPhone) {
+      arrow.classList.add("kga-mobile-phone");
+    }
     const suggestionsList = mainContent.createEl("div", { cls: "suggestions-list" });
-    suggestionsList.style.cssText = `
-      display: flex;
-      align-items: center;
-      gap: ${isMobile ? isPhone ? "4px" : "5px" : "6px"};
-      flex-wrap: wrap;
-    `;
+    if (isMobile) {
+      suggestionsList.classList.add("kga-mobile");
+    }
+    if (isPhone) {
+      suggestionsList.classList.add("kga-mobile-phone");
+    }
     const uniqueSuggestions = [...new Set(error.correction.corrected)];
     Logger.debug(`\u{1F527} \uD234\uD301 \uC81C\uC548 \uC911\uBCF5 \uC81C\uAC70: ${error.correction.corrected.length}\uAC1C \u2192 ${uniqueSuggestions.length}\uAC1C`);
     uniqueSuggestions.forEach((suggestion, index) => {
@@ -11411,37 +11149,21 @@ var InlineTooltip = class {
         text: suggestion,
         cls: "suggestion-button"
       });
-      const isMobile2 = import_obsidian11.Platform.isMobile;
-      const isPhone2 = import_obsidian11.Platform.isPhone;
-      suggestionButton.style.cssText = `
-        color: var(--text-normal);
-        font-weight: 600;
-        background: rgba(59, 130, 246, 0.1);
-        padding: ${isMobile2 ? isPhone2 ? "3px 6px" : "4px 7px" : "4px 8px"};
-        border-radius: 3px;
-        font-size: ${isMobile2 ? isPhone2 ? "12px" : "13px" : "13px"};
-        cursor: pointer;
-        ${isMobile2 ? "touch-action: manipulation;" : ""}
-      `;
-      const onActivate = () => {
-        suggestionButton.style.background = "rgba(59, 130, 246, 0.15)";
-        if (isMobile2 && "vibrate" in navigator) {
-          navigator.vibrate(10);
-        }
-      };
-      const onDeactivate = () => {
-        suggestionButton.style.background = "rgba(59, 130, 246, 0.1)";
-      };
-      suggestionButton.addEventListener("mouseenter", onActivate);
-      suggestionButton.addEventListener("mouseleave", onDeactivate);
-      if (isMobile2) {
+      if (isMobile) {
+        suggestionButton.classList.add("kga-mobile");
+      }
+      if (isPhone) {
+        suggestionButton.classList.add("kga-mobile-phone");
+      }
+      if (isMobile) {
         suggestionButton.addEventListener("touchstart", (e) => {
           e.preventDefault();
-          onActivate();
+          if ("vibrate" in navigator) {
+            navigator.vibrate(10);
+          }
         }, { passive: false });
         suggestionButton.addEventListener("touchend", (e) => {
           e.preventDefault();
-          onDeactivate();
           Logger.log(`\u{1F4F1} \uBAA8\uBC14\uC77C \uD130\uCE58\uB85C \uC81C\uC548 \uC801\uC6A9: "${suggestion}"`);
           this.applySuggestion(error, suggestion, targetElement);
         }, { passive: false });
@@ -11452,46 +11174,24 @@ var InlineTooltip = class {
       });
     });
     const actionsContainer = mainContent.createEl("div", { cls: "actions-container" });
-    actionsContainer.style.cssText = `
-      display: flex;
-      align-items: center;
-      gap: ${isMobile ? isPhone ? "8px" : "7px" : "6px"};
-      margin-left: auto;
-      flex-shrink: 0;
-      min-height: ${isMobile ? isPhone ? "28px" : "26px" : "auto"};
-    `;
+    if (isMobile) {
+      actionsContainer.classList.add("kga-mobile");
+    }
+    if (isPhone) {
+      actionsContainer.classList.add("kga-mobile-phone");
+    }
     const exceptionButton = actionsContainer.createEl("button", { cls: "exception-button" });
     exceptionButton.textContent = "\u{1F4DA}";
     exceptionButton.title = "\uC608\uC678 \uB2E8\uC5B4\uB85C \uCD94\uAC00";
-    exceptionButton.style.cssText = `
-      background: var(--interactive-normal);
-      border: 1px solid var(--background-modifier-border);
-      border-radius: ${isMobile ? "5px" : "4px"};
-      padding: ${isMobile ? isPhone ? "5px" : "6px" : "6px"};
-      cursor: pointer;
-      transition: all 0.2s;
-      font-size: ${isMobile ? isPhone ? "13px" : "14px" : "14px"};
-      min-height: ${isMobile ? isPhone ? "26px" : "28px" : "auto"};
-      min-width: ${isMobile ? isPhone ? "26px" : "28px" : "auto"};
-      max-height: ${isMobile ? isPhone ? "26px" : "28px" : "none"};
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-      ${isMobile ? "touch-action: manipulation;" : ""}
-    `;
-    exceptionButton.addEventListener("mouseenter", () => {
-      exceptionButton.style.background = "var(--interactive-hover)";
-      exceptionButton.style.transform = "translateY(-1px)";
-    });
-    exceptionButton.addEventListener("mouseleave", () => {
-      exceptionButton.style.background = "var(--interactive-normal)";
-      exceptionButton.style.transform = "translateY(0)";
-    });
+    if (isMobile) {
+      exceptionButton.classList.add("kga-mobile");
+    }
+    if (isPhone) {
+      exceptionButton.classList.add("kga-mobile-phone");
+    }
     if (isMobile) {
       exceptionButton.addEventListener("touchstart", (e) => {
         e.preventDefault();
-        exceptionButton.style.background = "var(--interactive-hover)";
         if ("vibrate" in navigator) {
           navigator.vibrate(10);
         }
@@ -11509,35 +11209,15 @@ var InlineTooltip = class {
     const ignoreButton = actionsContainer.createEl("button", { cls: "ignore-button" });
     ignoreButton.textContent = "\u274C";
     ignoreButton.title = "\uC774 \uC624\uB958 \uBB34\uC2DC (\uC77C\uC2DC\uC801)";
-    ignoreButton.style.cssText = `
-      background: var(--interactive-normal);
-      border: 1px solid var(--background-modifier-border);
-      border-radius: ${isMobile ? "5px" : "4px"};
-      padding: ${isMobile ? isPhone ? "5px" : "6px" : "6px"};
-      cursor: pointer;
-      transition: all 0.2s;
-      font-size: ${isMobile ? isPhone ? "11px" : "12px" : "12px"};
-      min-height: ${isMobile ? isPhone ? "26px" : "28px" : "auto"};
-      min-width: ${isMobile ? isPhone ? "26px" : "28px" : "auto"};
-      max-height: ${isMobile ? isPhone ? "26px" : "28px" : "none"};
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-      ${isMobile ? "touch-action: manipulation;" : ""}
-    `;
-    ignoreButton.addEventListener("mouseenter", () => {
-      ignoreButton.style.background = "var(--interactive-hover)";
-      ignoreButton.style.transform = "translateY(-1px)";
-    });
-    ignoreButton.addEventListener("mouseleave", () => {
-      ignoreButton.style.background = "var(--interactive-normal)";
-      ignoreButton.style.transform = "translateY(0)";
-    });
+    if (isMobile) {
+      ignoreButton.classList.add("kga-mobile");
+    }
+    if (isPhone) {
+      ignoreButton.classList.add("kga-mobile-phone");
+    }
     if (isMobile) {
       ignoreButton.addEventListener("touchstart", (e) => {
         e.preventDefault();
-        ignoreButton.style.background = "var(--interactive-hover)";
         if ("vibrate" in navigator) {
           navigator.vibrate(10);
         }
@@ -11557,44 +11237,29 @@ var InlineTooltip = class {
       this.createInlineHelpIcon(error.correction.help, actionsContainer, () => {
         if (!helpArea) {
           helpArea = this.tooltip.createEl("div", { cls: "tooltip-help-area" });
-          helpArea.style.cssText = `
-            padding: ${isMobile ? isPhone ? "4px 8px" : "5px 9px" : "6px 10px"};
-            border-top: 1px solid var(--background-modifier-border);
-            background: var(--background-secondary);
-            font-size: ${isMobile ? isPhone ? "10px" : "11px" : "11px"};
-            color: var(--text-muted);
-            line-height: 1.3;
-            white-space: pre-wrap;
-            word-break: break-word;
-            min-height: ${isMobile ? isPhone ? "20px" : "22px" : "24px"};
-            flex-shrink: 0;
-          `;
+          if (isMobile) {
+            helpArea.classList.add("kga-mobile");
+          }
+          if (isPhone) {
+            helpArea.classList.add("kga-mobile-phone");
+          }
           helpArea.textContent = error.correction.help;
         } else {
-          const isHidden = helpArea.style.display === "none";
-          helpArea.style.display = isHidden ? "block" : "none";
+          const isHidden = helpArea.hasClass("kga-hidden");
+          helpArea.toggleClass("kga-hidden", !isHidden);
         }
       });
     }
     if (error.aiAnalysis) {
       const aiArea = this.tooltip.createEl("div", { cls: "tooltip-ai-area" });
-      aiArea.style.cssText = `
-        padding: ${isMobile ? isPhone ? "4px 8px" : "5px 9px" : "6px 10px"};
-        border-top: 1px solid var(--background-modifier-border);
-        background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(16, 185, 129, 0.05));
-        font-size: ${isMobile ? isPhone ? "10px" : "11px" : "11px"};
-        color: var(--text-muted);
-        line-height: 1.3;
-        display: flex;
-        align-items: center;
-        gap: ${isMobile ? isPhone ? "4px" : "5px" : "6px"};
-        min-height: ${isMobile ? isPhone ? "20px" : "22px" : "24px"};
-        flex-shrink: 0;
-      `;
-      const aiIcon = aiArea.createEl("span", { text: "\u{1F916}" });
-      aiIcon.style.cssText = "font-size: 12px; flex-shrink: 0;";
-      const reasoningText = aiArea.createEl("span");
-      reasoningText.style.cssText = "flex: 1; font-style: italic; font-size: 11px; color: var(--text-muted);";
+      if (isMobile) {
+        aiArea.classList.add("kga-mobile");
+      }
+      if (isPhone) {
+        aiArea.classList.add("kga-mobile-phone");
+      }
+      const aiIcon = aiArea.createEl("span", { text: "\u{1F916}", cls: "ai-icon" });
+      const reasoningText = aiArea.createEl("span", { cls: "ai-reasoning" });
       if (error.aiAnalysis.reasoning) {
         const shortReason = error.aiAnalysis.reasoning.split(".")[0] + ".";
         reasoningText.textContent = shortReason;
@@ -11717,45 +11382,19 @@ var InlineTooltip = class {
    * 도움말 아이콘 생성 (Inline 모드용) - 모바일 최적화
    */
   createInlineHelpIcon(helpText, container, onIconClick) {
-    const helpIcon = container.createEl("span", { text: "?" });
+    const helpIcon = container.createEl("span", { text: "?", cls: "help-icon" });
     const isMobile = import_obsidian11.Platform.isMobile;
     const isPhone = import_obsidian11.Platform.isPhone || window.innerWidth <= 480;
-    helpIcon.style.cssText = `
-      color: var(--text-muted);
-      cursor: pointer;
-      width: ${isMobile ? isPhone ? "16px" : "18px" : "18px"};
-      height: ${isMobile ? isPhone ? "16px" : "18px" : "18px"};
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid var(--text-muted);
-      border-radius: 50%;
-      font-size: ${isMobile ? isPhone ? "8px" : "9px" : "10px"};
-      font-weight: bold;
-      transition: all 0.2s;
-      background: var(--background-primary);
-      flex-shrink: 0;
-      line-height: 1;
-    `;
+    if (isMobile) {
+      helpIcon.classList.add("kga-mobile");
+    }
+    if (isPhone) {
+      helpIcon.classList.add("kga-mobile-phone");
+    }
     helpIcon.title = helpText;
-    helpIcon.addEventListener("mouseenter", () => {
-      helpIcon.style.background = "var(--interactive-hover)";
-      helpIcon.style.borderColor = "var(--text-normal)";
-      helpIcon.style.color = "var(--text-normal)";
-      helpIcon.style.transform = "scale(1.1)";
-    });
-    helpIcon.addEventListener("mouseleave", () => {
-      helpIcon.style.background = "var(--background-primary)";
-      helpIcon.style.borderColor = "var(--text-muted)";
-      helpIcon.style.color = "var(--text-muted)";
-      helpIcon.style.transform = "scale(1)";
-    });
     if (isMobile) {
       helpIcon.addEventListener("touchstart", (e) => {
         e.preventDefault();
-        helpIcon.style.background = "var(--interactive-hover)";
-        helpIcon.style.borderColor = "var(--text-normal)";
-        helpIcon.style.color = "var(--text-normal)";
         if ("vibrate" in navigator) {
           navigator.vibrate(10);
         }
@@ -11782,10 +11421,12 @@ var InlineTooltip = class {
     const originalVisibility = this.tooltip.style.visibility;
     const originalPosition = this.tooltip.style.position;
     const originalWidth = this.tooltip.style.width;
+    const originalCssWidth = this.tooltip.style.getPropertyValue("--kga-width");
     this.tooltip.style.position = "absolute";
     this.tooltip.style.visibility = "hidden";
     this.tooltip.style.display = "block";
     this.tooltip.style.width = "auto";
+    this.tooltip.style.setProperty("--kga-width", "auto");
     this.tooltip.style.maxWidth = "none";
     this.tooltip.style.minWidth = "none";
     const naturalWidth = this.tooltip.scrollWidth;
@@ -11821,6 +11462,11 @@ var InlineTooltip = class {
     this.tooltip.style.visibility = originalVisibility;
     this.tooltip.style.position = originalPosition;
     this.tooltip.style.width = originalWidth;
+    if (originalCssWidth) {
+      this.tooltip.style.setProperty("--kga-width", originalCssWidth);
+    } else {
+      this.tooltip.style.removeProperty("--kga-width");
+    }
     const result = {
       width: optimalWidth,
       maxHeight,
@@ -11928,18 +11574,7 @@ var InlineTooltip = class {
         }
       });
       const hiddenInput = document.createElement("input");
-      hiddenInput.style.cssText = `
-        position: fixed;
-        left: -9999px;
-        top: -9999px;
-        opacity: 0;
-        pointer-events: none;
-        width: 1px;
-        height: 1px;
-        border: none;
-        background: transparent;
-        font-size: 16px;
-      `;
+      hiddenInput.className = "kga-hidden-input";
       document.body.appendChild(hiddenInput);
       setTimeout(() => {
         hiddenInput.focus();

@@ -130,27 +130,20 @@ export class InlineTooltip {
   private createTooltip(error: InlineError, targetElement: HTMLElement, triggerType: 'hover' | 'click'): void {
     this.tooltip = document.createElement('div');
     this.tooltip.className = 'korean-grammar-inline-tooltip';
-    
+
     const isMobile = Platform.isMobile;
-    
+    const isMobilePhone = Platform.isMobileApp;
+
+    // Add platform modifier classes
+    if (isMobile) {
+      this.tooltip.classList.add('kga-mobile');
+    }
+    if (isMobilePhone) {
+      this.tooltip.classList.add('kga-mobile-phone');
+    }
+
     // 툴팁 전체 컨테이너 (세로 레이아웃) - 모바일 최적화
-    // 🔧 고정 크기 제거하고 내용 기반 사이징만 사용
-    this.tooltip.style.cssText = `
-      position: absolute;
-      background: var(--background-primary);
-      border: 1px solid var(--background-modifier-border);
-      border-radius: ${isMobile ? '12px' : '6px'};
-      padding: 0;
-      box-shadow: ${isMobile ? '0 8px 32px rgba(0, 0, 0, 0.3)' : 'var(--shadow-s)'};
-      z-index: 1000;
-      font-size: ${isMobile ? '14px' : '13px'};
-      color: var(--text-normal);
-      display: flex;
-      flex-direction: column;
-      ${isMobile ? 'max-height: 200px;' : 'max-height: 300px;'}
-      overflow-y: auto;
-      ${isMobile ? 'touch-action: manipulation;' : ''}
-    `;
+    // 🔧 모든 스타일은 CSS 클래스로 처리됨
 
     // 모바일에서 터치 이벤트 방지 (툴팁 자체 클릭 시 닫히지 않도록)
     if (isMobile) {
@@ -296,29 +289,25 @@ export class InlineTooltip {
     // 컴팩트한 크기 설정 (AI 분석에 따라 높이 조정)
     const fixedWidth = viewportWidth - 16; // 양쪽 8px씩만 마진
     const fixedHeight = hasAIAnalysis ? 110 : 85; // AI 분석 시 25px 추가
-    
-    this.tooltip.style.width = `${fixedWidth}px`;
-    this.tooltip.style.height = `${fixedHeight}px`;
-    this.tooltip.style.maxHeight = `${fixedHeight}px`;
-    this.tooltip.style.minWidth = `${fixedWidth}px`;
-    this.tooltip.style.fontSize = '13px'; // 폰트도 약간 축소
+
+    // CSS 변수로 동적 크기 설정
+    this.tooltip.classList.add('kga-fixed-position');
+    if (hasAIAnalysis) {
+      this.tooltip.classList.add('kga-has-ai');
+    }
+    this.tooltip.style.setProperty('--kga-width', `${fixedWidth}px`);
+    this.tooltip.style.setProperty('--kga-fixed-height', `${fixedHeight}px`);
 
     // 화면 하단에 고정 (AI 분석에 따라 여백 조정)
     const safeBottomMargin = hasAIAnalysis ? 90 : 80; // AI 분석 시 적절한 여백
     const bottomOffset = keyboardHeight > 0 ? keyboardHeight + 12 : safeBottomMargin;
-    
+
     const finalLeft = (viewportWidth - fixedWidth) / 2; // 중앙 정렬
     const finalTop = viewportHeight - fixedHeight - bottomOffset;
 
-    // 위치 적용 (단순화)
-    this.tooltip.style.position = 'fixed';
-    this.tooltip.style.left = `${finalLeft}px`;
-    this.tooltip.style.top = `${finalTop}px`;
-    this.tooltip.style.zIndex = '1000';
-    this.tooltip.style.visibility = 'visible';
-    this.tooltip.style.boxShadow = '0 -2px 12px rgba(0, 0, 0, 0.2)'; // 더 얕은 그림자
-    this.tooltip.style.borderRadius = '12px 12px 0 0'; // 덜 둥글게
-    this.tooltip.style.border = '1px solid var(--background-modifier-border)';
+    // CSS 변수로 동적 위치 설정
+    this.tooltip.style.setProperty('--kga-left', `${finalLeft}px`);
+    this.tooltip.style.setProperty('--kga-top', `${finalTop}px`);
 
     Logger.log(`📱 고정 툴팁 (${hasAIAnalysis ? 'AI+' : '기본'}): ${fixedWidth}x${fixedHeight}px (${Math.round((fixedWidth / viewportWidth) * 100)}% 너비)`, {
       position: `(${finalLeft}, ${finalTop})`,
@@ -354,11 +343,13 @@ export class InlineTooltip {
     const adaptiveSize = this.calculateAdaptiveTooltipSize(
       viewportWidth, viewportHeight, keyboardHeight, isPhone, editorWidth, editorHeight
     );
-    
-    this.tooltip.style.width = `${adaptiveSize.width}px`;
-    this.tooltip.style.maxHeight = `${adaptiveSize.maxHeight}px`;
-    this.tooltip.style.minWidth = `${adaptiveSize.minWidth}px`;
-    this.tooltip.style.fontSize = adaptiveSize.fontSize;
+
+    // CSS 변수로 동적 크기 설정
+    this.tooltip.classList.add('kga-dynamic-position');
+    this.tooltip.style.setProperty('--kga-width', `${adaptiveSize.width}px`);
+    this.tooltip.style.setProperty('--kga-max-height', `${adaptiveSize.maxHeight}px`);
+    this.tooltip.style.setProperty('--kga-min-width', `${adaptiveSize.minWidth}px`);
+    this.tooltip.style.setProperty('--kga-font-size', adaptiveSize.fontSize);
 
     // 🎯 터치/마우스 위치 우선 고려 (모바일 엣지케이스 해결)
     let referenceCenterX: number;
@@ -456,14 +447,10 @@ export class InlineTooltip {
     );
     finalLeft = Math.max(safeMargin, Math.min(finalLeft, viewportWidth - adaptiveSize.width - safeMargin));
 
-    // 🔧 위치 적용
-    this.tooltip.style.position = 'fixed';
-    this.tooltip.style.left = `${finalLeft}px`;
-    this.tooltip.style.top = `${finalTop}px`;
-    this.tooltip.style.zIndex = '1000';
-    this.tooltip.style.visibility = 'visible';
-    this.tooltip.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3)';
-    this.tooltip.style.borderRadius = '12px';
+    // 🔧 CSS 변수로 동적 위치 설정
+    this.tooltip.style.setProperty('--kga-left', `${finalLeft}px`);
+    this.tooltip.style.setProperty('--kga-top', `${finalTop}px`);
+    // All styling (z-index, visibility, box-shadow, border-radius) handled by CSS classes
 
     Logger.log(`📱 최종 모바일 툴팁 위치: ${adaptiveSize.width}x${adaptiveSize.maxHeight} at (${finalLeft}, ${finalTop})`, {
       corners: { isLeftEdge, isRightEdge, isTopEdge, isBottomEdge },
@@ -499,11 +486,13 @@ export class InlineTooltip {
     const adaptiveSize = this.calculateAdaptiveTooltipSize(
       viewportWidth, viewportHeight, 0, false, editorWidth, editorHeight
     );
-    
-    this.tooltip.style.width = `${adaptiveSize.width}px`;
-    this.tooltip.style.maxHeight = `${adaptiveSize.maxHeight}px`;
-    this.tooltip.style.minWidth = `${adaptiveSize.minWidth}px`;
-    this.tooltip.style.fontSize = adaptiveSize.fontSize;
+
+    // CSS 변수로 동적 크기 설정
+    this.tooltip.classList.add('kga-dynamic-position');
+    this.tooltip.style.setProperty('--kga-width', `${adaptiveSize.width}px`);
+    this.tooltip.style.setProperty('--kga-max-height', `${adaptiveSize.maxHeight}px`);
+    this.tooltip.style.setProperty('--kga-min-width', `${adaptiveSize.minWidth}px`);
+    this.tooltip.style.setProperty('--kga-font-size', adaptiveSize.fontSize);
 
     const gap = 8;
     const minSpacing = 12;
@@ -605,12 +594,10 @@ export class InlineTooltip {
       );
     }
 
-    // 🔧 위치 적용
-    this.tooltip.style.position = 'fixed';
-    this.tooltip.style.left = `${finalLeft}px`;
-    this.tooltip.style.top = `${finalTop}px`;
-    this.tooltip.style.zIndex = '1000';
-    this.tooltip.style.visibility = 'visible';
+    // 🔧 CSS 변수로 동적 위치 설정
+    this.tooltip.classList.add('kga-desktop');
+    this.tooltip.style.setProperty('--kga-left', `${finalLeft}px`);
+    this.tooltip.style.setProperty('--kga-top', `${finalTop}px`);
 
     Logger.log(`🖥️ 데스크톱 툴팁 위치: ${adaptiveSize.width}x${adaptiveSize.maxHeight} at (${finalLeft}, ${finalTop})`, {
       corners: { isLeftEdge, isRightEdge, isTopEdge, isBottomEdge },
@@ -648,99 +635,36 @@ export class InlineTooltip {
 
     // 헤더 영역 - 닫기 버튼 포함
     const header = this.tooltip.createEl('div', { cls: 'tooltip-header' });
-    header.style.cssText = `
-      padding: ${isMobile ? (isPhone ? '10px 12px' : '11px 13px') : '8px 12px'};
-      border-bottom: 1px solid var(--background-modifier-border);
-      background: var(--background-secondary);
-      font-weight: 600;
-      font-size: ${isMobile ? (isPhone ? '11px' : '12px') : '12px'};
-      color: var(--text-muted);
-      text-align: center;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    `;
+    if (isMobile) header.classList.add('kga-mobile');
+    if (isPhone) header.classList.add('kga-mobile-phone');
 
     // 🔧 헤더 텍스트 (필터링된 개수 반영)
-    const headerText = header.createEl('span', { 
+    const headerText = header.createEl('span', {
       text: `${uniqueOriginalErrors.length}개 오류 병합됨`,
       cls: 'header-text'
     });
-    headerText.style.cssText = `
-      flex: 1;
-      text-align: center;
-    `;
 
     // 우상단 닫기 버튼 (✕) - 순수 아이콘만
-    const headerCloseButton = header.createEl('button', { 
+    const headerCloseButton = header.createEl('button', {
       text: '✕',
       cls: 'header-close-button'
     });
-    headerCloseButton.style.cssText = `
-      position: absolute;
-      right: ${isMobile ? (isPhone ? '12px' : '10px') : '8px'};
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      outline: none;
-      box-shadow: none;
-      cursor: pointer;
-      font-size: ${isMobile ? (isPhone ? '18px' : '16px') : '16px'};
-      color: var(--text-muted);
-      padding: 0;
-      margin: 0;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-width: auto;
-      min-height: auto;
-      width: auto;
-      height: auto;
-      z-index: 10;
-      font-weight: 500;
-      line-height: 1;
-      opacity: 0.7;
-      font-family: inherit;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      appearance: none;
-      ${isMobile ? 'touch-action: manipulation;' : ''}
-    `;
+    if (isMobile) headerCloseButton.classList.add('kga-mobile');
+    if (isPhone) headerCloseButton.classList.add('kga-mobile-phone');
 
-    // 닫기 버튼 이벤트 - 순수 아이콘 효과
-    headerCloseButton.addEventListener('mouseenter', () => {
-      headerCloseButton.style.opacity = '1';
-      headerCloseButton.style.color = 'var(--text-normal)';
-      headerCloseButton.style.transform = 'translateY(-50%) scale(1.2)';
-    });
-
-    headerCloseButton.addEventListener('mouseleave', () => {
-      headerCloseButton.style.opacity = '0.7';
-      headerCloseButton.style.color = 'var(--text-muted)';
-      headerCloseButton.style.transform = 'translateY(-50%) scale(1)';
-    });
-
-    // 모바일 터치 피드백 - 순수 아이콘 효과
+    // 닫기 버튼 이벤트 - CSS hover states handle the visual feedback
+    // Touch feedback for mobile
     if (isMobile) {
       headerCloseButton.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        headerCloseButton.style.opacity = '1';
-        headerCloseButton.style.color = 'var(--text-normal)';
-        headerCloseButton.style.transform = 'translateY(-50%) scale(1.2)';
         if ('vibrate' in navigator) {
           navigator.vibrate(10);
         }
       }, { passive: false });
-      
+
       headerCloseButton.addEventListener('touchend', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        headerCloseButton.style.opacity = '0.7';
-        headerCloseButton.style.color = 'var(--text-muted)';
-        headerCloseButton.style.transform = 'translateY(-50%) scale(1)';
         this.hide(true); // 강제 닫기
       }, { passive: false });
     }
@@ -752,71 +676,38 @@ export class InlineTooltip {
 
     // 스크롤 가능한 내용 영역 - 모바일 최적화
     const scrollContainer = this.tooltip.createEl('div', { cls: 'tooltip-scroll-container' });
-    scrollContainer.style.cssText = `
-      flex: 1;
-      overflow-y: auto;
-      max-height: ${isMobile ? (isPhone ? '280px' : '320px') : '250px'};
-      min-height: ${isMobile ? (isPhone ? '120px' : '140px') : 'auto'};
-    `;
+    if (isMobile) scrollContainer.classList.add('kga-mobile');
+    if (isPhone) scrollContainer.classList.add('kga-mobile-phone');
 
     // 🔍 각 원본 오류별로 섹션 생성 - 모바일 최적화 (이미 중복 제거됨)
     uniqueOriginalErrors.forEach((originalError, index) => {
       const errorSection = scrollContainer.createEl('div', { cls: 'error-section' });
-      errorSection.style.cssText = `
-        padding: ${isMobile ? (isPhone ? '10px 12px' : '11px 13px') : '8px 12px'};
-        ${index > 0 ? 'border-top: 1px solid var(--background-modifier-border-hover);' : ''}
-      `;
+      if (isMobile) errorSection.classList.add('kga-mobile');
+      if (isPhone) errorSection.classList.add('kga-mobile-phone');
+      if (index > 0) errorSection.classList.add('kga-bordered');
 
       // 한 줄 레이아웃 (오류 → 제안들) - 모바일 최적화
       const errorLine = errorSection.createEl('div', { cls: 'error-line' });
-      errorLine.style.cssText = `
-        display: flex;
-        align-items: center;
-        gap: ${isMobile ? (isPhone ? '6px' : '7px') : '8px'};
-        flex-wrap: nowrap;
-        min-height: ${isMobile ? (isPhone ? '32px' : '34px') : '28px'};
-      `;
+      if (isMobile) errorLine.classList.add('kga-mobile');
+      if (isPhone) errorLine.classList.add('kga-mobile-phone');
 
       // 오류 단어 표시 (고정 너비) - 모바일 최적화
-      const errorWord = errorLine.createEl('span', { 
+      const errorWord = errorLine.createEl('span', {
         text: originalError.correction.original,
         cls: 'error-word'
       });
-      errorWord.style.cssText = `
-        color: var(--text-error);
-        font-weight: 600;
-        background: rgba(255, 0, 0, 0.1);
-        padding: ${isMobile ? (isPhone ? '3px 6px' : '4px 7px') : '4px 8px'};
-        border-radius: 3px;
-        font-size: ${isMobile ? (isPhone ? '12px' : '13px') : '13px'};
-        white-space: nowrap;
-        flex-shrink: 0;
-        min-width: ${isMobile ? '70px' : '60px'};
-        max-width: ${isMobile ? (isPhone ? '100px' : '110px') : '120px'};
-        overflow: hidden;
-        text-overflow: ellipsis;
-        line-height: ${isMobile ? '1.3' : '1.2'};
-      `;
+      if (isMobile) errorWord.classList.add('kga-mobile');
+      if (isPhone) errorWord.classList.add('kga-mobile-phone');
 
       // 화살표 (고정) - 모바일 최적화
-      const arrow = errorLine.createEl('span', { text: '→' });
-      arrow.style.cssText = `
-        color: var(--text-muted);
-        font-weight: bold;
-        flex-shrink: 0;
-        font-size: ${isMobile ? (isPhone ? '12px' : '13px') : '14px'};
-      `;
+      const arrow = errorLine.createEl('span', { text: '→', cls: 'kga-arrow' });
+      if (isMobile) arrow.classList.add('kga-mobile');
+      if (isPhone) arrow.classList.add('kga-mobile-phone');
 
       // 수정 제안들을 가로로 나열 (남은 공간 활용) - 모바일 최적화
       const suggestionsList = errorLine.createEl('div', { cls: 'suggestions-list' });
-      suggestionsList.style.cssText = `
-        display: flex;
-        align-items: center;
-        gap: ${isMobile ? (isPhone ? '3px' : '4px') : '4px'};
-        flex: 1;
-        flex-wrap: wrap;
-        overflow: hidden;
-      `;
+      if (isMobile) suggestionsList.classList.add('kga-mobile');
+      if (isPhone) suggestionsList.classList.add('kga-mobile-phone');
 
       // 🔧 수정 제안들 (중복 제거 강화) - 모바일 최적화
       const uniqueSuggestions = [...new Set(originalError.correction.corrected)];
@@ -827,45 +718,20 @@ export class InlineTooltip {
           text: suggestion,
           cls: 'suggestion-button'
         });
-        
-                          // 원본 오류어와 100% 동일한 span 스타일 (복합어 툴팁과 일관성)
-        suggestionButton.style.cssText = `
-          color: var(--text-normal);
-          font-weight: 600;
-          background: rgba(59, 130, 246, 0.1);
-          padding: ${isMobile ? (isPhone ? '3px 6px' : '4px 7px') : '4px 8px'};
-          border-radius: 3px;
-          font-size: ${isMobile ? (isPhone ? '12px' : '13px') : '13px'};
-          cursor: pointer;
-          ${isMobile ? 'touch-action: manipulation;' : ''}
-        `;
+        if (isMobile) suggestionButton.classList.add('kga-mobile');
+        if (isPhone) suggestionButton.classList.add('kga-mobile-phone');
 
-        // span 요소용 호버/터치 효과 (복합어 툴팁과 일관성)
-        const onActivate = () => {
-          suggestionButton.style.background = 'rgba(59, 130, 246, 0.15)';
-          if (isMobile && 'vibrate' in navigator) {
-            navigator.vibrate(10);
-          }
-        };
-
-        const onDeactivate = () => {
-          suggestionButton.style.background = 'rgba(59, 130, 246, 0.1)';
-        };
-
-        suggestionButton.addEventListener('mouseenter', onActivate);
-        suggestionButton.addEventListener('mouseleave', onDeactivate);
-
-        // 모바일 터치 피드백
+        // CSS handles hover states, only need touch feedback for mobile
         if (isMobile) {
           suggestionButton.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            onActivate();
+            if ('vibrate' in navigator) {
+              navigator.vibrate(10);
+            }
           }, { passive: false });
-          
+
           suggestionButton.addEventListener('touchend', (e) => {
             e.preventDefault();
-            onDeactivate();
-            
             // 🔧 모바일에서 터치 종료 시 직접 수정 적용
             Logger.log(`📱 모바일 터치로 제안 적용: "${suggestion}"`);
             this.applySuggestionKeepOpen(mergedError, suggestion, targetElement);
@@ -883,37 +749,21 @@ export class InlineTooltip {
       // 도움말 아이콘 추가 (원본 오류에 도움말이 있는 경우)
       if (originalError.correction.help) {
         const helpContainer = errorLine.createEl('div', { cls: 'help-container' });
-        helpContainer.style.cssText = `
-          display: flex;
-          align-items: center;
-          margin-left: 4px;
-          flex-shrink: 0;
-        `;
-        
+
         // 📖 도움말을 하단에 표시하는 인라인 방식 사용
         this.createInlineHelpIcon(originalError.correction.help, helpContainer, () => {
           let helpArea = this.tooltip!.querySelector('.tooltip-help-area') as HTMLElement;
           if (!helpArea) {
             // 도움말 영역 생성
             helpArea = this.tooltip!.createEl('div', { cls: 'tooltip-help-area' });
-            helpArea.style.cssText = `
-              padding: ${isMobile ? (isPhone ? '4px 8px' : '5px 9px') : '6px 10px'};
-              border-top: 1px solid var(--background-modifier-border);
-              background: var(--background-secondary);
-              font-size: ${isMobile ? (isPhone ? '10px' : '11px') : '11px'};
-              color: var(--text-muted);
-              line-height: 1.3;
-              white-space: pre-wrap;
-              word-break: break-word;
-              min-height: ${isMobile ? (isPhone ? '20px' : '22px') : '24px'};
-              flex-shrink: 0;
-            `;
+            if (isMobile) helpArea.classList.add('kga-mobile');
+            if (isPhone) helpArea.classList.add('kga-mobile-phone');
             helpArea.textContent = originalError.correction.help;
           } else {
             // 도움말 영역 토글 (숨기기/보이기)
-            const isHidden = helpArea.style.display === 'none';
-            helpArea.style.display = isHidden ? 'block' : 'none';
-            if (!isHidden) {
+            const isHidden = helpArea.hasClass('kga-hidden');
+            helpArea.toggleClass('kga-hidden', !isHidden);
+            if (isHidden) {
               // 새로운 도움말로 내용 업데이트
               helpArea.textContent = originalError.correction.help;
             }
@@ -924,106 +774,41 @@ export class InlineTooltip {
 
     // 하단 액션 컨테이너 (도움말 및 버튼들) - 아이폰 최적화
     const actionsContainer = this.tooltip.createEl('div', { cls: 'tooltip-actions' });
-    actionsContainer.style.cssText = `
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: ${isMobile ? (isPhone ? '8px 12px 10px 12px' : '7px 11px 9px 11px') : '8px 12px'};
-      border-top: 1px solid var(--background-modifier-border);
-      background: var(--background-secondary);
-      gap: ${isMobile ? (isPhone ? '8px' : '7px') : '6px'};
-      min-height: ${isMobile ? (isPhone ? '48px' : '44px') : 'auto'};
-      border-bottom-left-radius: 12px;
-      border-bottom-right-radius: 12px;
-    `;
+    if (isMobile) actionsContainer.classList.add('kga-mobile');
+    if (isPhone) actionsContainer.classList.add('kga-mobile-phone');
 
     // 정보 텍스트 - 아이폰 최적화
     const infoText = actionsContainer.createEl('span', {
       text: isMobile ? (isPhone ? '개별 수정' : '개별 클릭 수정') : '개별 클릭으로 하나씩 수정',
       cls: 'info-text'
     });
-    infoText.style.cssText = `
-      font-size: ${isMobile ? (isPhone ? '11px' : '12px') : '11px'};
-      color: var(--text-muted);
-      flex: 1;
-      line-height: 1.3;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      padding-right: ${isMobile ? '4px' : '0'};
-    `;
+    if (isMobile) infoText.classList.add('kga-mobile');
+    if (isPhone) infoText.classList.add('kga-mobile-phone');
 
     // 액션 버튼들 컨테이너 - 아이폰 최적화
     const actionButtons = actionsContainer.createEl('div', { cls: 'action-buttons' });
-    actionButtons.style.cssText = `
-      display: flex;
-      align-items: center;
-      gap: ${isMobile ? (isPhone ? '6px' : '5px') : '6px'};
-      flex-shrink: 0;
-      min-height: ${isMobile ? (isPhone ? '32px' : '30px') : 'auto'};
-    `;
+    if (isMobile) actionButtons.classList.add('kga-mobile');
+    if (isPhone) actionButtons.classList.add('kga-mobile-phone');
 
     // ❌ 병합된 오류 전체 무시 버튼 - 체크박스와 일관된 스타일
     const ignoreAllButton = actionButtons.createEl('button', { cls: 'ignore-all-button' });
     ignoreAllButton.textContent = '✕'; // X 표시
     ignoreAllButton.title = '이 오류들 모두 무시';
-    ignoreAllButton.style.cssText = `
-      background: #ef4444;
-      color: white;
-      border: 1px solid #ef4444;
-      border-radius: ${isMobile ? '6px' : '4px'};
-      padding: ${isMobile ? (isPhone ? '8px' : '7px') : '6px'};
-      cursor: pointer;
-      font-size: ${isMobile ? (isPhone ? '16px' : '15px') : '16px'};
-      font-weight: 700;
-      transition: all 0.2s;
-      min-height: ${isMobile ? (isPhone ? '32px' : '30px') : 'auto'};
-      min-width: ${isMobile ? (isPhone ? '32px' : '30px') : 'auto'};
-      max-height: ${isMobile ? (isPhone ? '32px' : '30px') : 'none'};
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-      white-space: nowrap;
-      box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
-      ${isMobile ? 'touch-action: manipulation;' : ''}
-    `;
+    if (isMobile) ignoreAllButton.classList.add('kga-mobile');
+    if (isPhone) ignoreAllButton.classList.add('kga-mobile-phone');
 
-    // 무시 버튼 이벤트 - 체크박스와 일관된 효과
-    ignoreAllButton.addEventListener('mouseenter', () => {
-      ignoreAllButton.style.background = '#dc2626';
-      ignoreAllButton.style.borderColor = '#dc2626';
-      ignoreAllButton.style.transform = 'translateY(-1px)';
-      ignoreAllButton.style.boxShadow = '0 4px 8px rgba(239, 68, 68, 0.3)';
-    });
-
-    ignoreAllButton.addEventListener('mouseleave', () => {
-      ignoreAllButton.style.background = '#ef4444';
-      ignoreAllButton.style.borderColor = '#ef4444';
-      ignoreAllButton.style.transform = 'translateY(0)';
-      ignoreAllButton.style.boxShadow = '0 2px 4px rgba(239, 68, 68, 0.2)';
-    });
-
-    // 모바일 터치 피드백 - 체크박스와 일관된 효과
+    // CSS handles hover states, only need touch feedback for mobile
     if (Platform.isMobile) {
       ignoreAllButton.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        ignoreAllButton.style.background = '#dc2626';
-        ignoreAllButton.style.borderColor = '#dc2626';
-        ignoreAllButton.style.transform = 'translateY(-1px)';
-        ignoreAllButton.style.boxShadow = '0 4px 8px rgba(239, 68, 68, 0.3)';
         if ('vibrate' in navigator) {
           navigator.vibrate(15); // 체크박스와 동일한 강도
         }
       }, { passive: false });
-      
+
       ignoreAllButton.addEventListener('touchend', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        ignoreAllButton.style.background = '#ef4444';
-        ignoreAllButton.style.borderColor = '#ef4444';
-        ignoreAllButton.style.transform = 'translateY(0)';
-        ignoreAllButton.style.boxShadow = '0 2px 4px rgba(239, 68, 68, 0.2)';
         this.ignoreError(mergedError);
       }, { passive: false });
     }
@@ -1040,62 +825,21 @@ export class InlineTooltip {
       cls: 'apply-all-button'
     });
     applyAllButton.title = '모든 수정 사항 적용';
-    applyAllButton.style.cssText = `
-      background: #10b981;
-      color: white;
-      border: 1px solid #10b981;
-      border-radius: ${isMobile ? '6px' : '4px'};
-      padding: ${isMobile ? (isPhone ? '8px' : '7px') : '6px'};
-      cursor: pointer;
-      font-size: ${isMobile ? (isPhone ? '16px' : '15px') : '16px'};
-      font-weight: 700;
-      transition: all 0.2s;
-      min-height: ${isMobile ? (isPhone ? '32px' : '30px') : 'auto'};
-      min-width: ${isMobile ? (isPhone ? '32px' : '30px') : 'auto'};
-      max-height: ${isMobile ? (isPhone ? '32px' : '30px') : 'none'};
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-      white-space: nowrap;
-      box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
-      ${isMobile ? 'touch-action: manipulation;' : ''}
-    `;
+    if (isMobile) applyAllButton.classList.add('kga-mobile');
+    if (isPhone) applyAllButton.classList.add('kga-mobile-phone');
 
-    applyAllButton.addEventListener('mouseenter', () => {
-      applyAllButton.style.background = '#059669';
-      applyAllButton.style.borderColor = '#059669';
-      applyAllButton.style.transform = 'translateY(-1px)';
-      applyAllButton.style.boxShadow = '0 4px 8px rgba(16, 185, 129, 0.3)';
-    });
-
-    applyAllButton.addEventListener('mouseleave', () => {
-      applyAllButton.style.background = '#10b981';
-      applyAllButton.style.borderColor = '#10b981';
-      applyAllButton.style.transform = 'translateY(0)';
-      applyAllButton.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.2)';
-    });
-
-    // 모바일 터치 피드백
+    // CSS handles hover states, only need touch feedback for mobile
     if (isMobile) {
       applyAllButton.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        applyAllButton.style.background = '#059669';
-        applyAllButton.style.borderColor = '#059669';
-        applyAllButton.style.transform = 'translateY(-1px)';
-        applyAllButton.style.boxShadow = '0 4px 8px rgba(16, 185, 129, 0.3)';
         if ('vibrate' in navigator) {
           navigator.vibrate(15); // 좀 더 강한 피드백
         }
       }, { passive: false });
-      
+
       applyAllButton.addEventListener('touchend', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        applyAllButton.style.background = '#10b981';
-        applyAllButton.style.borderColor = '#10b981';
-        applyAllButton.style.transform = 'translateY(0)';
-        applyAllButton.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.2)';
         // 모든 오류의 첫 번째 제안 적용
         if (mergedError.originalErrors) {
           mergedError.originalErrors.forEach((originalError) => {
@@ -1238,71 +982,38 @@ export class InlineTooltip {
     const isPhone = (Platform as any).isPhone || (window.innerWidth <= 480);
 
     // 헤더 영역 - 컴팩트한 크기로 축소
-    const header = this.tooltip.createEl('div', { cls: 'tooltip-header' });
-    header.style.cssText = `
-      padding: ${isMobile ? (isPhone ? '6px 10px' : '7px 11px') : '6px 10px'};
-      border-bottom: 1px solid var(--background-modifier-border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--background-secondary);
-      border-radius: 6px 6px 0 0;
-      font-size: ${isMobile ? (isPhone ? '12px' : '13px') : '13px'};
-      font-weight: 500;
-      color: var(--text-muted);
-      min-height: 32px;
-    `;
+    const header = this.tooltip.createEl('div', { cls: 'tooltip-header kga-single' });
+    if (isMobile) header.classList.add('kga-mobile');
+    if (isPhone) header.classList.add('kga-mobile-phone');
 
     // 헤더 텍스트 - 컴팩트
-    const headerText = header.createEl('span', { 
+    const headerText = header.createEl('span', {
       text: '맞춤법 오류',
-      cls: 'header-text'
+      cls: 'header-text kga-single'
     });
-    headerText.style.cssText = `
-      font-size: ${isMobile ? (isPhone ? '12px' : '13px') : '13px'};
-    `;
+    if (isMobile) headerText.classList.add('kga-mobile');
+    if (isPhone) headerText.classList.add('kga-mobile-phone');
 
     // 우상단 닫기 버튼 (✕) - 더 작게
-    const headerCloseButton = header.createEl('button', { 
+    const headerCloseButton = header.createEl('button', {
       text: '✕',
-      cls: 'header-close-button'
+      cls: 'header-close-button kga-single'
     });
-    headerCloseButton.style.cssText = `
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      font-size: ${isMobile ? (isPhone ? '14px' : '15px') : '14px'};
-      font-weight: bold;
-      cursor: pointer;
-      padding: 0;
-      width: ${isMobile ? (isPhone ? '20px' : '22px') : '20px'};
-      height: ${isMobile ? (isPhone ? '20px' : '22px') : '20px'};
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0.7;
-      transition: all 0.2s ease;
-    `;
+    if (isMobile) headerCloseButton.classList.add('kga-mobile');
+    if (isPhone) headerCloseButton.classList.add('kga-mobile-phone');
 
-    // 모바일 터치 피드백 - 순수 아이콘 효과
+    // CSS handles hover states, only need touch feedback for mobile
     if (isMobile) {
       headerCloseButton.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        headerCloseButton.style.opacity = '1';
-        headerCloseButton.style.color = 'var(--text-normal)';
-        headerCloseButton.style.background = 'var(--interactive-hover)';
         if ('vibrate' in navigator) {
           navigator.vibrate(10);
         }
       }, { passive: false });
-      
+
       headerCloseButton.addEventListener('touchend', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        headerCloseButton.style.opacity = '0.7';
-        headerCloseButton.style.color = 'var(--text-muted)';
-        headerCloseButton.style.background = 'none';
         this.hide(true); // 강제 닫기
       }, { passive: false });
     }
@@ -1314,81 +1025,59 @@ export class InlineTooltip {
 
     // 상단 메인 콘텐츠 영역 - 컴팩트한 패딩
     const mainContent = this.tooltip.createEl('div', { cls: 'tooltip-main-content' });
-    
-    mainContent.style.cssText = `
-      display: flex;
-      align-items: center;
-      gap: ${isMobile ? (isPhone ? '4px' : '5px') : '6px'};
-      padding: ${isMobile ? (isPhone ? '4px 8px' : '5px 9px') : '6px 10px'};
-      white-space: nowrap;
-      flex: 1;
-      min-height: 0;
-    `;
+    if (isMobile) mainContent.classList.add('kga-mobile');
+    if (isPhone) mainContent.classList.add('kga-mobile-phone');
 
     // 오류 단어 표시 (간소화) - 모바일 최적화 + 형태소 정보
     const errorWordContainer = mainContent.createEl('div', { cls: 'error-word-container' });
-    errorWordContainer.style.cssText = `
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-    `;
-    
-    const errorWord = errorWordContainer.createEl('span', { 
+
+    const errorWord = errorWordContainer.createEl('span', {
       text: error.correction.original,
       cls: 'error-word'
     });
-    
-    // 🎨 AI 상태에 따른 색상 및 스타일 설정
-    const { color, backgroundColor, cursor } = this.getErrorWordStyle(error);
-    
-    errorWord.style.cssText = `
-      color: ${color};
-      font-weight: 600;
-      background: ${backgroundColor};
-      padding: ${isMobile ? (isPhone ? '3px 6px' : '4px 7px') : '4px 8px'};
-      border-radius: 3px;
-      font-size: ${isMobile ? (isPhone ? '12px' : '13px') : '13px'};
-      cursor: ${cursor};
-      transition: opacity 0.2s ease;
-    `;
+
+    // 🎨 AI 상태에 따른 색상 및 스타일 설정 (CSS 클래스로 적용)
+    if (error.aiStatus) {
+      errorWord.classList.add(`kga-ai-${error.aiStatus}`);
+    }
+    if (isMobile) {
+      errorWord.classList.add('kga-mobile');
+    }
+    if (isPhone) {
+      errorWord.classList.add('kga-mobile-phone');
+    }
     
     // 🖱️ 클릭 처리는 InlineModeService에서 담당 (중복 이벤트 방지)
     // errorWord에는 별도 클릭 이벤트를 등록하지 않음
 
     // 형태소 정보 표시 (중요한 품사만)
     if (error.morphemeInfo && this.isImportantPos(error.morphemeInfo.mainPos, error.morphemeInfo.tags)) {
-      const posInfo = errorWordContainer.createEl('span', { 
+      const posInfo = errorWordContainer.createEl('span', {
         text: error.morphemeInfo.mainPos,
         cls: 'pos-info'
       });
-      posInfo.style.cssText = `
-        color: var(--text-accent);
-        font-size: ${isMobile ? '9px' : '10px'};
-        font-weight: 500;
-        opacity: 0.9;
-        background: rgba(59, 130, 246, 0.1);
-        padding: 1px 4px;
-        border-radius: 3px;
-      `;
+      if (isMobile) {
+        posInfo.classList.add('kga-mobile');
+      }
     }
 
     // 화살표 - 모바일 최적화
-    const arrow = mainContent.createEl('span', { text: '→' });
-    arrow.style.cssText = `
-      color: var(--text-muted);
-      font-weight: bold;
-      font-size: ${isMobile ? (isPhone ? '11px' : '12px') : '12px'};
-    `;
+    const arrow = mainContent.createEl('span', { text: '→', cls: 'kga-arrow' });
+    if (isMobile) {
+      arrow.classList.add('kga-mobile');
+    }
+    if (isPhone) {
+      arrow.classList.add('kga-mobile-phone');
+    }
 
     // 수정 제안들을 가로로 나열 - 모바일 최적화
     const suggestionsList = mainContent.createEl('div', { cls: 'suggestions-list' });
-    suggestionsList.style.cssText = `
-      display: flex;
-      align-items: center;
-      gap: ${isMobile ? (isPhone ? '4px' : '5px') : '6px'};
-      flex-wrap: wrap;
-    `;
+    if (isMobile) {
+      suggestionsList.classList.add('kga-mobile');
+    }
+    if (isPhone) {
+      suggestionsList.classList.add('kga-mobile-phone');
+    }
 
     // 🔧 수정 제안들 (중복 제거 강화)
     const uniqueSuggestions = [...new Set(error.correction.corrected)];
@@ -1399,49 +1088,26 @@ export class InlineTooltip {
         text: suggestion,
         cls: 'suggestion-button'
       });
-      
-      const isMobile = Platform.isMobile;
-      const isPhone = Platform.isPhone;
-      
-      // 원본 오류어와 100% 동일한 스타일 (span 요소, 색상만 다름)
-      suggestionButton.style.cssText = `
-        color: var(--text-normal);
-        font-weight: 600;
-        background: rgba(59, 130, 246, 0.1);
-        padding: ${isMobile ? (isPhone ? '3px 6px' : '4px 7px') : '4px 8px'};
-        border-radius: 3px;
-        font-size: ${isMobile ? (isPhone ? '12px' : '13px') : '13px'};
-        cursor: pointer;
-        ${isMobile ? 'touch-action: manipulation;' : ''}
-      `;
 
-      // span 요소용 호버/터치 효과 (원본과 동일한 subtle 효과)
-      const onActivate = () => {
-        suggestionButton.style.background = 'rgba(59, 130, 246, 0.15)';
-        if (isMobile && 'vibrate' in navigator) {
-          navigator.vibrate(10);
-        }
-      };
+      if (isMobile) {
+        suggestionButton.classList.add('kga-mobile');
+      }
+      if (isPhone) {
+        suggestionButton.classList.add('kga-mobile-phone');
+      }
 
-      const onDeactivate = () => {
-        suggestionButton.style.background = 'rgba(59, 130, 246, 0.1)';
-      };
-
-      // 호버 효과
-      suggestionButton.addEventListener('mouseenter', onActivate);
-      suggestionButton.addEventListener('mouseleave', onDeactivate);
-
-      // 모바일 터치 피드백
+      // 모바일 터치 피드백 (진동만)
       if (isMobile) {
         suggestionButton.addEventListener('touchstart', (e) => {
           e.preventDefault();
-          onActivate();
+          if ('vibrate' in navigator) {
+            navigator.vibrate(10);
+          }
         }, { passive: false });
-        
+
         suggestionButton.addEventListener('touchend', (e) => {
           e.preventDefault();
-          onDeactivate();
-          
+
           // 🔧 모바일에서 터치 종료 시 직접 수정 적용
           Logger.log(`📱 모바일 터치로 제안 적용: "${suggestion}"`);
           this.applySuggestion(error, suggestion, targetElement);
@@ -1457,59 +1123,34 @@ export class InlineTooltip {
 
     // 액션 영역 (아이폰 최적화) - 메인 콘텐츠 내부로 이동
     const actionsContainer = mainContent.createEl('div', { cls: 'actions-container' });
-    actionsContainer.style.cssText = `
-      display: flex;
-      align-items: center;
-      gap: ${isMobile ? (isPhone ? '8px' : '7px') : '6px'};
-      margin-left: auto;
-      flex-shrink: 0;
-      min-height: ${isMobile ? (isPhone ? '28px' : '26px') : 'auto'};
-    `;
+    if (isMobile) {
+      actionsContainer.classList.add('kga-mobile');
+    }
+    if (isPhone) {
+      actionsContainer.classList.add('kga-mobile-phone');
+    }
 
     // 📚 예외 단어 추가 버튼 (책 아이콘) - 모바일 최적화
     const exceptionButton = actionsContainer.createEl('button', { cls: 'exception-button' });
     exceptionButton.textContent = '📚'; // 책 아이콘
     exceptionButton.title = '예외 단어로 추가';
-    
-    exceptionButton.style.cssText = `
-      background: var(--interactive-normal);
-      border: 1px solid var(--background-modifier-border);
-      border-radius: ${isMobile ? '5px' : '4px'};
-      padding: ${isMobile ? (isPhone ? '5px' : '6px') : '6px'};
-      cursor: pointer;
-      transition: all 0.2s;
-      font-size: ${isMobile ? (isPhone ? '13px' : '14px') : '14px'};
-      min-height: ${isMobile ? (isPhone ? '26px' : '28px') : 'auto'};
-      min-width: ${isMobile ? (isPhone ? '26px' : '28px') : 'auto'};
-      max-height: ${isMobile ? (isPhone ? '26px' : '28px') : 'none'};
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-      ${isMobile ? 'touch-action: manipulation;' : ''}
-    `;
 
-    // 예외 단어 버튼 이벤트
-    exceptionButton.addEventListener('mouseenter', () => {
-      exceptionButton.style.background = 'var(--interactive-hover)';
-      exceptionButton.style.transform = 'translateY(-1px)';
-    });
+    if (isMobile) {
+      exceptionButton.classList.add('kga-mobile');
+    }
+    if (isPhone) {
+      exceptionButton.classList.add('kga-mobile-phone');
+    }
 
-    exceptionButton.addEventListener('mouseleave', () => {
-      exceptionButton.style.background = 'var(--interactive-normal)';
-      exceptionButton.style.transform = 'translateY(0)';
-    });
-
-    // 모바일 터치 피드백
+    // 모바일 터치 피드백 (진동만)
     if (isMobile) {
       exceptionButton.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        exceptionButton.style.background = 'var(--interactive-hover)';
         if ('vibrate' in navigator) {
           navigator.vibrate(10);
         }
       }, { passive: false });
-      
+
       exceptionButton.addEventListener('touchend', async (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1527,45 +1168,23 @@ export class InlineTooltip {
     const ignoreButton = actionsContainer.createEl('button', { cls: 'ignore-button' });
     ignoreButton.textContent = '❌'; // X 표시
     ignoreButton.title = '이 오류 무시 (일시적)';
-    ignoreButton.style.cssText = `
-      background: var(--interactive-normal);
-      border: 1px solid var(--background-modifier-border);
-      border-radius: ${isMobile ? '5px' : '4px'};
-      padding: ${isMobile ? (isPhone ? '5px' : '6px') : '6px'};
-      cursor: pointer;
-      transition: all 0.2s;
-      font-size: ${isMobile ? (isPhone ? '11px' : '12px') : '12px'};
-      min-height: ${isMobile ? (isPhone ? '26px' : '28px') : 'auto'};
-      min-width: ${isMobile ? (isPhone ? '26px' : '28px') : 'auto'};
-      max-height: ${isMobile ? (isPhone ? '26px' : '28px') : 'none'};
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-      ${isMobile ? 'touch-action: manipulation;' : ''}
-    `;
 
-    // 무시 버튼 이벤트
-    ignoreButton.addEventListener('mouseenter', () => {
-      ignoreButton.style.background = 'var(--interactive-hover)';
-      ignoreButton.style.transform = 'translateY(-1px)';
-    });
+    if (isMobile) {
+      ignoreButton.classList.add('kga-mobile');
+    }
+    if (isPhone) {
+      ignoreButton.classList.add('kga-mobile-phone');
+    }
 
-    ignoreButton.addEventListener('mouseleave', () => {
-      ignoreButton.style.background = 'var(--interactive-normal)';
-      ignoreButton.style.transform = 'translateY(0)';
-    });
-
-    // 모바일 터치 피드백
+    // 모바일 터치 피드백 (진동만)
     if (isMobile) {
       ignoreButton.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        ignoreButton.style.background = 'var(--interactive-hover)';
         if ('vibrate' in navigator) {
           navigator.vibrate(10);
         }
       }, { passive: false });
-      
+
       ignoreButton.addEventListener('touchend', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1587,23 +1206,17 @@ export class InlineTooltip {
         if (!helpArea) {
           // 도움말 영역 생성
           helpArea = this.tooltip!.createEl('div', { cls: 'tooltip-help-area' });
-          helpArea.style.cssText = `
-            padding: ${isMobile ? (isPhone ? '4px 8px' : '5px 9px') : '6px 10px'};
-            border-top: 1px solid var(--background-modifier-border);
-            background: var(--background-secondary);
-            font-size: ${isMobile ? (isPhone ? '10px' : '11px') : '11px'};
-            color: var(--text-muted);
-            line-height: 1.3;
-            white-space: pre-wrap;
-            word-break: break-word;
-            min-height: ${isMobile ? (isPhone ? '20px' : '22px') : '24px'};
-            flex-shrink: 0;
-          `;
+          if (isMobile) {
+            helpArea.classList.add('kga-mobile');
+          }
+          if (isPhone) {
+            helpArea.classList.add('kga-mobile-phone');
+          }
           helpArea.textContent = error.correction.help;
         } else {
           // 도움말 영역 토글 (숨기기/보이기)
-          const isHidden = helpArea.style.display === 'none';
-          helpArea.style.display = isHidden ? 'block' : 'none';
+          const isHidden = helpArea.hasClass('kga-hidden');
+          helpArea.toggleClass('kga-hidden', !isHidden);
         }
       });
     }
@@ -1611,28 +1224,19 @@ export class InlineTooltip {
     // 🤖 AI 분석 결과 영역 (도움말 영역 아래)
     if (error.aiAnalysis) {
       const aiArea = this.tooltip!.createEl('div', { cls: 'tooltip-ai-area' });
-      aiArea.style.cssText = `
-        padding: ${isMobile ? (isPhone ? '4px 8px' : '5px 9px') : '6px 10px'};
-        border-top: 1px solid var(--background-modifier-border);
-        background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(16, 185, 129, 0.05));
-        font-size: ${isMobile ? (isPhone ? '10px' : '11px') : '11px'};
-        color: var(--text-muted);
-        line-height: 1.3;
-        display: flex;
-        align-items: center;
-        gap: ${isMobile ? (isPhone ? '4px' : '5px') : '6px'};
-        min-height: ${isMobile ? (isPhone ? '20px' : '22px') : '24px'};
-        flex-shrink: 0;
-      `;
+      if (isMobile) {
+        aiArea.classList.add('kga-mobile');
+      }
+      if (isPhone) {
+        aiArea.classList.add('kga-mobile-phone');
+      }
 
       // 🤖 AI 아이콘
-      const aiIcon = aiArea.createEl('span', { text: '🤖' });
-      aiIcon.style.cssText = 'font-size: 12px; flex-shrink: 0;';
+      const aiIcon = aiArea.createEl('span', { text: '🤖', cls: 'ai-icon' });
 
       // AI 추천 이유 간단 표시
-      const reasoningText = aiArea.createEl('span');
-      reasoningText.style.cssText = 'flex: 1; font-style: italic; font-size: 11px; color: var(--text-muted);';
-      
+      const reasoningText = aiArea.createEl('span', { cls: 'ai-reasoning' });
+
       // AI 분석 이유를 짧게 표시 (첫 번째 문장만)
       if (error.aiAnalysis.reasoning) {
         const shortReason = error.aiAnalysis.reasoning.split('.')[0] + '.';
@@ -1804,58 +1408,30 @@ export class InlineTooltip {
    * 도움말 아이콘 생성 (Inline 모드용) - 모바일 최적화
    */
   private createInlineHelpIcon(helpText: string, container: HTMLElement, onIconClick: () => void): void {
-    const helpIcon = container.createEl('span', { text: '?' });
-    
+    const helpIcon = container.createEl('span', { text: '?', cls: 'help-icon' });
+
     // 모바일 감지 (메서드 내에서 사용)
     const isMobile = Platform.isMobile;
     const isPhone = (Platform as any).isPhone || (window.innerWidth <= 480);
-    
-    helpIcon.style.cssText = `
-      color: var(--text-muted);
-      cursor: pointer;
-      width: ${isMobile ? (isPhone ? '16px' : '18px') : '18px'};
-      height: ${isMobile ? (isPhone ? '16px' : '18px') : '18px'};
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid var(--text-muted);
-      border-radius: 50%;
-      font-size: ${isMobile ? (isPhone ? '8px' : '9px') : '10px'};
-      font-weight: bold;
-      transition: all 0.2s;
-      background: var(--background-primary);
-      flex-shrink: 0;
-      line-height: 1;
-    `;
+
+    if (isMobile) {
+      helpIcon.classList.add('kga-mobile');
+    }
+    if (isPhone) {
+      helpIcon.classList.add('kga-mobile-phone');
+    }
+
     helpIcon.title = helpText;
 
-    // 호버 효과
-    helpIcon.addEventListener('mouseenter', () => {
-      helpIcon.style.background = 'var(--interactive-hover)';
-      helpIcon.style.borderColor = 'var(--text-normal)';
-      helpIcon.style.color = 'var(--text-normal)';
-      helpIcon.style.transform = 'scale(1.1)';
-    });
-
-    helpIcon.addEventListener('mouseleave', () => {
-      helpIcon.style.background = 'var(--background-primary)';
-      helpIcon.style.borderColor = 'var(--text-muted)';
-      helpIcon.style.color = 'var(--text-muted)';
-      helpIcon.style.transform = 'scale(1)';
-    });
-
-    // 모바일 터치 피드백
+    // 모바일 터치 피드백 (진동만)
     if (isMobile) {
       helpIcon.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        helpIcon.style.background = 'var(--interactive-hover)';
-        helpIcon.style.borderColor = 'var(--text-normal)';
-        helpIcon.style.color = 'var(--text-normal)';
         if ('vibrate' in navigator) {
           navigator.vibrate(10);
         }
       }, { passive: false });
-      
+
       helpIcon.addEventListener('touchend', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1885,16 +1461,21 @@ export class InlineTooltip {
       return { width: 250, maxHeight: 200, minWidth: 200, fontSize: '14px' };
     }
 
-    // 🔧 임시로 툴팁을 보이지 않게 하여 내용 크기 측정
+    // 🔧 [필수] DOM 측정을 위한 임시 스타일 변경
+    // 브라우저가 실제 콘텐츠 크기를 계산하려면 요소가 렌더링되어야 함
+    // visibility:hidden으로 화면에는 보이지 않지만 레이아웃 계산은 수행됨
+    // 이는 동적 크기 계산에 필요한 정당한 inline style 사용 사례임
     const originalDisplay = this.tooltip.style.display;
     const originalVisibility = this.tooltip.style.visibility;
     const originalPosition = this.tooltip.style.position;
     const originalWidth = this.tooltip.style.width;
-    
+    const originalCssWidth = this.tooltip.style.getPropertyValue('--kga-width');
+
     this.tooltip.style.position = 'absolute';
     this.tooltip.style.visibility = 'hidden';
     this.tooltip.style.display = 'block';
     this.tooltip.style.width = 'auto';
+    this.tooltip.style.setProperty('--kga-width', 'auto');
     this.tooltip.style.maxWidth = 'none';
     this.tooltip.style.minWidth = 'none';
     
@@ -1941,6 +1522,11 @@ export class InlineTooltip {
     this.tooltip.style.visibility = originalVisibility;
     this.tooltip.style.position = originalPosition;
     this.tooltip.style.width = originalWidth;
+    if (originalCssWidth) {
+      this.tooltip.style.setProperty('--kga-width', originalCssWidth);
+    } else {
+      this.tooltip.style.removeProperty('--kga-width');
+    }
     
     const result = {
       width: optimalWidth,
@@ -2072,18 +1658,7 @@ export class InlineTooltip {
 
       // 4. 키보드 숨기기 - 더 부드러운 방식 (깜빡임 최소화)
       const hiddenInput = document.createElement('input');
-      hiddenInput.style.cssText = `
-        position: fixed;
-        left: -9999px;
-        top: -9999px;
-        opacity: 0;
-        pointer-events: none;
-        width: 1px;
-        height: 1px;
-        border: none;
-        background: transparent;
-        font-size: 16px;
-      `;
+      hiddenInput.className = 'kga-hidden-input';
       document.body.appendChild(hiddenInput);
       
       // 더 짧은 지연시간으로 깜빡임 최소화
