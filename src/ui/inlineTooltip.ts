@@ -1,7 +1,60 @@
 import { InlineError } from '../types/interfaces';
 import { Logger } from '../utils/logger';
-import { Platform, MarkdownView, Notice } from 'obsidian';
+import { Platform, MarkdownView, Notice, App, Editor } from 'obsidian';
 import { InlineModeService } from '../services/inlineModeService';
+
+// ==================== Type Extensions ====================
+
+/**
+ * Window 객체 확장 - 인라인 툴팁 전역 상태 및 서비스
+ */
+interface InlineTooltipWindow extends Window {
+  tooltipProtected?: boolean;
+  tooltipKeepOpenMode?: boolean;
+  app?: App;
+  InlineModeService?: {
+    addWordToIgnoreListAndRemoveErrors(word: string): Promise<number>;
+    removeError(view: any, uniqueId: string): void;
+  };
+  globalInlineTooltip?: InlineTooltip;
+}
+
+/**
+ * Platform 확장 - 모바일 기기 타입 감지
+ */
+interface ExtendedPlatform {
+  isMobile: boolean;
+  isMobileApp: boolean;
+  isPhone?: boolean;
+  isTablet?: boolean;
+  isDesktopApp: boolean;
+  isIosApp: boolean;
+  isAndroidApp: boolean;
+  isSafari: boolean;
+  isDesktop: boolean;
+  isMacOS: boolean;
+  isWin: boolean;
+  isLinux: boolean;
+}
+
+/**
+ * HTMLElement 확장 - 툴팁 정리 함수 저장
+ */
+interface ExtendedHTMLElement extends HTMLElement {
+  _cleanup?: () => void;
+}
+
+/**
+ * Editor 확장 - CodeMirror 접근
+ */
+interface ExtendedEditor extends Editor {
+  cm?: {
+    dom?: HTMLElement;
+    [key: string]: any;
+  };
+}
+
+// ==========================================================
 
 /**
  * 인라인 오류 툴팁 클래스
@@ -35,7 +88,7 @@ export class InlineTooltip {
     // 모바일에서 키보드 숨기기 및 에디터 포커스 해제 (툴팁 보호)
     if (Platform.isMobile) {
       // 🔧 툴팁 보호 플래그 설정 (모바일에서는 툴팁 수동 닫기만 허용)
-      (window as any).tooltipProtected = true;
+      (window as InlineTooltipWindow).tooltipProtected = true;
       
       setTimeout(() => {
         // 🔧 키보드 숨김 활성화 - 이전 방식 유지
@@ -64,7 +117,7 @@ export class InlineTooltip {
     
     // 🔧 모바일에서 강제 숨김 시 보호 플래그 해제
     if (Platform.isMobile && forceHide) {
-      (window as any).tooltipProtected = false;
+      (window as InlineTooltipWindow).tooltipProtected = false;
       Logger.debug('📱 모바일 툴팁: 수동 닫기로 보호 플래그 해제');
     }
     
@@ -210,11 +263,11 @@ export class InlineTooltip {
     const viewportHeight = window.innerHeight;
     
     const isMobile = Platform.isMobile;
-    const isPhone = (Platform as any).isPhone || (viewportWidth <= 480);
-    const isTablet = (Platform as any).isTablet || (viewportWidth <= 768 && viewportWidth > 480);
-    
+    const isPhone = (Platform as ExtendedPlatform).isPhone || (viewportWidth <= 480);
+    const isTablet = (Platform as ExtendedPlatform).isTablet || (viewportWidth <= 768 && viewportWidth > 480);
+
     // 🔧 Obsidian App 정보 활용
-    const app = (window as any).app;
+    const app = (window as InlineTooltipWindow).app;
     let editorScrollInfo = null;
     let editorContainerRect = null;
     
@@ -953,9 +1006,9 @@ export class InlineTooltip {
     startHideTimer();
 
     // 정리 함수 저장
-    (this.tooltip as any)._cleanup = () => {
+    (this.tooltip as ExtendedHTMLElement)._cleanup = () => {
       document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseover', onMouseOver);  
+      document.removeEventListener('mouseover', onMouseOver);
       document.removeEventListener('click', onMouseClick);
       if (hideTimeout) clearTimeout(hideTimeout);
       Logger.debug('🔍 호버 이벤트 정리 완료');
@@ -979,7 +1032,7 @@ export class InlineTooltip {
 
     // 모바일 최적화를 위한 플랫폼 감지 (메서드 전체에서 사용)
     const isMobile = Platform.isMobile;
-    const isPhone = (Platform as any).isPhone || (window.innerWidth <= 480);
+    const isPhone = (Platform as ExtendedPlatform).isPhone || (window.innerWidth <= 480);
 
     // 헤더 영역 - 컴팩트한 크기로 축소
     const header = this.tooltip.createEl('div', { cls: 'tooltip-header kga-single' });
@@ -1271,8 +1324,8 @@ export class InlineTooltip {
     Logger.log(`인라인 모드: 수정 제안 적용 (클릭 후 툴팁 유지) - "${mergedError.correction.original}" → "${suggestion}"`);
     
     // 툴팁 유지 모드 플래그 설정
-    (window as any).tooltipKeepOpenMode = true;
-    
+    (window as InlineTooltipWindow).tooltipKeepOpenMode = true;
+
     // 🔧 직접 import한 InlineModeService 사용
     try {
       InlineModeService.applySuggestion(mergedError, suggestion);
@@ -1280,10 +1333,10 @@ export class InlineTooltip {
     } catch (error) {
       Logger.error('❌ 수정 제안 적용 중 오류:', error);
     }
-    
+
     // 툴팁 유지 모드 해제 (약간의 지연 후)
     setTimeout(() => {
-      (window as any).tooltipKeepOpenMode = false;
+      (window as InlineTooltipWindow).tooltipKeepOpenMode = false;
     }, 200);
     
     // 툴팁 상태 유지 (현재 오류 정보 업데이트는 InlineModeService에서 처리)
@@ -1316,8 +1369,8 @@ export class InlineTooltip {
     
     try {
       // InlineModeService의 새로운 메서드로 동일 단어 모든 오류 제거
-      if ((window as any).InlineModeService) {
-        const removedCount = await (window as any).InlineModeService.addWordToIgnoreListAndRemoveErrors(word);
+      if ((window as InlineTooltipWindow).InlineModeService) {
+        const removedCount = await (window as InlineTooltipWindow).InlineModeService!.addWordToIgnoreListAndRemoveErrors(word);
         
         if (removedCount > 0) {
           Logger.log(`📚 예외 단어 추가 및 ${removedCount}개 오류 제거: "${word}"`);
@@ -1347,8 +1400,8 @@ export class InlineTooltip {
       Logger.log(`❌ 오류 무시: "${error.correction.original}"`);
       
       // 현재 오류 제거 (InlineModeService를 통해)
-      if ((window as any).InlineModeService) {
-        (window as any).InlineModeService.removeError(null, error.uniqueId);
+      if ((window as InlineTooltipWindow).InlineModeService) {
+        (window as InlineTooltipWindow).InlineModeService!.removeError(null, error.uniqueId);
         Logger.debug(`✅ 일시적 무시로 인한 오류 제거: ${error.uniqueId}`);
       }
       
@@ -1412,7 +1465,7 @@ export class InlineTooltip {
 
     // 모바일 감지 (메서드 내에서 사용)
     const isMobile = Platform.isMobile;
-    const isPhone = (Platform as any).isPhone || (window.innerWidth <= 480);
+    const isPhone = (Platform as ExtendedPlatform).isPhone || (window.innerWidth <= 480);
 
     if (isMobile) {
       helpIcon.classList.add('kga-mobile');
@@ -1597,18 +1650,19 @@ export class InlineTooltip {
   private blurEditorOnly(): void {
     try {
       // 옵시디언 API를 통한 에디터 포커스 해제만
-      const obsidianApp = (window as any).app;
+      const obsidianApp = (window as InlineTooltipWindow).app;
       if (obsidianApp) {
         const activeView = obsidianApp.workspace.getActiveViewOfType(MarkdownView);
         if (activeView?.editor) {
-          if ((activeView.editor as any).hasFocus?.()) {
+          const extendedEditor = activeView.editor as ExtendedEditor;
+          if (activeView.editor.hasFocus()) {
             Logger.log('📱 에디터 포커스만 해제 (키보드 유지)');
-            (activeView.editor as any).blur?.();
-            
+            activeView.editor.blur();
+
             // CodeMirror 에디터 직접 접근
-            const cmEditor = (activeView.editor as any).cm;
+            const cmEditor = extendedEditor.cm;
             if (cmEditor && cmEditor.dom) {
-              (cmEditor.dom as HTMLElement).blur();
+              cmEditor.dom.blur();
             }
           }
         }
@@ -1632,19 +1686,20 @@ export class InlineTooltip {
   private hideKeyboardAndBlurEditor(): void {
     try {
       // 1. 옵시디언 API를 통한 에디터 포커스 해제 (window를 통한 접근)
-      const obsidianApp = (window as any).app;
+      const obsidianApp = (window as InlineTooltipWindow).app;
       if (obsidianApp) {
         const activeView = obsidianApp.workspace.getActiveViewOfType(MarkdownView);
         if (activeView?.editor) {
           // 에디터가 포커스되어 있는지 확인 후 포커스 해제
-          if ((activeView.editor as any).hasFocus?.()) {
+          const extendedEditor = activeView.editor as ExtendedEditor;
+          if (activeView.editor.hasFocus()) {
             Logger.log('📱 모바일: 에디터 포커스 해제 시작');
-            (activeView.editor as any).blur?.();
-            
+            activeView.editor.blur();
+
             // CodeMirror 에디터 직접 접근
-            const cmEditor = (activeView.editor as any).cm;
+            const cmEditor = extendedEditor.cm;
             if (cmEditor && cmEditor.dom) {
-              (cmEditor.dom as HTMLElement).blur();
+              cmEditor.dom.blur();
             }
           }
         }
@@ -1853,4 +1908,4 @@ export class InlineTooltip {
 export const globalInlineTooltip = new InlineTooltip();
 
 // Window 객체에 노출 (InlineModeService에서 접근하기 위해)
-(window as any).globalInlineTooltip = globalInlineTooltip;
+(window as InlineTooltipWindow).globalInlineTooltip = globalInlineTooltip;

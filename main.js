@@ -1570,7 +1570,11 @@ var init_aiAnalysisService = __esm({
         if (!morphemeInfo || !morphemeInfo.sentences)
           return false;
         for (const sentence of morphemeInfo.sentences) {
+          if (!sentence.tokens)
+            continue;
           for (const token of sentence.tokens) {
+            if (!token.text || !token.morphemes)
+              continue;
             if (token.text.content === text) {
               for (const morpheme of token.morphemes) {
                 const tag = morpheme.tag;
@@ -1597,7 +1601,7 @@ var init_aiAnalysisService = __esm({
       extractEnhancedContext(editor, file, originalText, correction, errorIndex, morphemeInfo) {
         const errorPosition = editor.offsetToPos(errorIndex);
         const sentenceContext = this.extractCurrentSentence(editor, errorPosition);
-        const documentType = (file == null ? void 0 : file.extension) || "unknown";
+        const documentType = typeof file === "object" && file !== null && "extension" in file ? file.extension : "unknown";
         let isLikelyProperNoun = false;
         let detectionMethod = "";
         if (morphemeInfo) {
@@ -1731,13 +1735,16 @@ var init_aiAnalysisService = __esm({
        * 단일 배치를 처리합니다.
        */
       async processBatch(batch, batchIndex, totalBatches, client, adjustedMaxTokens, model, morphemeInfo) {
-        var _a;
         Logger.debug(`\uBC30\uCE58 ${batchIndex + 1}/${totalBatches} \uCC98\uB9AC \uC911 (${batch.length}\uAC1C \uC624\uB958)`);
         const systemPrompt = AI_PROMPTS.analysisSystem;
         const userPrompt = morphemeInfo ? AI_PROMPTS.analysisUserWithMorphemes(batch, morphemeInfo) : AI_PROMPTS.analysisUserWithContext(batch);
         if (morphemeInfo) {
           Logger.debug(`\uD615\uD0DC\uC18C \uC815\uBCF4\uC640 \uD568\uAED8 AI \uBD84\uC11D \uC9C4\uD589 (\uD1A0\uD070 \uC808\uC57D \uBAA8\uB4DC)`);
-          Logger.debug(`\uD615\uD0DC\uC18C \uD1A0\uD070 \uC218: ${((_a = morphemeInfo.tokens) == null ? void 0 : _a.length) || 0}\uAC1C`);
+          const totalTokens = morphemeInfo.sentences.reduce((sum, s) => {
+            var _a;
+            return sum + (((_a = s.tokens) == null ? void 0 : _a.length) || 0);
+          }, 0);
+          Logger.debug(`\uD615\uD0DC\uC18C \uD1A0\uD070 \uC218: ${totalTokens}\uAC1C`);
         }
         const messages = [
           { role: "system", content: systemPrompt },
@@ -1752,7 +1759,7 @@ var init_aiAnalysisService = __esm({
        * ⭐ NEW: 형태소 정보 통합 지원
        */
       async analyzeCorrections(request, morphemeInfo) {
-        var _a, _b;
+        var _a;
         Logger.debug("analyzeCorrections \uC2DC\uC791:", {
           enabled: this.settings.enabled,
           provider: this.settings.provider,
@@ -1801,10 +1808,13 @@ var init_aiAnalysisService = __esm({
             Logger.debug(`${batches.length}\uAC1C \uBC30\uCE58\uB85C \uBD84\uD560\uD558\uC5EC \uCC98\uB9AC\uD569\uB2C8\uB2E4.`);
             const adjustedMaxTokens = this.adjustTokensForModel(this.settings.maxTokens, this.settings.model);
             if (morphemeInfo) {
+              const totalTokens = morphemeInfo.sentences.reduce((sum, s) => {
+                var _a2;
+                return sum + (((_a2 = s.tokens) == null ? void 0 : _a2.length) || 0);
+              }, 0);
               Logger.debug("\uD615\uD0DC\uC18C \uC815\uBCF4 \uD65C\uC6A9 AI \uBD84\uC11D \uC2DC\uC791:", {
-                tokensCount: ((_a = morphemeInfo.tokens) == null ? void 0 : _a.length) || 0,
-                sentences: ((_b = morphemeInfo.sentences) == null ? void 0 : _b.length) || 0,
-                language: morphemeInfo.language || "unknown"
+                tokensCount: totalTokens,
+                sentences: ((_a = morphemeInfo.sentences) == null ? void 0 : _a.length) || 0
               });
             }
             for (let i = 0; i < batches.length; i++) {
@@ -1849,6 +1859,12 @@ var init_aiAnalysisService = __esm({
           Logger.error("\uBD84\uC11D \uC911 \uC624\uB958 \uBC1C\uC0DD:", error);
           throw new Error(`AI \uBD84\uC11D \uC2E4\uD328: ${error.message}`);
         }
+      }
+      /**
+       * AI 응답 항목의 타입 가드
+       */
+      isValidAIResponseItem(item) {
+        return typeof item === "object" && item !== null && "correctionIndex" in item && "selectedValue" in item;
       }
       /**
        * AI 응답을 파싱하여 구조화된 결과로 변환합니다.
@@ -1939,7 +1955,11 @@ var init_aiAnalysisService = __esm({
           }
           const results = [];
           for (const item of parsedResponse) {
-            const batchIndex = parseInt(item.correctionIndex);
+            if (!this.isValidAIResponseItem(item)) {
+              Logger.warn("\uC720\uD6A8\uD558\uC9C0 \uC54A\uC740 AI \uC751\uB2F5 \uD56D\uBAA9:", item);
+              continue;
+            }
+            const batchIndex = typeof item.correctionIndex === "number" ? item.correctionIndex : parseInt(String(item.correctionIndex));
             if (isNaN(batchIndex) || batchIndex < 0 || batchIndex >= correctionContexts.length) {
               Logger.warn("\uC720\uD6A8\uD558\uC9C0 \uC54A\uC740 batchIndex:", batchIndex);
               continue;
@@ -1972,12 +1992,13 @@ var init_aiAnalysisService = __esm({
             }
             const isOriginalSelected = selectedValue === context.original;
             const isOriginalKept = isOriginalSelected && !item.isExceptionProcessed;
+            const confidence = typeof item.confidence === "number" ? item.confidence : typeof item.confidence === "string" ? parseInt(item.confidence) : 0;
             results.push({
               correctionIndex: originalCorrectionIndex,
               selectedValue,
               isExceptionProcessed: item.isExceptionProcessed || false,
               isOriginalKept,
-              confidence: Math.max(0, Math.min(100, parseInt(item.confidence) || 0)),
+              confidence: Math.max(0, Math.min(100, confidence)),
               reasoning: item.reasoning || "\uC774\uC720\uAC00 \uC81C\uACF5\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4."
             });
           }
@@ -2475,16 +2496,22 @@ var init_advancedSettingsService = __esm({
        */
       static mergeSettings(base, override) {
         const merged = JSON.parse(JSON.stringify(base));
-        Object.keys(override).forEach((key) => {
-          const value = override[key];
-          if (value !== void 0) {
-            if (typeof value === "object" && value !== null && !Array.isArray(value)) {
-              merged[key] = { ...merged[key], ...value };
-            } else {
-              merged[key] = value;
-            }
-          }
-        });
+        if (override.apiKey !== void 0)
+          merged.apiKey = override.apiKey;
+        if (override.apiHost !== void 0)
+          merged.apiHost = override.apiHost;
+        if (override.apiPort !== void 0)
+          merged.apiPort = override.apiPort;
+        if (override.ignoredWords !== void 0)
+          merged.ignoredWords = override.ignoredWords;
+        if (override.filterSingleCharErrors !== void 0)
+          merged.filterSingleCharErrors = override.filterSingleCharErrors;
+        if (override.ai !== void 0) {
+          merged.ai = { ...merged.ai, ...override.ai };
+        }
+        if (override.inlineMode !== void 0) {
+          merged.inlineMode = { ...merged.inlineMode, ...override.inlineMode };
+        }
         return merged;
       }
       /**
@@ -4146,7 +4173,8 @@ function addEventListenerWithCleanup(element, event, handler) {
 
 // src/utils/domUtils.ts
 function parseHTMLSafely(htmlString) {
-  const sanitized = window.sanitizeHTMLToDom(htmlString);
+  var _a;
+  const sanitized = (_a = window.sanitizeHTMLToDom) == null ? void 0 : _a.call(window, htmlString);
   const fragment = document.createDocumentFragment();
   if (sanitized) {
     fragment.appendChild(sanitized);
@@ -7006,7 +7034,7 @@ var CorrectionPopup = class extends BaseComponent {
       if (await this.checkTokenUsageWarning(analysisRequest) === false) {
         return;
       }
-      this.aiAnalysisResults = await this.aiService.analyzeCorrections(analysisRequest, morphemeInfo);
+      this.aiAnalysisResults = await this.aiService.analyzeCorrections(analysisRequest, morphemeInfo != null ? morphemeInfo : void 0);
       Logger.log("AI \uBD84\uC11D \uC644\uB8CC:", this.aiAnalysisResults);
       this.applyAIAnalysisResults();
       this.updateDisplay();
@@ -11517,16 +11545,16 @@ var InlineTooltip = class {
    * 에디터 포커스만 해제 (키보드는 유지) - 깜빡임 없는 대안
    */
   blurEditorOnly() {
-    var _a, _b, _c, _d;
     try {
       const obsidianApp = window.app;
       if (obsidianApp) {
         const activeView = obsidianApp.workspace.getActiveViewOfType(import_obsidian11.MarkdownView);
         if (activeView == null ? void 0 : activeView.editor) {
-          if ((_b = (_a = activeView.editor).hasFocus) == null ? void 0 : _b.call(_a)) {
+          const extendedEditor = activeView.editor;
+          if (activeView.editor.hasFocus()) {
             Logger.log("\u{1F4F1} \uC5D0\uB514\uD130 \uD3EC\uCEE4\uC2A4\uB9CC \uD574\uC81C (\uD0A4\uBCF4\uB4DC \uC720\uC9C0)");
-            (_d = (_c = activeView.editor).blur) == null ? void 0 : _d.call(_c);
-            const cmEditor = activeView.editor.cm;
+            activeView.editor.blur();
+            const cmEditor = extendedEditor.cm;
             if (cmEditor && cmEditor.dom) {
               cmEditor.dom.blur();
             }
@@ -11546,16 +11574,16 @@ var InlineTooltip = class {
    * 모바일에서 키보드 숨기기 및 에디터 포커스 해제
    */
   hideKeyboardAndBlurEditor() {
-    var _a, _b, _c, _d;
     try {
       const obsidianApp = window.app;
       if (obsidianApp) {
         const activeView = obsidianApp.workspace.getActiveViewOfType(import_obsidian11.MarkdownView);
         if (activeView == null ? void 0 : activeView.editor) {
-          if ((_b = (_a = activeView.editor).hasFocus) == null ? void 0 : _b.call(_a)) {
+          const extendedEditor = activeView.editor;
+          if (activeView.editor.hasFocus()) {
             Logger.log("\u{1F4F1} \uBAA8\uBC14\uC77C: \uC5D0\uB514\uD130 \uD3EC\uCEE4\uC2A4 \uD574\uC81C \uC2DC\uC791");
-            (_d = (_c = activeView.editor).blur) == null ? void 0 : _d.call(_c);
-            const cmEditor = activeView.editor.cm;
+            activeView.editor.blur();
+            const cmEditor = extendedEditor.cm;
             if (cmEditor && cmEditor.dom) {
               cmEditor.dom.blur();
             }
@@ -12074,6 +12102,7 @@ var NotificationUtils = class {
 };
 
 // src/services/inlineModeService.ts
+var getExtendedWindow = () => window;
 var AITextWidget = class extends import_view.WidgetType {
   constructor(aiText, errorId, originalText) {
     super();
@@ -12118,15 +12147,17 @@ var AITextWidget = class extends import_view.WidgetType {
         aiStatus: "corrected",
         aiSelectedValue: this.aiText
       };
-      if (window.globalInlineTooltip) {
+      const tooltip = getExtendedWindow().globalInlineTooltip;
+      if (tooltip) {
         const mousePosition = { x: e.clientX, y: e.clientY };
-        window.globalInlineTooltip.show(mockError, span, "hover", mousePosition);
+        tooltip.show(mockError, span, "hover", mousePosition);
       }
     });
     span.addEventListener("mouseleave", () => {
       setTimeout(() => {
-        if (window.globalInlineTooltip && !window.globalInlineTooltip.isHovered) {
-          window.globalInlineTooltip.hide();
+        const tooltip = getExtendedWindow().globalInlineTooltip;
+        if (tooltip && !tooltip.isHovered) {
+          tooltip.hide();
         }
       }, 500);
     });
@@ -12139,8 +12170,9 @@ var AITextWidget = class extends import_view.WidgetType {
       e.stopPropagation();
       Logger.log(`\u{1F7E2} AI Widget \uD074\uB9AD: "${this.originalText}" \u2192 "${this.aiText}" (\uD655\uC815 \uC801\uC6A9)`);
       InlineModeService.applyAIWidgetToEditor(this.errorId, this.aiText, this.originalText);
-      if (window.globalInlineTooltip) {
-        window.globalInlineTooltip.hide();
+      const tooltip = getExtendedWindow().globalInlineTooltip;
+      if (tooltip) {
+        tooltip.hide();
       }
     });
     span.addEventListener("dblclick", (e) => {
@@ -12585,8 +12617,9 @@ var InlineModeService = class {
       Logger.debug(`\u{1F3AF} \uCEE4\uC11C\uAC00 \uD3EC\uCEE4\uC2A4 \uC601\uC5ED\uC744 \uBC97\uC5B4\uB0A8: ${cursorOffset} (\uBC94\uC704: ${this.currentFocusedError.start}-${this.currentFocusedError.end})`);
       const focusedErrorId = this.currentFocusedError.uniqueId;
       this.clearFocusedError();
-      if (window.globalInlineTooltip) {
-        window.globalInlineTooltip.hide();
+      const tooltip = getExtendedWindow().globalInlineTooltip;
+      if (tooltip) {
+        tooltip.hide();
       }
       if (this.activeErrors.has(focusedErrorId)) {
         this.activeErrors.delete(focusedErrorId);
@@ -12671,7 +12704,7 @@ var InlineModeService = class {
       }
       const beforeIgnoreCount = optimizedCorrections.length;
       const filteredCorrections = optimizedCorrections.filter((correction) => {
-        const isIgnored = IgnoredWordsService.isWordIgnored(correction.original, this.settings);
+        const isIgnored = this.settings ? IgnoredWordsService.isWordIgnored(correction.original, this.settings) : false;
         if (isIgnored) {
           Logger.debug(`\u{1F535} \uC608\uC678\uCC98\uB9AC \uC0AC\uC804\uC73C\uB85C \uD544\uD130\uB9C1: "${correction.original}"`);
         }
@@ -12926,8 +12959,9 @@ var InlineModeService = class {
     const shouldShowTooltip = this.shouldShowTooltipOnInteraction("hover");
     if (shouldShowTooltip) {
       const targetElement = hoveredElement || this.findErrorElement(error);
-      if (targetElement && window.globalInlineTooltip) {
-        window.globalInlineTooltip.show(error, targetElement, "hover", mousePosition);
+      const tooltip = getExtendedWindow().globalInlineTooltip;
+      if (targetElement && tooltip) {
+        tooltip.show(error, targetElement, "hover", mousePosition);
       }
     }
   }
@@ -12937,8 +12971,9 @@ var InlineModeService = class {
   static handleErrorClick(error, clickedElement, mousePosition) {
     Logger.log(`\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC624\uB958 \uD074\uB9AD - ${error.correction.original} (AI \uC0C1\uD0DC: ${error.aiStatus || "none"})`);
     try {
-      if (window.globalInlineTooltip) {
-        window.globalInlineTooltip.hide();
+      const tooltip = getExtendedWindow().globalInlineTooltip;
+      if (tooltip) {
+        tooltip.hide();
       }
       const aiStatus = error.aiStatus;
       switch (aiStatus) {
@@ -12975,8 +13010,9 @@ var InlineModeService = class {
       }
     } catch (err) {
       Logger.error("\uC624\uB958 \uD074\uB9AD \uCC98\uB9AC \uC911 \uBB38\uC81C \uBC1C\uC0DD:", err);
-      if (window.globalInlineTooltip) {
-        window.globalInlineTooltip.hide();
+      const tooltip = getExtendedWindow().globalInlineTooltip;
+      if (tooltip) {
+        tooltip.hide();
       }
     }
   }
@@ -13081,13 +13117,13 @@ var InlineModeService = class {
               this.updateErrorPositionsAfterChange(error.start, originalText.length, lengthDiff);
               Logger.debug(`\u{1F4CD} \uC704\uCE58 \uC7AC\uACC4\uC0B0: ${lengthDiff > 0 ? "+" : ""}${lengthDiff}\uC790 \uBCC0\uD654, ${error.start} \uC774\uD6C4 \uC624\uB958\uB4E4 \uC5C5\uB370\uC774\uD2B8`);
             }
-            if (window.Notice) {
-              new window.Notice(`\u2705 "${newText}" \uC801\uC6A9 \uC644\uB8CC`);
+            if (getExtendedWindow().Notice) {
+              new (getExtendedWindow()).Notice(`\u2705 "${newText}" \uC801\uC6A9 \uC644\uB8CC`);
             }
           } catch (replaceError) {
             Logger.error("\uD14D\uC2A4\uD2B8 \uAD50\uCCB4 \uC2E4\uD328:", replaceError);
-            if (window.Notice) {
-              new window.Notice("\u274C \uD14D\uC2A4\uD2B8 \uAD50\uCCB4\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+            if (getExtendedWindow().Notice) {
+              new (getExtendedWindow()).Notice("\u274C \uD14D\uC2A4\uD2B8 \uAD50\uCCB4\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
             }
           }
         });
@@ -13190,10 +13226,11 @@ var InlineModeService = class {
       },
       effects: [removeErrorDecorations.of([error.uniqueId])]
     });
-    const isKeepOpenMode = window.tooltipKeepOpenMode;
+    const isKeepOpenMode = getExtendedWindow().tooltipKeepOpenMode;
     if (!isKeepOpenMode) {
-      if (window.globalInlineTooltip) {
-        window.globalInlineTooltip.hide();
+      const tooltip = getExtendedWindow().globalInlineTooltip;
+      if (tooltip) {
+        tooltip.hide();
       }
       this.clearFocusedError();
     } else {
@@ -13246,10 +13283,14 @@ var InlineModeService = class {
     if (window.globalInlineTooltip && window.globalInlineTooltip.visible) {
       setTimeout(() => {
         const errorElement = this.findErrorElement(mergedError);
-        if (errorElement && window.globalInlineTooltip) {
-          window.globalInlineTooltip.hide();
+        const tooltip = getExtendedWindow().globalInlineTooltip;
+        if (errorElement && tooltip) {
+          tooltip.hide();
           setTimeout(() => {
-            window.globalInlineTooltip.show(mergedError, errorElement, "click");
+            const tooltip2 = getExtendedWindow().globalInlineTooltip;
+            if (tooltip2) {
+              tooltip2.show(mergedError, errorElement, "click");
+            }
           }, 50);
         }
       }, 100);
@@ -13377,7 +13418,7 @@ var InlineModeService = class {
     this.currentSuggestionIndex = 0;
     this.currentHoveredError = null;
     this.clearHoverTimeout();
-    if ((_a = window.globalInlineTooltip) == null ? void 0 : _a.visible) {
+    if ((_a = getExtendedWindow().globalInlineTooltip) == null ? void 0 : _a.visible) {
       window.globalInlineTooltip.hide();
     }
     Logger.debug("\uC778\uB77C\uC778 \uBAA8\uB4DC: \uC11C\uBE44\uC2A4 \uC815\uB9AC\uB428 (\uACB9\uCE58\uB294 \uC601\uC5ED \uCC98\uB9AC \uD3EC\uD568)");
@@ -13397,8 +13438,9 @@ var InlineModeService = class {
         }
         const nextError = this.findNextErrorFromCursor();
         if (nextError) {
-          if (window.globalInlineTooltip) {
-            window.globalInlineTooltip.hide();
+          const tooltip = getExtendedWindow().globalInlineTooltip;
+          if (tooltip) {
+            tooltip.hide();
           }
           this.moveToError(nextError);
           this.setFocusedError(nextError);
@@ -13418,8 +13460,9 @@ var InlineModeService = class {
         }
         const previousError = this.findPreviousErrorFromCursor();
         if (previousError) {
-          if (window.globalInlineTooltip) {
-            window.globalInlineTooltip.hide();
+          const tooltip = getExtendedWindow().globalInlineTooltip;
+          if (tooltip) {
+            tooltip.hide();
           }
           this.moveToError(previousError);
           this.setFocusedError(previousError);
@@ -13923,7 +13966,7 @@ var InlineModeService = class {
    * 🤖 기존 인라인 오류에 대한 AI 분석 실행
    */
   static async runAIAnalysisOnExistingErrors(progressCallback) {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c;
     if (this.activeErrors.size === 0) {
       Logger.warn("AI \uBD84\uC11D\uD560 \uAE30\uC874 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
       throw new Error("\uBD84\uC11D\uD560 \uC624\uB958\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uB9DE\uCDA4\uBC95 \uAC80\uC0AC\uB97C \uC2E4\uD589\uD558\uC138\uC694.");
@@ -13941,7 +13984,7 @@ var InlineModeService = class {
           corrected: error.correction.corrected || []
         });
       });
-      const aiService = (_e = (_d = (_c = window.koreanGrammarPlugin) == null ? void 0 : _c.instance) == null ? void 0 : _d.orchestrator) == null ? void 0 : _e.aiService;
+      const aiService = (_c = getExtendedWindow().koreanGrammarPlugin) == null ? void 0 : _c.instance;
       if (!aiService) {
         throw new Error("AI \uBD84\uC11D \uC11C\uBE44\uC2A4\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
       }
@@ -13961,7 +14004,13 @@ var InlineModeService = class {
           progressCallback(current, total);
         } : void 0
       };
-      const analysisResults = await aiService.analyzeCorrections(aiRequest);
+      let analysisResults = [];
+      if (aiService && typeof aiService === "object" && "analyzeCorrections" in aiService) {
+        const analyzeMethod = aiService.analyzeCorrections;
+        if (typeof analyzeMethod === "function") {
+          analysisResults = await analyzeMethod.call(aiService, aiRequest);
+        }
+      }
       Logger.log(`\u{1F916} AI \uBD84\uC11D \uC644\uB8CC: ${analysisResults.length}\uAC1C \uACB0\uACFC`);
       const totalResults = analysisResults.length;
       for (let i = 0; i < analysisResults.length; i++) {
@@ -14021,7 +14070,12 @@ var InlineModeService = class {
     Logger.log(`\u{1F4DD} \uC778\uB77C\uC778 \uBAA8\uB4DC \uB9DE\uCDA4\uBC95 \uAC80\uC0AC \uC2DC\uC791: ${text.length}\uC790`);
     try {
       const apiService = new SpellCheckApiService();
-      const result = await apiService.checkSpelling(text, this.settings);
+      const settings = this.settings;
+      if (!settings) {
+        Logger.error("\uC124\uC815\uC774 \uCD08\uAE30\uD654\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+        return;
+      }
+      const result = await apiService.checkSpelling(text, settings);
       if (!result.corrections || result.corrections.length === 0) {
         Logger.log("\uB9DE\uCDA4\uBC95 \uC624\uB958\uAC00 \uBC1C\uACAC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
         return;
@@ -14195,7 +14249,6 @@ var InlineModeService = class {
    * @returns 제거된 오류 개수
    */
   static async addWordToIgnoreListAndRemoveErrors(word) {
-    var _a;
     if (!this.settings || !this.currentView) {
       throw new Error("\uC124\uC815 \uB610\uB294 \uC5D0\uB514\uD130 \uBDF0\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
     }
@@ -14205,10 +14258,16 @@ var InlineModeService = class {
     }
     Logger.log(`\u{1F535} \uC608\uC678\uCC98\uB9AC \uC0AC\uC804 \uCD94\uAC00 \uBC0F \uB3D9\uC77C \uB2E8\uC5B4 \uC624\uB958 \uC81C\uAC70: "${trimmedWord}"`);
     const updatedSettings = IgnoredWordsService.addIgnoredWord(trimmedWord, this.settings);
-    if ((_a = window.koreanGrammarPlugin) == null ? void 0 : _a.instance) {
-      const plugin = window.koreanGrammarPlugin.instance;
-      plugin.settings = updatedSettings;
-      await plugin.saveSettings();
+    const pluginWrapper = getExtendedWindow().koreanGrammarPlugin;
+    if (pluginWrapper && typeof pluginWrapper === "object" && "instance" in pluginWrapper) {
+      const plugin = pluginWrapper.instance;
+      if (plugin && typeof plugin === "object" && "saveSettings" in plugin) {
+        const saveMethod = plugin.saveSettings;
+        if (typeof saveMethod === "function") {
+          plugin.settings = updatedSettings;
+          await saveMethod.call(plugin);
+        }
+      }
       this.settings = updatedSettings;
       Logger.debug(`\u{1F535} \uC608\uC678\uCC98\uB9AC \uC0AC\uC804\uC5D0 \uC800\uC7A5\uB428: "${trimmedWord}"`);
     }
@@ -14351,7 +14410,7 @@ var InlineModeService = class {
         selectedText
       );
       const filteredCorrections = optimizedCorrections.filter((correction) => {
-        const isIgnored = IgnoredWordsService.isWordIgnored(correction.original, this.settings);
+        const isIgnored = this.settings ? IgnoredWordsService.isWordIgnored(correction.original, this.settings) : false;
         if (isIgnored) {
           Logger.debug(`\uC608\uC678 \uB2E8\uC5B4\uB85C \uD544\uD130\uB9C1\uB428: "${correction.original}"`);
         }

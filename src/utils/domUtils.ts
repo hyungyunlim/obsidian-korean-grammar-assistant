@@ -3,6 +3,82 @@
  */
 
 /**
+ * Obsidian Window 인터페이스 확장
+ * sanitizeHTMLToDom 메서드를 포함한 Obsidian API
+ */
+interface ObsidianWindow extends Window {
+  sanitizeHTMLToDom?: (html: string) => DocumentFragment;
+}
+
+/**
+ * API 성능 메트릭 인터페이스
+ */
+interface ApiMetrics {
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  averageResponseTime: number;
+  queueLength: number;
+  activeBatches: number;
+}
+
+/**
+ * 캐시 통계 인터페이스
+ */
+interface CacheStats {
+  totalRequests: number;
+  cacheHits: number;
+  cacheMisses: number;
+  hitRatio: number;
+  cacheSize: number;
+  memoryUsage: number;
+}
+
+/**
+ * 확장된 메트릭 인터페이스 (로그 통계, 에러 통계 포함)
+ */
+interface ExtendedMetrics extends ApiMetrics {
+  cache?: CacheStats;
+  morphemeCache?: CacheStats;
+  logStats?: {
+    debug: number;
+    info: number;
+    warn: number;
+    error: number;
+    total: number;
+  };
+  errorStats?: {
+    totalErrors: number;
+    errorsByCategory: Record<string, number>;
+    recentErrors: Array<{
+      timestamp: number;
+      category: string;
+      message: string;
+    }>;
+  };
+}
+
+/**
+ * 검증 결과 인터페이스
+ */
+interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+/**
+ * 최적화 제안 인터페이스
+ */
+interface OptimizationSuggestion {
+  type?: 'cost' | 'usability' | 'performance';
+  title: string;
+  description?: string;
+  impact: 'high' | 'medium' | 'low';
+  action: string;
+}
+
+/**
  * HTML 요소를 생성합니다.
  * @param tag 요소 태그명
  * @param options 요소 옵션 (클래스, 텍스트, 부모 등)
@@ -116,7 +192,7 @@ export function createLink(text: string, href: string, target: string = '_blank'
  */
 export function parseHTMLSafely(htmlString: string): DocumentFragment {
   // Obsidian의 sanitizeHTMLToDom 사용
-  const sanitized = (window as any).sanitizeHTMLToDom(htmlString);
+  const sanitized = (window as ObsidianWindow).sanitizeHTMLToDom?.(htmlString);
   const fragment = document.createDocumentFragment();
   if (sanitized) {
     fragment.appendChild(sanitized);
@@ -160,7 +236,7 @@ export function clearElement(element: HTMLElement): void {
  * @param parent 부모 요소
  * @param metrics 메트릭 데이터
  */
-export function createMetricsDisplay(parent: HTMLElement, metrics: any): void {
+export function createMetricsDisplay(parent: HTMLElement, metrics: ExtendedMetrics): void {
   clearElement(parent);
   
   // API 성능 통계 섹션
@@ -210,7 +286,7 @@ export function createMetricsDisplay(parent: HTMLElement, metrics: any): void {
  * @param validation 검증 결과
  * @param suggestions 최적화 제안
  */
-export function createValidationDisplay(parent: HTMLElement, validation: any, suggestions: any[]): void {
+export function createValidationDisplay(parent: HTMLElement, validation: ValidationResult, suggestions: OptimizationSuggestion[]): void {
   clearElement(parent);
   
   // 검증 결과 헤더
@@ -246,9 +322,9 @@ export function createValidationDisplay(parent: HTMLElement, validation: any, su
     parent.createEl('br');
     parent.createEl('strong', { text: '최적화 제안:' });
     parent.createEl('br');
-    
-    suggestions.forEach((suggestion: any) => {
-      const icon = suggestion.impact === 'high' ? '🔴' : 
+
+    suggestions.forEach((suggestion: OptimizationSuggestion) => {
+      const icon = suggestion.impact === 'high' ? '🔴' :
                    suggestion.impact === 'medium' ? '🟡' : '🟢';
       parent.createEl('div', { text: `${icon} ${suggestion.title}: ${suggestion.action}` });
     });

@@ -62,11 +62,11 @@ export interface PopupConfig {
   start: EditorPosition;
   end: EditorPosition;
   editor: Editor;
-  file?: any; // TFile 인스턴스 (메타데이터 및 파일 정보용)
-  morphemeInfo?: any; // 형태소 분석 정보 (AI 분석용)
+  file?: unknown; // TFile 인스턴스 (메타데이터 및 파일 정보용)
+  morphemeInfo?: MorphemeInfo; // 형태소 분석 정보 (AI 분석용)
   ignoredWords: string[];
   onExceptionWordsAdded?: (words: string[]) => void;
-  
+
   // Phase 5: AI 통합 관련 설정
   enableAI?: boolean;
   aiProvider?: string;
@@ -199,10 +199,10 @@ export interface AIAnalysisRequest {
   correctionContexts?: CorrectionContext[]; // 오류별 컨텍스트 정보
   onProgress?: (current: number, total: number, status: string) => void; // 배치 진행 상황 콜백
   currentStates?: {[correctionIndex: number]: {state: 'error' | 'corrected' | 'exception-processed' | 'original-kept' | 'user-edited', value: string}}; // 현재 상태 정보
-  editor?: any; // Obsidian Editor 인스턴스 (구조화된 컨텍스트 추출용)
-  file?: any; // TFile 인스턴스 (메타데이터 정보용)
+  editor?: Editor; // Obsidian Editor 인스턴스 (구조화된 컨텍스트 추출용)
+  file?: unknown; // TFile 인스턴스 (메타데이터 정보용)
   enhancedContext?: boolean; // 향상된 컨텍스트 추출 활성화 여부
-  morphemeData?: any; // Phase 5: 형태소 분석 데이터
+  morphemeData?: MorphemeInfo; // Phase 5: 형태소 분석 데이터
 }
 
 /**
@@ -266,6 +266,58 @@ export interface InlineError {
 }
 
 /**
+ * 형태소 분석 결과 인터페이스
+ */
+export interface MorphemeInfo {
+  sentences: MorphemeSentence[];
+}
+
+export interface MorphemeSentence {
+  tokens: MorphemeToken[];
+  text?: string;
+  id?: string;
+}
+
+export interface MorphemeToken {
+  text?: {
+    content: string;
+    offset: number;
+    length: number;
+  };
+  morphemes?: MorphemeAnalysis[];
+  id?: string;
+}
+
+export interface MorphemeAnalysis {
+  tag: string;
+  text?: {
+    content: string;
+    offset: number;
+    length: number;
+  };
+}
+
+/**
+ * 확장된 Window 인터페이스
+ */
+export interface ExtendedWindow extends Window {
+  globalInlineTooltip?: {
+    show: (error: InlineError, element: HTMLElement, trigger: 'hover' | 'click', position?: { x: number; y: number }) => void;
+    hide: () => void;
+    visible?: boolean;
+    isHovered?: boolean;
+  };
+  tooltipKeepOpenMode?: boolean;
+  koreanGrammarPlugin?: {
+    instance?: unknown;
+  };
+  Notice?: new (message: string, timeout?: number) => void;
+  sanitizeHTMLToDom?: (html: string) => DocumentFragment;
+  getEventListeners?: (element: Element) => Record<string, unknown[]>;
+  app?: App;
+}
+
+/**
  * Phase 7: UI System 타입 정의
  */
 
@@ -294,7 +346,16 @@ export interface EventContext {
   type: string;
   target: HTMLElement;
   correctionIndex?: number;
-  eventData?: any;
+  eventData?: unknown;
   timestamp?: number;
   platform?: 'desktop' | 'mobile';
+}
+
+/**
+ * Obsidian Plugin 인터페이스 확장
+ */
+export interface PluginInstance {
+  settings?: PluginSettings;
+  orchestrator?: unknown;
+  instance?: unknown;
 }

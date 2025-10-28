@@ -41,8 +41,8 @@ interface SettingsProfile {
 interface SettingsChange {
   timestamp: number;
   field: string;
-  oldValue: any;
-  newValue: any;
+  oldValue: unknown;
+  newValue: unknown;
   reason?: string;
 }
 
@@ -295,7 +295,7 @@ export class AdvancedSettingsService {
   /**
    * 설정 변경을 추적합니다
    */
-  static trackChange(field: string, oldValue: any, newValue: any, reason?: string): void {
+  static trackChange(field: string, oldValue: unknown, newValue: unknown, reason?: string): void {
     const change: SettingsChange = {
       timestamp: Date.now(),
       field,
@@ -472,20 +472,23 @@ export class AdvancedSettingsService {
    * 설정을 병합합니다
    */
   private static mergeSettings(base: PluginSettings, override: Partial<PluginSettings>): PluginSettings {
-    const merged = JSON.parse(JSON.stringify(base));
-    
-    Object.keys(override).forEach(key => {
-      const value = (override as any)[key];
-      if (value !== undefined) {
-        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-          // 객체는 재귀적으로 병합
-          (merged as any)[key] = { ...(merged as any)[key], ...value };
-        } else {
-          // 원시값과 배열은 직접 할당
-          (merged as any)[key] = value;
-        }
-      }
-    });
+    // Deep clone base settings to preserve its structure
+    const merged = JSON.parse(JSON.stringify(base)) as PluginSettings;
+
+    // Manually merge each key from override
+    if (override.apiKey !== undefined) merged.apiKey = override.apiKey;
+    if (override.apiHost !== undefined) merged.apiHost = override.apiHost;
+    if (override.apiPort !== undefined) merged.apiPort = override.apiPort;
+    if (override.ignoredWords !== undefined) merged.ignoredWords = override.ignoredWords;
+    if (override.filterSingleCharErrors !== undefined) merged.filterSingleCharErrors = override.filterSingleCharErrors;
+
+    // Deep merge for nested objects
+    if (override.ai !== undefined) {
+      merged.ai = { ...merged.ai, ...override.ai };
+    }
+    if (override.inlineMode !== undefined) {
+      merged.inlineMode = { ...merged.inlineMode, ...override.inlineMode };
+    }
 
     return merged;
   }
@@ -500,19 +503,19 @@ export class AdvancedSettingsService {
   /**
    * 값을 문자열로 변환합니다
    */
-  private static stringifyValue(value: any): string {
+  private static stringifyValue(value: unknown): string {
     if (typeof value === 'string') {
       return value.length > 50 ? value.substring(0, 50) + '...' : value;
     }
-    
+
     if (Array.isArray(value)) {
       return `배열 (${value.length}개 항목)`;
     }
-    
+
     if (typeof value === 'object' && value !== null) {
       return `객체 (${Object.keys(value).length}개 속성)`;
     }
-    
+
     return String(value);
   }
 

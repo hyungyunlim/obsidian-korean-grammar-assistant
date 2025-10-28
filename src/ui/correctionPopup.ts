@@ -2510,7 +2510,7 @@ export class CorrectionPopup extends BaseComponent {
       }
 
       // ⭐ NEW: 형태소 정보와 함께 AI 분석 호출
-      this.aiAnalysisResults = await this.aiService.analyzeCorrections(analysisRequest, morphemeInfo);
+      this.aiAnalysisResults = await this.aiService.analyzeCorrections(analysisRequest, morphemeInfo ?? undefined);
       
       Logger.log('AI 분석 완료:', this.aiAnalysisResults);
 

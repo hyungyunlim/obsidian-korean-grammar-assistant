@@ -1,4 +1,5 @@
-import { AISettings, AIAnalysisRequest, AIAnalysisResult, Correction, CorrectionContext } from '../types/interfaces';
+import { AISettings, AIAnalysisRequest, AIAnalysisResult, Correction, CorrectionContext, MorphemeInfo, MorphemeSentence, MorphemeToken } from '../types/interfaces';
+import { Editor } from 'obsidian';
 import { AI_PROMPTS, MODEL_TOKEN_LIMITS } from '../constants/aiModels';
 import { estimateAnalysisTokenUsage, estimateCost } from '../utils/tokenEstimator';
 import { Logger } from '../utils/logger';
@@ -27,7 +28,7 @@ export class AIAnalysisService {
   /**
    * 각 오류에 대한 컨텍스트를 추출합니다.
    */
-  private extractCorrectionContexts(request: AIAnalysisRequest, morphemeInfo?: any): CorrectionContext[] {
+  private extractCorrectionContexts(request: AIAnalysisRequest, morphemeInfo?: MorphemeInfo): CorrectionContext[] {
     const { originalText, corrections, contextWindow = 50, currentStates, editor, file, enhancedContext = true } = request;
     const contexts: CorrectionContext[] = [];
 
@@ -106,9 +107,9 @@ export class AIAnalysisService {
   /**
    * 형태소 분석 결과 전체를 로깅합니다.
    */
-  private logMorphemeAnalysis(morphemeInfo: any, corrections: any[]): void {
+  private logMorphemeAnalysis(morphemeInfo: MorphemeInfo, corrections: Correction[]): void {
     Logger.debug('📋 형태소 분석 결과 요약:');
-    
+
     if (!morphemeInfo || !morphemeInfo.sentences) {
       Logger.warn('형태소 분석 데이터가 유효하지 않음');
       return;
@@ -116,7 +117,7 @@ export class AIAnalysisService {
 
     // 전체 토큰 수와 문장 수
     const totalSentences = morphemeInfo.sentences.length;
-    const totalTokens = morphemeInfo.sentences.reduce((sum: number, sentence: any) => 
+    const totalTokens = morphemeInfo.sentences.reduce((sum: number, sentence: MorphemeSentence) =>
       sum + (sentence.tokens ? sentence.tokens.length : 0), 0);
     
     Logger.debug(`  총 ${totalSentences}개 문장, ${totalTokens}개 토큰 분석됨`);
@@ -126,12 +127,12 @@ export class AIAnalysisService {
     const foreignWords: string[] = [];
     const allTokens: {text: string, tags: string[]}[] = [];
 
-    morphemeInfo.sentences.forEach((sentence: any, sentenceIdx: number) => {
+    morphemeInfo.sentences.forEach((sentence: MorphemeSentence, sentenceIdx: number) => {
       if (!sentence.tokens) return;
-      
-      sentence.tokens.forEach((token: any) => {
+
+      sentence.tokens.forEach((token: MorphemeToken) => {
         const tokenText = token.text?.content || '';
-        const tags = token.morphemes?.map((m: any) => m.tag) || [];
+        const tags = token.morphemes?.map(m => m.tag) || [];
         
         allTokens.push({text: tokenText, tags});
         
@@ -186,11 +187,13 @@ export class AIAnalysisService {
   /**
    * 형태소 분석 결과에서 고유명사를 감지합니다.
    */
-  private isProperNounFromMorphemes(text: string, morphemeInfo: any): boolean {
+  private isProperNounFromMorphemes(text: string, morphemeInfo: MorphemeInfo): boolean {
     if (!morphemeInfo || !morphemeInfo.sentences) return false;
 
     for (const sentence of morphemeInfo.sentences) {
+      if (!sentence.tokens) continue;
       for (const token of sentence.tokens) {
+        if (!token.text || !token.morphemes) continue;
         if (token.text.content === text) {
           // 품사 태그에서 고유명사 확인
           for (const morpheme of token.morphemes) {
@@ -217,7 +220,7 @@ export class AIAnalysisService {
   /**
    * Obsidian Editor를 활용한 향상된 컨텍스트 추출
    */
-  private extractEnhancedContext(editor: any, file: any, originalText: string, correction: any, errorIndex: number, morphemeInfo?: any): {
+  private extractEnhancedContext(editor: Editor, file: unknown, originalText: string, correction: Correction, errorIndex: number, morphemeInfo?: MorphemeInfo): {
     sentenceContext?: string;
     isLikelyProperNoun: boolean;
     documentType?: string;
@@ -230,7 +233,9 @@ export class AIAnalysisService {
     const sentenceContext = this.extractCurrentSentence(editor, errorPosition);
     
     // 문서 타입 감지 (마크다운, 일반 텍스트 등)
-    const documentType = file?.extension || 'unknown';
+    const documentType = (typeof file === 'object' && file !== null && 'extension' in file)
+      ? (file as { extension: string }).extension
+      : 'unknown';
     
     // 형태소 분석 우선, 없으면 패턴 기반으로 고유명사 감지
     let isLikelyProperNoun = false;
@@ -266,7 +271,7 @@ export class AIAnalysisService {
   /**
    * 현재 문장을 추출합니다.
    */
-  private extractCurrentSentence(editor: any, position: any): string {
+  private extractCurrentSentence(editor: Editor, position: { line: number; ch: number }): string {
     const currentLine = editor.getLine(position.line);
     
     // 한국어 문장 끝 패턴
@@ -398,13 +403,13 @@ export class AIAnalysisService {
    * 단일 배치를 처리합니다.
    */
   private async processBatch(
-    batch: CorrectionContext[], 
-    batchIndex: number, 
+    batch: CorrectionContext[],
+    batchIndex: number,
     totalBatches: number,
-    client: any,
+    client: { chat: (messages: Array<{ role: string; content: string }>, maxTokens: number, model: string) => Promise<string> },
     adjustedMaxTokens: number,
     model: string,
-    morphemeInfo?: any  // ⭐ NEW: 형태소 정보 추가
+    morphemeInfo?: MorphemeInfo  // ⭐ NEW: 형태소 정보 추가
   ): Promise<AIAnalysisResult[]> {
     Logger.debug(`배치 ${batchIndex + 1}/${totalBatches} 처리 중 (${batch.length}개 오류)`);
 
@@ -418,7 +423,8 @@ export class AIAnalysisService {
     // ⭐ NEW: 형태소 정보 로깅
     if (morphemeInfo) {
       Logger.debug(`형태소 정보와 함께 AI 분석 진행 (토큰 절약 모드)`);
-      Logger.debug(`형태소 토큰 수: ${morphemeInfo.tokens?.length || 0}개`);
+      const totalTokens = morphemeInfo.sentences.reduce((sum, s) => sum + (s.tokens?.length || 0), 0);
+      Logger.debug(`형태소 토큰 수: ${totalTokens}개`);
     }
     
     const messages = [
@@ -436,7 +442,7 @@ export class AIAnalysisService {
    * AI를 사용하여 맞춤법 오류를 분석하고 최적의 수정사항을 제안합니다.
    * ⭐ NEW: 형태소 정보 통합 지원
    */
-  async analyzeCorrections(request: AIAnalysisRequest, morphemeInfo?: any): Promise<AIAnalysisResult[]> {
+  async analyzeCorrections(request: AIAnalysisRequest, morphemeInfo?: MorphemeInfo): Promise<AIAnalysisResult[]> {
     Logger.debug('analyzeCorrections 시작:', {
       enabled: this.settings.enabled,
       provider: this.settings.provider,
@@ -511,10 +517,10 @@ export class AIAnalysisService {
         
         // ⭐ NEW: 형태소 정보 로깅
         if (morphemeInfo) {
+          const totalTokens = morphemeInfo.sentences.reduce((sum, s) => sum + (s.tokens?.length || 0), 0);
           Logger.debug('형태소 정보 활용 AI 분석 시작:', {
-            tokensCount: morphemeInfo.tokens?.length || 0,
-            sentences: morphemeInfo.sentences?.length || 0,
-            language: morphemeInfo.language || 'unknown'
+            tokensCount: totalTokens,
+            sentences: morphemeInfo.sentences?.length || 0
           });
         }
 
@@ -575,12 +581,26 @@ export class AIAnalysisService {
   }
 
   /**
+   * AI 응답 항목의 타입 가드
+   */
+  private isValidAIResponseItem(item: unknown): item is {
+    correctionIndex: string | number;
+    selectedValue: string;
+    isExceptionProcessed?: boolean;
+    confidence?: string | number;
+    reasoning?: string;
+  } {
+    return typeof item === 'object' && item !== null &&
+           'correctionIndex' in item && 'selectedValue' in item;
+  }
+
+  /**
    * AI 응답을 파싱하여 구조화된 결과로 변환합니다.
    */
   private parseAIResponse(response: string, correctionContexts: CorrectionContext[]): AIAnalysisResult[] {
     try {
       // JSON 응답 파싱 시도
-      let parsedResponse: any[];
+      let parsedResponse: unknown[];
       
       // 1. 먼저 마크다운 코드 블록 제거
       let cleanedResponse = response.trim();
@@ -691,7 +711,14 @@ export class AIAnalysisService {
       const results: AIAnalysisResult[] = [];
 
       for (const item of parsedResponse) {
-        const batchIndex = parseInt(item.correctionIndex);
+        if (!this.isValidAIResponseItem(item)) {
+          Logger.warn('유효하지 않은 AI 응답 항목:', item);
+          continue;
+        }
+
+        const batchIndex = typeof item.correctionIndex === 'number'
+          ? item.correctionIndex
+          : parseInt(String(item.correctionIndex));
         
         if (isNaN(batchIndex) || batchIndex < 0 || batchIndex >= correctionContexts.length) {
           Logger.warn('유효하지 않은 batchIndex:', batchIndex);
@@ -734,12 +761,16 @@ export class AIAnalysisService {
         const isOriginalSelected = selectedValue === context.original;
         const isOriginalKept = isOriginalSelected && !item.isExceptionProcessed;
 
+        const confidence = typeof item.confidence === 'number'
+          ? item.confidence
+          : (typeof item.confidence === 'string' ? parseInt(item.confidence) : 0);
+
         results.push({
           correctionIndex: originalCorrectionIndex,
           selectedValue,
           isExceptionProcessed: item.isExceptionProcessed || false,
           isOriginalKept: isOriginalKept,
-          confidence: Math.max(0, Math.min(100, parseInt(item.confidence) || 0)),
+          confidence: Math.max(0, Math.min(100, confidence)),
           reasoning: item.reasoning || '이유가 제공되지 않았습니다.'
         });
       }

@@ -63,6 +63,13 @@ interface MorphemeResponse {
 }
 
 /**
+ * 확장된 토큰 맵 인터페이스 (위치 정보 포함)
+ */
+interface ExtendedTokenMap extends Map<string, Token> {
+  tokensByPosition?: Map<number, Token[]>;
+}
+
+/**
  * Bareun.ai API 맞춤법 검사 서비스
  */
 export class SpellCheckApiService {
@@ -147,9 +154,9 @@ export class SpellCheckApiService {
         }
 
         const data = response.json ?? JSON.parse(response.text || '{}');
-        Logger.debug('형태소 분석 API 응답 성공:', { 
+        Logger.debug('형태소 분석 API 응답 성공:', {
           textLength: text.length,
-          tokensCount: data.sentences?.reduce((count: number, sentence: any) => count + sentence.tokens.length, 0) || 0,
+          tokensCount: data.sentences?.reduce((count: number, sentence: Sentence) => count + sentence.tokens.length, 0) || 0,
           sentencesCount: data.sentences?.length || 0
         });
         return data;
@@ -630,11 +637,11 @@ export class SpellCheckApiService {
     });
 
     Logger.debug('토큰 맵:', Array.from(tokenMap.keys()));
-    Logger.debug('위치별 토큰 맵:', Array.from(tokensByPosition.entries()).map(([pos, tokens]) => 
+    Logger.debug('위치별 토큰 맵:', Array.from(tokensByPosition.entries()).map(([pos, tokens]) =>
       `${pos}: [${tokens.map(t => t.text.content).join(', ')}]`));
-    
+
     // 토큰 맵을 확장하여 위치 정보를 활용할 수 있도록 저장
-    (tokenMap as any).tokensByPosition = tokensByPosition;
+    (tokenMap as ExtendedTokenMap).tokensByPosition = tokensByPosition;
 
     // 겹치는 교정들을 식별하고 통합
     const groupedCorrections: Correction[] = [];
@@ -787,7 +794,7 @@ export class SpellCheckApiService {
     position: number
   ): boolean {
     // 위치별 토큰 맵이 있으면 더 정확한 매칭 사용
-    const tokensByPosition = (tokenMap as any).tokensByPosition as Map<number, Token[]> | undefined;
+    const tokensByPosition = (tokenMap as ExtendedTokenMap).tokensByPosition;
     
     if (tokensByPosition) {
       // 위치 기반 정확한 매칭
