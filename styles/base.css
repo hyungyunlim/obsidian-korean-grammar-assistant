@@ -134,3 +134,98 @@ body.spell-popup-open #correctionPopup [contenteditable] {
     opacity: 0 !important;
     pointer-events: none !important;
 }
+
+/* === Button State Classes === */
+.kga-button-disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+}
+
+.kga-button-enabled {
+    opacity: 1 !important;
+    cursor: pointer !important;
+}
+
+/* === Element Visibility States === */
+.kga-collapsed {
+    display: none !important;
+    max-height: 0 !important;
+}
+
+.kga-expanded {
+    display: block !important;
+}
+
+/* === Animation Classes === */
+.kga-spin {
+    animation: kga-spin-animation 1s linear infinite !important;
+}
+
+@keyframes kga-spin-animation {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.kga-slide-out-down {
+    animation: kga-slideOutDown 0.2s ease-in !important;
+}
+
+@keyframes kga-slideOutDown {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+}
+
+/* === Hover Effects (using data attributes for theme compatibility) === */
+/* These should be used with :hover pseudo-class in specific components */
+
+/* === Dynamic Positioning Support === */
+/* Use CSS variables for dynamic positioning */
+.kga-dynamic-position {
+    position: fixed;
+    left: var(--kga-pos-left, 0);
+    top: var(--kga-pos-top, 0);
+    width: var(--kga-width, auto);
+    height: var(--kga-height, auto);
+    z-index: var(--kga-z-index, 1000);
+}
+
+/* === Display States === */
+.kga-block {
+    display: block !important;
+}
+
+.kga-inline-block {
+    display: inline-block !important;
+}
+
+.kga-flex {
+    display: flex !important;
+}
+
+/* === Opacity States === */
+.kga-opacity-full {
+    opacity: 1 !important;
+}
+
+.kga-opacity-half {
+    opacity: 0.5 !important;
+}
+
+.kga-opacity-60 {
+    opacity: 0.6 !important;
+}
+
+.kga-opacity-0 {
+    opacity: 0 !important;
+}

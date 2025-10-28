@@ -1284,13 +1284,7 @@ export class ModernSettingsTab extends PluginSettingTab {
         }
       });
 
-      tag.addEventListener('mouseenter', () => {
-        tag.style.background = 'var(--interactive-accent-hover)';
-      });
-
-      tag.addEventListener('mouseleave', () => {
-        tag.style.background = 'var(--interactive-accent)';
-      });
+      // Hover 효과는 CSS :hover로 처리 (ignored-word-tag:hover)
 
       tag.onclick = async () => {
         if (confirm(`"${word}"를 예외 목록에서 제거하시겠습니까?`)) {
@@ -1349,12 +1343,14 @@ export class ModernSettingsTab extends PluginSettingTab {
         const suggestions = AdvancedSettingsService.getOptimizationSuggestions(this.plugin.settings);
         
         this.createImprovedValidationDisplay(validationResult, validation, suggestions);
-        
-        validationResult.style.display = 'block';
+
+        validationResult.removeClass('kga-hidden');
+        validationResult.addClass('kga-block');
         validationResult.className = ''; // 새로운 스타일에서는 클래스 제거
       } catch (error) {
         Logger.error('설정 검증 오류:', error);
-        validationResult.style.display = 'block';
+        validationResult.removeClass('kga-hidden');
+        validationResult.addClass('kga-block');
         validationResult.className = 'ksc-warning-box';
         validationResult.textContent = '설정 검증 중 오류가 발생했습니다.';
       }
@@ -1386,7 +1382,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     createBackupBtn.onclick = () => {
       AdvancedSettingsService.backupSettings(this.plugin.settings, '수동 백업');
       new Notice("설정이 백업되었습니다.");
-      if (backupListContainer.style.display !== 'none') {
+      if (!backupListContainer.hasClass('kga-hidden')) {
         updateBackupList();
       }
     };
@@ -1432,8 +1428,8 @@ export class ModernSettingsTab extends PluginSettingTab {
     };
 
     showBackupsBtn.onclick = () => {
-      const isVisible = backupListContainer.style.display !== 'none';
-      backupListContainer.style.display = isVisible ? 'none' : 'block';
+      const isVisible = !backupListContainer.hasClass('kga-hidden');
+      backupListContainer.toggleClass('kga-hidden', isVisible);
       if (!isVisible) {
         updateBackupList();
       }
@@ -1685,14 +1681,14 @@ export class ModernSettingsTab extends PluginSettingTab {
     refreshStatsBtn.onclick = updateLogStats;
 
     viewLogsBtn.onclick = () => {
-      const isVisible = logViewerContainer.style.display !== 'none';
-      
+      const isVisible = !logViewerContainer.hasClass('kga-hidden');
+
       if (isVisible) {
-        logViewerContainer.style.display = 'none';
+        logViewerContainer.addClass('kga-hidden');
         viewLogsBtn.textContent = '로그 보기';
       } else {
         this.displayLogViewer(logViewerContainer);
-        logViewerContainer.style.display = 'block';
+        logViewerContainer.removeClass('kga-hidden');
         viewLogsBtn.textContent = '로그 숨기기';
       }
     };
@@ -1705,7 +1701,7 @@ export class ModernSettingsTab extends PluginSettingTab {
       if (confirm('모든 로그를 삭제하시겠습니까?')) {
         Logger.clearHistory();
         updateLogStats();
-        if (logViewerContainer.style.display !== 'none') {
+        if (!logViewerContainer.hasClass('kga-hidden')) {
           this.displayLogViewer(logViewerContainer);
         }
       }

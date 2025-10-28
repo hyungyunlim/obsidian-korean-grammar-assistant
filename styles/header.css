@@ -87,3 +87,116 @@
     flex-shrink: 0;
     background: var(--background-primary);
 }
+
+/* === Button State Classes === */
+#correctionPopup .header-button-disabled {
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+}
+
+#correctionPopup .header-button-enabled {
+    opacity: 1 !important;
+    cursor: pointer !important;
+}
+
+#correctionPopup .header-button-primary-hover {
+    background-color: var(--interactive-accent-hover) !important;
+}
+
+#correctionPopup .header-button-secondary-hover {
+    background-color: var(--background-modifier-hover) !important;
+}
+
+#correctionPopup .header-button-primary {
+    background-color: var(--interactive-accent) !important;
+}
+
+#correctionPopup .header-button-secondary {
+    background-color: var(--background-primary) !important;
+}
+
+/* === New Header Renderer Styles === */
+.korean-grammar-popup-header-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    background-color: var(--background-secondary);
+    min-height: 48px;
+}
+
+.korean-grammar-popup-title-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.korean-grammar-popup-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--text-accent);
+}
+
+.korean-grammar-popup-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.korean-grammar-popup-page-info {
+    font-size: 12px;
+    color: var(--text-muted);
+    background-color: var(--background-modifier-border-hover);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.korean-grammar-popup-header-buttons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.korean-grammar-popup-header-button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.korean-grammar-popup-header-button-icon-only {
+    padding: 6px !important;
+}
+
+.korean-grammar-popup-header-button-primary {
+    background-color: var(--interactive-accent) !important;
+    color: var(--text-on-accent) !important;
+}
+
+.korean-grammar-popup-header-button-primary:hover {
+    background-color: var(--interactive-accent-hover) !important;
+}
+
+.korean-grammar-popup-header-button-danger {
+    color: var(--text-error) !important;
+}
+
+.korean-grammar-popup-header-button:not(.korean-grammar-popup-header-button-primary):hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.korean-grammar-popup-header-button-icon {
+    width: 14px;
+    height: 14px;
+}

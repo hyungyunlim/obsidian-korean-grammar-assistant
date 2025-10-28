@@ -106,13 +106,6 @@ export class HoverHandler {
   private createTooltipContainer(): void {
     this.tooltipContainer = document.createElement('div');
     this.tooltipContainer.className = 'popup-tooltip-container';
-    this.tooltipContainer.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      pointer-events: none;
-      z-index: 10001;
-    `;
     document.body.appendChild(this.tooltipContainer);
   }
 
@@ -503,34 +496,20 @@ export class HoverHandler {
    */
   private createTooltipElement(config: TooltipConfig): HTMLElement {
     const tooltip = document.createElement('div');
-    tooltip.className = `popup-tooltip ${config.className || ''}`;
-    tooltip.style.cssText = `
-      position: absolute;
-      left: ${config.position.x}px;
-      top: ${config.position.y}px;
-      max-width: ${config.maxWidth}px;
-      background: var(--background-primary);
-      border: 1px solid var(--background-modifier-border);
-      border-radius: 4px;
-      padding: 8px 12px;
-      font-size: 12px;
-      line-height: 1.4;
-      color: var(--text-normal);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      z-index: 10002;
-      opacity: 0;
-      transform: translateY(-5px);
-      transition: opacity 0.2s ease, transform 0.2s ease;
-    `;
-    
+    tooltip.className = `popup-tooltip ${config.className || ''} kga-dynamic-position kga-tooltip-enter`;
+
+    // Set position using CSS variables
+    tooltip.style.setProperty('--kga-pos-left', `${config.position.x}px`);
+    tooltip.style.setProperty('--kga-pos-top', `${config.position.y}px`);
+
     tooltip.textContent = config.content;
-    
+
     // 애니메이션으로 나타나기
     setTimeout(() => {
-      tooltip.style.opacity = '1';
-      tooltip.style.transform = 'translateY(0)';
+      tooltip.classList.remove('kga-tooltip-enter');
+      tooltip.classList.add('kga-tooltip-visible');
     }, 10);
-    
+
     return tooltip;
   }
 
@@ -541,25 +520,26 @@ export class HoverHandler {
     const rect = tooltip.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    
+
     let { x, y } = position;
-    
+
     // 오른쪽 경계 확인
     if (x + rect.width > viewportWidth - 10) {
       x = viewportWidth - rect.width - 10;
     }
-    
+
     // 하단 경계 확인
     if (y + rect.height > viewportHeight - 10) {
       y = position.y - rect.height - 10; // 마우스 위로 이동
     }
-    
+
     // 왼쪽/상단 경계 확인
     x = Math.max(10, x);
     y = Math.max(10, y);
-    
-    tooltip.style.left = `${x}px`;
-    tooltip.style.top = `${y}px`;
+
+    // Update position using CSS variables
+    tooltip.style.setProperty('--kga-pos-left', `${x}px`);
+    tooltip.style.setProperty('--kga-pos-top', `${y}px`);
   }
 
   /**
@@ -582,9 +562,9 @@ export class HoverHandler {
   private hideTooltip(): void {
     if (this.activeTooltip) {
       // 페이드아웃 애니메이션
-      this.activeTooltip.style.opacity = '0';
-      this.activeTooltip.style.transform = 'translateY(-5px)';
-      
+      this.activeTooltip.classList.remove('kga-tooltip-visible');
+      this.activeTooltip.classList.add('kga-tooltip-exit');
+
       // DOM에서 제거
       setTimeout(() => {
         if (this.activeTooltip && this.tooltipContainer) {

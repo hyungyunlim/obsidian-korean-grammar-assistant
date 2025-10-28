@@ -1,0 +1,850 @@
+/**
+ * Inline Tooltip Styles
+ * 인라인 툴팁 전용 스타일 (인라인 스타일 제거)
+ */
+
+/* ========================================
+   1. Base Tooltip Container
+   ======================================== */
+
+.korean-grammar-inline-tooltip {
+  position: absolute;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 0;
+  box-shadow: var(--shadow-s);
+  z-index: 1000;
+  font-size: 13px;
+  color: var(--text-normal);
+  display: flex;
+  flex-direction: column;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Mobile variants */
+.korean-grammar-inline-tooltip.kga-mobile {
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  font-size: 14px;
+  max-height: 200px;
+  touch-action: manipulation;
+}
+
+.korean-grammar-inline-tooltip.kga-mobile-phone {
+  font-size: 14px;
+}
+
+/* Fixed position mode (mobile phone) */
+.korean-grammar-inline-tooltip.kga-fixed-position {
+  position: fixed;
+  visibility: visible;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.2);
+  border-radius: 12px 12px 0 0;
+  border: 1px solid var(--background-modifier-border);
+}
+
+/* Fixed position with AI analysis */
+.korean-grammar-inline-tooltip.kga-fixed-position.kga-has-ai {
+  /* JavaScript will set height dynamically via CSS variables */
+  height: var(--kga-fixed-height, 110px);
+  max-height: var(--kga-fixed-height, 110px);
+}
+
+/* Desktop positioning */
+.korean-grammar-inline-tooltip.kga-desktop {
+  position: fixed;
+  visibility: visible;
+}
+
+/* Dynamic positioning with CSS variables */
+.korean-grammar-inline-tooltip.kga-dynamic-position {
+  left: var(--kga-left);
+  top: var(--kga-top);
+  width: var(--kga-width);
+  max-height: var(--kga-max-height);
+  min-width: var(--kga-min-width);
+  font-size: var(--kga-font-size);
+}
+
+/* ========================================
+   2. Header Section
+   ======================================== */
+
+.tooltip-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile header variants */
+.tooltip-header.kga-mobile {
+  padding: 11px 13px;
+  font-size: 12px;
+}
+
+.tooltip-header.kga-mobile-phone {
+  padding: 10px 12px;
+  font-size: 11px;
+}
+
+/* Single tooltip header */
+.tooltip-header.kga-single {
+  padding: 6px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 6px 6px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  min-height: 32px;
+}
+
+.tooltip-header.kga-single.kga-mobile-phone {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.tooltip-header.kga-single.kga-mobile {
+  padding: 7px 11px;
+  font-size: 13px;
+}
+
+/* Header text */
+.header-text {
+  flex: 1;
+  text-align: center;
+}
+
+.header-text.kga-single {
+  font-size: 13px;
+}
+
+.header-text.kga-single.kga-mobile-phone {
+  font-size: 12px;
+}
+
+.header-text.kga-single.kga-mobile {
+  font-size: 13px;
+}
+
+/* ========================================
+   3. Header Close Button
+   ======================================== */
+
+.header-close-button {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text-muted);
+  padding: 0;
+  margin: 0;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: auto;
+  min-height: auto;
+  width: auto;
+  height: auto;
+  z-index: 10;
+  font-weight: 500;
+  line-height: 1;
+  opacity: 0.7;
+  font-family: inherit;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.header-close-button.kga-mobile {
+  right: 10px;
+  font-size: 16px;
+  touch-action: manipulation;
+}
+
+.header-close-button.kga-mobile-phone {
+  right: 12px;
+  font-size: 18px;
+  touch-action: manipulation;
+}
+
+/* Single tooltip close button */
+.header-close-button.kga-single {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: all 0.2s ease;
+  position: static;
+  transform: none;
+}
+
+.header-close-button.kga-single.kga-mobile {
+  font-size: 15px;
+  width: 22px;
+  height: 22px;
+}
+
+.header-close-button.kga-single.kga-mobile-phone {
+  font-size: 14px;
+  width: 20px;
+  height: 20px;
+}
+
+/* Close button hover states */
+.header-close-button:hover {
+  opacity: 1;
+  color: var(--text-normal);
+  transform: translateY(-50%) scale(1.2);
+}
+
+.header-close-button.kga-single:hover {
+  opacity: 1;
+  color: var(--text-normal);
+  background: var(--interactive-hover);
+}
+
+/* ========================================
+   4. Scroll Container
+   ======================================== */
+
+.tooltip-scroll-container {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 250px;
+  min-height: auto;
+}
+
+.tooltip-scroll-container.kga-mobile {
+  max-height: 320px;
+  min-height: 140px;
+}
+
+.tooltip-scroll-container.kga-mobile-phone {
+  max-height: 280px;
+  min-height: 120px;
+}
+
+/* ========================================
+   5. Error Section (Merged Tooltip)
+   ======================================== */
+
+.error-section {
+  padding: 8px 12px;
+}
+
+.error-section.kga-mobile {
+  padding: 11px 13px;
+}
+
+.error-section.kga-mobile-phone {
+  padding: 10px 12px;
+}
+
+.error-section.kga-bordered {
+  border-top: 1px solid var(--background-modifier-border-hover);
+}
+
+/* Error line layout */
+.error-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  min-height: 28px;
+}
+
+.error-line.kga-mobile {
+  gap: 7px;
+  min-height: 34px;
+}
+
+.error-line.kga-mobile-phone {
+  gap: 6px;
+  min-height: 32px;
+}
+
+/* ========================================
+   6. Error Word Display
+   ======================================== */
+
+.error-word {
+  color: var(--text-error);
+  font-weight: 600;
+  background: rgba(255, 0, 0, 0.1);
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 13px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 60px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.error-word.kga-mobile {
+  padding: 4px 7px;
+  font-size: 13px;
+  min-width: 70px;
+  max-width: 110px;
+  line-height: 1.3;
+}
+
+.error-word.kga-mobile-phone {
+  padding: 3px 6px;
+  font-size: 12px;
+  min-width: 70px;
+  max-width: 100px;
+  line-height: 1.3;
+}
+
+/* Error word with AI status */
+.error-word.kga-ai-corrected {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.error-word.kga-ai-exception {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.error-word.kga-ai-keep-original {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+/* Error word container */
+.error-word-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Part-of-speech info */
+.pos-info {
+  color: var(--text-accent);
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.9;
+  background: rgba(59, 130, 246, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.pos-info.kga-mobile-phone {
+  font-size: 9px;
+}
+
+/* Arrow separator */
+.error-line > span.kga-arrow {
+  color: var(--text-muted);
+  font-weight: bold;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.error-line > span.kga-arrow.kga-mobile {
+  font-size: 13px;
+}
+
+.error-line > span.kga-arrow.kga-mobile-phone {
+  font-size: 12px;
+}
+
+/* ========================================
+   7. Suggestions List
+   ======================================== */
+
+.suggestions-list {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  flex-wrap: wrap;
+  overflow: hidden;
+}
+
+.suggestions-list.kga-mobile {
+  gap: 4px;
+}
+
+.suggestions-list.kga-mobile-phone {
+  gap: 3px;
+}
+
+/* Suggestion buttons */
+.suggestion-button {
+  color: var(--text-normal);
+  font-weight: 600;
+  background: rgba(59, 130, 246, 0.1);
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.suggestion-button.kga-mobile {
+  padding: 4px 7px;
+  font-size: 13px;
+  touch-action: manipulation;
+}
+
+.suggestion-button.kga-mobile-phone {
+  padding: 3px 6px;
+  font-size: 12px;
+  touch-action: manipulation;
+}
+
+.suggestion-button:hover {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+/* ========================================
+   8. Main Content (Single Tooltip)
+   ======================================== */
+
+.tooltip-main-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  white-space: nowrap;
+  flex: 1;
+  min-height: 0;
+}
+
+.tooltip-main-content.kga-mobile {
+  gap: 5px;
+  padding: 5px 9px;
+}
+
+.tooltip-main-content.kga-mobile-phone {
+  gap: 4px;
+  padding: 4px 8px;
+}
+
+/* ========================================
+   9. Actions Container
+   ======================================== */
+
+.tooltip-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-top: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  gap: 6px;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.tooltip-actions.kga-mobile {
+  padding: 7px 11px 9px 11px;
+  gap: 7px;
+  min-height: 44px;
+}
+
+.tooltip-actions.kga-mobile-phone {
+  padding: 8px 12px 10px 12px;
+  gap: 8px;
+  min-height: 48px;
+}
+
+/* Actions container in single tooltip */
+.actions-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.actions-container.kga-mobile {
+  gap: 7px;
+  min-height: 26px;
+}
+
+.actions-container.kga-mobile-phone {
+  gap: 8px;
+  min-height: 28px;
+}
+
+/* Info text */
+.info-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex: 1;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.info-text.kga-mobile {
+  font-size: 12px;
+  padding-right: 4px;
+}
+
+.info-text.kga-mobile-phone {
+  font-size: 11px;
+  padding-right: 4px;
+}
+
+/* Action buttons group */
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.action-buttons.kga-mobile {
+  gap: 5px;
+  min-height: 30px;
+}
+
+.action-buttons.kga-mobile-phone {
+  gap: 6px;
+  min-height: 32px;
+}
+
+/* ========================================
+   10. Action Buttons
+   ======================================== */
+
+/* Ignore button (red X) */
+.ignore-all-button,
+.ignore-button {
+  background: #ef4444;
+  color: white;
+  border: 1px solid #ef4444;
+  border-radius: 4px;
+  padding: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+}
+
+.ignore-all-button.kga-mobile,
+.ignore-button.kga-mobile {
+  border-radius: 6px;
+  padding: 7px;
+  font-size: 15px;
+  min-height: 30px;
+  min-width: 30px;
+  max-height: 30px;
+  touch-action: manipulation;
+}
+
+.ignore-all-button.kga-mobile-phone,
+.ignore-button.kga-mobile-phone {
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 16px;
+  min-height: 32px;
+  min-width: 32px;
+  max-height: 32px;
+  touch-action: manipulation;
+}
+
+.ignore-button.kga-single {
+  background: var(--interactive-normal);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  padding: 6px;
+  font-size: 12px;
+  min-height: auto;
+  min-width: auto;
+  max-height: none;
+}
+
+.ignore-button.kga-single.kga-mobile {
+  border-radius: 5px;
+  padding: 6px;
+  min-height: 28px;
+  min-width: 28px;
+  max-height: 28px;
+}
+
+.ignore-button.kga-single.kga-mobile-phone {
+  border-radius: 5px;
+  padding: 5px;
+  font-size: 11px;
+  min-height: 26px;
+  min-width: 26px;
+  max-height: 26px;
+}
+
+.ignore-all-button:hover,
+.ignore-button:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+}
+
+.ignore-button.kga-single:hover {
+  background: var(--interactive-hover);
+  transform: translateY(-1px);
+}
+
+/* Apply button (green check) */
+.apply-all-button {
+  background: #10b981;
+  color: white;
+  border: 1px solid #10b981;
+  border-radius: 4px;
+  padding: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.apply-all-button.kga-mobile {
+  border-radius: 6px;
+  padding: 7px;
+  font-size: 15px;
+  min-height: 30px;
+  min-width: 30px;
+  max-height: 30px;
+  touch-action: manipulation;
+}
+
+.apply-all-button.kga-mobile-phone {
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 16px;
+  min-height: 32px;
+  min-width: 32px;
+  max-height: 32px;
+  touch-action: manipulation;
+}
+
+.apply-all-button:hover {
+  background: #059669;
+  border-color: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+/* Exception button (book icon) */
+.exception-button {
+  background: var(--interactive-normal);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  padding: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.exception-button.kga-mobile {
+  border-radius: 5px;
+  padding: 6px;
+  font-size: 14px;
+  min-height: 28px;
+  min-width: 28px;
+  max-height: 28px;
+  touch-action: manipulation;
+}
+
+.exception-button.kga-mobile-phone {
+  border-radius: 5px;
+  padding: 5px;
+  font-size: 13px;
+  min-height: 26px;
+  min-width: 26px;
+  max-height: 26px;
+  touch-action: manipulation;
+}
+
+.exception-button:hover {
+  background: var(--interactive-hover);
+  transform: translateY(-1px);
+}
+
+/* ========================================
+   11. Help Area
+   ======================================== */
+
+.help-container {
+  display: flex;
+  align-items: center;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.tooltip-help-area {
+  padding: 6px 10px;
+  border-top: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.3;
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 24px;
+  flex-shrink: 0;
+}
+
+.tooltip-help-area.kga-mobile {
+  padding: 5px 9px;
+  font-size: 11px;
+  min-height: 22px;
+}
+
+.tooltip-help-area.kga-mobile-phone {
+  padding: 4px 8px;
+  font-size: 10px;
+  min-height: 20px;
+}
+
+/* Help icon */
+.help-container > span {
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--text-muted);
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: bold;
+  transition: all 0.2s;
+  background: var(--background-primary);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.help-container > span.kga-mobile {
+  width: 18px;
+  height: 18px;
+  font-size: 9px;
+}
+
+.help-container > span.kga-mobile-phone {
+  width: 16px;
+  height: 16px;
+  font-size: 8px;
+}
+
+.help-container > span:hover {
+  background: var(--interactive-hover);
+  border-color: var(--text-normal);
+  color: var(--text-normal);
+  transform: scale(1.1);
+}
+
+/* ========================================
+   12. AI Analysis Area
+   ======================================== */
+
+.tooltip-ai-area {
+  padding: 6px 10px;
+  border-top: 1px solid var(--background-modifier-border);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(16, 185, 129, 0.05));
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  flex-shrink: 0;
+}
+
+.tooltip-ai-area.kga-mobile {
+  padding: 5px 9px;
+  font-size: 11px;
+  gap: 5px;
+  min-height: 22px;
+}
+
+.tooltip-ai-area.kga-mobile-phone {
+  padding: 4px 8px;
+  font-size: 10px;
+  gap: 4px;
+  min-height: 20px;
+}
+
+.tooltip-ai-area > span:first-child {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.tooltip-ai-area > span:last-child {
+  flex: 1;
+  font-style: italic;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ========================================
+   13. Cursor Hidden State
+   ======================================== */
+
+.korean-tooltip-cursor-hidden .cm-cursor {
+  display: none !important;
+}
+
+.korean-tooltip-cursor-hidden .cm-focused {
+  caret-color: transparent !important;
+}

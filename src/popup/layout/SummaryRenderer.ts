@@ -212,14 +212,7 @@ export class SummaryRenderer implements IPopupComponent {
     const container = createEl('div', {
       cls: 'korean-grammar-popup-summary-container'
     });
-    
-    // 컨테이너 스타일 설정
-    Object.assign(container.style, {
-      borderTop: '1px solid var(--background-modifier-border)',
-      backgroundColor: 'var(--background-secondary)',
-      transition: 'all 0.3s ease'
-    });
-    
+
     return container;
   }
   
@@ -228,84 +221,48 @@ export class SummaryRenderer implements IPopupComponent {
    */
   private renderHeader(): void {
     if (!this.containerElement) return;
-    
+
     // 헤더 요소 생성
     this.headerElement = createEl('div', {
       cls: 'korean-grammar-popup-summary-header',
       parent: this.containerElement
     });
-    
-    // 헤더 스타일 설정
-    Object.assign(this.headerElement.style, {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '12px 16px',
-      cursor: 'pointer',
-      backgroundColor: 'var(--background-secondary)'
-    });
-    
+
     // 헤더 클릭 이벤트 (토글)
     this.headerElement.addEventListener('click', () => {
       this.toggleExpanded();
     });
-    
+
     // 제목 및 통계 정보
     const titleContainer = createEl('div', {
       cls: 'korean-grammar-popup-summary-title-container',
       parent: this.headerElement
     });
-    
-    Object.assign(titleContainer.style, {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px'
-    });
-    
+
     // 아이콘
     const iconElement = createEl('div', {
       cls: 'korean-grammar-popup-summary-icon',
       parent: titleContainer
     });
-    
+
     setIcon(iconElement, 'list');
-    Object.assign(iconElement.style, {
-      width: '16px',
-      height: '16px',
-      color: 'var(--text-muted)'
-    });
-    
-    // 제목 (텍스트로 대체)
-    const titleElement = createEl('div', {
+
+    // 제목
+    createEl('div', {
       cls: 'korean-grammar-popup-summary-title',
       text: '오류 요약',
       parent: titleContainer
     });
-    
-    Object.assign(titleElement.style, {
-      margin: '0',
-      fontSize: '14px',
-      fontWeight: '600',
-      color: 'var(--text-normal)'
-    });
-    
+
     // 통계 정보
     this.statsElement = createEl('span', {
       cls: 'korean-grammar-popup-summary-stats',
       parent: titleContainer
     });
-    
-    Object.assign(this.statsElement.style, {
-      fontSize: '12px',
-      color: 'var(--text-muted)',
-      backgroundColor: 'var(--background-modifier-border-hover)',
-      padding: '2px 6px',
-      borderRadius: '4px'
-    });
-    
+
     // 토글 버튼
     this.renderToggleButton();
-    
+
     // 초기 통계 업데이트
     this.updateStats();
   }
@@ -315,38 +272,18 @@ export class SummaryRenderer implements IPopupComponent {
    */
   private renderToggleButton(): void {
     if (!this.headerElement) return;
-    
+
     this.toggleButtonElement = createEl('button', {
       cls: 'korean-grammar-popup-summary-toggle',
       parent: this.headerElement
     });
-    
-    // 토글 버튼 스타일
-    Object.assign(this.toggleButtonElement.style, {
-      padding: '4px',
-      border: 'none',
-      borderRadius: '4px',
-      backgroundColor: 'transparent',
-      color: 'var(--text-muted)',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease'
-    });
-    
+
     // 토글 버튼 클릭 이벤트
     this.toggleButtonElement.addEventListener('click', (e) => {
       e.stopPropagation(); // 헤더 클릭 이벤트 방지
       this.toggleExpanded();
     });
-    
-    // 호버 효과
-    this.toggleButtonElement.addEventListener('mouseenter', () => {
-      this.toggleButtonElement!.style.backgroundColor = 'var(--background-modifier-hover)';
-    });
-    
-    this.toggleButtonElement.addEventListener('mouseleave', () => {
-      this.toggleButtonElement!.style.backgroundColor = 'transparent';
-    });
-    
+
     // 초기 토글 버튼 업데이트
     this.updateToggleButton();
   }
@@ -356,21 +293,18 @@ export class SummaryRenderer implements IPopupComponent {
    */
   private renderContent(): void {
     if (!this.containerElement) return;
-    
+
     // 콘텐츠 영역 생성
+    const classes = ['korean-grammar-popup-summary-content'];
+    if (Platform.isMobile) {
+      classes.push('kga-mobile');
+    }
+
     this.contentElement = createEl('div', {
-      cls: 'korean-grammar-popup-summary-content',
+      cls: classes,
       parent: this.containerElement
     });
-    
-    // 콘텐츠 스타일 설정
-    Object.assign(this.contentElement.style, {
-      padding: '0 16px 16px 16px',
-      maxHeight: Platform.isMobile ? '200px' : '300px',
-      overflow: 'auto',
-      transition: 'all 0.3s ease'
-    });
-    
+
     // 오류 목록 렌더링
     this.renderErrorList();
   }
@@ -380,19 +314,13 @@ export class SummaryRenderer implements IPopupComponent {
    */
   private renderErrorList(): void {
     if (!this.contentElement) return;
-    
+
     // 오류 목록 컨테이너 생성
     this.errorListElement = createEl('div', {
       cls: 'korean-grammar-popup-summary-error-list',
       parent: this.contentElement
     });
-    
-    Object.assign(this.errorListElement.style, {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '8px'
-    });
-    
+
     // 초기 오류 목록 업데이트
     this.updateErrorList();
   }
@@ -408,39 +336,19 @@ export class SummaryRenderer implements IPopupComponent {
     const card = createEl('div', {
       cls: 'korean-grammar-popup-summary-error-card'
     });
-    
-    // 카드 스타일
-    Object.assign(card.style, {
-      padding: '12px',
-      border: '1px solid var(--background-modifier-border)',
-      borderRadius: '6px',
-      backgroundColor: 'var(--background-primary)',
-      transition: 'all 0.2s ease'
-    });
-    
-    // 호버 효과
-    card.addEventListener('mouseenter', () => {
-      card.style.borderColor = 'var(--interactive-accent)';
-      card.style.backgroundColor = 'var(--background-modifier-hover)';
-    });
-    
-    card.addEventListener('mouseleave', () => {
-      card.style.borderColor = 'var(--background-modifier-border)';
-      card.style.backgroundColor = 'var(--background-primary)';
-    });
-    
+
     // 카드 헤더
     const cardHeader = this.createErrorCardHeader(correction, index, aiResult);
     card.appendChild(cardHeader);
-    
+
     // 카드 콘텐츠
     const cardContent = this.createErrorCardContent(correction, index, aiResult);
     card.appendChild(cardContent);
-    
+
     // 카드 액션
     const cardActions = this.createErrorCardActions(correction, index);
     card.appendChild(cardActions);
-    
+
     return card;
   }
   
@@ -451,34 +359,18 @@ export class SummaryRenderer implements IPopupComponent {
     const header = createEl('div', {
       cls: 'korean-grammar-popup-summary-error-card-header'
     });
-    
-    Object.assign(header.style, {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: '8px'
-    });
-    
+
     // 원본 텍스트
-    const originalElement = createEl('span', {
+    createEl('span', {
       cls: 'korean-grammar-popup-summary-error-original',
       text: correction.original,
       parent: header
     });
-    
-    Object.assign(originalElement.style, {
-      fontSize: '13px',
-      fontWeight: '600',
-      color: 'var(--text-error)',
-      backgroundColor: 'var(--background-modifier-error)',
-      padding: '2px 6px',
-      borderRadius: '3px'
-    });
-    
+
     // 상태 배지
     const statusBadge = this.createStatusBadge(correction, aiResult);
     header.appendChild(statusBadge);
-    
+
     return header;
   }
   
@@ -486,31 +378,20 @@ export class SummaryRenderer implements IPopupComponent {
    * 상태 배지 생성
    */
   private createStatusBadge(correction: Correction, aiResult?: AIAnalysisResult): HTMLElement {
-    const badge = createEl('span', {
-      cls: 'korean-grammar-popup-summary-error-status-badge'
-    });
-    
+    const classes = ['korean-grammar-popup-summary-error-status-badge'];
     let badgeText = '오류';
-    let badgeColor = 'var(--text-error)';
-    let badgeBackground = 'var(--background-modifier-error)';
-    
+
     // AI 결과가 있는 경우 상태 업데이트
     if (aiResult) {
       badgeText = `AI 분석 (${aiResult.confidence}%)`;
-      badgeColor = 'var(--text-accent)';
-      badgeBackground = 'var(--background-modifier-success)';
+      classes.push('kga-ai-analyzed');
     }
-    
-    badge.textContent = badgeText;
-    Object.assign(badge.style, {
-      fontSize: '10px',
-      fontWeight: '500',
-      color: badgeColor,
-      backgroundColor: badgeBackground,
-      padding: '2px 6px',
-      borderRadius: '3px'
+
+    const badge = createEl('span', {
+      cls: classes,
+      text: badgeText
     });
-    
+
     return badge;
   }
   
@@ -521,62 +402,39 @@ export class SummaryRenderer implements IPopupComponent {
     const content = createEl('div', {
       cls: 'korean-grammar-popup-summary-error-card-content'
     });
-    
+
     // 수정 제안 목록
     if (correction.corrected && correction.corrected.length > 0) {
       const suggestionsContainer = createEl('div', {
         cls: 'korean-grammar-popup-summary-error-suggestions',
         parent: content
       });
-      
-      Object.assign(suggestionsContainer.style, {
-        marginBottom: '8px'
-      });
-      
-      const suggestionsLabel = createEl('div', {
+
+      createEl('div', {
         cls: 'korean-grammar-popup-summary-error-suggestions-label',
         text: '수정 제안:',
         parent: suggestionsContainer
       });
-      
-      Object.assign(suggestionsLabel.style, {
-        fontSize: '11px',
-        color: 'var(--text-muted)',
-        marginBottom: '4px'
-      });
-      
+
       const suggestionsList = createEl('div', {
         cls: 'korean-grammar-popup-summary-error-suggestions-list',
         parent: suggestionsContainer
       });
-      
-      Object.assign(suggestionsList.style, {
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '4px'
-      });
-      
+
       // 각 수정 제안 렌더링
       correction.corrected.forEach((suggestion, suggestionIndex) => {
+        const isSelected = aiResult?.selectedValue === suggestion;
+        const classes = ['korean-grammar-popup-summary-error-suggestion'];
+        if (isSelected) {
+          classes.push('kga-selected');
+        }
+
         const suggestionElement = createEl('span', {
-          cls: 'korean-grammar-popup-summary-error-suggestion',
+          cls: classes,
           text: suggestion,
           parent: suggestionsList
         });
-        
-        const isSelected = aiResult?.selectedValue === suggestion;
-        
-        Object.assign(suggestionElement.style, {
-          fontSize: '12px',
-          padding: '2px 6px',
-          borderRadius: '3px',
-          cursor: 'pointer',
-          border: isSelected ? '1px solid var(--interactive-accent)' : '1px solid var(--background-modifier-border)',
-          backgroundColor: isSelected ? 'var(--background-modifier-success)' : 'var(--background-secondary)',
-          color: isSelected ? 'var(--text-accent)' : 'var(--text-normal)',
-          transition: 'all 0.2s ease'
-        });
-        
+
         // 클릭 이벤트
         suggestionElement.addEventListener('click', () => {
           this.handleErrorCardAction('apply-suggestion', index, correction, {
@@ -584,54 +442,27 @@ export class SummaryRenderer implements IPopupComponent {
             suggestionIndex
           });
         });
-        
-        // 호버 효과
-        suggestionElement.addEventListener('mouseenter', () => {
-          suggestionElement.style.backgroundColor = 'var(--background-modifier-hover)';
-        });
-        
-        suggestionElement.addEventListener('mouseleave', () => {
-          suggestionElement.style.backgroundColor = isSelected ? 'var(--background-modifier-success)' : 'var(--background-secondary)';
-        });
       });
     }
-    
+
     // 도움말 텍스트
     if (correction.help) {
-      const helpElement = createEl('div', {
+      createEl('div', {
         cls: 'korean-grammar-popup-summary-error-help',
         text: correction.help,
         parent: content
       });
-      
-      Object.assign(helpElement.style, {
-        fontSize: '11px',
-        color: 'var(--text-muted)',
-        fontStyle: 'italic',
-        lineHeight: '1.4'
-      });
     }
-    
+
     // AI 분석 결과 (있는 경우)
     if (aiResult && aiResult.reasoning) {
-      const aiReasoningElement = createEl('div', {
+      createEl('div', {
         cls: 'korean-grammar-popup-summary-error-ai-reasoning',
         text: `AI 분석: ${aiResult.reasoning}`,
         parent: content
       });
-      
-      Object.assign(aiReasoningElement.style, {
-        fontSize: '11px',
-        color: 'var(--text-accent)',
-        fontStyle: 'italic',
-        lineHeight: '1.4',
-        marginTop: '6px',
-        padding: '6px',
-        backgroundColor: 'var(--background-modifier-border)',
-        borderRadius: '3px'
-      });
     }
-    
+
     return content;
   }
   
@@ -642,29 +473,19 @@ export class SummaryRenderer implements IPopupComponent {
     const actions = createEl('div', {
       cls: 'korean-grammar-popup-summary-error-card-actions'
     });
-    
-    Object.assign(actions.style, {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'flex-end',
-      gap: '6px',
-      marginTop: '8px',
-      paddingTop: '8px',
-      borderTop: '1px solid var(--background-modifier-border)'
-    });
-    
+
     // 편집 버튼
     const editButton = this.createActionButton('edit', '편집', () => {
       this.handleErrorCardAction('edit-original', index, correction);
     });
     actions.appendChild(editButton);
-    
+
     // 무시 버튼
     const ignoreButton = this.createActionButton('ignore', '무시', () => {
       this.handleErrorCardAction('ignore-error', index, correction);
     });
     actions.appendChild(ignoreButton);
-    
+
     // 도움말 버튼
     if (correction.help) {
       const helpButton = this.createActionButton('help', '?', () => {
@@ -672,7 +493,7 @@ export class SummaryRenderer implements IPopupComponent {
       });
       actions.appendChild(helpButton);
     }
-    
+
     return actions;
   }
   
@@ -684,34 +505,14 @@ export class SummaryRenderer implements IPopupComponent {
       cls: [`korean-grammar-popup-summary-error-action-button`, `korean-grammar-popup-summary-error-action-button-${type}`],
       text
     });
-    
-    Object.assign(button.style, {
-      padding: '4px 8px',
-      border: '1px solid var(--background-modifier-border)',
-      borderRadius: '3px',
-      backgroundColor: 'var(--background-secondary)',
-      color: 'var(--text-normal)',
-      fontSize: '10px',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease'
-    });
-    
+
     // 클릭 이벤트
     button.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       onClick();
     });
-    
-    // 호버 효과
-    button.addEventListener('mouseenter', () => {
-      button.style.backgroundColor = 'var(--background-modifier-hover)';
-    });
-    
-    button.addEventListener('mouseleave', () => {
-      button.style.backgroundColor = 'var(--background-secondary)';
-    });
-    
+
     return button;
   }
   
@@ -724,15 +525,13 @@ export class SummaryRenderer implements IPopupComponent {
    */
   private updateExpandedState(): void {
     if (!this.containerElement || !this.contentElement) return;
-    
+
     if (this.isExpanded) {
-      this.contentElement.style.display = 'block';
-      this.contentElement.style.maxHeight = Platform.isMobile ? '200px' : '300px';
+      this.contentElement.classList.remove('kga-collapsed');
     } else {
-      this.contentElement.style.display = 'none';
-      this.contentElement.style.maxHeight = '0';
+      this.contentElement.classList.add('kga-collapsed');
     }
-    
+
     Logger.debug('SummaryRenderer: 확장 상태 업데이트', { isExpanded: this.isExpanded });
   }
   
@@ -741,21 +540,18 @@ export class SummaryRenderer implements IPopupComponent {
    */
   private updateToggleButton(): void {
     if (!this.toggleButtonElement) return;
-    
+
     // 토글 버튼 아이콘 업데이트
     const iconName = this.isExpanded ? 'chevron-up' : 'chevron-down';
     this.toggleButtonElement.empty();
-    
+
     const iconElement = createEl('div', {
+      cls: 'korean-grammar-popup-summary-toggle-icon',
       parent: this.toggleButtonElement
     });
-    
+
     setIcon(iconElement, iconName);
-    Object.assign(iconElement.style, {
-      width: '16px',
-      height: '16px'
-    });
-    
+
     // 툴팁 업데이트
     const tooltip = this.isExpanded ? '오류 요약 접기' : '오류 요약 펼치기';
     this.toggleButtonElement.setAttribute('title', tooltip);
@@ -791,40 +587,32 @@ export class SummaryRenderer implements IPopupComponent {
    */
   private updateErrorList(): void {
     if (!this.errorListElement) return;
-    
+
     // 기존 오류 카드들 제거
     this.errorListElement.empty();
-    
+
     if (this.currentCorrections.length === 0) {
       // 오류가 없는 경우 플레이스홀더 표시
-      const placeholder = createEl('div', {
+      createEl('div', {
         cls: 'korean-grammar-popup-summary-no-errors',
         text: '현재 페이지에 오류가 없습니다.',
         parent: this.errorListElement
       });
-      
-      Object.assign(placeholder.style, {
-        textAlign: 'center',
-        color: 'var(--text-muted)',
-        fontSize: '12px',
-        padding: '20px',
-        fontStyle: 'italic'
-      });
-      
+
       return;
     }
-    
+
     // 오류 카드들 렌더링
     this.currentCorrections.forEach((correction, index) => {
       // AI 분석 결과 찾기
-      const aiResult = this.aiAnalysisResults.find(result => 
+      const aiResult = this.aiAnalysisResults.find(result =>
         result.correctionIndex === index
       );
-      
+
       const errorCard = this.createErrorCard(correction.correction, index, aiResult);
       this.errorListElement!.appendChild(errorCard);
     });
-    
+
     Logger.debug('SummaryRenderer: 오류 목록 업데이트 완료', {
       correctionCount: this.currentCorrections.length
     });
@@ -874,14 +662,15 @@ export class SummaryRenderer implements IPopupComponent {
    */
   handleResize(): void {
     if (!this.contentElement) return;
-    
+
     // 모바일에서 최대 높이 조정
+    // NOTE: 동적 계산이 필요하므로 인라인 스타일 유지
     if (Platform.isMobile) {
       const windowHeight = window.innerHeight;
       const maxHeight = Math.min(200, Math.floor(windowHeight * 0.3));
       this.contentElement.style.maxHeight = `${maxHeight}px`;
     }
-    
+
     Logger.debug('SummaryRenderer: 리사이즈 처리 완료');
   }
   

@@ -515,64 +515,41 @@ export class MobileEventHandler {
     Logger.log('MobileEventHandler: 편집 모드 진입', {
       correctionIndex: context.correctionIndex
     });
-    
+
     // 이미 편집 중인 경우 무시
     if (this.editModeElements.has(target)) {
       return;
     }
-    
+
     // 편집 가능한 input 요소 생성
     const input = document.createElement('input');
     input.type = 'text';
     input.value = target.textContent || '';
     input.className = 'error-original-input mobile-edit-input';
-    
-    // 모바일 최적화 스타일
-    input.style.cssText = `
-      width: 100%;
-      min-width: 200px;
-      padding: 8px 12px;
-      font-size: 16px;
-      border: 2px solid var(--interactive-accent);
-      border-radius: 6px;
-      background: var(--background-primary);
-      color: var(--text-normal);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      outline: none;
-    `;
-    
+
     // data 속성 복사
     if (context.correctionIndex !== undefined) {
       input.setAttribute('data-correction-index', context.correctionIndex.toString());
     }
     input.setAttribute('data-edit-mode', 'true');
-    
+
     // 완료/취소 버튼 컨테이너 생성
     const buttonContainer = this.createEditButtonContainer(input, target, context);
-    
+
     // 편집 컨테이너 생성
     const editContainer = document.createElement('div');
     editContainer.className = 'mobile-edit-container';
-    editContainer.style.cssText = `
-      position: relative;
-      display: inline-block;
-      min-width: 250px;
-      padding: 4px;
-      background: var(--background-secondary);
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    `;
-    
+
     editContainer.appendChild(input);
     editContainer.appendChild(buttonContainer);
-    
+
     // 원본 요소 숨기고 편집 컨테이너 삽입
-    target.style.display = 'none';
+    target.classList.add('kga-mobile-edit-hidden');
     target.parentNode?.insertBefore(editContainer, target);
-    
+
     // 편집 상태 기록
     this.editModeElements.set(target, input);
-    
+
     // 포커스 및 선택
     setTimeout(() => {
       input.focus();
@@ -584,67 +561,35 @@ export class MobileEventHandler {
    * 편집 버튼 컨테이너 생성
    */
   private createEditButtonContainer(
-    input: HTMLInputElement, 
-    target: HTMLElement, 
+    input: HTMLInputElement,
+    target: HTMLElement,
     context: EventContext
   ): HTMLElement {
-    
+
     const container = document.createElement('div');
     container.className = 'mobile-edit-buttons';
-    container.style.cssText = `
-      display: flex;
-      gap: 8px;
-      margin-top: 8px;
-      justify-content: flex-end;
-    `;
-    
+
     // 완료 버튼
     const confirmBtn = document.createElement('button');
     confirmBtn.textContent = '✓';
     confirmBtn.className = 'mobile-edit-confirm';
-    confirmBtn.style.cssText = `
-      width: 40px;
-      height: 40px;
-      background: var(--interactive-accent);
-      color: var(--text-on-accent);
-      border: none;
-      border-radius: 6px;
-      font-size: 18px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    `;
-    
+
     // 취소 버튼
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = '✕';
     cancelBtn.className = 'mobile-edit-cancel';
-    cancelBtn.style.cssText = `
-      width: 40px;
-      height: 40px;
-      background: var(--background-modifier-border);
-      color: var(--text-normal);
-      border: none;
-      border-radius: 6px;
-      font-size: 18px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    `;
-    
+
     // 이벤트 리스너
     confirmBtn.addEventListener('click', (e) => {
       e.preventDefault();
       this.confirmEdit(input, target, context);
     });
-    
+
     cancelBtn.addEventListener('click', (e) => {
       e.preventDefault();
       this.cancelEdit(input, target);
     });
-    
+
     // Enter/Escape 키 처리
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -655,10 +600,10 @@ export class MobileEventHandler {
         this.cancelEdit(input, target);
       }
     });
-    
+
     container.appendChild(confirmBtn);
     container.appendChild(cancelBtn);
-    
+
     return container;
   }
 
@@ -711,19 +656,19 @@ export class MobileEventHandler {
   private exitEditMode(target: HTMLElement): void {
     const input = this.editModeElements.get(target);
     if (!input) return;
-    
+
     // 편집 컨테이너 제거
     const editContainer = input.closest('.mobile-edit-container');
     if (editContainer) {
       editContainer.remove();
     }
-    
+
     // 원본 요소 다시 표시
-    target.style.display = '';
-    
+    target.classList.remove('kga-mobile-edit-hidden');
+
     // 편집 상태 제거
     this.editModeElements.delete(target);
-    
+
     Logger.debug('MobileEventHandler: 편집 모드 종료 완료');
   }
 

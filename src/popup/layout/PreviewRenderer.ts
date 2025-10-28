@@ -345,17 +345,8 @@ export class PreviewRenderer implements IPopupComponent {
       }
     });
     
-    // 호버 효과
-    button.addEventListener('mouseenter', () => {
-      if (button.hasAttribute('disabled')) return;
-      button.style.backgroundColor = 'var(--background-modifier-hover)';
-    });
-    
-    button.addEventListener('mouseleave', () => {
-      if (button.hasAttribute('disabled')) return;
-      button.style.backgroundColor = 'var(--background-primary)';
-    });
-    
+    // Hover 효과는 CSS :hover로 처리 (preview.css에서 정의)
+
     return button;
   }
   
@@ -561,28 +552,24 @@ export class PreviewRenderer implements IPopupComponent {
       this.pageInfoElement.textContent = `${this.currentPage + 1} / ${this.totalPages}`;
     }
     
-    // 버튼 상태 업데이트
+    // 버튼 상태 업데이트 (CSS 클래스 사용)
     if (this.prevButtonElement) {
       if (this.currentPage <= 0) {
         this.prevButtonElement.setAttribute('disabled', 'true');
-        this.prevButtonElement.style.opacity = '0.5';
-        this.prevButtonElement.style.cursor = 'not-allowed';
+        this.prevButtonElement.addClass('kga-button-disabled');
       } else {
         this.prevButtonElement.removeAttribute('disabled');
-        this.prevButtonElement.style.opacity = '1';
-        this.prevButtonElement.style.cursor = 'pointer';
+        this.prevButtonElement.removeClass('kga-button-disabled');
       }
     }
-    
+
     if (this.nextButtonElement) {
       if (this.currentPage >= this.totalPages - 1) {
         this.nextButtonElement.setAttribute('disabled', 'true');
-        this.nextButtonElement.style.opacity = '0.5';
-        this.nextButtonElement.style.cursor = 'not-allowed';
+        this.nextButtonElement.addClass('kga-button-disabled');
       } else {
         this.nextButtonElement.removeAttribute('disabled');
-        this.nextButtonElement.style.opacity = '1';
-        this.nextButtonElement.style.cursor = 'pointer';
+        this.nextButtonElement.removeClass('kga-button-disabled');
       }
     }
     

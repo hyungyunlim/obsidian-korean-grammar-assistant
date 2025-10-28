@@ -316,7 +316,7 @@ export class LoadingManager {
     // Notice 객체 흉내 (호환성을 위해)
     this.currentNotice = {
       hide: () => {
-        toastContainer.style.animation = 'slideOutDown 0.2s ease-in';
+        toastContainer.addClass('kga-slide-out-down');
         setTimeout(() => {
           toastContainer.remove();
         }, 200);

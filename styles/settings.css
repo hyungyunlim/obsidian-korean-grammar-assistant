@@ -216,3 +216,17 @@
   margin-top: 8px !important;
   font-size: 12px !important;
 }
+
+/* === Tag Hover States === */
+.ksc-tag-hover {
+  background: var(--interactive-accent-hover) !important;
+}
+
+/* === Collapsible Container States === */
+.ksc-container-visible {
+  display: block !important;
+}
+
+.ksc-container-hidden {
+  display: none !important;
+}

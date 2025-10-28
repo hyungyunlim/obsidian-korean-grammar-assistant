@@ -181,18 +181,7 @@ export class HeaderRenderer implements IPopupComponent {
     const container = createEl('div', {
       cls: 'korean-grammar-popup-header-container'
     });
-    
-    // 헤더 스타일 설정
-    Object.assign(container.style, {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '12px 16px',
-      borderBottom: '1px solid var(--background-modifier-border)',
-      backgroundColor: 'var(--background-secondary)',
-      minHeight: '48px'
-    });
-    
+
     return container;
   }
   
@@ -201,61 +190,34 @@ export class HeaderRenderer implements IPopupComponent {
    */
   private renderTitle(): void {
     if (!this.containerElement) return;
-    
+
     // 제목 컨테이너
     const titleContainer = createEl('div', {
       cls: 'korean-grammar-popup-title-container',
       parent: this.containerElement
     });
-    
-    Object.assign(titleContainer.style, {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      flex: '1'
-    });
-    
+
     // 아이콘
     const iconElement = createEl('div', {
       cls: 'korean-grammar-popup-icon',
       parent: titleContainer
     });
-    
+
     setIcon(iconElement, 'spell-check');
-    Object.assign(iconElement.style, {
-      width: '18px',
-      height: '18px',
-      color: 'var(--text-accent)'
-    });
-    
+
     // 제목 텍스트 (div로 변경)
     this.titleElement = createEl('div', {
       cls: 'korean-grammar-popup-title',
       text: this.getTitleText(),
       parent: titleContainer
     });
-    
-    Object.assign(this.titleElement.style, {
-      margin: '0',
-      fontSize: '16px',
-      fontWeight: '600',
-      color: 'var(--text-normal)'
-    });
-    
+
     // 페이지 정보 (긴 텍스트인 경우)
     if (this.context?.state.isLongText) {
       const pageInfoElement = createEl('span', {
         cls: 'korean-grammar-popup-page-info',
         text: this.getPageInfoText(),
         parent: titleContainer
-      });
-      
-      Object.assign(pageInfoElement.style, {
-        fontSize: '12px',
-        color: 'var(--text-muted)',
-        backgroundColor: 'var(--background-modifier-border-hover)',
-        padding: '2px 6px',
-        borderRadius: '4px'
       });
     }
   }
@@ -265,30 +227,24 @@ export class HeaderRenderer implements IPopupComponent {
    */
   private renderButtons(): void {
     if (!this.containerElement) return;
-    
+
     // 버튼 컨테이너
     this.buttonContainerElement = createEl('div', {
       cls: 'korean-grammar-popup-header-buttons',
       parent: this.containerElement
     });
-    
-    Object.assign(this.buttonContainerElement.style, {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '4px'
-    });
-    
+
     // AI 분석 버튼
     this.renderAIButton();
-    
+
     // 설정 버튼 (데스크톱에서만)
     if (!Platform.isMobile) {
       this.renderSettingsButton();
     }
-    
+
     // 도움말 버튼
     this.renderHelpButton();
-    
+
     // 닫기 버튼
     this.renderCloseButton();
   }
@@ -380,57 +336,37 @@ export class HeaderRenderer implements IPopupComponent {
     const button = createEl('button', {
       cls: ['korean-grammar-popup-header-button']
     });
-    
+
     // 버튼 타입별 클래스 추가
     button.classList.add(`korean-grammar-popup-header-button-${options.type}`);
-    
+
     if (options.primary) {
       button.classList.add('korean-grammar-popup-header-button-primary');
     }
-    
+
     if (options.danger) {
       button.classList.add('korean-grammar-popup-header-button-danger');
     }
-    
+
     if (options.iconOnly) {
       button.classList.add('korean-grammar-popup-header-button-icon-only');
     }
-    
-    // 기본 스타일
-    Object.assign(button.style, {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '4px',
-      padding: options.iconOnly ? '6px' : '6px 12px',
-      border: '1px solid var(--background-modifier-border)',
-      borderRadius: '4px',
-      backgroundColor: options.primary 
-        ? 'var(--interactive-accent)' 
-        : 'var(--background-primary)',
-      color: options.primary 
-        ? 'var(--text-on-accent)' 
-        : options.danger 
-          ? 'var(--text-error)'
-          : 'var(--text-normal)',
-      fontSize: '12px',
-      fontWeight: '500',
-      cursor: options.disabled ? 'not-allowed' : 'pointer',
-      opacity: options.disabled ? '0.6' : '1',
-      transition: 'all 0.2s ease'
-    });
-    
+
+    // 활성화/비활성화 상태 클래스 추가
+    if (options.disabled) {
+      button.classList.add('header-button-disabled');
+    } else {
+      button.classList.add('header-button-enabled');
+    }
+
     // 아이콘 추가
     const iconElement = createEl('div', {
       cls: 'korean-grammar-popup-header-button-icon',
       parent: button
     });
-    
+
     setIcon(iconElement, options.icon);
-    Object.assign(iconElement.style, {
-      width: '14px',
-      height: '14px'
-    });
-    
+
     // 텍스트 추가 (아이콘 전용이 아닌 경우)
     if (!options.iconOnly && options.text) {
       const textElement = createEl('span', {
@@ -439,49 +375,28 @@ export class HeaderRenderer implements IPopupComponent {
         parent: button
       });
     }
-    
+
     // 툴팁 설정
     if (options.tooltip) {
       button.setAttribute('aria-label', options.tooltip);
       button.setAttribute('title', options.tooltip);
     }
-    
+
     // 비활성화 상태
     if (options.disabled) {
       button.setAttribute('disabled', 'true');
     }
-    
+
     // 클릭 이벤트
     button.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      
+
       if (options.disabled) return;
-      
+
       this.handleButtonClick(options.type);
     });
-    
-    // 호버 효과
-    button.addEventListener('mouseenter', () => {
-      if (options.disabled) return;
-      
-      if (options.primary) {
-        button.style.backgroundColor = 'var(--interactive-accent-hover)';
-      } else {
-        button.style.backgroundColor = 'var(--background-modifier-hover)';
-      }
-    });
-    
-    button.addEventListener('mouseleave', () => {
-      if (options.disabled) return;
-      
-      if (options.primary) {
-        button.style.backgroundColor = 'var(--interactive-accent)';
-      } else {
-        button.style.backgroundColor = 'var(--background-primary)';
-      }
-    });
-    
+
     return button;
   }
   
@@ -518,34 +433,34 @@ export class HeaderRenderer implements IPopupComponent {
    */
   private updateAIButton(): void {
     if (!this.aiButtonElement) return;
-    
+
     // 버튼 텍스트 업데이트
     const textElement = this.aiButtonElement.querySelector('.korean-grammar-popup-header-button-text');
     if (textElement) {
       textElement.textContent = this.isAiAnalyzing ? 'AI 분석 중...' : '🤖 AI 분석';
     }
-    
+
     // 버튼 상태 업데이트
     if (this.isAiAnalyzing) {
       this.aiButtonElement.setAttribute('disabled', 'true');
-      this.aiButtonElement.style.opacity = '0.6';
-      this.aiButtonElement.style.cursor = 'not-allowed';
+      this.aiButtonElement.classList.add('header-button-disabled');
+      this.aiButtonElement.classList.remove('header-button-enabled');
     } else {
       this.aiButtonElement.removeAttribute('disabled');
-      this.aiButtonElement.style.opacity = '1';
-      this.aiButtonElement.style.cursor = 'pointer';
+      this.aiButtonElement.classList.remove('header-button-disabled');
+      this.aiButtonElement.classList.add('header-button-enabled');
     }
-    
+
     // 아이콘 애니메이션 (분석 중일 때)
     const iconElement = this.aiButtonElement.querySelector('.korean-grammar-popup-header-button-icon');
     if (iconElement && iconElement instanceof HTMLElement) {
       if (this.isAiAnalyzing) {
-        iconElement.style.animation = 'spin 1s linear infinite';
+        iconElement.classList.add('kga-spin');
       } else {
-        iconElement.style.animation = '';
+        iconElement.classList.remove('kga-spin');
       }
     }
-    
+
     Logger.debug('HeaderRenderer: AI 버튼 업데이트', { isAnalyzing: this.isAiAnalyzing });
   }
   
@@ -675,17 +590,17 @@ export class HeaderRenderer implements IPopupComponent {
   setButtonEnabled(type: HeaderButtonType, enabled: boolean): void {
     const button = this.getButtonElement(type);
     if (!button) return;
-    
+
     if (enabled) {
       button.removeAttribute('disabled');
-      button.style.opacity = '1';
-      button.style.cursor = 'pointer';
+      button.classList.remove('header-button-disabled');
+      button.classList.add('header-button-enabled');
     } else {
       button.setAttribute('disabled', 'true');
-      button.style.opacity = '0.6';
-      button.style.cursor = 'not-allowed';
+      button.classList.add('header-button-disabled');
+      button.classList.remove('header-button-enabled');
     }
-    
+
     Logger.debug('HeaderRenderer: 버튼 활성화 상태 변경', { type, enabled });
   }
   

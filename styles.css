@@ -112,6 +112,75 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   opacity: 0 !important;
   pointer-events: none !important;
 }
+.kga-button-disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+.kga-button-enabled {
+  opacity: 1 !important;
+  cursor: pointer !important;
+}
+.kga-collapsed {
+  display: none !important;
+  max-height: 0 !important;
+}
+.kga-expanded {
+  display: block !important;
+}
+.kga-spin {
+  animation: kga-spin-animation 1s linear infinite !important;
+}
+@keyframes kga-spin-animation {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.kga-slide-out-down {
+  animation: kga-slideOutDown 0.2s ease-in !important;
+}
+@keyframes kga-slideOutDown {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+}
+.kga-dynamic-position {
+  position: fixed;
+  left: var(--kga-pos-left, 0);
+  top: var(--kga-pos-top, 0);
+  width: var(--kga-width, auto);
+  height: var(--kga-height, auto);
+  z-index: var(--kga-z-index, 1000);
+}
+.kga-block {
+  display: block !important;
+}
+.kga-inline-block {
+  display: inline-block !important;
+}
+.kga-flex {
+  display: flex !important;
+}
+.kga-opacity-full {
+  opacity: 1 !important;
+}
+.kga-opacity-half {
+  opacity: 0.5 !important;
+}
+.kga-opacity-60 {
+  opacity: 0.6 !important;
+}
+.kga-opacity-0 {
+  opacity: 0 !important;
+}
 
 /* styles/header.css */
 #correctionPopup .header {
@@ -190,6 +259,98 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   border-top: 1px solid var(--background-modifier-border);
   flex-shrink: 0;
   background: var(--background-primary);
+}
+#correctionPopup .header-button-disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
+#correctionPopup .header-button-enabled {
+  opacity: 1 !important;
+  cursor: pointer !important;
+}
+#correctionPopup .header-button-primary-hover {
+  background-color: var(--interactive-accent-hover) !important;
+}
+#correctionPopup .header-button-secondary-hover {
+  background-color: var(--background-modifier-hover) !important;
+}
+#correctionPopup .header-button-primary {
+  background-color: var(--interactive-accent) !important;
+}
+#correctionPopup .header-button-secondary {
+  background-color: var(--background-primary) !important;
+}
+.korean-grammar-popup-header-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background-color: var(--background-secondary);
+  min-height: 48px;
+}
+.korean-grammar-popup-title-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+.korean-grammar-popup-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--text-accent);
+}
+.korean-grammar-popup-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+.korean-grammar-popup-page-info {
+  font-size: 12px;
+  color: var(--text-muted);
+  background-color: var(--background-modifier-border-hover);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.korean-grammar-popup-header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.korean-grammar-popup-header-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.korean-grammar-popup-header-button-icon-only {
+  padding: 6px !important;
+}
+.korean-grammar-popup-header-button-primary {
+  background-color: var(--interactive-accent) !important;
+  color: var(--text-on-accent) !important;
+}
+.korean-grammar-popup-header-button-primary:hover {
+  background-color: var(--interactive-accent-hover) !important;
+}
+.korean-grammar-popup-header-button-danger {
+  color: var(--text-error) !important;
+}
+.korean-grammar-popup-header-button:not(.korean-grammar-popup-header-button-primary):hover {
+  background-color: var(--background-modifier-hover);
+}
+.korean-grammar-popup-header-button-icon {
+  width: 14px;
+  height: 14px;
 }
 
 /* styles/preview.css */
@@ -661,6 +822,191 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   font-size: 12px;
   color: var(--text-muted);
   opacity: 0.8;
+}
+.korean-grammar-popup-summary-container {
+  border-top: 1px solid var(--background-modifier-border);
+  background-color: var(--background-secondary);
+  transition: all 0.3s ease;
+}
+.korean-grammar-popup-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  cursor: pointer;
+  background-color: var(--background-secondary);
+}
+.korean-grammar-popup-summary-title-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.korean-grammar-popup-summary-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+}
+.korean-grammar-popup-summary-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+.korean-grammar-popup-summary-stats {
+  font-size: 12px;
+  color: var(--text-muted);
+  background-color: var(--background-modifier-border-hover);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.korean-grammar-popup-summary-toggle {
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  background-color: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.korean-grammar-popup-summary-toggle:hover {
+  background-color: var(--background-modifier-hover);
+}
+.korean-grammar-popup-summary-toggle .korean-grammar-popup-summary-toggle-icon {
+  width: 16px;
+  height: 16px;
+}
+.korean-grammar-popup-summary-content {
+  padding: 0 16px 16px 16px;
+  max-height: 300px;
+  overflow: auto;
+  transition: all 0.3s ease;
+}
+.korean-grammar-popup-summary-content.kga-mobile {
+  max-height: 200px;
+}
+.korean-grammar-popup-summary-content.kga-collapsed {
+  display: none;
+  max-height: 0;
+}
+.korean-grammar-popup-summary-error-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.korean-grammar-popup-summary-error-card {
+  padding: 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background-color: var(--background-primary);
+  transition: all 0.2s ease;
+}
+.korean-grammar-popup-summary-error-card:hover {
+  border-color: var(--interactive-accent);
+  background-color: var(--background-modifier-hover);
+}
+.korean-grammar-popup-summary-error-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.korean-grammar-popup-summary-error-original {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-error);
+  background-color: var(--background-modifier-error);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.korean-grammar-popup-summary-error-status-badge {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-error);
+  background-color: var(--background-modifier-error);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.korean-grammar-popup-summary-error-status-badge.kga-ai-analyzed {
+  color: var(--text-accent);
+  background-color: var(--background-modifier-success);
+}
+.korean-grammar-popup-summary-error-card-content {
+}
+.korean-grammar-popup-summary-error-suggestions {
+  margin-bottom: 8px;
+}
+.korean-grammar-popup-summary-error-suggestions-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.korean-grammar-popup-summary-error-suggestions-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.korean-grammar-popup-summary-error-suggestion {
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid var(--background-modifier-border);
+  background-color: var(--background-secondary);
+  color: var(--text-normal);
+  transition: all 0.2s ease;
+}
+.korean-grammar-popup-summary-error-suggestion:hover {
+  background-color: var(--background-modifier-hover);
+}
+.korean-grammar-popup-summary-error-suggestion.kga-selected {
+  border-color: var(--interactive-accent);
+  background-color: var(--background-modifier-success);
+  color: var(--text-accent);
+}
+.korean-grammar-popup-summary-error-help {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.4;
+}
+.korean-grammar-popup-summary-error-ai-reasoning {
+  font-size: 11px;
+  color: var(--text-accent);
+  font-style: italic;
+  line-height: 1.4;
+  margin-top: 6px;
+  padding: 6px;
+  background-color: var(--background-modifier-border);
+  border-radius: 3px;
+}
+.korean-grammar-popup-summary-error-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+.korean-grammar-popup-summary-error-action-button {
+  padding: 4px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 3px;
+  background-color: var(--background-secondary);
+  color: var(--text-normal);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.korean-grammar-popup-summary-error-action-button:hover {
+  background-color: var(--background-modifier-hover);
+}
+.korean-grammar-popup-summary-no-errors {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 20px;
+  font-style: italic;
 }
 
 /* styles/error-highlight.css */
@@ -1426,6 +1772,138 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   margin-top: 8px !important;
   font-size: 12px !important;
 }
+.ksc-tag-hover {
+  background: var(--interactive-accent-hover) !important;
+}
+.ksc-container-visible {
+  display: block !important;
+}
+.ksc-container-hidden {
+  display: none !important;
+}
+
+/* styles/tooltip.css */
+.popup-tooltip-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 10001;
+}
+.popup-tooltip {
+  position: absolute;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-normal);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 10002;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.popup-tooltip:not(.help-tooltip):not(.button-hint-tooltip):not(.navigation-hint-tooltip) {
+  max-width: 300px;
+}
+.popup-tooltip.kga-tooltip-enter {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+.popup-tooltip.kga-tooltip-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.popup-tooltip.kga-tooltip-exit {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+.popup-tooltip.kga-dynamic-position {
+  left: var(--kga-pos-left);
+  top: var(--kga-pos-top);
+}
+.error-preview-tooltip {
+  border-color: var(--text-error);
+  border-left: 3px solid var(--text-error);
+}
+.suggestion-tooltip {
+  border-color: var(--text-accent);
+  border-left: 3px solid var(--text-accent);
+}
+.ai-info-tooltip {
+  border-color: var(--interactive-accent);
+  border-left: 3px solid var(--interactive-accent);
+  background: var(--background-secondary);
+}
+.help-tooltip {
+  border-color: var(--text-muted);
+  max-width: 250px;
+}
+.button-hint-tooltip {
+  font-size: 11px;
+  padding: 6px 10px;
+}
+.navigation-hint-tooltip {
+  font-size: 11px;
+  padding: 6px 10px;
+}
+.error-preview-content .error-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--text-error);
+}
+.error-preview-content .error-original {
+  margin-bottom: 4px;
+  font-style: italic;
+}
+.error-preview-content .error-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.suggestion-tooltip-content .suggestion-text {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.suggestion-tooltip-content .suggestion-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.ai-info-content .ai-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.ai-info-content .ai-confidence {
+  font-size: 11px;
+  margin-bottom: 4px;
+  color: var(--interactive-accent);
+}
+.ai-info-content .ai-reasoning {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.help-tooltip-content .help-text {
+  line-height: 1.5;
+}
+.button-hint-content .button-name {
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+.button-hint-content .button-shortcut {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+}
+.navigation-hint-content .navigation-text {
+  font-weight: 500;
+}
+@media (max-width: 768px) {
+  .popup-tooltip {
+    max-width: 250px;
+    font-size: 11px;
+  }
+}
 
 /* styles/inline-mode.css */
 .korean-grammar-inline-error {
@@ -2037,6 +2515,730 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   margin-top: 4px;
 }
 
+/* styles/inline-tooltip.css */
+.korean-grammar-inline-tooltip {
+  position: absolute;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 0;
+  box-shadow: var(--shadow-s);
+  z-index: 1000;
+  font-size: 13px;
+  color: var(--text-normal);
+  display: flex;
+  flex-direction: column;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.korean-grammar-inline-tooltip.kga-mobile {
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  font-size: 14px;
+  max-height: 200px;
+  touch-action: manipulation;
+}
+.korean-grammar-inline-tooltip.kga-mobile-phone {
+  font-size: 14px;
+}
+.korean-grammar-inline-tooltip.kga-fixed-position {
+  position: fixed;
+  visibility: visible;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.2);
+  border-radius: 12px 12px 0 0;
+  border: 1px solid var(--background-modifier-border);
+}
+.korean-grammar-inline-tooltip.kga-fixed-position.kga-has-ai {
+  height: var(--kga-fixed-height, 110px);
+  max-height: var(--kga-fixed-height, 110px);
+}
+.korean-grammar-inline-tooltip.kga-desktop {
+  position: fixed;
+  visibility: visible;
+}
+.korean-grammar-inline-tooltip.kga-dynamic-position {
+  left: var(--kga-left);
+  top: var(--kga-top);
+  width: var(--kga-width);
+  max-height: var(--kga-max-height);
+  min-width: var(--kga-min-width);
+  font-size: var(--kga-font-size);
+}
+.tooltip-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tooltip-header.kga-mobile {
+  padding: 11px 13px;
+  font-size: 12px;
+}
+.tooltip-header.kga-mobile-phone {
+  padding: 10px 12px;
+  font-size: 11px;
+}
+.tooltip-header.kga-single {
+  padding: 6px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 6px 6px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  min-height: 32px;
+}
+.tooltip-header.kga-single.kga-mobile-phone {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.tooltip-header.kga-single.kga-mobile {
+  padding: 7px 11px;
+  font-size: 13px;
+}
+.header-text {
+  flex: 1;
+  text-align: center;
+}
+.header-text.kga-single {
+  font-size: 13px;
+}
+.header-text.kga-single.kga-mobile-phone {
+  font-size: 12px;
+}
+.header-text.kga-single.kga-mobile {
+  font-size: 13px;
+}
+.header-close-button {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text-muted);
+  padding: 0;
+  margin: 0;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: auto;
+  min-height: auto;
+  width: auto;
+  height: auto;
+  z-index: 10;
+  font-weight: 500;
+  line-height: 1;
+  opacity: 0.7;
+  font-family: inherit;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+.header-close-button.kga-mobile {
+  right: 10px;
+  font-size: 16px;
+  touch-action: manipulation;
+}
+.header-close-button.kga-mobile-phone {
+  right: 12px;
+  font-size: 18px;
+  touch-action: manipulation;
+}
+.header-close-button.kga-single {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: all 0.2s ease;
+  position: static;
+  transform: none;
+}
+.header-close-button.kga-single.kga-mobile {
+  font-size: 15px;
+  width: 22px;
+  height: 22px;
+}
+.header-close-button.kga-single.kga-mobile-phone {
+  font-size: 14px;
+  width: 20px;
+  height: 20px;
+}
+.header-close-button:hover {
+  opacity: 1;
+  color: var(--text-normal);
+  transform: translateY(-50%) scale(1.2);
+}
+.header-close-button.kga-single:hover {
+  opacity: 1;
+  color: var(--text-normal);
+  background: var(--interactive-hover);
+}
+.tooltip-scroll-container {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 250px;
+  min-height: auto;
+}
+.tooltip-scroll-container.kga-mobile {
+  max-height: 320px;
+  min-height: 140px;
+}
+.tooltip-scroll-container.kga-mobile-phone {
+  max-height: 280px;
+  min-height: 120px;
+}
+.error-section {
+  padding: 8px 12px;
+}
+.error-section.kga-mobile {
+  padding: 11px 13px;
+}
+.error-section.kga-mobile-phone {
+  padding: 10px 12px;
+}
+.error-section.kga-bordered {
+  border-top: 1px solid var(--background-modifier-border-hover);
+}
+.error-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  min-height: 28px;
+}
+.error-line.kga-mobile {
+  gap: 7px;
+  min-height: 34px;
+}
+.error-line.kga-mobile-phone {
+  gap: 6px;
+  min-height: 32px;
+}
+.error-word {
+  color: var(--text-error);
+  font-weight: 600;
+  background: rgba(255, 0, 0, 0.1);
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 13px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 60px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+.error-word.kga-mobile {
+  padding: 4px 7px;
+  font-size: 13px;
+  min-width: 70px;
+  max-width: 110px;
+  line-height: 1.3;
+}
+.error-word.kga-mobile-phone {
+  padding: 3px 6px;
+  font-size: 12px;
+  min-width: 70px;
+  max-width: 100px;
+  line-height: 1.3;
+}
+.error-word.kga-ai-corrected {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.error-word.kga-ai-exception {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.error-word.kga-ai-keep-original {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.error-word-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.pos-info {
+  color: var(--text-accent);
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.9;
+  background: rgba(59, 130, 246, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.pos-info.kga-mobile-phone {
+  font-size: 9px;
+}
+.error-line > span.kga-arrow {
+  color: var(--text-muted);
+  font-weight: bold;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+.error-line > span.kga-arrow.kga-mobile {
+  font-size: 13px;
+}
+.error-line > span.kga-arrow.kga-mobile-phone {
+  font-size: 12px;
+}
+.suggestions-list {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  flex-wrap: wrap;
+  overflow: hidden;
+}
+.suggestions-list.kga-mobile {
+  gap: 4px;
+}
+.suggestions-list.kga-mobile-phone {
+  gap: 3px;
+}
+.suggestion-button {
+  color: var(--text-normal);
+  font-weight: 600;
+  background: rgba(59, 130, 246, 0.1);
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.suggestion-button.kga-mobile {
+  padding: 4px 7px;
+  font-size: 13px;
+  touch-action: manipulation;
+}
+.suggestion-button.kga-mobile-phone {
+  padding: 3px 6px;
+  font-size: 12px;
+  touch-action: manipulation;
+}
+.suggestion-button:hover {
+  background: rgba(59, 130, 246, 0.15);
+}
+.tooltip-main-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  white-space: nowrap;
+  flex: 1;
+  min-height: 0;
+}
+.tooltip-main-content.kga-mobile {
+  gap: 5px;
+  padding: 5px 9px;
+}
+.tooltip-main-content.kga-mobile-phone {
+  gap: 4px;
+  padding: 4px 8px;
+}
+.tooltip-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-top: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  gap: 6px;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+.tooltip-actions.kga-mobile {
+  padding: 7px 11px 9px 11px;
+  gap: 7px;
+  min-height: 44px;
+}
+.tooltip-actions.kga-mobile-phone {
+  padding: 8px 12px 10px 12px;
+  gap: 8px;
+  min-height: 48px;
+}
+.actions-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.actions-container.kga-mobile {
+  gap: 7px;
+  min-height: 26px;
+}
+.actions-container.kga-mobile-phone {
+  gap: 8px;
+  min-height: 28px;
+}
+.info-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex: 1;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.info-text.kga-mobile {
+  font-size: 12px;
+  padding-right: 4px;
+}
+.info-text.kga-mobile-phone {
+  font-size: 11px;
+  padding-right: 4px;
+}
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.action-buttons.kga-mobile {
+  gap: 5px;
+  min-height: 30px;
+}
+.action-buttons.kga-mobile-phone {
+  gap: 6px;
+  min-height: 32px;
+}
+.ignore-all-button,
+.ignore-button {
+  background: #ef4444;
+  color: white;
+  border: 1px solid #ef4444;
+  border-radius: 4px;
+  padding: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+}
+.ignore-all-button.kga-mobile,
+.ignore-button.kga-mobile {
+  border-radius: 6px;
+  padding: 7px;
+  font-size: 15px;
+  min-height: 30px;
+  min-width: 30px;
+  max-height: 30px;
+  touch-action: manipulation;
+}
+.ignore-all-button.kga-mobile-phone,
+.ignore-button.kga-mobile-phone {
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 16px;
+  min-height: 32px;
+  min-width: 32px;
+  max-height: 32px;
+  touch-action: manipulation;
+}
+.ignore-button.kga-single {
+  background: var(--interactive-normal);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  padding: 6px;
+  font-size: 12px;
+  min-height: auto;
+  min-width: auto;
+  max-height: none;
+}
+.ignore-button.kga-single.kga-mobile {
+  border-radius: 5px;
+  padding: 6px;
+  min-height: 28px;
+  min-width: 28px;
+  max-height: 28px;
+}
+.ignore-button.kga-single.kga-mobile-phone {
+  border-radius: 5px;
+  padding: 5px;
+  font-size: 11px;
+  min-height: 26px;
+  min-width: 26px;
+  max-height: 26px;
+}
+.ignore-all-button:hover,
+.ignore-button:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+}
+.ignore-button.kga-single:hover {
+  background: var(--interactive-hover);
+  transform: translateY(-1px);
+}
+.apply-all-button {
+  background: #10b981;
+  color: white;
+  border: 1px solid #10b981;
+  border-radius: 4px;
+  padding: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+.apply-all-button.kga-mobile {
+  border-radius: 6px;
+  padding: 7px;
+  font-size: 15px;
+  min-height: 30px;
+  min-width: 30px;
+  max-height: 30px;
+  touch-action: manipulation;
+}
+.apply-all-button.kga-mobile-phone {
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 16px;
+  min-height: 32px;
+  min-width: 32px;
+  max-height: 32px;
+  touch-action: manipulation;
+}
+.apply-all-button:hover {
+  background: #059669;
+  border-color: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+.exception-button {
+  background: var(--interactive-normal);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  padding: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.exception-button.kga-mobile {
+  border-radius: 5px;
+  padding: 6px;
+  font-size: 14px;
+  min-height: 28px;
+  min-width: 28px;
+  max-height: 28px;
+  touch-action: manipulation;
+}
+.exception-button.kga-mobile-phone {
+  border-radius: 5px;
+  padding: 5px;
+  font-size: 13px;
+  min-height: 26px;
+  min-width: 26px;
+  max-height: 26px;
+  touch-action: manipulation;
+}
+.exception-button:hover {
+  background: var(--interactive-hover);
+  transform: translateY(-1px);
+}
+.help-container {
+  display: flex;
+  align-items: center;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+.tooltip-help-area {
+  padding: 6px 10px;
+  border-top: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.3;
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 24px;
+  flex-shrink: 0;
+}
+.tooltip-help-area.kga-mobile {
+  padding: 5px 9px;
+  font-size: 11px;
+  min-height: 22px;
+}
+.tooltip-help-area.kga-mobile-phone {
+  padding: 4px 8px;
+  font-size: 10px;
+  min-height: 20px;
+}
+.help-container > span {
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--text-muted);
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: bold;
+  transition: all 0.2s;
+  background: var(--background-primary);
+  flex-shrink: 0;
+  line-height: 1;
+}
+.help-container > span.kga-mobile {
+  width: 18px;
+  height: 18px;
+  font-size: 9px;
+}
+.help-container > span.kga-mobile-phone {
+  width: 16px;
+  height: 16px;
+  font-size: 8px;
+}
+.help-container > span:hover {
+  background: var(--interactive-hover);
+  border-color: var(--text-normal);
+  color: var(--text-normal);
+  transform: scale(1.1);
+}
+.tooltip-ai-area {
+  padding: 6px 10px;
+  border-top: 1px solid var(--background-modifier-border);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(16, 185, 129, 0.05));
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  flex-shrink: 0;
+}
+.tooltip-ai-area.kga-mobile {
+  padding: 5px 9px;
+  font-size: 11px;
+  gap: 5px;
+  min-height: 22px;
+}
+.tooltip-ai-area.kga-mobile-phone {
+  padding: 4px 8px;
+  font-size: 10px;
+  gap: 4px;
+  min-height: 20px;
+}
+.tooltip-ai-area > span:first-child {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.tooltip-ai-area > span:last-child {
+  flex: 1;
+  font-style: italic;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.korean-tooltip-cursor-hidden .cm-cursor {
+  display: none !important;
+}
+.korean-tooltip-cursor-hidden .cm-focused {
+  caret-color: transparent !important;
+}
+
+/* styles/mobile.css */
+.mobile-edit-input {
+  width: 100%;
+  min-width: 200px;
+  padding: 8px 12px;
+  font-size: 16px;
+  border: 2px solid var(--interactive-accent);
+  border-radius: 6px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  outline: none;
+}
+.mobile-edit-container {
+  position: relative;
+  display: inline-block;
+  min-width: 250px;
+  padding: 4px;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.mobile-edit-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: flex-end;
+}
+.mobile-edit-confirm,
+.mobile-edit-cancel {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 6px;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mobile-edit-confirm {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+.mobile-edit-cancel {
+  background: var(--background-modifier-border);
+  color: var(--text-normal);
+}
+.kga-mobile-edit-hidden {
+  display: none !important;
+}
+
 /* styles/responsive.css */
 @supports (padding-top: env(safe-area-inset-top)) {
   #correctionPopup {
@@ -2262,4 +3464,46 @@ body.spell-popup-open #correctionPopup [contenteditable] {
 }
 .pagination-container-hidden {
   display: none;
+}
+.korean-grammar-popup,
+.korean-grammar-popup-modern {
+  position: fixed;
+  z-index: 1000;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.korean-grammar-popup-header {
+  flex-shrink: 0;
+}
+.korean-grammar-popup-preview {
+  flex: 1;
+  min-height: 200px;
+  overflow: auto;
+}
+.korean-grammar-popup-footer {
+  flex-shrink: 0;
+}
+.korean-grammar-popup-footer-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+}
+.korean-grammar-popup-mobile {
+  border-radius: 0;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+.korean-grammar-popup-tablet {
+  border-radius: 8px;
+}
+.korean-grammar-popup-desktop {
+  border-radius: 8px;
 }

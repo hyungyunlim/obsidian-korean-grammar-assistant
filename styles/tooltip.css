@@ -1,0 +1,156 @@
+/* styles/tooltip.css */
+
+/* === Tooltip Container === */
+.popup-tooltip-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 10001;
+}
+
+/* === Base Tooltip Styles === */
+.popup-tooltip {
+    position: absolute;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--text-normal);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 10002;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Default max-width for all tooltips */
+.popup-tooltip:not(.help-tooltip):not(.button-hint-tooltip):not(.navigation-hint-tooltip) {
+    max-width: 300px;
+}
+
+/* === Tooltip Animation States === */
+.popup-tooltip.kga-tooltip-enter {
+    opacity: 0;
+    transform: translateY(-5px);
+}
+
+.popup-tooltip.kga-tooltip-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.popup-tooltip.kga-tooltip-exit {
+    opacity: 0;
+    transform: translateY(-5px);
+}
+
+/* === Dynamic Positioning === */
+.popup-tooltip.kga-dynamic-position {
+    left: var(--kga-pos-left);
+    top: var(--kga-pos-top);
+}
+
+/* === Tooltip Type Classes === */
+.error-preview-tooltip {
+    border-color: var(--text-error);
+    border-left: 3px solid var(--text-error);
+}
+
+.suggestion-tooltip {
+    border-color: var(--text-accent);
+    border-left: 3px solid var(--text-accent);
+}
+
+.ai-info-tooltip {
+    border-color: var(--interactive-accent);
+    border-left: 3px solid var(--interactive-accent);
+    background: var(--background-secondary);
+}
+
+.help-tooltip {
+    border-color: var(--text-muted);
+    max-width: 250px;
+}
+
+.button-hint-tooltip {
+    font-size: 11px;
+    padding: 6px 10px;
+}
+
+.navigation-hint-tooltip {
+    font-size: 11px;
+    padding: 6px 10px;
+}
+
+/* === Tooltip Content Sections === */
+.error-preview-content .error-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--text-error);
+}
+
+.error-preview-content .error-original {
+    margin-bottom: 4px;
+    font-style: italic;
+}
+
+.error-preview-content .error-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.suggestion-tooltip-content .suggestion-text {
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.suggestion-tooltip-content .suggestion-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.ai-info-content .ai-title {
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.ai-info-content .ai-confidence {
+    font-size: 11px;
+    margin-bottom: 4px;
+    color: var(--interactive-accent);
+}
+
+.ai-info-content .ai-reasoning {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.help-tooltip-content .help-text {
+    line-height: 1.5;
+}
+
+.button-hint-content .button-name {
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.button-hint-content .button-shortcut {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: var(--font-monospace);
+}
+
+.navigation-hint-content .navigation-text {
+    font-weight: 500;
+}
+
+/* === Responsive Adjustments === */
+@media (max-width: 768px) {
+    .popup-tooltip {
+        max-width: 250px;
+        font-size: 11px;
+    }
+}

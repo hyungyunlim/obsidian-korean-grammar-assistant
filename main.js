@@ -8021,7 +8021,7 @@ var _LoadingManager = class {
     this.progressElement = toastContainer;
     this.currentNotice = {
       hide: () => {
-        toastContainer.style.animation = "slideOutDown 0.2s ease-in";
+        toastContainer.addClass("kga-slide-out-down");
         setTimeout(() => {
           toastContainer.remove();
         }, 200);
@@ -9532,12 +9532,6 @@ var ModernSettingsTab = class extends import_obsidian10.PluginSettingTab {
           `
         }
       });
-      tag.addEventListener("mouseenter", () => {
-        tag.style.background = "var(--interactive-accent-hover)";
-      });
-      tag.addEventListener("mouseleave", () => {
-        tag.style.background = "var(--interactive-accent)";
-      });
       tag.onclick = async () => {
         if (confirm(`"${word}"\uB97C \uC608\uC678 \uBAA9\uB85D\uC5D0\uC11C \uC81C\uAC70\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?`)) {
           const updatedSettings = IgnoredWordsService.removeIgnoredWord(word, this.plugin.settings);
@@ -9576,11 +9570,13 @@ var ModernSettingsTab = class extends import_obsidian10.PluginSettingTab {
         const validation = AdvancedSettingsService2.validateSettings(this.plugin.settings);
         const suggestions = AdvancedSettingsService2.getOptimizationSuggestions(this.plugin.settings);
         this.createImprovedValidationDisplay(validationResult, validation, suggestions);
-        validationResult.style.display = "block";
+        validationResult.removeClass("kga-hidden");
+        validationResult.addClass("kga-block");
         validationResult.className = "";
       } catch (error) {
         Logger.error("\uC124\uC815 \uAC80\uC99D \uC624\uB958:", error);
-        validationResult.style.display = "block";
+        validationResult.removeClass("kga-hidden");
+        validationResult.addClass("kga-block");
         validationResult.className = "ksc-warning-box";
         validationResult.textContent = "\uC124\uC815 \uAC80\uC99D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.";
       }
@@ -9602,7 +9598,7 @@ var ModernSettingsTab = class extends import_obsidian10.PluginSettingTab {
     createBackupBtn.onclick = () => {
       AdvancedSettingsService2.backupSettings(this.plugin.settings, "\uC218\uB3D9 \uBC31\uC5C5");
       new import_obsidian10.Notice("\uC124\uC815\uC774 \uBC31\uC5C5\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
-      if (backupListContainer.style.display !== "none") {
+      if (!backupListContainer.hasClass("kga-hidden")) {
         updateBackupList();
       }
     };
@@ -9642,8 +9638,8 @@ var ModernSettingsTab = class extends import_obsidian10.PluginSettingTab {
       }
     };
     showBackupsBtn.onclick = () => {
-      const isVisible = backupListContainer.style.display !== "none";
-      backupListContainer.style.display = isVisible ? "none" : "block";
+      const isVisible = !backupListContainer.hasClass("kga-hidden");
+      backupListContainer.toggleClass("kga-hidden", isVisible);
       if (!isVisible) {
         updateBackupList();
       }
@@ -9828,13 +9824,13 @@ var ModernSettingsTab = class extends import_obsidian10.PluginSettingTab {
     updateLogStats();
     refreshStatsBtn.onclick = updateLogStats;
     viewLogsBtn.onclick = () => {
-      const isVisible = logViewerContainer.style.display !== "none";
+      const isVisible = !logViewerContainer.hasClass("kga-hidden");
       if (isVisible) {
-        logViewerContainer.style.display = "none";
+        logViewerContainer.addClass("kga-hidden");
         viewLogsBtn.textContent = "\uB85C\uADF8 \uBCF4\uAE30";
       } else {
         this.displayLogViewer(logViewerContainer);
-        logViewerContainer.style.display = "block";
+        logViewerContainer.removeClass("kga-hidden");
         viewLogsBtn.textContent = "\uB85C\uADF8 \uC228\uAE30\uAE30";
       }
     };
@@ -9845,7 +9841,7 @@ var ModernSettingsTab = class extends import_obsidian10.PluginSettingTab {
       if (confirm("\uBAA8\uB4E0 \uB85C\uADF8\uB97C \uC0AD\uC81C\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?")) {
         Logger2.clearHistory();
         updateLogStats();
-        if (logViewerContainer.style.display !== "none") {
+        if (!logViewerContainer.hasClass("kga-hidden")) {
           this.displayLogViewer(logViewerContainer);
         }
       }

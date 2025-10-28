@@ -246,27 +246,17 @@ export class PopupLayoutManager implements IPopupComponent {
         `korean-grammar-popup-${this.layoutState.currentBreakpoint}`
       ]
     });
-    
-    // 기본 스타일 설정
-    Object.assign(container.style, {
-      position: 'fixed',
-      zIndex: '1000',
-      maxWidth: this.getMaxWidth(),
-      maxHeight: this.getMaxHeight(),
-      backgroundColor: 'var(--background-primary)',
-      border: '1px solid var(--background-modifier-border)',
-      borderRadius: '8px',
-      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column'
-    });
-    
+
+    // 동적 계산이 필요한 스타일만 JavaScript로 설정
+    // (maxWidth, maxHeight는 브레이크포인트에 따라 달라짐)
+    container.style.maxWidth = this.getMaxWidth();
+    container.style.maxHeight = this.getMaxHeight();
+
     // 커스텀 클래스 추가
     if (this.layoutState.customClasses.length > 0) {
       container.classList.add(...this.layoutState.customClasses);
     }
-    
+
     return container;
   }
   
@@ -298,22 +288,17 @@ export class PopupLayoutManager implements IPopupComponent {
     if (!this.containerElement || !this.layoutState.areaVisibility.preview) {
       return;
     }
-    
+
     try {
       this.previewElement = this.previewRenderer.render();
       this.previewElement.classList.add('korean-grammar-popup-preview');
-      
-      // 미리보기 영역은 flex-grow로 남은 공간 채움
-      Object.assign(this.previewElement.style, {
-        flex: '1',
-        minHeight: '200px',
-        overflow: 'auto'
-      });
-      
+
+      // CSS에서 처리: flex-grow, minHeight, overflow는 CSS 클래스로 정의됨
+
       this.containerElement.appendChild(this.previewElement);
-      
+
       Logger.debug('PopupLayoutManager: 미리보기 렌더링 완료');
-      
+
     } catch (error) {
       Logger.error('PopupLayoutManager: 미리보기 렌더링 중 오류', error);
     }
@@ -347,29 +332,24 @@ export class PopupLayoutManager implements IPopupComponent {
     if (!this.containerElement || !this.layoutState.areaVisibility.footer) {
       return;
     }
-    
+
     try {
       this.footerElement = createEl('div', {
         cls: 'korean-grammar-popup-footer'
       });
-      
+
       // 푸터 버튼들 (적용, 취소 등)
       const buttonContainer = createEl('div', {
         cls: 'korean-grammar-popup-footer-buttons',
         parent: this.footerElement
       });
-      
-      Object.assign(buttonContainer.style, {
-        display: 'flex',
-        justifyContent: 'flex-end',
-        gap: '8px',
-        padding: '12px 16px'
-      });
-      
+
+      // CSS에서 처리: flexbox layout, gap, padding는 CSS 클래스로 정의됨
+
       this.containerElement.appendChild(this.footerElement);
-      
+
       Logger.debug('PopupLayoutManager: 푸터 렌더링 완료');
-      
+
     } catch (error) {
       Logger.error('PopupLayoutManager: 푸터 렌더링 중 오류', error);
     }
@@ -457,17 +437,11 @@ export class PopupLayoutManager implements IPopupComponent {
    */
   private applyMobileStyles(): void {
     if (!this.containerElement) return;
-    
-    Object.assign(this.containerElement.style, {
-      maxWidth: '100vw',
-      maxHeight: '100vh',
-      borderRadius: '0',
-      left: '0',
-      top: '0',
-      right: '0',
-      bottom: '0'
-    });
-    
+
+    // 동적 계산이 필요한 스타일만 JavaScript로 설정
+    this.containerElement.style.maxWidth = '100vw';
+    this.containerElement.style.maxHeight = '100vh';
+
     // 오류 요약 영역을 기본적으로 접힘
     if (this.context) {
       this.context.state.isErrorSummaryExpanded = false;
@@ -479,12 +453,10 @@ export class PopupLayoutManager implements IPopupComponent {
    */
   private applyTabletStyles(): void {
     if (!this.containerElement) return;
-    
-    Object.assign(this.containerElement.style, {
-      maxWidth: '90vw',
-      maxHeight: '90vh',
-      borderRadius: '8px'
-    });
+
+    // 동적 계산이 필요한 스타일만 JavaScript로 설정
+    this.containerElement.style.maxWidth = '90vw';
+    this.containerElement.style.maxHeight = '90vh';
   }
   
   /**
@@ -492,12 +464,10 @@ export class PopupLayoutManager implements IPopupComponent {
    */
   private applyDesktopStyles(): void {
     if (!this.containerElement) return;
-    
-    Object.assign(this.containerElement.style, {
-      maxWidth: '1200px',
-      maxHeight: '800px',
-      borderRadius: '8px'
-    });
+
+    // 동적 계산이 필요한 스타일만 JavaScript로 설정
+    this.containerElement.style.maxWidth = '1200px';
+    this.containerElement.style.maxHeight = '800px';
   }
   
   // =============================================================================
@@ -614,18 +584,17 @@ export class PopupLayoutManager implements IPopupComponent {
    */
   private centerContainer(): void {
     if (!this.containerElement) return;
-    
+
     const rect = this.containerElement.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    
+
     const left = Math.max(0, (viewportWidth - rect.width) / 2);
     const top = Math.max(0, (viewportHeight - rect.height) / 2);
-    
-    Object.assign(this.containerElement.style, {
-      left: `${left}px`,
-      top: `${top}px`
-    });
+
+    // 동적 계산이 필요한 위치 스타일만 JavaScript로 설정
+    this.containerElement.style.left = `${left}px`;
+    this.containerElement.style.top = `${top}px`;
   }
   
   /**
@@ -664,13 +633,20 @@ export class PopupLayoutManager implements IPopupComponent {
    */
   private updateAreaVisibility(): void {
     if (!this.context) return;
-    
+
     const state = this.context.state;
-    
+
     // 오류 요약 영역 가시성
     if (this.summaryElement) {
       const isVisible = state.isErrorSummaryExpanded;
-      this.summaryElement.style.display = isVisible ? 'block' : 'none';
+      // CSS 클래스로 가시성 제어
+      if (isVisible) {
+        this.summaryElement.classList.remove('kga-hidden');
+        this.summaryElement.classList.add('kga-block');
+      } else {
+        this.summaryElement.classList.remove('kga-block');
+        this.summaryElement.classList.add('kga-hidden');
+      }
       this.layoutState.areaVisibility.summary = isVisible;
     }
   }
@@ -714,21 +690,28 @@ export class PopupLayoutManager implements IPopupComponent {
    */
   toggleAreaVisibility(area: LayoutArea): void {
     this.layoutState.areaVisibility[area] = !this.layoutState.areaVisibility[area];
-    
+
     const element = this.getAreaElement(area);
     if (element) {
-      element.style.display = this.layoutState.areaVisibility[area] ? 'block' : 'none';
+      // CSS 클래스로 가시성 제어
+      if (this.layoutState.areaVisibility[area]) {
+        element.classList.remove('kga-hidden');
+        element.classList.add('kga-block');
+      } else {
+        element.classList.remove('kga-block');
+        element.classList.add('kga-hidden');
+      }
     }
-    
+
     this.notifyLayoutChange({
       area,
       type: 'visibility',
       data: { visible: this.layoutState.areaVisibility[area] }
     });
-    
-    Logger.debug('PopupLayoutManager: 영역 가시성 토글', { 
-      area, 
-      visible: this.layoutState.areaVisibility[area] 
+
+    Logger.debug('PopupLayoutManager: 영역 가시성 토글', {
+      area,
+      visible: this.layoutState.areaVisibility[area]
     });
   }
   

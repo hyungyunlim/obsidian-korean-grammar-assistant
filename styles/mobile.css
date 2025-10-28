@@ -1,0 +1,61 @@
+/* styles/mobile.css */
+
+/* Mobile Edit Mode Styles */
+
+.mobile-edit-input {
+    width: 100%;
+    min-width: 200px;
+    padding: 8px 12px;
+    font-size: 16px;
+    border: 2px solid var(--interactive-accent);
+    border-radius: 6px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    outline: none;
+}
+
+.mobile-edit-container {
+    position: relative;
+    display: inline-block;
+    min-width: 250px;
+    padding: 4px;
+    background: var(--background-secondary);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.mobile-edit-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    justify-content: flex-end;
+}
+
+.mobile-edit-confirm,
+.mobile-edit-cancel {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 6px;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-edit-confirm {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.mobile-edit-cancel {
+    background: var(--background-modifier-border);
+    color: var(--text-normal);
+}
+
+/* Mobile Edit Mode: Hidden original element */
+.kga-mobile-edit-hidden {
+    display: none !important;
+}

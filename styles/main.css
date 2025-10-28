@@ -9,8 +9,11 @@
 @import url("modals.css");
 @import url("keyboard.css");
 @import url("settings.css");
+@import url("tooltip.css");
 @import url("inline-mode.css");
 @import url("inline-suggest.css");
+@import url("inline-tooltip.css");
+@import url("mobile.css");
 @import url("responsive.css");
 
 /* Additional CSS classes for replacing inline styles that were not component-specific */
@@ -22,4 +25,63 @@
 
 .pagination-container-hidden {
   display: none;
+}
+
+/* ===================================================================
+ * Popup Layout Manager Styles
+ * =================================================================== */
+
+/* Main popup container structure */
+.korean-grammar-popup,
+.korean-grammar-popup-modern {
+  position: fixed;
+  z-index: 1000;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header area */
+.korean-grammar-popup-header {
+  flex-shrink: 0;
+}
+
+/* Preview area - takes remaining space */
+.korean-grammar-popup-preview {
+  flex: 1;
+  min-height: 200px;
+  overflow: auto;
+}
+
+/* Footer area */
+.korean-grammar-popup-footer {
+  flex-shrink: 0;
+}
+
+.korean-grammar-popup-footer-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+/* Responsive breakpoint classes */
+.korean-grammar-popup-mobile {
+  border-radius: 0;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.korean-grammar-popup-tablet {
+  border-radius: 8px;
+}
+
+.korean-grammar-popup-desktop {
+  border-radius: 8px;
 }
