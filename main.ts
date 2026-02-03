@@ -45,8 +45,6 @@ export default class KoreanGrammarPlugin extends Plugin {
     } else {
       Logger.configureForDevelopment();
     }
-    
-    Logger.log('Korean Grammar Assistant 플러그인 로딩 시작');
 
     // 설정 로드
     await this.loadSettings();
@@ -65,7 +63,7 @@ export default class KoreanGrammarPlugin extends Plugin {
     InlineModeService.registerCommands(this);
 
     // 리본 아이콘 추가
-    this.addRibbonIcon("han-spellchecker", "Check Spelling", async () => {
+    this.addRibbonIcon("han-spellchecker", "Check spelling", async () => {
       await this.orchestrator.execute();
     });
     
@@ -178,8 +176,6 @@ export default class KoreanGrammarPlugin extends Plugin {
 
     // 🔧 문서 전환 감지 이벤트 리스너 등록
     this.setupDocumentChangeListeners();
-
-    Logger.log('Korean Grammar Assistant 플러그인 로딩 완료');
   }
 
   onunload() {
@@ -814,7 +810,6 @@ export default class KoreanGrammarPlugin extends Plugin {
    * 파일이나 리프가 변경될 때마다 InlineModeService 상태를 자동으로 정리
    */
   private setupDocumentChangeListeners(): void {
-    Logger.log('🔧 문서 전환 감지 이벤트 리스너 설정 중...');
 
     // 파일 변경 감지 - 다른 파일로 이동할 때 트리거
     this.fileOpenListener = this.app.workspace.on('file-open', (file) => {
@@ -857,8 +852,6 @@ export default class KoreanGrammarPlugin extends Plugin {
         }
       }
     });
-
-    Logger.log('🔧 문서 전환 감지 이벤트 리스너 설정 완료');
   }
 }
 

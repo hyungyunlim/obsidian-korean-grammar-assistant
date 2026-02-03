@@ -8,7 +8,7 @@ import { ShortcutHandler } from './ShortcutHandler';
 import { FocusManager } from './FocusManager';
 import { PopupState, KeyboardAction, KeyboardNavigationState, IPopupComponent, RenderContext } from '../types/PopupTypes';
 import { Logger } from '../../utils/logger';
-import { Scope } from 'obsidian';
+import { Platform, Scope } from 'obsidian';
 
 export interface KeyboardEventResult {
   handled: boolean;
@@ -333,7 +333,7 @@ export class KeyboardManager implements IPopupComponent {
   }
 
   private isMobile(): boolean {
-    return /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    return Platform.isMobile;
   }
 
   private createKeyboardHints(): HTMLElement {

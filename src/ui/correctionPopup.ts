@@ -2858,7 +2858,7 @@ export class CorrectionPopup extends BaseComponent {
     // 키보드 단축키 안내
     const keyboardHint = content.appendChild(document.createElement('div'));
     keyboardHint.className = 'token-warning-keyboard-hint';
-    keyboardHint.textContent = '💡 키보드 단축키: Enter(진행), Esc(취소)';
+    keyboardHint.textContent = '💡 키보드 단축키: enter(진행), esc(취소)';
 
     return content;
   }

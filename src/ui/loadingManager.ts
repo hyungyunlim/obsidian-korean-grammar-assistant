@@ -261,55 +261,10 @@ export class LoadingManager {
   private showProgressNotice(): void {
     this.hideNotice();
     
-    // 커스텀 토스트 컨테이너 생성
+    // 커스텀 토스트 컨테이너 생성 (styles are defined in styles.css)
     const toastContainer = document.body.createEl('div', {
-      cls: 'spell-check-toast',
-      attr: {
-        style: `
-          position: fixed;
-          bottom: 20px;
-          right: 20px;
-          min-width: 280px;
-          max-width: 320px;
-          background: var(--background-primary);
-          border: 1px solid var(--background-modifier-border);
-          border-radius: 8px;
-          padding: 12px 16px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-          z-index: 1000;
-          font-family: var(--font-interface);
-          font-size: 13px;
-          animation: slideInUp 0.3s ease-out;
-        `
-      }
+      cls: 'spell-check-toast'
     });
-    
-    // 애니메이션 키프레임 추가
-    if (!document.querySelector('#spell-check-toast-styles')) {
-      const style = document.head.createEl('style', { attr: { id: 'spell-check-toast-styles' } });
-      style.textContent = `
-        @keyframes slideInUp {
-          from {
-            transform: translateY(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-        @keyframes slideOutDown {
-          from {
-            transform: translateY(0);
-            opacity: 1;
-          }
-          to {
-            transform: translateY(100%);
-            opacity: 0;
-          }
-        }
-      `;
-    }
     
     this.progressElement = toastContainer;
     

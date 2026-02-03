@@ -1,3 +1,4 @@
+import { Platform } from 'obsidian';
 import { PluginSettings } from '../types/interfaces';
 import { DEFAULT_INLINE_MODE_SETTINGS } from './settings';
 import { Logger } from '../utils/logger';
@@ -379,8 +380,8 @@ export class AdvancedSettingsService {
       settings: settings,
       metadata: {
         exportedBy: 'Korean Grammar Assistant',
-        platform: navigator.platform,
-        userAgent: navigator.userAgent.substring(0, 100)
+        platform: Platform.isMacOS ? 'macOS' : Platform.isWin ? 'Windows' : Platform.isLinux ? 'Linux' : Platform.isIosApp ? 'iOS' : Platform.isAndroidApp ? 'Android' : 'Unknown',
+        isMobile: Platform.isMobile
       }
     };
 

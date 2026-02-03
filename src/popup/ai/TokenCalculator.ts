@@ -171,45 +171,21 @@ export class TokenCalculator implements IPopupServiceManager {
       // 모달 컨테이너 생성
       const modal = document.createElement('div');
       modal.className = 'modal-container token-warning-modal';
-      modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10000;
-      `;
 
       // 모달 콘텐츠
       const content = document.createElement('div');
       content.className = 'modal token-warning-content';
-      content.style.cssText = `
-        background: var(--background-primary);
-        border: 1px solid var(--background-modifier-border);
-        border-radius: 8px;
-        padding: 24px;
-        max-width: 400px;
-        width: 90%;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-      `;
 
       // DOM API를 사용한 안전한 모달 생성
-      const title = content.createDiv({ cls: 'modal-title' });
-      title.style.cssText = 'font-size: 18px; font-weight: 600; margin-bottom: 16px; color: var(--text-normal);';
+      const title = content.createDiv({ cls: 'modal-title token-warning-title' });
       title.textContent = '🚨 토큰 사용량 경고';
 
-      const modalContent = content.createDiv({ cls: 'modal-content' });
-      modalContent.style.cssText = 'margin-bottom: 20px; color: var(--text-normal);';
+      const modalContent = content.createDiv({ cls: 'modal-content token-warning-body' });
 
       const p1 = modalContent.createEl('p');
       p1.textContent = 'AI 분석에 많은 토큰이 사용될 예정입니다:';
 
-      const infoBox = modalContent.createDiv();
-      infoBox.style.cssText = 'background: var(--background-secondary); padding: 12px; border-radius: 4px; margin: 12px 0;';
+      const infoBox = modalContent.createDiv({ cls: 'token-warning-info-box' });
 
       const tokenInfo = infoBox.createDiv();
       const tokenStrong = tokenInfo.createEl('strong');
@@ -222,8 +198,7 @@ export class TokenCalculator implements IPopupServiceManager {
       costInfo.appendChild(document.createTextNode(` ${tokenUsage.estimatedCost}`));
 
       if (tokenUsage.morphemeOptimized) {
-        const optimizedInfo = infoBox.createDiv();
-        optimizedInfo.style.cssText = 'color: var(--text-accent);';
+        const optimizedInfo = infoBox.createDiv({ cls: 'token-warning-optimized' });
         const optimizedStrong = optimizedInfo.createEl('strong');
         optimizedStrong.textContent = '✓ 형태소 최적화 적용됨';
       }
@@ -231,11 +206,9 @@ export class TokenCalculator implements IPopupServiceManager {
       const p2 = modalContent.createEl('p');
       p2.textContent = '계속 진행하시겠습니까?';
 
-      const buttonContainer = content.createDiv({ cls: 'modal-button-container' });
-      buttonContainer.style.cssText = 'display: flex; gap: 8px; justify-content: flex-end;';
+      const buttonContainer = content.createDiv({ cls: 'modal-button-container token-warning-buttons' });
 
       const proceedBtn = buttonContainer.createEl('button', { cls: 'mod-cta token-warning-proceed' });
-      proceedBtn.style.cssText = 'background: var(--interactive-accent); color: var(--text-on-accent);';
       proceedBtn.textContent = '진행';
 
       const cancelBtn = buttonContainer.createEl('button', { cls: 'token-warning-cancel' });

@@ -1514,32 +1514,12 @@ export class InlineTooltip {
       return { width: 250, maxHeight: 200, minWidth: 200, fontSize: '14px' };
     }
 
-    // 🔧 [필수] DOM 크기 측정을 위한 임시 스타일 변경
-    // ⚠️ Obsidian Guidelines Note: 이 inline style 사용은 정당화됨
-    //
-    // 이유:
-    // - 브라우저는 실제 콘텐츠 크기 계산을 위해 요소가 렌더링되어야 함
-    // - CSS만으로는 동적 콘텐츠의 자연스러운 크기를 측정할 수 없음
-    // - visibility:hidden은 레이아웃 계산은 수행하지만 화면에 보이지 않음
-    // - 측정 후 즉시 원래 상태로 복원되므로 사용자에게 영향 없음
-    //
-    // 대안 검토:
-    // - CSS 클래스로 시도: 여전히 원래 값 저장/복원이 필요함
-    // - getComputedStyle(): 실제 렌더링된 크기만 반환, 자연 크기 불가
-    // - 결론: 이 방법이 유일한 해결책
-    const originalDisplay = this.tooltip.style.display;
-    const originalVisibility = this.tooltip.style.visibility;
-    const originalPosition = this.tooltip.style.position;
-    const originalWidth = this.tooltip.style.width;
-    const originalCssWidth = this.tooltip.style.getPropertyValue('--kga-width');
-
-    this.tooltip.style.position = 'absolute';
-    this.tooltip.style.visibility = 'hidden';
-    this.tooltip.style.display = 'block';
-    this.tooltip.style.width = 'auto';
-    this.tooltip.style.setProperty('--kga-width', 'auto');
-    this.tooltip.style.maxWidth = 'none';
-    this.tooltip.style.minWidth = 'none';
+    // 🔧 [필수] DOM 크기 측정을 위한 임시 CSS 클래스 적용
+    // kga-tooltip-measuring 클래스가 !important로 측정에 필요한 스타일을 오버라이드:
+    // position: absolute, visibility: hidden, display: block,
+    // width: auto, --kga-width: auto, max-width: none, min-width: none
+    // 클래스 제거 시 원래 스타일시트/인라인 값이 자동으로 복원됨
+    this.tooltip.classList.add('kga-tooltip-measuring');
     
     // 📏 실제 내용 크기 측정
     const naturalWidth = this.tooltip.scrollWidth;
@@ -1579,16 +1559,8 @@ export class InlineTooltip {
     // 내용이 너무 길면 최대 너비로 제한
     optimalWidth = Math.min(maxWidth, optimalWidth);
     
-    // 🔧 원래 스타일 복원
-    this.tooltip.style.display = originalDisplay;
-    this.tooltip.style.visibility = originalVisibility;
-    this.tooltip.style.position = originalPosition;
-    this.tooltip.style.width = originalWidth;
-    if (originalCssWidth) {
-      this.tooltip.style.setProperty('--kga-width', originalCssWidth);
-    } else {
-      this.tooltip.style.removeProperty('--kga-width');
-    }
+    // 🔧 원래 스타일 복원 - 측정용 CSS 클래스 제거로 자동 복원
+    this.tooltip.classList.remove('kga-tooltip-measuring');
     
     const result = {
       width: optimalWidth,
@@ -1617,20 +1589,7 @@ export class InlineTooltip {
       editor.classList.add('korean-tooltip-cursor-hidden');
     });
 
-    // 동적 CSS 스타일 추가 (한 번만)
-    if (!document.getElementById('korean-tooltip-cursor-style')) {
-      const style = document.createElement('style');
-      style.id = 'korean-tooltip-cursor-style';
-      style.textContent = `
-        .korean-tooltip-cursor-hidden .cm-cursor {
-          display: none !important;
-        }
-        .korean-tooltip-cursor-hidden .cm-focused {
-          caret-color: transparent !important;
-        }
-      `;
-      document.head.appendChild(style);
-    }
+    // CSS rules are defined in styles.css (.korean-tooltip-cursor-hidden)
   }
 
   /**

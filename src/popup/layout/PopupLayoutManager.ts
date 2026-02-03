@@ -438,9 +438,8 @@ export class PopupLayoutManager implements IPopupComponent {
   private applyMobileStyles(): void {
     if (!this.containerElement) return;
 
-    // 동적 계산이 필요한 스타일만 JavaScript로 설정
-    this.containerElement.style.setProperty('--kga-max-width', '100vw');
-    this.containerElement.style.setProperty('--kga-max-height', '100vh');
+    // CSS 클래스로 레이아웃 크기 적용 (--kga-max-width, --kga-max-height)
+    // 값은 styles.css의 .korean-grammar-popup-mobile에서 정의됨
 
     // 오류 요약 영역을 기본적으로 접힘
     if (this.context) {
@@ -454,9 +453,8 @@ export class PopupLayoutManager implements IPopupComponent {
   private applyTabletStyles(): void {
     if (!this.containerElement) return;
 
-    // 동적 계산이 필요한 스타일만 JavaScript로 설정
-    this.containerElement.style.setProperty('--kga-max-width', '90vw');
-    this.containerElement.style.setProperty('--kga-max-height', '90vh');
+    // CSS 클래스로 레이아웃 크기 적용 (--kga-max-width, --kga-max-height)
+    // 값은 styles.css의 .korean-grammar-popup-tablet에서 정의됨
   }
   
   /**
@@ -465,9 +463,8 @@ export class PopupLayoutManager implements IPopupComponent {
   private applyDesktopStyles(): void {
     if (!this.containerElement) return;
 
-    // 동적 계산이 필요한 스타일만 JavaScript로 설정
-    this.containerElement.style.setProperty('--kga-max-width', '1200px');
-    this.containerElement.style.setProperty('--kga-max-height', '800px');
+    // CSS 클래스로 레이아웃 크기 적용 (--kga-max-width, --kga-max-height)
+    // 값은 styles.css의 .korean-grammar-popup-desktop에서 정의됨
   }
   
   // =============================================================================

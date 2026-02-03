@@ -2,6 +2,8 @@
  * HTML 처리 관련 유틸리티 함수들
  */
 
+import { Platform } from 'obsidian';
+
 /**
  * HTML에 안전하게 텍스트를 삽입하기 위해 이스케이프 처리합니다.
  * @param text 이스케이프할 텍스트
@@ -106,9 +108,7 @@ export function temporaryHighlight(
  * @returns 모바일 여부
  */
 export function isMobileDevice(): boolean {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  );
+  return Platform.isMobile;
 }
 
 /**
