@@ -1,6 +1,6 @@
 /* styles/ai.css */
 
-#correctionPopup .ai-analysis-result {
+#correctionPopup .kga-ai-analysis-result {
     margin-top: 6px !important;
     padding: 6px 8px !important;
     background: rgba(var(--color-blue-rgb), 0.1) !important;
@@ -9,7 +9,7 @@
     font-size: 10px !important;
 }
 
-#correctionPopup .ai-confidence {
+#correctionPopup .kga-ai-confidence {
     display: flex !important;
     align-items: center !important;
     gap: 4px !important;
@@ -18,7 +18,7 @@
     color: var(--color-blue) !important;
 }
 
-#correctionPopup .confidence-score {
+#correctionPopup .kga-confidence-score {
     background: var(--color-blue) !important;
     color: white !important;
     padding: 1px 4px !important;
@@ -27,14 +27,14 @@
     font-weight: 700 !important;
 }
 
-#correctionPopup .ai-reasoning {
+#correctionPopup .kga-ai-reasoning {
     color: var(--text-normal) !important;
     line-height: 1.3 !important;
     font-style: italic !important;
     opacity: 0.9 !important;
 }
 
-#correctionPopup .ai-analyze-btn {
+#correctionPopup .kga-ai-analyze-btn {
     padding: 6px 12px !important;
     border: 1px solid var(--color-blue) !important;
     border-radius: 6px !important;
@@ -47,18 +47,18 @@
     white-space: nowrap !important;
 }
 
-#correctionPopup .ai-analyze-btn:hover:not(:disabled) {
+#correctionPopup .kga-ai-analyze-btn:hover:not(:disabled) {
     background: var(--color-blue) !important;
     color: white !important;
 }
 
-#correctionPopup .ai-analyze-btn:disabled {
+#correctionPopup .kga-ai-analyze-btn:disabled {
     opacity: 0.6 !important;
     cursor: not-allowed !important;
 }
 
 /* AI 서비스 비활성화 상태 */
-#correctionPopup .ai-analyze-btn.ai-disabled {
+#correctionPopup .kga-ai-analyze-btn.kga-ai-disabled {
     border-color: var(--text-muted) !important;
     background: rgba(var(--text-muted-rgb), 0.1) !important;
     color: var(--text-muted) !important;
@@ -67,7 +67,7 @@
 }
 
 /* AI 서비스 비활성화 상태 호버 효과 제거 */
-#correctionPopup .ai-analyze-btn.ai-disabled:hover {
+#correctionPopup .kga-ai-analyze-btn.kga-ai-disabled:hover {
     background: rgba(var(--text-muted-rgb), 0.1) !important;
     color: var(--text-muted) !important;
     border-color: var(--text-muted) !important;

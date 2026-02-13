@@ -286,7 +286,7 @@ export class ComponentManager {
     correction: PageCorrection, 
     renderContext: RenderContext
   ): Promise<HTMLElement> {
-    const template = this.templates.get('error-card');
+    const template = this.templates.get('kga-error-card');
     if (!template) {
       return this.createBasicSummaryComponent(correction, renderContext);
     }
@@ -302,7 +302,7 @@ export class ComponentManager {
     renderContext: RenderContext
   ): HTMLElement {
     const card = createEl('div', {
-      cls: 'error-card',
+      cls: 'kga-error-card',
       attr: {
         'data-correction-index': correction.originalIndex.toString(),
         'role': 'button',
@@ -313,21 +313,21 @@ export class ComponentManager {
 
     // 상태 표시기
     const stateIndicator = createEl('div', {
-      cls: 'error-state-indicator',
+      cls: 'kga-error-state-indicator',
       text: this.getStateDisplayText(renderContext.state)
     });
     card.appendChild(stateIndicator);
 
     // 원본 텍스트
     const originalText = createEl('div', {
-      cls: 'error-original-text',
+      cls: 'kga-error-original-text',
       text: correction.correction.original
     });
     card.appendChild(originalText);
 
     // 수정 제안
     if (correction.correction.suggestions && correction.correction.suggestions.length > 0) {
-      const suggestions = createEl('div', { cls: 'error-suggestions' });
+      const suggestions = createEl('div', { cls: 'kga-error-suggestions' });
       correction.correction.suggestions.forEach((suggestion, index) => {
         const suggestionSpan = createEl('span', {
           cls: 'suggestion-item',
@@ -511,13 +511,13 @@ export class ComponentManager {
    */
   private initializeTemplates(): void {
     // 오류 카드 템플릿
-    this.templates.set('error-card', {
-      name: 'error-card',
+    this.templates.set('kga-error-card', {
+      name: 'kga-error-card',
       html: `
-        <div class="error-card state-{{state}}" data-correction-index="{{correctionIndex}}" role="button" tabindex="0">
-          <div class="error-state-indicator">{{stateText}}</div>
-          <div class="error-original-text">{{originalText}}</div>
-          <div class="error-suggestions"></div>
+        <div class="kga-error-card state-{{state}}" data-correction-index="{{correctionIndex}}" role="button" tabindex="0">
+          <div class="kga-error-state-indicator">{{stateText}}</div>
+          <div class="kga-error-original-text">{{originalText}}</div>
+          <div class="kga-error-suggestions"></div>
         </div>
       `,
       bindings: {}

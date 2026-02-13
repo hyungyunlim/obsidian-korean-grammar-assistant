@@ -1,6 +1,6 @@
 import { EditorView, WidgetType, Decoration, DecorationSet } from '@codemirror/view';
 import { StateField, StateEffect } from '@codemirror/state';
-import { Correction, InlineError, ExtendedWindow, PluginInstance, PluginSettings } from '../types/interfaces';
+import { Correction, InlineError, ExtendedWindow, PluginSettings } from '../types/interfaces';
 import { Logger } from '../utils/logger';
 import { globalInlineTooltip } from '../ui/inlineTooltip';
 import { Scope, App, Platform } from 'obsidian';
@@ -500,13 +500,14 @@ export class InlineModeService {
   // 🔧 레거시: 기존 키보드 스코프 방식 (Command Palette 방식으로 대체됨)
   // private static keyboardScope: Scope | null = null;
   private static app: App | null = null;
+  private static saveSettingsCallback: ((settings: PluginSettings) => Promise<void>) | null = null;
   private static currentHoveredError: InlineError | null = null;
   private static hoverTimeout: NodeJS.Timeout | null = null;
 
   /**
    * 에디터 뷰 및 설정 초기화
    */
-  static setEditorView(view: EditorView, settings?: PluginSettings, app?: App): void {
+  static setEditorView(view: EditorView, settings?: PluginSettings, app?: App, saveSettingsCallback?: (settings: PluginSettings) => Promise<void>): void {
     // 🔧 새로운 에디터뷰가 이전과 다르면 이전 상태 완전 정리
     if (this.currentView && this.currentView !== view) {
       Logger.debug('인라인 모드: 이전 에디터뷰와 다름 - 상태 정리 중');
@@ -521,7 +522,10 @@ export class InlineModeService {
     if (app) {
       this.app = app;
     }
-    
+    if (saveSettingsCallback) {
+      this.saveSettingsCallback = saveSettingsCallback;
+    }
+
     // 이벤트 리스너 추가
     this.setupEventListeners(view);
     
@@ -2188,7 +2192,6 @@ export class InlineModeService {
    * 인라인 모드 명령어 등록 (Command Palette 방식)
    */
   static registerCommands(plugin: any): void {
-    Logger.log('🎹 인라인 모드: 명령어 등록 시작');
 
     // 다음 오류로 이동
     plugin.addCommand({
@@ -2402,17 +2405,6 @@ export class InlineModeService {
         }
       }
     });
-
-    Logger.log('🎹 인라인 모드: 명령어 등록 완료!');
-    Logger.log('📋 등록된 명령어:');
-    Logger.log('  • Korean Grammar Assistant: 다음 문법 오류로 이동');
-    Logger.log('  • Korean Grammar Assistant: 이전 문법 오류로 이동');
-    Logger.log('  • Korean Grammar Assistant: 다음 제안 선택');
-    Logger.log('  • Korean Grammar Assistant: 이전 제안 선택');
-    Logger.log('  • Korean Grammar Assistant: 선택된 제안 적용');
-    Logger.log('  • Korean Grammar Assistant: 문법 오류 포커스 해제');
-    Logger.log('  • Korean Grammar Assistant: 한국어 문법 인라인 모드 토글');
-    Logger.log('💡 Command Palette (Cmd+P)에서 검색하거나 Hotkeys에서 단축키를 설정하세요!');
   }
 
   /**
@@ -2945,9 +2937,7 @@ export class InlineModeService {
       });
       
       // AI 분석 서비스가 있는지 확인
-      const aiService = getExtendedWindow().koreanGrammarPlugin?.instance;
-      
-      if (!aiService) {
+      if (!this.settings) {
         throw new Error('AI 분석 서비스를 찾을 수 없습니다.');
       }
 
@@ -3219,11 +3209,10 @@ export class InlineModeService {
         updatedSettings = IgnoredWordsService.addIgnoredWord(word, updatedSettings);
       }
       
-      // 설정 업데이트 (플러그인 인스턴스를 통해)
-      if ((window as any).koreanGrammarPlugin?.instance) {
-        const plugin = (window as any).koreanGrammarPlugin.instance;
-        plugin.settings = updatedSettings;
-        await plugin.saveSettings();
+      // 설정 업데이트 (saveSettingsCallback을 통해)
+      if (this.saveSettingsCallback) {
+        this.settings = updatedSettings;
+        await this.saveSettingsCallback(updatedSettings);
         Logger.log(`🔵 예외처리 사전 등록: ${wordsToIgnore.join(', ')}`);
       }
     }
@@ -3305,18 +3294,10 @@ export class InlineModeService {
     // 1. 예외처리 사전에 단어 추가
     const updatedSettings = IgnoredWordsService.addIgnoredWord(trimmedWord, this.settings);
 
-    // 2. 설정 저장
-    const pluginWrapper = getExtendedWindow().koreanGrammarPlugin;
-    if (pluginWrapper && typeof pluginWrapper === 'object' && 'instance' in pluginWrapper) {
-      const plugin = pluginWrapper.instance;
-      if (plugin && typeof plugin === 'object' && 'saveSettings' in plugin) {
-        const saveMethod = (plugin as any).saveSettings;
-        if (typeof saveMethod === 'function') {
-          (plugin as any).settings = updatedSettings;
-          await saveMethod.call(plugin);
-        }
-      }
-      this.settings = updatedSettings; // 로컬 설정도 업데이트
+    // 2. 설정 저장 (saveSettingsCallback을 통해)
+    if (this.saveSettingsCallback) {
+      this.settings = updatedSettings;
+      await this.saveSettingsCallback(updatedSettings);
       Logger.debug(`🔵 예외처리 사전에 저장됨: "${trimmedWord}"`);
     }
 

@@ -85,7 +85,7 @@ export class CorrectionPopup extends BaseComponent {
     // Enter: 현재 선택된 수정사항 적용 (편집 중이 아닐 때만)
     this.keyboardScope.register([], 'Enter', (evt: KeyboardEvent) => {
       const target = evt.target as HTMLElement;
-      if (target && (target.dataset?.editMode === 'true' || target.classList.contains('error-original-input'))) {
+      if (target && (target.dataset?.editMode === 'true' || target.classList.contains('kga-error-original-input'))) {
         // 편집 중인 input 요소에서는 기본 동작 허용
         Logger.debug('Enter key in edit mode - allowing default behavior');
         return true;
@@ -98,7 +98,7 @@ export class CorrectionPopup extends BaseComponent {
     // Escape: 팝업 닫기 (편집 중이 아닐 때만)
     this.keyboardScope.register([], 'Escape', (evt: KeyboardEvent) => {
       const target = evt.target as HTMLElement;
-      if (target && (target.dataset?.editMode === 'true' || target.classList.contains('error-original-input'))) {
+      if (target && (target.dataset?.editMode === 'true' || target.classList.contains('kga-error-original-input'))) {
         // 편집 중인 input 요소에서는 기본 동작 허용
         Logger.debug('Escape key in edit mode - allowing default behavior');
         return true;
@@ -469,9 +469,9 @@ export class CorrectionPopup extends BaseComponent {
     Logger.debug(`currentFocusIndex: ${this.currentFocusIndex}`);
     
     // 기존 포커스 하이라이트 제거
-    const prevFocused = this.element.querySelectorAll('.keyboard-focused');
+    const prevFocused = this.element.querySelectorAll('.kga-keyboard-focused');
     Logger.debug(`기존 포커스 요소 ${prevFocused.length}개 제거`);
-    prevFocused.forEach(el => el.removeClass('keyboard-focused'));
+    prevFocused.forEach(el => el.removeClass('kga-keyboard-focused'));
 
     // 현재 포커스 항목 하이라이트
     if (this.currentCorrections.length > 0 && 
@@ -500,7 +500,7 @@ export class CorrectionPopup extends BaseComponent {
       }
       
       if (errorItem) {
-        errorItem.addClass('keyboard-focused');
+        errorItem.addClass('kga-keyboard-focused');
         // 스크롤하여 보이게 하기
         errorItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         Logger.debug(`포커스 하이라이트 적용 성공: 고유 ID ${uniqueId}, 원본 인덱스 ${actualIndex}, 절대 위치 ${pageCorrection.absolutePosition}`);
@@ -588,40 +588,40 @@ export class CorrectionPopup extends BaseComponent {
     this.element.empty();
     
     // Popup overlay
-    const overlay = this.element.createDiv('popup-overlay');
+    const overlay = this.element.createDiv('kga-popup-overlay');
     
     // Popup content
-    const content = this.element.createDiv('popup-content');
+    const content = this.element.createDiv('kga-popup-content');
     
     // Header
-    const header = content.createDiv('header');
+    const header = content.createDiv('kga-header');
     new Setting(header).setName('한국어 맞춤법 검사').setHeading();
     
-    const headerTop = header.createDiv('preview-header-top');
+    const headerTop = header.createDiv('kga-preview-header-top');
     
     // AI 분석 버튼 (항상 표시, 상태에 따라 활성화/비활성화)
     const aiBtn = headerTop.createEl('button', {
-      cls: 'ai-analyze-btn',
+      cls: 'kga-ai-analyze-btn',
       attr: { id: 'aiAnalyzeBtn' }
     });
     
     // AI 서비스 상태에 따른 버튼 설정
     this.updateAiButtonState(aiBtn);
-    headerTop.createEl('button', { cls: 'close-btn-header', text: '×' });
+    headerTop.createEl('button', { cls: 'kga-close-btn-header', text: '×' });
     
     // Main content
-    const mainContent = content.createDiv('content');
+    const mainContent = content.createDiv('kga-content');
     
     // Preview section
-    const previewSection = mainContent.createDiv('preview-section');
-    const previewHeader = previewSection.createDiv('preview-header');
+    const previewSection = mainContent.createDiv('kga-preview-section');
+    const previewHeader = previewSection.createDiv('kga-preview-header');
     
-    const previewLabel = previewHeader.createDiv('preview-label');
+    const previewLabel = previewHeader.createDiv('kga-preview-label');
     previewLabel.createSpan({ text: '미리보기' });
-    previewLabel.createSpan({ cls: 'preview-hint', text: '클릭하여 수정사항 적용' });
+    previewLabel.createSpan({ cls: 'kga-preview-hint', text: '클릭하여 수정사항 적용' });
     
     // Color legend
-    const colorLegend = previewHeader.createDiv('color-legend');
+    const colorLegend = previewHeader.createDiv('kga-color-legend');
     const legendItems = [
       { cls: 'error', text: '오류' },
       { cls: 'corrected', text: '수정' },
@@ -631,8 +631,8 @@ export class CorrectionPopup extends BaseComponent {
     ];
     
     legendItems.forEach(item => {
-      const legendItem = colorLegend.createDiv('color-legend-item');
-      legendItem.createDiv(`color-legend-dot ${item.cls}`);
+      const legendItem = colorLegend.createDiv('kga-color-legend-item');
+      legendItem.createDiv(`kga-color-legend-dot ${item.cls}`);
       legendItem.createSpan({ text: item.text });
     });
     
@@ -641,35 +641,35 @@ export class CorrectionPopup extends BaseComponent {
     this.createPaginationElement(paginationDiv);
     
     // Preview content
-    const previewContent = previewSection.createDiv('preview-text');
+    const previewContent = previewSection.createDiv('kga-preview-text');
     previewContent.id = 'resultPreview';
     previewContent.createEl('span', { text: this.config.selectedText.trim() });
     
     // Error summary
-    const errorSummary = mainContent.createDiv('error-summary collapsed');
+    const errorSummary = mainContent.createDiv('kga-error-summary collapsed');
     errorSummary.id = 'errorSummary';
     
-    const errorToggle = errorSummary.createDiv('error-summary-toggle');
-    const leftSection = errorToggle.createDiv('left-section');
-    leftSection.createSpan({ cls: 'error-summary-label', text: '오류 상세' });
+    const errorToggle = errorSummary.createDiv('kga-error-summary-toggle');
+    const leftSection = errorToggle.createDiv('kga-left-section');
+    leftSection.createSpan({ cls: 'kga-error-summary-label', text: '오류 상세' });
     const badge = leftSection.createSpan({ 
-      cls: 'error-count-badge', 
+      cls: 'kga-error-count-badge', 
       text: this.getErrorStateCount().toString(),
       attr: { id: 'errorCountBadge' }
     });
     
-    errorToggle.createSpan({ cls: 'toggle-icon', text: '▼' });
+    errorToggle.createSpan({ cls: 'kga-toggle-icon', text: '▼' });
     
-    const errorContent = errorSummary.createDiv('error-summary-content');
+    const errorContent = errorSummary.createDiv('kga-error-summary-content');
     errorContent.id = 'errorSummaryContent';
     // Error summary content
     this.createErrorSummaryElement(errorContent);
     
     // Button area
-    const buttonArea = content.createDiv('button-area');
-    buttonArea.createEl('button', { cls: 'cancel-btn', text: '취소' });
-    buttonArea.createEl('button', { 
-      cls: 'apply-btn', 
+    const buttonArea = content.createDiv('kga-button-area');
+    buttonArea.createEl('button', { cls: 'kga-cancel-btn', text: '취소' });
+    buttonArea.createEl('button', {
+      cls: 'kga-apply-btn',
       text: '적용',
       attr: { id: 'applyCorrectionsButton' }
     });
@@ -683,17 +683,17 @@ export class CorrectionPopup extends BaseComponent {
     container.empty();
     
     if (!this.isLongText || this.totalPreviewPages <= 1) {
-      const hiddenContainer = container.createDiv('pagination-container-hidden');
+      const hiddenContainer = container.createDiv('kga-pagination-container-hidden');
       hiddenContainer.id = 'paginationContainer';
       return;
     }
 
-    const paginationControls = container.createDiv('pagination-controls');
+    const paginationControls = container.createDiv('kga-pagination-controls');
     paginationControls.id = 'paginationContainer';
     
     // Previous button
     const prevBtn = paginationControls.createEl('button', { 
-      cls: 'pagination-btn',
+      cls: 'kga-pagination-btn',
       text: '이전'
     });
     prevBtn.id = 'prevPreviewPage';
@@ -702,13 +702,13 @@ export class CorrectionPopup extends BaseComponent {
     }
     
     // Page info
-    const pageInfo = paginationControls.createSpan('page-info');
+    const pageInfo = paginationControls.createSpan('kga-page-info');
     pageInfo.id = 'previewPageInfo';
     pageInfo.textContent = `${this.currentPreviewPage + 1} / ${this.totalPreviewPages}`;
     
     // Next button
     const nextBtn = paginationControls.createEl('button', { 
-      cls: 'pagination-btn',
+      cls: 'kga-pagination-btn',
       text: '다음'
     });
     nextBtn.id = 'nextPreviewPage';
@@ -717,7 +717,7 @@ export class CorrectionPopup extends BaseComponent {
     }
     
     // Page chars info
-    const pageCharsInfo = paginationControls.createSpan('page-chars-info');
+    const pageCharsInfo = paginationControls.createSpan('kga-page-chars-info');
     pageCharsInfo.id = 'pageCharsInfo';
     pageCharsInfo.textContent = `${this.charsPerPage}자`;
   }
@@ -728,15 +728,15 @@ export class CorrectionPopup extends BaseComponent {
    */
   private createPaginationHTML(): string {
     if (!this.isLongText || this.totalPreviewPages <= 1) {
-      return '<div id="paginationContainer" class="pagination-container-hidden"></div>';
+      return '<div id="paginationContainer" class="kga-pagination-container-hidden"></div>';
     }
 
     return `
-      <div class="pagination-controls" id="paginationContainer">
-        <button class="pagination-btn" id="prevPreviewPage" ${this.currentPreviewPage === 0 ? 'disabled' : ''}>이전</button>
-        <span class="page-info" id="previewPageInfo">${this.currentPreviewPage + 1} / ${this.totalPreviewPages}</span>
-        <button class="pagination-btn" id="nextPreviewPage" ${this.currentPreviewPage === this.totalPreviewPages - 1 ? 'disabled' : ''}>다음</button>
-        <span class="page-chars-info" id="pageCharsInfo">${this.charsPerPage}자</span>
+      <div class="kga-pagination-controls" id="paginationContainer">
+        <button class="kga-pagination-btn" id="prevPreviewPage" ${this.currentPreviewPage === 0 ? 'disabled' : ''}>이전</button>
+        <span class="kga-page-info" id="previewPageInfo">${this.currentPreviewPage + 1} / ${this.totalPreviewPages}</span>
+        <button class="kga-pagination-btn" id="nextPreviewPage" ${this.currentPreviewPage === this.totalPreviewPages - 1 ? 'disabled' : ''}>다음</button>
+        <span class="kga-page-chars-info" id="pageCharsInfo">${this.charsPerPage}자</span>
       </div>
     `;
   }
@@ -1118,7 +1118,7 @@ export class CorrectionPopup extends BaseComponent {
         Logger.debug(`🎨 미리보기 사용자편집: index=${actualIndex}, original="${correction.original}", currentValue="${currentValue}", displayClass="${displayClass}"`);
       }
       
-      const replacementHtml = `<span class="${displayClass} clickable-error" data-correction-index="${actualIndex}" data-unique-id="${uniqueId}">${escapedValue}</span>`;
+      const replacementHtml = `<span class="${displayClass} kga-clickable-error" data-correction-index="${actualIndex}" data-unique-id="${uniqueId}">${escapedValue}</span>`;
       
       // 정확한 위치에서 오류 텍스트 찾기
       const expectedText = correction.original || '';
@@ -1230,10 +1230,10 @@ export class CorrectionPopup extends BaseComponent {
     if (currentCorrections.length === 0) {
       Logger.debug(`🏗️ 오류 없음 - 플레이스홀더 반환`);
       return `
-        <div class="error-placeholder">
-          <div class="placeholder-icon">✓</div>
-          <div class="placeholder-text">이 페이지에는 발견된 오류가 없습니다</div>
-          <div class="placeholder-subtext">다른 페이지에서 오류를 확인하세요</div>
+        <div class="kga-error-placeholder">
+          <div class="kga-placeholder-icon">✓</div>
+          <div class="kga-placeholder-text">이 페이지에는 발견된 오류가 없습니다</div>
+          <div class="kga-placeholder-subtext">다른 페이지에서 오류를 확인하세요</div>
         </div>
       `;
     }
@@ -1253,18 +1253,18 @@ export class CorrectionPopup extends BaseComponent {
       
       const aiResult = this.aiAnalysisResults.find(result => result.correctionIndex === actualIndex);
       const reasoningHTML = aiResult
-        ? `<div class="ai-analysis-result">
-             <div class="ai-confidence">🤖 신뢰도: <span class="confidence-score">${aiResult.confidence}%</span></div>
-             <div class="ai-reasoning">${escapeHtml(aiResult.reasoning)}</div>
+        ? `<div class="kga-ai-analysis-result">
+             <div class="kga-ai-confidence">🤖 신뢰도: <span class="kga-confidence-score">${aiResult.confidence}%</span></div>
+             <div class="kga-ai-reasoning">${escapeHtml(aiResult.reasoning)}</div>
            </div>`
         : isOriginalKept
-        ? `<div class="ai-analysis-result">
-             <div class="ai-reasoning">사용자가 직접 선택했거나, 예외 단어로 등록된 항목입니다.</div>
+        ? `<div class="kga-ai-analysis-result">
+             <div class="kga-ai-reasoning">사용자가 직접 선택했거나, 예외 단어로 등록된 항목입니다.</div>
            </div>`
         : '';
       
       const suggestionsHTML = suggestions.map(suggestion => 
-        `<span class="suggestion-compact ${this.stateManager.isSelected(actualIndex, suggestion) ? 'selected' : ''}" 
+        `<span class="kga-suggestion-compact ${this.stateManager.isSelected(actualIndex, suggestion) ? 'selected' : ''}" 
               data-value="${escapeHtml(suggestion)}" 
               data-correction="${actualIndex}"
               ${isOriginalKept ? 'disabled' : ''}>
@@ -1278,12 +1278,12 @@ export class CorrectionPopup extends BaseComponent {
                        this.stateManager.getValue(actualIndex) !== correction.original ? 'corrected' : '';
       
       const htmlString = `
-        <div class="error-item-compact ${isOriginalKept ? 'spell-original-kept' : ''}" data-correction-index="${actualIndex}">
-          <div class="error-row">
-            <div class="error-original-compact ${stateClass}" data-correction-index="${actualIndex}">${escapeHtml(this.stateManager.getValue(actualIndex))}</div>
-            <div class="error-suggestions-compact">
+        <div class="kga-error-item-compact ${isOriginalKept ? 'spell-original-kept' : ''}" data-correction-index="${actualIndex}">
+          <div class="kga-error-row">
+            <div class="kga-error-original-compact ${stateClass}" data-correction-index="${actualIndex}">${escapeHtml(this.stateManager.getValue(actualIndex))}</div>
+            <div class="kga-error-suggestions-compact">
               ${suggestionsHTML}
-              <span class="suggestion-compact ${this.stateManager.isSelected(actualIndex, correction.original) ? 'selected' : ''} keep-original" 
+              <span class="kga-suggestion-compact ${this.stateManager.isSelected(actualIndex, correction.original) ? 'selected' : ''} kga-keep-original" 
                     data-value="${escapeHtml(correction.original)}" 
                     data-correction="${actualIndex}"
                     ${isOriginalKept ? 'disabled' : ''}>
@@ -1291,7 +1291,7 @@ export class CorrectionPopup extends BaseComponent {
               </span>
             </div>
           </div>
-          <div class="error-help-compact">${escapeHtml(correction.help)}</div>
+          <div class="kga-error-help-compact">${escapeHtml(correction.help)}</div>
           ${reasoningHTML}
         </div>
       `;
@@ -1393,7 +1393,7 @@ export class CorrectionPopup extends BaseComponent {
     this.bindCloseEvents();
     
     // 팝업 오버레이 클릭 시 닫기
-    const overlay = this.element.querySelector('.popup-overlay');
+    const overlay = this.element.querySelector('.kga-popup-overlay');
     if (overlay) {
       this.addEventListener(overlay as HTMLElement, 'click', () => {
         this.close();
@@ -1420,7 +1420,7 @@ export class CorrectionPopup extends BaseComponent {
    * 닫기 이벤트를 바인딩합니다.
    */
   private bindCloseEvents(): void {
-    const closeButtons = this.element.querySelectorAll('.close-btn-header, .cancel-btn');
+    const closeButtons = this.element.querySelectorAll('.kga-close-btn-header, .kga-cancel-btn');
     closeButtons.forEach(button => {
       this.addEventListener(button as HTMLElement, 'click', () => {
         this.close();
@@ -1469,7 +1469,7 @@ export class CorrectionPopup extends BaseComponent {
    * 오류 토글 이벤트를 바인딩합니다.
    */
   private bindErrorToggleEvents(): void {
-    const toggleElement = this.element.querySelector('.error-summary-toggle');
+    const toggleElement = this.element.querySelector('.kga-error-summary-toggle');
     if (toggleElement) {
       this.addEventListener(toggleElement as HTMLElement, 'click', () => {
         const errorSummary = this.element.querySelector('#errorSummary');
@@ -1496,19 +1496,19 @@ export class CorrectionPopup extends BaseComponent {
       Logger.debug(`🖱️ 클릭 이벤트 발생: target="${target.tagName}.${target.className}", textContent="${target.textContent}"`);
       
       // 미리보기 영역 클릭 처리
-      if (target.classList.contains('clickable-error')) {
+      if (target.classList.contains('kga-clickable-error')) {
         Logger.debug(`🖱️ 미리보기 클릭 처리: ${target.textContent}`);
         this.handlePreviewClick(target);
       }
       
       // 오류 상세 카드 원본 텍스트 클릭 처리 (편집 모드)
-      if (target.classList.contains('error-original-compact')) {
+      if (target.classList.contains('kga-error-original-compact')) {
         Logger.debug(`🖱️ 오류 카드 텍스트 클릭 감지: ${target.textContent}`);
         this.handleCardTextClick(target);
       }
       
       // 제안 버튼 클릭 처리
-      if (target.classList.contains('suggestion-compact')) {
+      if (target.classList.contains('kga-suggestion-compact')) {
         this.handleSuggestionClick(target);
       }
     });
@@ -1518,7 +1518,7 @@ export class CorrectionPopup extends BaseComponent {
       const target = e.target as HTMLElement;
       
       // 미리보기 영역의 오류 단어에서 우클릭 시 편집 모드로 전환
-      if (target.classList.contains('clickable-error')) {
+      if (target.classList.contains('kga-clickable-error')) {
         e.preventDefault(); // 기본 컨텍스트 메뉴 차단
         Logger.debug(`🖱️ 미리보기 우클릭 편집 모드: ${target.textContent}`);
         this.handlePreviewRightClick(target);
@@ -1548,7 +1548,7 @@ export class CorrectionPopup extends BaseComponent {
       const target = e.target as HTMLElement;
       
       // 미리보기 영역의 오류 텍스트 또는 오류 카드의 원본 텍스트에서 터치홀드 처리
-      if (target.classList.contains('clickable-error') || target.classList.contains('error-original-compact')) {
+      if (target.classList.contains('kga-clickable-error') || target.classList.contains('kga-error-original-compact')) {
         touchTarget = target;
         
         touchTimer = setTimeout(() => {
@@ -1562,9 +1562,9 @@ export class CorrectionPopup extends BaseComponent {
             
             // 편집 모드 로직 먼저 호출 (미리보기가 보이는 상태에서)
             let editingStarted = false;
-            if (touchTarget.classList.contains('clickable-error')) {
+            if (touchTarget.classList.contains('kga-clickable-error')) {
               editingStarted = this.handlePreviewRightClick(touchTarget);
-            } else if (touchTarget.classList.contains('error-original-compact')) {
+            } else if (touchTarget.classList.contains('kga-error-original-compact')) {
               editingStarted = this.handleCardTextClick(touchTarget);
             }
             
@@ -1647,19 +1647,19 @@ export class CorrectionPopup extends BaseComponent {
         // 분석 중인 경우
         aiBtn.textContent = '🤖 분석 중...';
         aiBtn.disabled = true;
-        aiBtn.classList.remove('ai-disabled');
+        aiBtn.classList.remove('kga-ai-disabled');
         aiBtn.title = 'AI 분석이 진행 중입니다...';
       } else if (this.aiService && (await this.aiService.isAvailable())) {
         // AI 서비스 사용 가능한 경우
         aiBtn.textContent = '🤖 AI 분석';
         aiBtn.disabled = false;
-        aiBtn.classList.remove('ai-disabled');
+        aiBtn.classList.remove('kga-ai-disabled');
         aiBtn.title = 'AI가 최적의 수정사항을 자동으로 선택합니다 (Shift+Cmd+A)';
       } else {
         // AI 서비스 사용 불가능한 경우
         aiBtn.textContent = '🤖 AI 미설정';
         aiBtn.disabled = true;
-        aiBtn.classList.add('ai-disabled');
+        aiBtn.classList.add('kga-ai-disabled');
         if (!this.aiService) {
           aiBtn.title = 'AI 서비스를 초기화할 수 없습니다. 플러그인을 다시 로드해보세요.';
         } else {
@@ -1676,7 +1676,7 @@ export class CorrectionPopup extends BaseComponent {
       Logger.error('AI 버튼 상태 업데이트 실패:', error);
       aiBtn.textContent = '🤖 AI 오류';
       aiBtn.disabled = true;
-      aiBtn.classList.add('ai-disabled');
+      aiBtn.classList.add('kga-ai-disabled');
       aiBtn.title = 'AI 서비스 상태 확인 중 오류가 발생했습니다.';
     }
   }
@@ -1748,7 +1748,7 @@ export class CorrectionPopup extends BaseComponent {
 
     // DOM 업데이트 후 편집 모드 진입 (비동기 처리)
     setTimeout(() => {
-      const errorCard = this.element.querySelector(`[data-correction-index="${correctionIndex}"] .error-original-compact`);
+      const errorCard = this.element.querySelector(`[data-correction-index="${correctionIndex}"] .kga-error-original-compact`);
       if (errorCard) {
         Logger.debug(`🔧 편집 모드 진입 - 오류 상세 카드 찾음: index=${correctionIndex}`);
         
@@ -1802,7 +1802,7 @@ export class CorrectionPopup extends BaseComponent {
     const input = document.createElement('input');
     input.type = 'text';
     input.value = currentText;
-    input.className = 'error-original-input';
+    input.className = 'kga-error-original-input';
     input.dataset.correctionIndex = correctionIndex.toString();
     input.dataset.editMode = 'true'; // 편집 모드 표시
     
@@ -1822,7 +1822,7 @@ export class CorrectionPopup extends BaseComponent {
    * 데스크톱용 편집 모드를 생성합니다.
    */
   private createDesktopEditMode(originalElement: HTMLElement, input: HTMLInputElement, correctionIndex: number, getIsFinished: () => boolean, setIsFinished: (flag: boolean) => void): void {
-    const errorCard = originalElement.closest('.error-card');
+    const errorCard = originalElement.closest('.kga-error-card');
     const hiddenElements: Array<{ element: HTMLElement; className: string }> = [];
 
     const hideElement = (element: HTMLElement | null, className: string = HIDDEN_CLASS, logMessage?: string) => {
@@ -1836,12 +1836,12 @@ export class CorrectionPopup extends BaseComponent {
 
     if (errorCard) {
       hideElement(
-        errorCard.querySelector('.error-suggestions-compact') as HTMLElement,
+        errorCard.querySelector('.kga-error-suggestions-compact') as HTMLElement,
         HIDDEN_CLASS,
         `🖥️ 수정 제안 버튼 숨김: index=${correctionIndex}`
       );
       hideElement(
-        errorCard.querySelector('.error-exception-btn') as HTMLElement,
+        errorCard.querySelector('.kga-error-exception-btn') as HTMLElement,
         HIDDEN_CLASS,
         `🖥️ 예외 처리 버튼 숨김: index=${correctionIndex}`
       );
@@ -1944,18 +1944,18 @@ export class CorrectionPopup extends BaseComponent {
     };
     
     // 해당 오류 카드 찾기 및 수정 제안 버튼들 숨기기
-    const errorCard = originalElement.closest('.error-card');
+    const errorCard = originalElement.closest('.kga-error-card');
     
     if (errorCard) {
-      // editing-mode 클래스 추가 (CSS 폴백용)
-      errorCard.classList.add('editing-mode');
-      Logger.debug(`📱 editing-mode 클래스 추가: index=${correctionIndex}`);
+      // kga-editing-mode 클래스 추가 (CSS 폴백용)
+      errorCard.classList.add('kga-editing-mode');
+      Logger.debug(`📱 kga-editing-mode 클래스 추가: index=${correctionIndex}`);
       
       // 수정 제안 버튼들 모두 찾아서 숨기기
-      const suggestions = errorCard.querySelectorAll('.suggestion-compact');
-      const keepOriginals = errorCard.querySelectorAll('.keep-original');
-      const suggestionsContainer = errorCard.querySelector('.error-suggestions-compact') as HTMLElement;
-      const exceptionBtn = errorCard.querySelector('.error-exception-btn') as HTMLElement;
+      const suggestions = errorCard.querySelectorAll('.kga-suggestion-compact');
+      const keepOriginals = errorCard.querySelectorAll('.kga-keep-original');
+      const suggestionsContainer = errorCard.querySelector('.kga-error-suggestions-compact') as HTMLElement;
+      const exceptionBtn = errorCard.querySelector('.kga-error-exception-btn') as HTMLElement;
       
       // 개별 수정 제안 버튼들 강제 숨기기
       suggestions.forEach((btn) => {
@@ -1984,17 +1984,17 @@ export class CorrectionPopup extends BaseComponent {
     
     // 컨테이너 생성 (Obsidian createEl 사용)
     const container = document.createElement('div');
-    container.className = 'mobile-edit-container';
+    container.className = 'kga-mobile-edit-container';
     
     // 완료 버튼
     const saveBtn = document.createElement('button');
-    saveBtn.className = 'mobile-edit-btn save';
+    saveBtn.className = 'kga-mobile-edit-btn save';
     saveBtn.textContent = '✓';
     saveBtn.title = '저장';
     
     // 취소 버튼
     const cancelBtn = document.createElement('button');
-    cancelBtn.className = 'mobile-edit-btn cancel';
+    cancelBtn.className = 'kga-mobile-edit-btn cancel';
     cancelBtn.textContent = '✕';
     cancelBtn.title = '취소';
     
@@ -2006,10 +2006,10 @@ export class CorrectionPopup extends BaseComponent {
       // 모바일 편집 모드 종료 - 미리보기 복원 및 오류 상세 영역 원래 크기로 복원
       this.exitMobileEditingMode();
       
-      // editing-mode 클래스 제거
+      // kga-editing-mode 클래스 제거
       if (errorCard) {
-        errorCard.classList.remove('editing-mode');
-        Logger.debug(`📱 editing-mode 클래스 제거: index=${correctionIndex}`);
+        errorCard.classList.remove('kga-editing-mode');
+        Logger.debug(`📱 kga-editing-mode 클래스 제거: index=${correctionIndex}`);
       }
       
       // 숨겨둔 요소들 다시 표시
@@ -2030,10 +2030,10 @@ export class CorrectionPopup extends BaseComponent {
       // 모바일 편집 모드 종료 - 미리보기 복원 및 오류 상세 영역 원래 크기로 복원
       this.exitMobileEditingMode();
       
-      // editing-mode 클래스 제거
+      // kga-editing-mode 클래스 제거
       if (errorCard) {
-        errorCard.classList.remove('editing-mode');
-        Logger.debug(`📱 editing-mode 클래스 제거 (취소): index=${correctionIndex}`);
+        errorCard.classList.remove('kga-editing-mode');
+        Logger.debug(`📱 kga-editing-mode 클래스 제거 (취소): index=${correctionIndex}`);
       }
       
       // 숨겨진 요소들 다시 표시
@@ -2157,7 +2157,7 @@ export class CorrectionPopup extends BaseComponent {
         this.updateFocusHighlight();
         
         // 미리보기에서 해당 단어를 화면 중앙으로 스크롤
-        const previewElement = this.element.querySelector('.preview-text');
+        const previewElement = this.element.querySelector('.kga-preview-text');
         if (previewElement) {
           const targetSpan = previewElement.querySelector(`[data-correction-index="${correctionIndex}"]`);
           if (targetSpan) {
@@ -2169,9 +2169,9 @@ export class CorrectionPopup extends BaseComponent {
             Logger.debug(`🎯 미리보기 스크롤 완료: 단어 "${targetSpan.textContent}"`);
             
             // 포커스된 요소에 일시적 하이라이트 효과
-            targetSpan.classList.add('edit-completion-highlight');
+            targetSpan.classList.add('kga-edit-completion-highlight');
             setTimeout(() => {
-              targetSpan.classList.remove('edit-completion-highlight');
+              targetSpan.classList.remove('kga-edit-completion-highlight');
             }, 2000);
           } else {
             Logger.debug(`🎯 미리보기에서 해당 단어를 찾을 수 없음: index=${correctionIndex}`);
@@ -2238,11 +2238,11 @@ export class CorrectionPopup extends BaseComponent {
    * 오류 상세 항목의 스타일을 상태에 따라 업데이트합니다.
    */
   private updateErrorDetailStyles(): void {
-    const errorItems = this.element.querySelectorAll('.error-item-compact');
+    const errorItems = this.element.querySelectorAll('.kga-error-item-compact');
     
     errorItems.forEach((item, index) => {
       const correctionIndex = parseInt(item.getAttribute('data-correction-index') || '0');
-      const originalText = item.querySelector('.error-original-compact');
+      const originalText = item.querySelector('.kga-error-original-compact');
       
       if (originalText) {
         // 기존 상태 클래스 제거
@@ -2284,7 +2284,7 @@ export class CorrectionPopup extends BaseComponent {
     // 페이지네이션 컨테이너 가시성 업데이트
     if (paginationContainer) {
       if (this.isLongText && this.totalPreviewPages > 1) {
-        paginationContainer.className = 'pagination-controls';
+        paginationContainer.className = 'kga-pagination-controls';
         // 페이지네이션이 표시되어야 하는데 버튼이 없으면 HTML을 다시 생성
         if (!prevButton || !nextButton) {
           // DOM API를 사용하여 페이지네이션 컨트롤 생성
@@ -2296,7 +2296,7 @@ export class CorrectionPopup extends BaseComponent {
           this.bindPaginationEvents();
         }
       } else {
-        paginationContainer.className = 'pagination-container-hidden';
+        paginationContainer.className = 'kga-pagination-container-hidden';
       }
     }
 
@@ -2555,20 +2555,20 @@ export class CorrectionPopup extends BaseComponent {
     if (currentCorrections.length === 0) {
       // 오류가 없는 경우의 플레이스홀더
       const placeholder = document.createElement('div');
-      placeholder.className = 'error-placeholder';
+      placeholder.className = 'kga-error-placeholder';
       
       const icon = document.createElement('div');
-      icon.className = 'placeholder-icon';
+      icon.className = 'kga-placeholder-icon';
       icon.textContent = '✓';
       placeholder.appendChild(icon);
       
       const text = document.createElement('div');
-      text.className = 'placeholder-text';
+      text.className = 'kga-placeholder-text';
       text.textContent = '이 페이지에는 발견된 오류가 없습니다';
       placeholder.appendChild(text);
       
       const subtext = document.createElement('div');
-      subtext.className = 'placeholder-subtext';
+      subtext.className = 'kga-placeholder-subtext';
       subtext.textContent = '다른 페이지에서 오류를 확인하세요';
       placeholder.appendChild(subtext);
       
@@ -2590,7 +2590,7 @@ export class CorrectionPopup extends BaseComponent {
       
       // 에러 아이템 컨테이너
       const errorItem = document.createElement('div');
-      errorItem.className = `error-item-compact ${isOriginalKept ? 'spell-original-kept' : ''}`;
+      errorItem.className = `kga-error-item-compact ${isOriginalKept ? 'spell-original-kept' : ''}`;
       errorItem.setAttribute('data-correction-index', actualIndex.toString());
       errorItem.setAttribute('data-unique-id', pageCorrection.uniqueId);
       
@@ -2598,7 +2598,7 @@ export class CorrectionPopup extends BaseComponent {
       
       // 에러 행 (원본 + 제안들)
       const errorRow = document.createElement('div');
-      errorRow.className = 'error-row';
+      errorRow.className = 'kga-error-row';
       
       // 원본 텍스트 (사용자 편집값 또는 현재 상태값 표시)
       const errorOriginal = document.createElement('div');
@@ -2608,19 +2608,19 @@ export class CorrectionPopup extends BaseComponent {
                        this.stateManager.isExceptionState(actualIndex) ? 'exception-processed' :
                        this.stateManager.getValue(actualIndex) !== correction.original ? 'corrected' : '';
       
-      errorOriginal.className = `error-original-compact ${stateClass}`;
+      errorOriginal.className = `kga-error-original-compact ${stateClass}`;
       errorOriginal.setAttribute('data-correction-index', actualIndex.toString());
       errorOriginal.textContent = this.stateManager.getValue(actualIndex); // 현재 상태값 (편집값 포함)
       errorRow.appendChild(errorOriginal);
       
       // 제안들 컨테이너
       const suggestionsContainer = document.createElement('div');
-      suggestionsContainer.className = 'error-suggestions-compact';
+      suggestionsContainer.className = 'kga-error-suggestions-compact';
       
       // 제안 스팬들 생성
       suggestions.forEach(suggestion => {
         const suggestionSpan = document.createElement('span');
-        suggestionSpan.className = `suggestion-compact ${this.stateManager.isSelected(actualIndex, suggestion) ? 'selected' : ''}`;
+        suggestionSpan.className = `kga-suggestion-compact ${this.stateManager.isSelected(actualIndex, suggestion) ? 'selected' : ''}`;
         suggestionSpan.setAttribute('data-value', suggestion);
         suggestionSpan.setAttribute('data-correction', actualIndex.toString());
         if (isOriginalKept) {
@@ -2632,7 +2632,7 @@ export class CorrectionPopup extends BaseComponent {
       
       // 예외처리 스팬
       const keepOriginalSpan = document.createElement('span');
-      keepOriginalSpan.className = `suggestion-compact ${this.stateManager.isSelected(actualIndex, correction.original) ? 'selected' : ''} keep-original`;
+      keepOriginalSpan.className = `kga-suggestion-compact ${this.stateManager.isSelected(actualIndex, correction.original) ? 'selected' : ''} kga-keep-original`;
       keepOriginalSpan.setAttribute('data-value', correction.original);
       keepOriginalSpan.setAttribute('data-correction', actualIndex.toString());
       if (isOriginalKept) {
@@ -2646,7 +2646,7 @@ export class CorrectionPopup extends BaseComponent {
       
       // 도움말 텍스트
       const errorHelp = document.createElement('div');
-      errorHelp.className = 'error-help-compact';
+      errorHelp.className = 'kga-error-help-compact';
       errorHelp.textContent = correction.help;
       errorItem.appendChild(errorHelp);
       
@@ -2654,26 +2654,26 @@ export class CorrectionPopup extends BaseComponent {
       const aiResult = this.aiAnalysisResults.find(result => result.correctionIndex === actualIndex);
       if (aiResult || isOriginalKept) {
         const aiAnalysis = document.createElement('div');
-        aiAnalysis.className = 'ai-analysis-result';
+        aiAnalysis.className = 'kga-ai-analysis-result';
         
         if (aiResult) {
           const aiConfidence = document.createElement('div');
-          aiConfidence.className = 'ai-confidence';
+          aiConfidence.className = 'kga-ai-confidence';
           aiConfidence.textContent = '🤖 신뢰도: ';
           
           const confidenceScore = document.createElement('span');
-          confidenceScore.className = 'confidence-score';
+          confidenceScore.className = 'kga-confidence-score';
           confidenceScore.textContent = `${aiResult.confidence}%`;
           aiConfidence.appendChild(confidenceScore);
           aiAnalysis.appendChild(aiConfidence);
           
           const aiReasoning = document.createElement('div');
-          aiReasoning.className = 'ai-reasoning';
+          aiReasoning.className = 'kga-ai-reasoning';
           aiReasoning.textContent = aiResult.reasoning;
           aiAnalysis.appendChild(aiReasoning);
         } else if (isOriginalKept) {
           const aiReasoning = document.createElement('div');
-          aiReasoning.className = 'ai-reasoning';
+          aiReasoning.className = 'kga-ai-reasoning';
           aiReasoning.textContent = '사용자가 직접 선택했거나, 예외 단어로 등록된 항목입니다.';
           aiAnalysis.appendChild(aiReasoning);
         }
@@ -2698,7 +2698,7 @@ export class CorrectionPopup extends BaseComponent {
     const fragment = document.createDocumentFragment();
 
     const prevButton = document.createElement('button');
-    prevButton.className = 'pagination-btn';
+    prevButton.className = 'kga-pagination-btn';
     prevButton.id = 'prevPreviewPage';
     prevButton.textContent = '이전';
     if (this.currentPreviewPage === 0) {
@@ -2707,13 +2707,13 @@ export class CorrectionPopup extends BaseComponent {
     fragment.appendChild(prevButton);
 
     const pageInfo = document.createElement('span');
-    pageInfo.className = 'page-info';
+    pageInfo.className = 'kga-page-info';
     pageInfo.id = 'previewPageInfo';
     pageInfo.textContent = `${this.currentPreviewPage + 1} / ${this.totalPreviewPages}`;
     fragment.appendChild(pageInfo);
 
     const nextButton = document.createElement('button');
-    nextButton.className = 'pagination-btn';
+    nextButton.className = 'kga-pagination-btn';
     nextButton.id = 'nextPreviewPage';
     nextButton.textContent = '다음';
     if (this.currentPreviewPage === this.totalPreviewPages - 1) {
@@ -2722,7 +2722,7 @@ export class CorrectionPopup extends BaseComponent {
     fragment.appendChild(nextButton);
 
     const charsInfo = document.createElement('span');
-    charsInfo.className = 'page-chars-info';
+    charsInfo.className = 'kga-page-chars-info';
     charsInfo.id = 'pageCharsInfo';
     charsInfo.textContent = `${this.charsPerPage}자`;
     fragment.appendChild(charsInfo);
@@ -2736,75 +2736,75 @@ export class CorrectionPopup extends BaseComponent {
    */
   private createTokenWarningModal(tokenUsage: any, isOverMaxTokens: boolean, maxTokens: number): HTMLElement {
     const content = document.createElement('div');
-    content.className = 'token-warning-content';
+    content.className = 'kga-token-warning-content';
 
     // 헤더 섹션
     const header = content.appendChild(document.createElement('div'));
-    header.className = 'token-warning-header';
+    header.className = 'kga-token-warning-header';
     
     const headerIcon = header.appendChild(document.createElement('div'));
-    headerIcon.className = 'token-warning-header-icon';
+    headerIcon.className = 'kga-token-warning-header-icon';
     headerIcon.textContent = '⚡';
     
     const headerInfo = header.appendChild(document.createElement('div'));
     
     const title = headerInfo.appendChild(document.createElement('h3'));
-    title.className = 'token-warning-title';
+    title.className = 'kga-token-warning-title';
     title.textContent = isOverMaxTokens ? '토큰 사용량 확인' : '토큰 사용량 안내';
     
     const description = headerInfo.appendChild(document.createElement('p'));
-    description.className = 'token-warning-description';
+    description.className = 'kga-token-warning-description';
     description.textContent = isOverMaxTokens ? '설정된 한계를 초과했습니다' : '예상 사용량이 높습니다';
 
     // 토큰 사용량 카드
     const details = content.appendChild(document.createElement('div'));
-    details.className = 'token-warning-details';
+    details.className = 'kga-token-warning-details';
     
     const stats = details.appendChild(document.createElement('div'));
-    stats.className = 'token-warning-stats';
+    stats.className = 'kga-token-warning-stats';
     
     // 총 토큰 통계
     const totalTokenItem = stats.appendChild(document.createElement('div'));
-    totalTokenItem.className = 'token-stat-item';
+    totalTokenItem.className = 'kga-token-stat-item';
     
     const totalTokenNumber = totalTokenItem.appendChild(document.createElement('div'));
-    totalTokenNumber.className = 'token-stat-number';
+    totalTokenNumber.className = 'kga-token-stat-number';
     totalTokenNumber.textContent = tokenUsage.totalEstimated.toLocaleString();
     
     const totalTokenLabel = totalTokenItem.appendChild(document.createElement('div'));
-    totalTokenLabel.className = 'token-stat-label';
+    totalTokenLabel.className = 'kga-token-stat-label';
     totalTokenLabel.textContent = '총 토큰';
     
     // 예상 비용 통계
     const costItem = stats.appendChild(document.createElement('div'));
-    costItem.className = 'token-stat-item';
+    costItem.className = 'kga-token-stat-item';
     
     const costNumber = costItem.appendChild(document.createElement('div'));
-    costNumber.className = 'token-stat-number orange';
+    costNumber.className = 'kga-token-stat-number kga-orange';
     costNumber.textContent = tokenUsage.estimatedCost;
     
     const costLabel = costItem.appendChild(document.createElement('div'));
-    costLabel.className = 'token-stat-label';
+    costLabel.className = 'kga-token-stat-label';
     costLabel.textContent = '예상 비용';
     
     // 형태소 최적화는 백그라운드에서 동작하므로 UI에 표시하지 않음
     
     // 사용량 세부사항
     const recommendation = details.appendChild(document.createElement('div'));
-    recommendation.className = 'token-warning-recommendation';
+    recommendation.className = 'kga-token-warning-recommendation';
     
     const recHeader = recommendation.appendChild(document.createElement('div'));
-    recHeader.className = 'token-warning-recommendation-header';
+    recHeader.className = 'kga-token-warning-recommendation-header';
     
     const recContent = recHeader.appendChild(document.createElement('div'));
-    recContent.className = 'token-warning-recommendation-content';
+    recContent.className = 'kga-token-warning-recommendation-content';
     
     const recTitle = recContent.appendChild(document.createElement('div'));
-    recTitle.className = 'token-warning-recommendation-title';
+    recTitle.className = 'kga-token-warning-recommendation-title';
     recTitle.textContent = '사용량 세부사항';
     
     const recText = recContent.appendChild(document.createElement('div'));
-    recText.className = 'token-warning-recommendation-text';
+    recText.className = 'kga-token-warning-recommendation-text';
     
     // 깔끔한 토큰 정보만 표시 (최적화는 백그라운드 처리)
     const detailText = `입력: ${tokenUsage.inputTokens.toLocaleString()} • 출력: ${tokenUsage.estimatedOutputTokens.toLocaleString()}`;
@@ -2813,51 +2813,51 @@ export class CorrectionPopup extends BaseComponent {
     // 토큰 초과 알림 (조건부)
     if (isOverMaxTokens) {
       const overLimit = content.appendChild(document.createElement('div'));
-      overLimit.className = 'token-warning-over-limit';
+      overLimit.className = 'kga-token-warning-over-limit';
       
       const overLimitContent = overLimit.appendChild(document.createElement('div'));
-      overLimitContent.className = 'token-warning-over-limit-content';
+      overLimitContent.className = 'kga-token-warning-over-limit-content';
       
       const overLimitIcon = overLimitContent.appendChild(document.createElement('div'));
-      overLimitIcon.className = 'token-warning-over-limit-icon';
+      overLimitIcon.className = 'kga-token-warning-over-limit-icon';
       overLimitIcon.textContent = '!';
       
       const overLimitText = overLimitContent.appendChild(document.createElement('div'));
-      overLimitText.className = 'token-warning-over-limit-text';
+      overLimitText.className = 'kga-token-warning-over-limit-text';
       
       const overLimitTitle = overLimitText.appendChild(document.createElement('div'));
-      overLimitTitle.className = 'token-warning-over-limit-title';
+      overLimitTitle.className = 'kga-token-warning-over-limit-title';
       overLimitTitle.textContent = '설정된 최대 토큰을 초과했습니다';
       
       const overLimitDesc = overLimitText.appendChild(document.createElement('div'));
-      overLimitDesc.className = 'token-warning-over-limit-description';
+      overLimitDesc.className = 'kga-token-warning-over-limit-description';
       overLimitDesc.textContent = `현재 설정: ${maxTokens.toLocaleString()} 토큰 → 초과량: ${(tokenUsage.totalEstimated - maxTokens).toLocaleString()} 토큰`;
     }
 
     // 액션 버튼들
     const actions = content.appendChild(document.createElement('div'));
-    actions.className = 'token-warning-actions';
+    actions.className = 'kga-token-warning-actions';
     
     const cancelBtn = actions.appendChild(document.createElement('button'));
     cancelBtn.id = 'token-warning-cancel';
-    cancelBtn.className = 'token-warning-btn token-warning-btn-cancel';
+    cancelBtn.className = 'kga-token-warning-btn kga-token-warning-btn-cancel';
     cancelBtn.textContent = '취소';
     
     if (isOverMaxTokens) {
       const updateSettingsBtn = actions.appendChild(document.createElement('button'));
       updateSettingsBtn.id = 'token-warning-update-settings';
-      updateSettingsBtn.className = 'token-warning-btn token-warning-btn-settings';
+      updateSettingsBtn.className = 'kga-token-warning-btn kga-token-warning-btn-settings';
       updateSettingsBtn.textContent = '설정 업데이트';
     }
     
     const proceedBtn = actions.appendChild(document.createElement('button'));
     proceedBtn.id = 'token-warning-proceed';
-    proceedBtn.className = 'token-warning-btn token-warning-btn-proceed';
+    proceedBtn.className = 'kga-token-warning-btn kga-token-warning-btn-proceed';
     proceedBtn.textContent = isOverMaxTokens ? '이번만 진행' : '계속 진행';
 
     // 키보드 단축키 안내
     const keyboardHint = content.appendChild(document.createElement('div'));
-    keyboardHint.className = 'token-warning-keyboard-hint';
+    keyboardHint.className = 'kga-token-warning-keyboard-hint';
     keyboardHint.textContent = '💡 키보드 단축키: enter(진행), esc(취소)';
 
     return content;
@@ -2985,7 +2985,7 @@ export class CorrectionPopup extends BaseComponent {
     // 확인 모달 표시
     return new Promise((resolve) => {
       const modal = document.createElement('div');
-      modal.className = 'token-warning-modal';
+      modal.className = 'kga-token-warning-modal';
 
       // DOM API를 사용하여 모달 내용 생성
       const modalContent = this.createTokenWarningModal(tokenUsage, isOverMaxTokens, maxTokens);
@@ -3152,20 +3152,20 @@ export class CorrectionPopup extends BaseComponent {
     }
 
     const hint = document.createElement('div');
-    hint.className = 'keyboard-navigation-hint';
+    hint.className = 'kga-keyboard-navigation-hint';
     hint.id = 'keyboard-hint';
     
     // 헤더 (제목 + 닫기 버튼)
     const header = document.createElement('div');
-    header.className = 'hint-header';
+    header.className = 'kga-hint-header';
     
     const title = document.createElement('div');
-    title.className = 'hint-title';
+    title.className = 'kga-hint-title';
     title.textContent = '⌨️ 키보드 단축키';
     header.appendChild(title);
     
     const closeBtn = document.createElement('button');
-    closeBtn.className = 'hint-close-btn';
+    closeBtn.className = 'kga-hint-close-btn';
     closeBtn.textContent = '×';
     closeBtn.title = '단축키 가이드 닫기';
     closeBtn.addEventListener('click', () => {
@@ -3191,14 +3191,14 @@ export class CorrectionPopup extends BaseComponent {
     
     shortcuts.forEach(shortcut => {
       const item = document.createElement('div');
-      item.className = 'hint-item';
+      item.className = 'kga-hint-item';
       
       const key = document.createElement('span');
-      key.className = 'hint-key';
+      key.className = 'kga-hint-key';
       key.textContent = shortcut.key;
       
       const desc = document.createElement('span');
-      desc.className = 'hint-desc';
+      desc.className = 'kga-hint-desc';
       desc.textContent = shortcut.desc;
       
       item.appendChild(key);
@@ -3255,7 +3255,7 @@ export class CorrectionPopup extends BaseComponent {
     const errorSummary = document.getElementById('errorSummary');
     if (!errorSummary) return;
 
-    const errorItems = errorSummary.querySelectorAll('.error-item-compact');
+    const errorItems = errorSummary.querySelectorAll('.kga-error-item-compact');
     let targetItem: HTMLElement | null = null;
 
     // 실제 인덱스와 매칭되는 항목 찾기
@@ -3303,17 +3303,17 @@ export class CorrectionPopup extends BaseComponent {
    */
   private highlightFocusedError(targetItem: HTMLElement): void {
     // 기존 하이라이트 제거
-    const existingHighlight = document.querySelector('.error-item-highlighted');
+    const existingHighlight = document.querySelector('.kga-error-item-highlighted');
     if (existingHighlight) {
-      existingHighlight.classList.remove('error-item-highlighted');
+      existingHighlight.classList.remove('kga-error-item-highlighted');
     }
 
     // 새로운 하이라이트 추가
-    targetItem.classList.add('error-item-highlighted');
+    targetItem.classList.add('kga-error-item-highlighted');
     
     // 2초 후 하이라이트 제거
     setTimeout(() => {
-      targetItem.classList.remove('error-item-highlighted');
+      targetItem.classList.remove('kga-error-item-highlighted');
     }, 2000);
     
     Logger.log('오류 카드 하이라이트 애니메이션 적용');
@@ -3363,7 +3363,7 @@ export class CorrectionPopup extends BaseComponent {
 
     // DOM 업데이트 후 편집 모드 진입
     setTimeout(() => {
-      const errorCard = this.element.querySelector(`[data-correction-index="${actualIndex}"] .error-original-compact`);
+      const errorCard = this.element.querySelector(`[data-correction-index="${actualIndex}"] .kga-error-original-compact`);
       if (errorCard) {
         Logger.debug(`⌨️ 편집 모드 진입 - 오류 상세 카드 찾음: index=${actualIndex}`);
         
@@ -3381,10 +3381,10 @@ export class CorrectionPopup extends BaseComponent {
         
       } else {
         Logger.debug(`⌨️ 오류 상세 카드를 찾을 수 없음: index=${actualIndex}`);
-        Logger.debug(`⌨️ 재시도: 모든 .error-original-compact 요소 확인`);
+        Logger.debug(`⌨️ 재시도: 모든 .kga-error-original-compact 요소 확인`);
         
         // 디버깅을 위해 모든 카드 확인
-        const allCards = this.element.querySelectorAll('.error-original-compact');
+        const allCards = this.element.querySelectorAll('.kga-error-original-compact');
         Logger.debug(`⌨️ 발견된 카드 개수: ${allCards.length}`);
         allCards.forEach((card, index) => {
           const cardIndex = card.parentElement?.dataset?.correctionIndex;
@@ -3422,7 +3422,7 @@ export class CorrectionPopup extends BaseComponent {
     const currentCorrections = this.removeDuplicateCorrections(rawCorrections);
     
     if (currentCorrections.length === 0) {
-      const placeholder = container.createDiv('error-placeholder');
+      const placeholder = container.createDiv('kga-error-placeholder');
       placeholder.textContent = '현재 페이지에 오류가 없습니다.';
       return;
     }
@@ -3431,7 +3431,7 @@ export class CorrectionPopup extends BaseComponent {
       const actualIndex = pageCorrection.originalIndex;
       if (actualIndex === undefined) return;
 
-      const errorCard = container.createDiv('error-card-compact');
+      const errorCard = container.createDiv('kga-error-card-compact');
       errorCard.dataset.correctionIndex = actualIndex.toString();
       
       // Error header
@@ -3439,7 +3439,7 @@ export class CorrectionPopup extends BaseComponent {
       const errorNumber = errorHeader.createSpan('error-number');
       errorNumber.textContent = (index + 1).toString();
       
-      const errorOriginal = errorHeader.createSpan('error-original-compact');
+      const errorOriginal = errorHeader.createSpan('kga-error-original-compact');
       errorOriginal.textContent = pageCorrection.correction.original;
       
       const errorArrow = errorHeader.createSpan('error-arrow');
@@ -3454,7 +3454,7 @@ export class CorrectionPopup extends BaseComponent {
       
       // Help text
       if (pageCorrection.correction.help) {
-        const helpDiv = errorCard.createDiv('error-help-compact');
+        const helpDiv = errorCard.createDiv('kga-error-help-compact');
         helpDiv.textContent = pageCorrection.correction.help;
       }
       
@@ -3501,7 +3501,7 @@ export class CorrectionPopup extends BaseComponent {
         const uniqueId = pageCorrection?.uniqueId || 'unknown';
         
         span.textContent = currentValue;
-        span.className = `clickable-error ${displayClass}`;
+        span.className = `kga-clickable-error ${displayClass}`;
         span.dataset.correctionIndex = actualIndex.toString();
         span.dataset.uniqueId = uniqueId;
         span.setAttribute('tabindex', '0');

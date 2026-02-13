@@ -525,7 +525,7 @@ export class MobileEventHandler {
     const input = document.createElement('input');
     input.type = 'text';
     input.value = target.textContent || '';
-    input.className = 'error-original-input mobile-edit-input';
+    input.className = 'kga-error-original-input kga-mobile-edit-input';
 
     // data 속성 복사
     if (context.correctionIndex !== undefined) {
@@ -538,7 +538,7 @@ export class MobileEventHandler {
 
     // 편집 컨테이너 생성
     const editContainer = document.createElement('div');
-    editContainer.className = 'mobile-edit-container';
+    editContainer.className = 'kga-mobile-edit-container';
 
     editContainer.appendChild(input);
     editContainer.appendChild(buttonContainer);
@@ -567,17 +567,17 @@ export class MobileEventHandler {
   ): HTMLElement {
 
     const container = document.createElement('div');
-    container.className = 'mobile-edit-buttons';
+    container.className = 'kga-mobile-edit-buttons';
 
     // 완료 버튼
     const confirmBtn = document.createElement('button');
     confirmBtn.textContent = '✓';
-    confirmBtn.className = 'mobile-edit-confirm';
+    confirmBtn.className = 'kga-mobile-edit-confirm';
 
     // 취소 버튼
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = '✕';
-    cancelBtn.className = 'mobile-edit-cancel';
+    cancelBtn.className = 'kga-mobile-edit-cancel';
 
     // 이벤트 리스너
     confirmBtn.addEventListener('click', (e) => {
@@ -658,7 +658,7 @@ export class MobileEventHandler {
     if (!input) return;
 
     // 편집 컨테이너 제거
-    const editContainer = input.closest('.mobile-edit-container');
+    const editContainer = input.closest('.kga-mobile-edit-container');
     if (editContainer) {
       editContainer.remove();
     }
@@ -683,8 +683,8 @@ export class MobileEventHandler {
     // 편집 중인 요소나 특정 UI 요소에서는 스크롤 방지
     return target.classList.contains('error-text') ||
            target.classList.contains('suggestion-item') ||
-           target.classList.contains('mobile-edit-input') ||
-           !!target.closest('.error-text, .suggestion-item, .mobile-edit-container');
+           target.classList.contains('kga-mobile-edit-input') ||
+           !!target.closest('.error-text, .suggestion-item, .kga-mobile-edit-container');
   }
 
   /**
@@ -695,7 +695,7 @@ export class MobileEventHandler {
     
     const touchableClasses = [
       'error-text', 'error-highlight', 'suggestion-item',
-      'nav-button', 'pagination-btn', 'btn', 'toggle-btn',
+      'nav-button', 'kga-pagination-btn', 'btn', 'toggle-btn',
       'edit-btn'
     ];
     

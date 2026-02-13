@@ -170,9 +170,9 @@ export class InteractionHandler {
     }
 
     // 상태 표시 업데이트
-    const stateIndicator = summaryElement.querySelector('.error-state-indicator');
+    const stateIndicator = summaryElement.querySelector('.kga-error-state-indicator');
     if (stateIndicator) {
-      stateIndicator.className = `error-state-indicator state-${newState}`;
+      stateIndicator.className = `kga-error-state-indicator state-${newState}`;
       stateIndicator.textContent = this.getStateDisplayText(newState);
     }
 

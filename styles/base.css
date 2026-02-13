@@ -17,7 +17,7 @@
     contain: layout style paint;
 }
 
-#correctionPopup .popup-overlay {
+#correctionPopup .kga-popup-overlay {
     position: absolute;
     top: 0;
     left: 0;
@@ -35,7 +35,7 @@
     -webkit-user-select: none;
 }
 
-#correctionPopup .popup-content {
+#correctionPopup .kga-popup-content {
     position: relative;
     width: min(98vw, 1200px);
     height: 95vh;
@@ -54,7 +54,7 @@
     z-index: 10000;
 }
 
-#correctionPopup .content {
+#correctionPopup .kga-content {
     padding: 20px 24px 0;
     display: flex;
     flex-direction: column;
@@ -64,20 +64,20 @@
 }
 
 /* Scrollbar styling */
-#correctionPopup .content::-webkit-scrollbar {
+#correctionPopup .kga-content::-webkit-scrollbar {
     width: 6px;
 }
 
-#correctionPopup .content::-webkit-scrollbar-track {
+#correctionPopup .kga-content::-webkit-scrollbar-track {
     background: var(--background-secondary);
 }
 
-#correctionPopup .content::-webkit-scrollbar-thumb {
+#correctionPopup .kga-content::-webkit-scrollbar-thumb {
     background: var(--background-modifier-border);
     border-radius: 3px;
 }
 
-#correctionPopup .content::-webkit-scrollbar-thumb:hover {
+#correctionPopup .kga-content::-webkit-scrollbar-thumb:hover {
     background: var(--background-modifier-border-hover);
 }
 

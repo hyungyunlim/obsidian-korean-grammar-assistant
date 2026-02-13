@@ -211,11 +211,11 @@ export class VirtualScroller {
    */
   private initializeStructure(): void {
     clearElement(this.container);
-    this.container.className = 'virtual-scroller-container';
+    this.container.className = 'kga-virtual-scroller-container';
     
     // 뷰포트 (스크롤 가능한 영역)
     this.viewport = this.container.createEl('div', {
-      cls: 'virtual-scroller-viewport',
+      cls: 'kga-virtual-scroller-viewport',
       attr: {
         style: `
           height: ${this.config.containerHeight}px;
@@ -228,7 +228,7 @@ export class VirtualScroller {
     
     // 콘텐츠 영역 (전체 높이를 가진 스크롤 영역)
     this.content = this.viewport.createEl('div', {
-      cls: 'virtual-scroller-content',
+      cls: 'kga-virtual-scroller-content',
       attr: {
         style: `
           position: relative;
@@ -354,7 +354,7 @@ export class VirtualScroller {
    */
   private createItemElement(item: VirtualItem, index: number): HTMLElement {
     const element = document.createElement('div');
-    element.className = 'virtual-scroller-item';
+    element.className = 'kga-virtual-scroller-item';
     element.dataset.virtualItemId = item.id;
     
     this.updateItemPosition(element, index);

@@ -34,9 +34,7 @@ export default class KoreanGrammarPlugin extends Plugin {
   orchestrator: SpellCheckOrchestrator;
   // 🤖 InlineModeService는 정적 클래스로 설계되어 인스턴스 불필요
   
-  // 🔧 문서 전환 감지 이벤트 참조
-  private fileOpenListener?: any;
-  private activeLeafChangeListener?: any;
+  // 🤖 InlineModeService 참조 (전역 변수 대신 인스턴스 속성 사용)
 
   async onload() {
     // 디버그/프로덕션 모드 설정
@@ -67,96 +65,92 @@ export default class KoreanGrammarPlugin extends Plugin {
       await this.orchestrator.execute();
     });
     
-    // 명령어 등록
+    // 명령어 등록 (conditional commands)
     this.addCommand({
       id: "check-korean-spelling",
       name: "한국어 맞춤법 검사",
-      callback: async () => {
-        await this.orchestrator.execute();
+      checkCallback: (checking: boolean) => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view) return false;
+        if (!checking) this.orchestrator.execute();
+        return true;
       },
     });
-    
-    // 현재 문단 맞춤법 검사 명령어 추가
+
     this.addCommand({
       id: "check-current-paragraph",
       name: "현재 문단 맞춤법 검사",
-      callback: async () => {
-        await this.orchestrator.executeCurrentParagraph();
+      checkCallback: (checking: boolean) => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view) return false;
+        if (!checking) this.orchestrator.executeCurrentParagraph();
+        return true;
       },
     });
 
-    // 현재 단어 맞춤법 검사 명령어 추가
     this.addCommand({
       id: "check-current-word",
       name: "현재 단어 맞춤법 검사",
-      callback: async () => {
-        await this.orchestrator.executeCurrentWord();
+      checkCallback: (checking: boolean) => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view) return false;
+        if (!checking) this.orchestrator.executeCurrentWord();
+        return true;
       },
     });
 
-    // 현재 문장 맞춤법 검사 명령어 추가
     this.addCommand({
       id: "check-current-sentence",
       name: "현재 문장 맞춤법 검사",
-      callback: async () => {
-        await this.orchestrator.executeCurrentSentence();
+      checkCallback: (checking: boolean) => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view) return false;
+        if (!checking) this.orchestrator.executeCurrentSentence();
+        return true;
       },
     });
 
-    // 인라인 모드 명령어 추가 (베타 기능)
     this.addCommand({
       id: "inline-spell-check",
       name: "인라인 맞춤법 검사 (베타)",
-      callback: async () => {
-        if (!this.settings.inlineMode.enabled) {
-          new Notice("인라인 모드가 비활성화되어 있습니다. 설정에서 베타 기능을 활성화하세요.");
-          return;
-        }
-        await this.executeInlineSpellCheck();
+      checkCallback: (checking: boolean) => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view || !this.settings.inlineMode.enabled) return false;
+        if (!checking) this.executeInlineSpellCheck();
+        return true;
       },
     });
 
-
-    // 🤖 인라인 모드 AI 분석 명령어 추가
     this.addCommand({
       id: "inline-ai-analysis",
-      name: "🤖 인라인 AI 분석 (베타)",
-      callback: async () => {
-        if (!this.settings.inlineMode.enabled) {
-          new Notice("인라인 모드가 비활성화되어 있습니다. 설정에서 베타 기능을 활성화하세요.");
-          return;
-        }
-        if (!this.settings.ai.enabled) {
-          new Notice("AI 기능이 비활성화되어 있습니다. 설정에서 AI 기능을 활성화하세요.");
-          return;
-        }
-        await this.executeInlineAIAnalysis();
+      name: "인라인 AI 분석 (베타)",
+      checkCallback: (checking: boolean) => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view || !this.settings.inlineMode.enabled || !this.settings.ai.enabled) return false;
+        if (!checking) this.executeInlineAIAnalysis();
+        return true;
       },
     });
 
-    // 📝 인라인 모드 일괄 적용 명령어 추가
     this.addCommand({
       id: "inline-apply-all",
-      name: "📝 인라인 오류 일괄 적용",
-      callback: async () => {
-        if (!this.settings.inlineMode.enabled) {
-          new Notice("인라인 모드가 비활성화되어 있습니다. 설정에서 베타 기능을 활성화하세요.");
-          return;
-        }
-        await this.executeInlineApplyAll();
+      name: "인라인 오류 일괄 적용",
+      checkCallback: (checking: boolean) => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view || !this.settings.inlineMode.enabled) return false;
+        if (!checking) this.executeInlineApplyAll();
+        return true;
       },
     });
 
-    // 인라인 분석 결과 표시 일괄 취소 명령어 추가
     this.addCommand({
       id: "inline-clear-all",
-      name: "🗑️ 인라인 분석 결과 표시 일괄 취소",
-      callback: async () => {
-        if (!this.settings.inlineMode.enabled) {
-          new Notice("인라인 모드가 비활성화되어 있습니다. 설정에서 베타 기능을 활성화하세요.");
-          return;
-        }
-        await this.executeInlineClearAll();
+      name: "인라인 분석 결과 표시 일괄 취소",
+      checkCallback: (checking: boolean) => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view || !this.settings.inlineMode.enabled) return false;
+        if (!checking) this.executeInlineClearAll();
+        return true;
       },
     });
 
@@ -168,28 +162,14 @@ export default class KoreanGrammarPlugin extends Plugin {
     // 설정 탭 추가
     this.addSettingTab(new ModernSettingsTab(this.app, this));
 
-    // 🤖 전역 설정 등록 (인라인 모드 AI 분석용)
-    (window as any).koreanGrammarPlugin = {
-      settings: this.settings,
-      instance: this
-    };
-
     // 🔧 문서 전환 감지 이벤트 리스너 등록
     this.setupDocumentChangeListeners();
   }
 
   onunload() {
-    // 🔧 문서 전환 감지 이벤트 리스너 정리
-    if (this.fileOpenListener) {
-      this.app.workspace.offref(this.fileOpenListener);
-    }
-    if (this.activeLeafChangeListener) {
-      this.app.workspace.offref(this.activeLeafChangeListener);
-    }
-    
     // 인라인 모드 정리
     this.disableInlineMode();
-    
+
     // 오케스트레이터 정리
     if (this.orchestrator) {
       this.orchestrator.destroy();
@@ -213,21 +193,20 @@ export default class KoreanGrammarPlugin extends Plugin {
    * 인라인 맞춤법 검사 실행
    */
   async executeInlineSpellCheck(): Promise<void> {
-    const activeLeaf = this.app.workspace.activeLeaf;
-    if (!activeLeaf) {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view) {
       new Notice("활성화된 편집기가 없습니다.");
       return;
     }
 
-    // @ts-ignore - Obsidian 내부 API 사용
-    const editor = activeLeaf.view.editor;
+    const editor = view.editor;
     if (!editor) {
       new Notice("편집기를 찾을 수 없습니다.");
       return;
     }
 
     // @ts-ignore - CodeMirror 6 에디터 뷰 접근
-    const editorView = editor.cm;
+    const editorView = (editor as any).cm;
     if (!editorView) {
       new Notice("CodeMirror 에디터 뷰를 찾을 수 없습니다.");
       return;
@@ -235,7 +214,7 @@ export default class KoreanGrammarPlugin extends Plugin {
 
     try {
       // 에디터 뷰 및 설정 초기화
-      InlineModeService.setEditorView(editorView, this.settings, this.app);
+      InlineModeService.setEditorView(editorView, this.settings, this.app, async (s) => { this.settings = s; await this.saveSettings(); });
 
       // 선택된 텍스트 확인
       const selectedText = editor.getSelection();
@@ -312,18 +291,14 @@ export default class KoreanGrammarPlugin extends Plugin {
       this.registerEditorExtension([errorDecorationField, temporarySuggestionModeField]);
 
       // InlineModeService 초기화 (키보드 단축키 지원을 위해 필요)
-      const activeLeaf = this.app.workspace.activeLeaf;
-      if (activeLeaf && activeLeaf.view && (activeLeaf.view as any).editor) {
-        // @ts-ignore - Obsidian 내부 API 사용
-        const editorView = (activeLeaf.view as any).editor.cm;
+      const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (activeView?.editor) {
+        const editorView = (activeView.editor as any).cm;
         if (editorView) {
-          InlineModeService.setEditorView(editorView, this.settings, this.app);
+          InlineModeService.setEditorView(editorView, this.settings, this.app, async (s) => { this.settings = s; await this.saveSettings(); });
           Logger.log('인라인 모드: InlineModeService 키보드 스코프 초기화됨');
         }
       }
-
-      // 전역 접근을 위한 참조 설정
-      (window as any).InlineModeService = InlineModeService;
 
       Logger.log('인라인 모드 활성화됨 (InlineModeService + 키보드 단축키)');
 
@@ -337,11 +312,6 @@ export default class KoreanGrammarPlugin extends Plugin {
    * 인라인 모드 비활성화
    */
   disableInlineMode(): void {
-    // 전역 객체 정리
-    if ((window as any).InlineModeService) {
-      delete (window as any).InlineModeService;
-    }
-
     Logger.log('인라인 모드 비활성화됨');
   }
 
@@ -393,7 +363,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       
       // 🔥 SMART FIX: 현재 문서 텍스트에 실제로 존재하는 오류만 유지
       Logger.log('🔥 SMART FIX: 현재 문서 기준으로 오류 필터링');
-      InlineModeService.setEditorView(currentEditorView, this.settings, this.app);
+      InlineModeService.setEditorView(currentEditorView, this.settings, this.app, async (s) => { this.settings = s; await this.saveSettings(); });
       InlineModeService.filterErrorsByCurrentDocument(targetText);
       
       // 🔧 이제 정리된 상태에서 현재 문서의 오류 상태 확인
@@ -531,8 +501,8 @@ export default class KoreanGrammarPlugin extends Plugin {
     const processNotice = new Notice('📝 맞춤법 검사를 시작합니다...', 0);
 
     // 에디터 정보 가져오기
-    const activeLeaf = this.app.workspace.activeLeaf;
-    if (!activeLeaf) {
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!activeView) {
       processNotice.hide();
       new Notice('활성화된 편집기가 없습니다.');
       return;
@@ -541,12 +511,11 @@ export default class KoreanGrammarPlugin extends Plugin {
     try {
       // 1단계: 맞춤법 검사 실행
       processNotice.setMessage(`📝 ${targetText.length}자 텍스트 맞춤법 검사 중...`);
-      
+
       // 🔧 단일 InlineModeService 시스템 사용
-      // @ts-ignore - Obsidian 내부 API 사용  
-      const editorView = (activeLeaf.view as any).editor?.cm;
+      const editorView = (activeView.editor as any)?.cm;
       if (editorView) {
-        InlineModeService.setEditorView(editorView, this.settings, this.app);
+        InlineModeService.setEditorView(editorView, this.settings, this.app, async (s) => { this.settings = s; await this.saveSettings(); });
       }
       
       // InlineModeService를 통한 맞춤법 검사 실행
@@ -627,8 +596,8 @@ export default class KoreanGrammarPlugin extends Plugin {
    * 📝 인라인 모드 일괄 적용 실행
    */
   async executeInlineApplyAll(): Promise<void> {
-    const activeLeaf = this.app.workspace.activeLeaf;
-    if (!activeLeaf || !activeLeaf.view || !(activeLeaf.view as any).editor) {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view?.editor) {
       new Notice('활성화된 편집기가 없습니다.');
       return;
     }
@@ -644,10 +613,9 @@ export default class KoreanGrammarPlugin extends Plugin {
 
     try {
       // 에디터 뷰 설정
-      // @ts-ignore - Obsidian 내부 API 사용  
-      const editorView = (activeLeaf.view as any).editor?.cm;
+      const editorView = (view.editor as any)?.cm;
       if (editorView) {
-        InlineModeService.setEditorView(editorView, this.settings, this.app);
+        InlineModeService.setEditorView(editorView, this.settings, this.app, async (s) => { this.settings = s; await this.saveSettings(); });
       }
 
       // 일괄 적용 실행
@@ -673,8 +641,8 @@ export default class KoreanGrammarPlugin extends Plugin {
    * 인라인 분석 결과 표시 일괄 취소 실행
    */
   async executeInlineClearAll(): Promise<void> {
-    const activeLeaf = this.app.workspace.activeLeaf;
-    if (!activeLeaf || !activeLeaf.view || !(activeLeaf.view as any).editor) {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view?.editor) {
       new Notice('활성화된 편집기가 없습니다.');
       return;
     }
@@ -690,10 +658,9 @@ export default class KoreanGrammarPlugin extends Plugin {
 
     try {
       // 에디터 뷰 설정
-      // @ts-ignore - Obsidian 내부 API 사용  
-      const editorView = (activeLeaf.view as any).editor?.cm;
+      const editorView = (view.editor as any)?.cm;
       if (editorView) {
-        InlineModeService.setEditorView(editorView, this.settings, this.app);
+        InlineModeService.setEditorView(editorView, this.settings, this.app, async (s) => { this.settings = s; await this.saveSettings(); });
         
         // 모든 오류 제거
         InlineModeService.clearErrors(editorView);
@@ -812,34 +779,34 @@ export default class KoreanGrammarPlugin extends Plugin {
   private setupDocumentChangeListeners(): void {
 
     // 파일 변경 감지 - 다른 파일로 이동할 때 트리거
-    this.fileOpenListener = this.app.workspace.on('file-open', (file) => {
-      
+    this.registerEvent(this.app.workspace.on('file-open', () => {
+
       // 인라인 모드가 활성화되어 있고 오류가 있으면 상태 완전 정리
       if (this.settings?.inlineMode?.enabled && InlineModeService.hasErrors()) {
         Logger.log('🔧 file-open: 이전 문서의 인라인 오류 상태 완전 정리');
         InlineModeService.forceCleanAllErrors();
       }
-      
+
       // 새로운 문서에 인라인 모드 설정 (오류 상태는 깨끗한 상태에서 시작)
       const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
       if (activeView?.editor && this.settings?.inlineMode?.enabled) {
         // @ts-ignore - Obsidian 내부 API 사용
         const currentEditorView = (activeView as any).editor?.cm;
         if (currentEditorView) {
-          InlineModeService.setEditorView(currentEditorView, this.settings, this.app);
+          InlineModeService.setEditorView(currentEditorView, this.settings, this.app, async (s) => { this.settings = s; await this.saveSettings(); });
         }
       }
-    });
+    }));
 
     // 리프 변경 감지 - 탭 변경, 패널 변경 등을 포함한 더 광범위한 변경 감지
-    this.activeLeafChangeListener = this.app.workspace.on('active-leaf-change', (leaf) => {
-      
+    this.registerEvent(this.app.workspace.on('active-leaf-change', (leaf) => {
+
       // 인라인 모드가 활성화되어 있고 오류가 있으면 먼저 상태 정리
       if (this.settings?.inlineMode?.enabled && InlineModeService.hasErrors()) {
         Logger.log('🔧 active-leaf-change: 이전 탭의 인라인 오류 상태 완전 정리');
         InlineModeService.forceCleanAllErrors();
       }
-      
+
       // 마크다운 뷰로 변경되었을 때만 새로운 뷰 설정
       if (leaf?.view?.getViewType() === 'markdown' && this.settings?.inlineMode?.enabled) {
         const markdownView = leaf.view as MarkdownView;
@@ -847,11 +814,11 @@ export default class KoreanGrammarPlugin extends Plugin {
           // @ts-ignore - Obsidian 내부 API 사용
           const currentEditorView = (markdownView as any).editor?.cm;
           if (currentEditorView) {
-            InlineModeService.setEditorView(currentEditorView, this.settings, this.app);
+            InlineModeService.setEditorView(currentEditorView, this.settings, this.app, async (s) => { this.settings = s; await this.saveSettings(); });
           }
         }
       }
-    });
+    }));
   }
 }
 

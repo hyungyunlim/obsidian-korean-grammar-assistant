@@ -298,7 +298,7 @@ export class PopupEventManager implements IPopupServiceManager {
     }
 
     // 네비게이션 버튼 클릭
-    this.addEventRule('.nav-button, .pagination-btn', 'click', async (event, context) => {
+    this.addEventRule('.nav-button, .kga-pagination-btn', 'click', async (event, context) => {
       Logger.debug('네비게이션 버튼 클릭됨');
       return await this.handleNavigationClick(event, context);
     });

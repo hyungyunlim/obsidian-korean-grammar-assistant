@@ -1,7 +1,7 @@
 /* styles/modals.css */
 
-.error-notice-overlay,
-.success-notice-overlay {
+.kga-error-notice-overlay,
+.kga-success-notice-overlay {
   position: fixed;
   top: 50%;
   left: 50%;
@@ -17,15 +17,15 @@
   border: 1px solid var(--background-modifier-border);
 }
 
-.error-notice-overlay {
+.kga-error-notice-overlay {
   background: var(--background-modifier-error);
 }
 
-.success-notice-overlay {
+.kga-success-notice-overlay {
   background: var(--background-modifier-success);
 }
 
-.token-warning-modal {
+.kga-token-warning-modal {
   position: fixed;
   top: 0;
   left: 0;
@@ -39,7 +39,7 @@
   font-family: var(--font-interface);
 }
 
-.token-warning-content {
+.kga-token-warning-content {
   background: var(--background-primary);
   border-radius: 12px;
   padding: 20px;
@@ -52,7 +52,7 @@
   border: 1px solid var(--background-modifier-border);
 }
 
-.token-warning-header {
+.kga-token-warning-header {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -61,7 +61,7 @@
   gap: 8px;
 }
 
-.token-warning-header-icon {
+.kga-token-warning-header-icon {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -74,7 +74,7 @@
   flex-shrink: 0;
 }
 
-.token-warning-title {
+.kga-token-warning-title {
   margin: 0;
   color: var(--text-normal);
   font-size: 18px;
@@ -82,14 +82,14 @@
   line-height: 1.2;
 }
 
-.token-warning-description {
+.kga-token-warning-description {
   margin: 0;
   color: var(--text-muted);
   font-size: 14px;
   line-height: 1.4;
 }
 
-.token-warning-details {
+.kga-token-warning-details {
   background: var(--background-secondary);
   border-radius: 10px;
   padding: 20px;
@@ -97,67 +97,67 @@
   border: 1px solid var(--background-modifier-border);
 }
 
-.token-warning-stats {
+.kga-token-warning-stats {
   display: flex;
   gap: 16px;
   justify-content: space-between;
   margin-bottom: 12px;
 }
 
-.token-stat-item {
+.kga-token-stat-item {
   text-align: center;
   flex: 1;
 }
 
-.token-stat-number {
+.kga-token-stat-number {
   font-size: 20px;
   font-weight: 700;
   line-height: 1;
   color: var(--text-accent);
 }
 
-.token-stat-number.orange {
+.kga-token-stat-number.kga-orange {
   color: var(--color-orange);
 }
 
-.token-stat-label {
+.kga-token-stat-label {
   font-size: 12px;
   color: var(--text-muted);
   margin-top: 4px;
 }
 
-.token-warning-recommendation {
+.kga-token-warning-recommendation {
   border-top: 1px solid var(--background-modifier-border);
   padding-top: 12px;
   margin-top: 12px;
 }
 
-.token-warning-recommendation-header {
+.kga-token-warning-recommendation-header {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 12px;
 }
 
-.token-warning-recommendation-content {
+.kga-token-warning-recommendation-content {
   flex: 1;
 }
 
-.token-warning-recommendation-title {
+.kga-token-warning-recommendation-title {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-normal);
   margin-bottom: 6px;
 }
 
-.token-warning-recommendation-text {
+.kga-token-warning-recommendation-text {
   font-size: 13px;
   color: var(--text-muted);
   line-height: 1.4;
   text-align: center;
 }
 
-.token-warning-over-limit {
+.kga-token-warning-over-limit {
   background: var(--background-modifier-error);
   border: 1px solid var(--text-error);
   border-radius: 6px;
@@ -168,34 +168,34 @@
   gap: 12px;
 }
 
-.token-warning-over-limit-icon {
+.kga-token-warning-over-limit-icon {
   font-size: 20px;
   flex-shrink: 0;
 }
 
-.token-warning-over-limit-text {
+.kga-token-warning-over-limit-text {
   flex: 1;
 }
 
-.token-warning-over-limit-title {
+.kga-token-warning-over-limit-title {
   font-weight: bold;
   color: var(--text-error);
   margin-bottom: 4px;
 }
 
-.token-warning-over-limit-description {
+.kga-token-warning-over-limit-description {
   font-size: 12px;
   color: var(--text-muted);
 }
 
-.token-warning-actions {
+.kga-token-warning-actions {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
   padding-top: 8px;
 }
 
-.token-warning-btn {
+.kga-token-warning-btn {
   padding: 8px 16px;
   border-radius: 4px;
   cursor: pointer;
@@ -205,17 +205,17 @@
   border: none;
 }
 
-.token-warning-btn-cancel {
+.kga-token-warning-btn-cancel {
   background: var(--interactive-normal);
   color: var(--text-normal);
 }
 
-.token-warning-btn-settings,
-.token-warning-btn-proceed {
+.kga-token-warning-btn-settings,
+.kga-token-warning-btn-proceed {
   background: var(--interactive-accent);
   color: var(--text-on-accent);
 }
 
-.token-warning-btn-settings {
+.kga-token-warning-btn-settings {
   border: 1px solid var(--interactive-accent);
 }

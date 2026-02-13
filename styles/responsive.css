@@ -17,7 +17,7 @@
         box-sizing: border-box;
     }
 
-    #correctionPopup .popup-content {
+    #correctionPopup .kga-popup-content {
         /* 화면 전체를 가득 채움 */
         width: 100vw;
         height: 100vh;
@@ -36,46 +36,46 @@
         flex-direction: column;
     }
     
-    #correctionPopup .header {
+    #correctionPopup .kga-header {
         /* 상단 safe area + 최소 패딩만 적용 */
         padding: 8px 16px 8px 16px;
         padding-top: max(8px, env(safe-area-inset-top, 0px) + 8px);
         padding-left: max(16px, env(safe-area-inset-left, 0px) + 16px);
         padding-right: max(16px, env(safe-area-inset-right, 0px) + 16px);
-        
+
         /* 헤더 고정 높이로 공간 절약 */
         flex-shrink: 0;
     }
     
-    #correctionPopup .header h2 {
+    #correctionPopup .kga-header h2 {
         font-size: 16px;
     }
     
-    #correctionPopup .content {
+    #correctionPopup .kga-content {
         /* 콘텐츠 영역 확대 - 남은 공간 모두 사용 */
         flex: 1;
         padding: 8px 16px 0;
         padding-left: max(16px, env(safe-area-inset-left, 0px) + 16px);
         padding-right: max(16px, env(safe-area-inset-right, 0px) + 16px);
-        
+
         /* 스크롤 가능하도록 설정 */
         overflow-y: auto;
         min-height: 0; /* flex 항목이 축소될 수 있도록 */
     }
     
-    #correctionPopup .preview-section {
+    #correctionPopup .kga-preview-section {
         /* 미리보기 영역 컴팩트화 */
         padding: 8px;
         margin-bottom: 8px;
     }
     
-    #correctionPopup .preview-header {
+    #correctionPopup .kga-preview-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 4px; /* 8px에서 4px로 줄임 */
     }
     
-    #correctionPopup .color-legend {
+    #correctionPopup .kga-color-legend {
         order: 1;
         align-self: flex-start;
         margin-left: 0;
@@ -87,55 +87,55 @@
         border-radius: 4px;
     }
     
-    #correctionPopup .preview-label {
+    #correctionPopup .kga-preview-label {
         order: 0;
     }
     
-    #correctionPopup .color-legend-dot {
+    #correctionPopup .kga-color-legend-dot {
         width: 8px;
         height: 8px;
     }
     
-    #correctionPopup .pagination-controls {
+    #correctionPopup .kga-pagination-controls {
         order: 2;
         align-self: flex-end;
     }
     
-    #correctionPopup .pagination-btn {
+    #correctionPopup .kga-pagination-btn {
         padding: 8px 12px;
         font-size: 14px;
         min-height: 36px;
         min-width: 60px;
     }
-    
-    #correctionPopup .pagination-btn.small {
+
+    #correctionPopup .kga-pagination-btn.small {
         padding: 6px 10px;
         font-size: 12px;
         min-height: 32px;
         min-width: 50px;
     }
     
-    #correctionPopup .page-info {
+    #correctionPopup .kga-page-info {
         font-size: 14px;
         min-width: 60px;
     }
-    
-    #correctionPopup .page-info.small {
+
+    #correctionPopup .kga-page-info.small {
         font-size: 12px;
         min-width: 50px;
     }
     
-    #correctionPopup .error-item {
+    #correctionPopup .kga-error-item {
         padding: 10px;
         margin-bottom: 10px;
     }
-    
-    #correctionPopup .error-original {
+
+    #correctionPopup .kga-error-original {
         font-size: 14px;
         padding: 6px 10px;
     }
-    
-    #correctionPopup .suggestion-option {
+
+    #correctionPopup .kga-suggestion-option {
         padding: 8px 12px;
         font-size: 13px;
         min-height: 36px;
@@ -144,7 +144,7 @@
         border-radius: 16px;
     }
     
-    #correctionPopup .button-area {
+    #correctionPopup .kga-button-area {
         /* 버튼 영역 최소화 - 하단 safe area + 최소 패딩만 */
         flex-shrink: 0;
         gap: 10px;
@@ -154,8 +154,8 @@
         padding-bottom: max(8px, env(safe-area-inset-bottom, 0px) + 8px);
     }
     
-    #correctionPopup .cancel-btn,
-    #correctionPopup .apply-btn {
+    #correctionPopup .kga-cancel-btn,
+    #correctionPopup .kga-apply-btn {
         padding: 12px 20px;
         font-size: 15px;
         min-height: 44px;
@@ -163,7 +163,7 @@
         flex: 1;
     }
     
-    .clickable-error {
+    .kga-clickable-error {
         padding: 4px 2px;
         margin: 0 1px;
         border-radius: 3px;
@@ -172,37 +172,37 @@
         align-items: center;
     }
     
-    #correctionPopup .preview-text {
+    #correctionPopup .kga-preview-text {
         font-size: 14px;
         line-height: 1.6;
         min-height: 120px; /* 미리보기 최소 높이 줄임 */
         -webkit-overflow-scrolling: touch;
     }
     
-    #correctionPopup .error-summary:not(.collapsed) .error-summary-content {
+    #correctionPopup .kga-error-summary:not(.collapsed) .kga-error-summary-content {
         /* 전체 화면에 맞게 오류 상세 영역 확대 */
         height: 320px;
         max-height: 40vh; /* 뷰포트 높이의 40%까지 사용 */
     }
     
-    #correctionPopup .error-suggestions {
+    #correctionPopup .kga-error-suggestions {
         gap: 8px;
     }
     
-    #correctionPopup .error-summary {
+    #correctionPopup .kga-error-summary {
         /* 상단 여백 줄임 */
         margin-top: 8px;
         padding-top: 8px;
     }
     
-    #correctionPopup .close-btn-header {
+    #correctionPopup .kga-close-btn-header {
         width: 36px;
         height: 36px;
         font-size: 20px;
     }
     
     /* AI 분석 버튼 모바일 최적화 */
-    #correctionPopup .ai-analyze-btn {
+    #correctionPopup .kga-ai-analyze-btn {
         padding: 4px 8px !important;
         font-size: 11px !important;
         border-radius: 4px !important;
@@ -210,50 +210,50 @@
     
     @media (max-height: 700px) {
         /* 작은 화면에서 오류 상세 영역 높이 조정 */
-        #correctionPopup .error-summary:not(.collapsed) .error-summary-content {
+        #correctionPopup .kga-error-summary:not(.collapsed) .kga-error-summary-content {
             height: 250px;
             max-height: 35vh;
         }
         
-        #correctionPopup .preview-text {
+        #correctionPopup .kga-preview-text {
             min-height: 100px;
         }
     }
-    
+
     @media (max-width: 896px) and (orientation: landscape) {
         /* 가로 모드에서 더 컴팩트한 레이아웃 */
-        #correctionPopup .header {
+        #correctionPopup .kga-header {
             padding: 6px 16px 6px 16px;
             padding-top: max(6px, env(safe-area-inset-top, 0px) + 6px);
         }
         
-        #correctionPopup .content {
+        #correctionPopup .kga-content {
             padding: 6px 16px 0;
         }
-        
-        #correctionPopup .button-area {
+
+        #correctionPopup .kga-button-area {
             padding: 6px 16px 6px 16px;
             padding-bottom: max(6px, env(safe-area-inset-bottom, 0px) + 6px);
         }
         
-        #correctionPopup .error-summary:not(.collapsed) .error-summary-content {
+        #correctionPopup .kga-error-summary:not(.collapsed) .kga-error-summary-content {
             height: 200px;
             max-height: 30vh;
         }
     }
     
-    #correctionPopup .error-item-compact {
+    #correctionPopup .kga-error-item-compact {
         padding: 10px;
         margin-bottom: 8px;
     }
     
-    #correctionPopup .error-original-compact {
+    #correctionPopup .kga-error-original-compact {
         font-size: 12px;
         padding: 3px 6px;
         min-width: 50px;
     }
     
-    #correctionPopup .suggestion-compact {
+    #correctionPopup .kga-suggestion-compact {
         font-size: 12px;
         padding: 4px 8px;
         min-height: 32px;
@@ -262,7 +262,7 @@
         align-items: center;
     }
     
-    #correctionPopup .error-help-compact {
+    #correctionPopup .kga-error-help-compact {
         font-size: 11px !important;
         padding: 5px 9px !important;
         min-height: 22px !important;

@@ -354,9 +354,9 @@ export class HeaderRenderer implements IPopupComponent {
 
     // 활성화/비활성화 상태 클래스 추가
     if (options.disabled) {
-      button.classList.add('header-button-disabled');
+      button.classList.add('kga-header-button-disabled');
     } else {
-      button.classList.add('header-button-enabled');
+      button.classList.add('kga-header-button-enabled');
     }
 
     // 아이콘 추가
@@ -443,12 +443,12 @@ export class HeaderRenderer implements IPopupComponent {
     // 버튼 상태 업데이트
     if (this.isAiAnalyzing) {
       this.aiButtonElement.setAttribute('disabled', 'true');
-      this.aiButtonElement.classList.add('header-button-disabled');
-      this.aiButtonElement.classList.remove('header-button-enabled');
+      this.aiButtonElement.classList.add('kga-header-button-disabled');
+      this.aiButtonElement.classList.remove('kga-header-button-enabled');
     } else {
       this.aiButtonElement.removeAttribute('disabled');
-      this.aiButtonElement.classList.remove('header-button-disabled');
-      this.aiButtonElement.classList.add('header-button-enabled');
+      this.aiButtonElement.classList.remove('kga-header-button-disabled');
+      this.aiButtonElement.classList.add('kga-header-button-enabled');
     }
 
     // 아이콘 애니메이션 (분석 중일 때)
@@ -593,12 +593,12 @@ export class HeaderRenderer implements IPopupComponent {
 
     if (enabled) {
       button.removeAttribute('disabled');
-      button.classList.remove('header-button-disabled');
-      button.classList.add('header-button-enabled');
+      button.classList.remove('kga-header-button-disabled');
+      button.classList.add('kga-header-button-enabled');
     } else {
       button.setAttribute('disabled', 'true');
-      button.classList.add('header-button-disabled');
-      button.classList.remove('header-button-enabled');
+      button.classList.add('kga-header-button-disabled');
+      button.classList.remove('kga-header-button-enabled');
     }
 
     Logger.debug('HeaderRenderer: 버튼 활성화 상태 변경', { type, enabled });

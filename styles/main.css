@@ -18,13 +18,13 @@
 @import url("responsive.css");
 
 /* Additional CSS classes for replacing inline styles that were not component-specific */
-.preview-header-top {
+.kga-preview-header-top {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.pagination-container-hidden {
+.kga-pagination-container-hidden {
   display: none;
 }
 

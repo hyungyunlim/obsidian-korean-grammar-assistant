@@ -1,6 +1,6 @@
 /* styles/header.css */
 
-#correctionPopup .header {
+#correctionPopup .kga-header {
     padding: 20px 24px 16px;
     background: var(--background-primary);
     border-bottom: 1px solid var(--background-modifier-border-hover);
@@ -10,7 +10,7 @@
     flex-shrink: 0;
 }
 
-#correctionPopup .header h2 {
+#correctionPopup .kga-header h2 {
     margin: 0;
     font-size: 18px;
     font-weight: 600;
@@ -19,7 +19,7 @@
     text-rendering: optimizeLegibility;
 }
 
-#correctionPopup .close-btn-header {
+#correctionPopup .kga-close-btn-header {
     background: none;
     border: none;
     font-size: 24px;
@@ -35,13 +35,13 @@
     transition: all 0.2s ease;
 }
 
-#correctionPopup .close-btn-header:hover {
+#correctionPopup .kga-close-btn-header:hover {
     background: var(--background-modifier-hover);
     color: var(--text-normal);
 }
 
-#correctionPopup .cancel-btn,
-#correctionPopup .apply-btn {
+#correctionPopup .kga-cancel-btn,
+#correctionPopup .kga-apply-btn {
     padding: 8px 16px;
     border: none;
     border-radius: 8px;
@@ -55,30 +55,30 @@
     transform: translateZ(0);
 }
 
-#correctionPopup .cancel-btn {
+#correctionPopup .kga-cancel-btn {
     background: var(--background-secondary);
     color: var(--text-muted);
 }
 
-#correctionPopup .cancel-btn:hover {
+#correctionPopup .kga-cancel-btn:hover {
     background: var(--background-modifier-hover);
     color: var(--text-normal);
 }
 
-#correctionPopup .apply-btn {
+#correctionPopup .kga-apply-btn {
     background: var(--interactive-accent);
     color: var(--text-on-accent);
 }
 
-#correctionPopup .header .apply-btn {
+#correctionPopup .kga-header .kga-apply-btn {
     margin-left: 8px;
 }
 
-#correctionPopup .apply-btn:hover {
+#correctionPopup .kga-apply-btn:hover {
     background: var(--interactive-accent-hover);
 }
 
-#correctionPopup .button-area {
+#correctionPopup .kga-button-area {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
@@ -89,29 +89,29 @@
 }
 
 /* === Button State Classes === */
-#correctionPopup .header-button-disabled {
+#correctionPopup .kga-header-button-disabled {
     opacity: 0.6 !important;
     cursor: not-allowed !important;
 }
 
-#correctionPopup .header-button-enabled {
+#correctionPopup .kga-header-button-enabled {
     opacity: 1 !important;
     cursor: pointer !important;
 }
 
-#correctionPopup .header-button-primary-hover {
+#correctionPopup .kga-header-button-primary-hover {
     background-color: var(--interactive-accent-hover) !important;
 }
 
-#correctionPopup .header-button-secondary-hover {
+#correctionPopup .kga-header-button-secondary-hover {
     background-color: var(--background-modifier-hover) !important;
 }
 
-#correctionPopup .header-button-primary {
+#correctionPopup .kga-header-button-primary {
     background-color: var(--interactive-accent) !important;
 }
 
-#correctionPopup .header-button-secondary {
+#correctionPopup .kga-header-button-secondary {
     background-color: var(--background-primary) !important;
 }
 

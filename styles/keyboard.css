@@ -1,6 +1,6 @@
 /* styles/keyboard.css */
 
-.keyboard-focused {
+.kga-keyboard-focused {
   outline: 2px solid var(--interactive-accent) !important;
   outline-offset: 2px !important;
   border-radius: 4px !important;
@@ -8,13 +8,13 @@
   transition: all 0.2s ease !important;
 }
 
-.error-item-compact.keyboard-focused {
+.kga-error-item-compact.kga-keyboard-focused {
   background: var(--background-modifier-hover) !important;
   border-left: 3px solid var(--interactive-accent) !important;
   padding-left: 13px !important; /* 원래 16px에서 border 3px를 뺀 값 */
 }
 
-.keyboard-navigation-hint {
+.kga-keyboard-navigation-hint {
   position: fixed;
   bottom: 20px;
   right: 20px;
@@ -32,7 +32,7 @@
   transition: opacity 0.2s ease;
 }
 
-.keyboard-navigation-hint .hint-header {
+.kga-keyboard-navigation-hint .kga-hint-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -42,14 +42,14 @@
   border-radius: 8px 8px 0 0;
 }
 
-.keyboard-navigation-hint .hint-title {
+.kga-keyboard-navigation-hint .kga-hint-title {
   font-weight: 600;
   color: var(--text-normal);
   font-size: 12px;
   margin: 0;
 }
 
-.keyboard-navigation-hint .hint-close-btn {
+.kga-keyboard-navigation-hint .kga-hint-close-btn {
   background: none;
   border: none;
   color: var(--text-muted);
@@ -67,31 +67,31 @@
   justify-content: center;
 }
 
-.keyboard-navigation-hint .hint-close-btn:hover {
+.kga-keyboard-navigation-hint .kga-hint-close-btn:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }
 
-.keyboard-navigation-hint .hint-close-btn:active {
+.kga-keyboard-navigation-hint .kga-hint-close-btn:active {
   background: var(--background-modifier-active);
 }
 
-.keyboard-navigation-hint .hint-item {
+.kga-keyboard-navigation-hint .kga-hint-item {
   display: flex;
   justify-content: space-between;
   margin: 2px 0;
   padding: 4px 14px;
 }
 
-.keyboard-navigation-hint .hint-item:first-of-type {
+.kga-keyboard-navigation-hint .kga-hint-item:first-of-type {
   padding-top: 8px;
 }
 
-.keyboard-navigation-hint .hint-item:last-of-type {
+.kga-keyboard-navigation-hint .kga-hint-item:last-of-type {
   padding-bottom: 10px;
 }
 
-.keyboard-navigation-hint .hint-key {
+.kga-keyboard-navigation-hint .kga-hint-key {
   font-family: var(--font-monospace);
   background: var(--background-modifier-border);
   padding: 1px 4px;
@@ -101,11 +101,11 @@
   text-align: center;
 }
 
-.keyboard-navigation-hint .hint-desc {
+.kga-keyboard-navigation-hint .kga-hint-desc {
   color: var(--text-muted);
 }
 
-.token-warning-keyboard-hint {
+.kga-token-warning-keyboard-hint {
   margin-top: 16px;
   padding: 8px 12px;
   background: var(--background-modifier-border);
@@ -116,7 +116,7 @@
   border: 1px solid var(--background-modifier-border);
 }
 
-.error-item-highlighted {
+.kga-error-item-highlighted {
   animation: error-card-highlight 2s ease-out forwards;
   position: relative;
   z-index: 1;
@@ -143,7 +143,7 @@
   }
 }
 
-.theme-dark .error-item-highlighted {
+.theme-dark .kga-error-item-highlighted {
   animation: error-card-highlight-dark 2s ease-out forwards;
 }
 
@@ -168,7 +168,7 @@
   }
 }
 
-.edit-completion-highlight {
+.kga-edit-completion-highlight {
   animation: edit-completion-pulse 2s ease-out forwards;
   position: relative;
   z-index: 1;
@@ -201,7 +201,7 @@
   }
 }
 
-.theme-dark .edit-completion-highlight {
+.theme-dark .kga-edit-completion-highlight {
   animation: edit-completion-pulse-dark 2s ease-out forwards;
 }
 

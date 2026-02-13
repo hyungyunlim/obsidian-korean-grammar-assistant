@@ -72,7 +72,7 @@
    2. Header Section
    ======================================== */
 
-.tooltip-header {
+.kga-tooltip-header {
   padding: 8px 12px;
   border-bottom: 1px solid var(--background-modifier-border);
   background: var(--background-secondary);
@@ -87,18 +87,18 @@
 }
 
 /* Mobile header variants */
-.tooltip-header.kga-mobile {
+.kga-tooltip-header.kga-mobile {
   padding: 11px 13px;
   font-size: 12px;
 }
 
-.tooltip-header.kga-mobile-phone {
+.kga-tooltip-header.kga-mobile-phone {
   padding: 10px 12px;
   font-size: 11px;
 }
 
 /* Single tooltip header */
-.tooltip-header.kga-single {
+.kga-tooltip-header.kga-single {
   padding: 6px 10px;
   display: flex;
   justify-content: space-between;
@@ -109,31 +109,31 @@
   min-height: 32px;
 }
 
-.tooltip-header.kga-single.kga-mobile-phone {
+.kga-tooltip-header.kga-single.kga-mobile-phone {
   padding: 6px 10px;
   font-size: 12px;
 }
 
-.tooltip-header.kga-single.kga-mobile {
+.kga-tooltip-header.kga-single.kga-mobile {
   padding: 7px 11px;
   font-size: 13px;
 }
 
 /* Header text */
-.header-text {
+.kga-header-text {
   flex: 1;
   text-align: center;
 }
 
-.header-text.kga-single {
+.kga-header-text.kga-single {
   font-size: 13px;
 }
 
-.header-text.kga-single.kga-mobile-phone {
+.kga-header-text.kga-single.kga-mobile-phone {
   font-size: 12px;
 }
 
-.header-text.kga-single.kga-mobile {
+.kga-header-text.kga-single.kga-mobile {
   font-size: 13px;
 }
 
@@ -141,7 +141,7 @@
    3. Header Close Button
    ======================================== */
 
-.header-close-button {
+.kga-header-close-button {
   position: absolute;
   right: 8px;
   top: 50%;
@@ -173,20 +173,20 @@
   appearance: none;
 }
 
-.header-close-button.kga-mobile {
+.kga-header-close-button.kga-mobile {
   right: 10px;
   font-size: 16px;
   touch-action: manipulation;
 }
 
-.header-close-button.kga-mobile-phone {
+.kga-header-close-button.kga-mobile-phone {
   right: 12px;
   font-size: 18px;
   touch-action: manipulation;
 }
 
 /* Single tooltip close button */
-.header-close-button.kga-single {
+.kga-header-close-button.kga-single {
   background: none;
   border: none;
   color: var(--text-muted);
@@ -206,26 +206,26 @@
   transform: none;
 }
 
-.header-close-button.kga-single.kga-mobile {
+.kga-header-close-button.kga-single.kga-mobile {
   font-size: 15px;
   width: 22px;
   height: 22px;
 }
 
-.header-close-button.kga-single.kga-mobile-phone {
+.kga-header-close-button.kga-single.kga-mobile-phone {
   font-size: 14px;
   width: 20px;
   height: 20px;
 }
 
 /* Close button hover states */
-.header-close-button:hover {
+.kga-header-close-button:hover {
   opacity: 1;
   color: var(--text-normal);
   transform: translateY(-50%) scale(1.2);
 }
 
-.header-close-button.kga-single:hover {
+.kga-header-close-button.kga-single:hover {
   opacity: 1;
   color: var(--text-normal);
   background: var(--interactive-hover);
@@ -235,19 +235,19 @@
    4. Scroll Container
    ======================================== */
 
-.tooltip-scroll-container {
+.kga-tooltip-scroll-container {
   flex: 1;
   overflow-y: auto;
   max-height: 250px;
   min-height: auto;
 }
 
-.tooltip-scroll-container.kga-mobile {
+.kga-tooltip-scroll-container.kga-mobile {
   max-height: 320px;
   min-height: 140px;
 }
 
-.tooltip-scroll-container.kga-mobile-phone {
+.kga-tooltip-scroll-container.kga-mobile-phone {
   max-height: 280px;
   min-height: 120px;
 }
@@ -256,24 +256,24 @@
    5. Error Section (Merged Tooltip)
    ======================================== */
 
-.error-section {
+.kga-error-section {
   padding: 8px 12px;
 }
 
-.error-section.kga-mobile {
+.kga-error-section.kga-mobile {
   padding: 11px 13px;
 }
 
-.error-section.kga-mobile-phone {
+.kga-error-section.kga-mobile-phone {
   padding: 10px 12px;
 }
 
-.error-section.kga-bordered {
+.kga-error-section.kga-bordered {
   border-top: 1px solid var(--background-modifier-border-hover);
 }
 
 /* Error line layout */
-.error-line {
+.kga-error-line {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -281,12 +281,12 @@
   min-height: 28px;
 }
 
-.error-line.kga-mobile {
+.kga-error-line.kga-mobile {
   gap: 7px;
   min-height: 34px;
 }
 
-.error-line.kga-mobile-phone {
+.kga-error-line.kga-mobile-phone {
   gap: 6px;
   min-height: 32px;
 }
@@ -295,7 +295,7 @@
    6. Error Word Display
    ======================================== */
 
-.error-word {
+.kga-error-word {
   color: var(--text-error);
   font-weight: 600;
   background: rgba(255, 0, 0, 0.1);
@@ -311,7 +311,7 @@
   line-height: 1.2;
 }
 
-.error-word.kga-mobile {
+.kga-error-word.kga-mobile {
   padding: 4px 7px;
   font-size: 13px;
   min-width: 70px;
@@ -319,7 +319,7 @@
   line-height: 1.3;
 }
 
-.error-word.kga-mobile-phone {
+.kga-error-word.kga-mobile-phone {
   padding: 3px 6px;
   font-size: 12px;
   min-width: 70px;
@@ -328,21 +328,21 @@
 }
 
 /* Error word with AI status */
-.error-word.kga-ai-corrected {
+.kga-error-word.kga-ai-corrected {
   color: #10b981;
   background: rgba(16, 185, 129, 0.1);
   cursor: pointer;
   transition: opacity 0.2s ease;
 }
 
-.error-word.kga-ai-exception {
+.kga-error-word.kga-ai-exception {
   color: #3b82f6;
   background: rgba(59, 130, 246, 0.1);
   cursor: pointer;
   transition: opacity 0.2s ease;
 }
 
-.error-word.kga-ai-keep-original {
+.kga-error-word.kga-ai-keep-original {
   color: #f59e0b;
   background: rgba(245, 158, 11, 0.1);
   cursor: pointer;
@@ -350,7 +350,7 @@
 }
 
 /* Error word container */
-.error-word-container {
+.kga-error-word-container {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -358,7 +358,7 @@
 }
 
 /* Part-of-speech info */
-.pos-info {
+.kga-pos-info {
   color: var(--text-accent);
   font-size: 10px;
   font-weight: 500;
@@ -368,23 +368,23 @@
   border-radius: 3px;
 }
 
-.pos-info.kga-mobile-phone {
+.kga-pos-info.kga-mobile-phone {
   font-size: 9px;
 }
 
 /* Arrow separator */
-.error-line > span.kga-arrow {
+.kga-error-line > span.kga-arrow {
   color: var(--text-muted);
   font-weight: bold;
   flex-shrink: 0;
   font-size: 14px;
 }
 
-.error-line > span.kga-arrow.kga-mobile {
+.kga-error-line > span.kga-arrow.kga-mobile {
   font-size: 13px;
 }
 
-.error-line > span.kga-arrow.kga-mobile-phone {
+.kga-error-line > span.kga-arrow.kga-mobile-phone {
   font-size: 12px;
 }
 
@@ -392,7 +392,7 @@
    7. Suggestions List
    ======================================== */
 
-.suggestions-list {
+.kga-suggestions-list {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -401,16 +401,16 @@
   overflow: hidden;
 }
 
-.suggestions-list.kga-mobile {
+.kga-suggestions-list.kga-mobile {
   gap: 4px;
 }
 
-.suggestions-list.kga-mobile-phone {
+.kga-suggestions-list.kga-mobile-phone {
   gap: 3px;
 }
 
 /* Suggestion buttons */
-.suggestion-button {
+.kga-suggestion-button {
   color: var(--text-normal);
   font-weight: 600;
   background: rgba(59, 130, 246, 0.1);
@@ -420,19 +420,19 @@
   cursor: pointer;
 }
 
-.suggestion-button.kga-mobile {
+.kga-suggestion-button.kga-mobile {
   padding: 4px 7px;
   font-size: 13px;
   touch-action: manipulation;
 }
 
-.suggestion-button.kga-mobile-phone {
+.kga-suggestion-button.kga-mobile-phone {
   padding: 3px 6px;
   font-size: 12px;
   touch-action: manipulation;
 }
 
-.suggestion-button:hover {
+.kga-suggestion-button:hover {
   background: rgba(59, 130, 246, 0.15);
 }
 
@@ -440,7 +440,7 @@
    8. Main Content (Single Tooltip)
    ======================================== */
 
-.tooltip-main-content {
+.kga-tooltip-main-content {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -450,12 +450,12 @@
   min-height: 0;
 }
 
-.tooltip-main-content.kga-mobile {
+.kga-tooltip-main-content.kga-mobile {
   gap: 5px;
   padding: 5px 9px;
 }
 
-.tooltip-main-content.kga-mobile-phone {
+.kga-tooltip-main-content.kga-mobile-phone {
   gap: 4px;
   padding: 4px 8px;
 }
@@ -464,7 +464,7 @@
    9. Actions Container
    ======================================== */
 
-.tooltip-actions {
+.kga-tooltip-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -476,20 +476,20 @@
   border-bottom-right-radius: 12px;
 }
 
-.tooltip-actions.kga-mobile {
+.kga-tooltip-actions.kga-mobile {
   padding: 7px 11px 9px 11px;
   gap: 7px;
   min-height: 44px;
 }
 
-.tooltip-actions.kga-mobile-phone {
+.kga-tooltip-actions.kga-mobile-phone {
   padding: 8px 12px 10px 12px;
   gap: 8px;
   min-height: 48px;
 }
 
 /* Actions container in single tooltip */
-.actions-container {
+.kga-actions-container {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -497,18 +497,18 @@
   flex-shrink: 0;
 }
 
-.actions-container.kga-mobile {
+.kga-actions-container.kga-mobile {
   gap: 7px;
   min-height: 26px;
 }
 
-.actions-container.kga-mobile-phone {
+.kga-actions-container.kga-mobile-phone {
   gap: 8px;
   min-height: 28px;
 }
 
 /* Info text */
-.info-text {
+.kga-info-text {
   font-size: 11px;
   color: var(--text-muted);
   flex: 1;
@@ -518,30 +518,30 @@
   text-overflow: ellipsis;
 }
 
-.info-text.kga-mobile {
+.kga-info-text.kga-mobile {
   font-size: 12px;
   padding-right: 4px;
 }
 
-.info-text.kga-mobile-phone {
+.kga-info-text.kga-mobile-phone {
   font-size: 11px;
   padding-right: 4px;
 }
 
 /* Action buttons group */
-.action-buttons {
+.kga-action-buttons {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
 }
 
-.action-buttons.kga-mobile {
+.kga-action-buttons.kga-mobile {
   gap: 5px;
   min-height: 30px;
 }
 
-.action-buttons.kga-mobile-phone {
+.kga-action-buttons.kga-mobile-phone {
   gap: 6px;
   min-height: 32px;
 }
@@ -551,8 +551,8 @@
    ======================================== */
 
 /* Ignore button (red X) */
-.ignore-all-button,
-.ignore-button {
+.kga-ignore-all-button,
+.kga-ignore-button {
   background: #ef4444;
   color: white;
   border: 1px solid #ef4444;
@@ -570,8 +570,8 @@
   box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
 }
 
-.ignore-all-button.kga-mobile,
-.ignore-button.kga-mobile {
+.kga-ignore-all-button.kga-mobile,
+.kga-ignore-button.kga-mobile {
   border-radius: 6px;
   padding: 7px;
   font-size: 15px;
@@ -581,8 +581,8 @@
   touch-action: manipulation;
 }
 
-.ignore-all-button.kga-mobile-phone,
-.ignore-button.kga-mobile-phone {
+.kga-ignore-all-button.kga-mobile-phone,
+.kga-ignore-button.kga-mobile-phone {
   border-radius: 6px;
   padding: 8px;
   font-size: 16px;
@@ -592,7 +592,7 @@
   touch-action: manipulation;
 }
 
-.ignore-button.kga-single {
+.kga-ignore-button.kga-single {
   background: var(--interactive-normal);
   border: 1px solid var(--background-modifier-border);
   border-radius: 4px;
@@ -603,7 +603,7 @@
   max-height: none;
 }
 
-.ignore-button.kga-single.kga-mobile {
+.kga-ignore-button.kga-single.kga-mobile {
   border-radius: 5px;
   padding: 6px;
   min-height: 28px;
@@ -611,7 +611,7 @@
   max-height: 28px;
 }
 
-.ignore-button.kga-single.kga-mobile-phone {
+.kga-ignore-button.kga-single.kga-mobile-phone {
   border-radius: 5px;
   padding: 5px;
   font-size: 11px;
@@ -620,21 +620,21 @@
   max-height: 26px;
 }
 
-.ignore-all-button:hover,
-.ignore-button:hover {
+.kga-ignore-all-button:hover,
+.kga-ignore-button:hover {
   background: #dc2626;
   border-color: #dc2626;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
 }
 
-.ignore-button.kga-single:hover {
+.kga-ignore-button.kga-single:hover {
   background: var(--interactive-hover);
   transform: translateY(-1px);
 }
 
 /* Apply button (green check) */
-.apply-all-button {
+.kga-apply-all-button {
   background: #10b981;
   color: white;
   border: 1px solid #10b981;
@@ -652,7 +652,7 @@
   box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
 }
 
-.apply-all-button.kga-mobile {
+.kga-apply-all-button.kga-mobile {
   border-radius: 6px;
   padding: 7px;
   font-size: 15px;
@@ -662,7 +662,7 @@
   touch-action: manipulation;
 }
 
-.apply-all-button.kga-mobile-phone {
+.kga-apply-all-button.kga-mobile-phone {
   border-radius: 6px;
   padding: 8px;
   font-size: 16px;
@@ -672,7 +672,7 @@
   touch-action: manipulation;
 }
 
-.apply-all-button:hover {
+.kga-apply-all-button:hover {
   background: #059669;
   border-color: #059669;
   transform: translateY(-1px);
@@ -680,7 +680,7 @@
 }
 
 /* Exception button (book icon) */
-.exception-button {
+.kga-exception-button {
   background: var(--interactive-normal);
   border: 1px solid var(--background-modifier-border);
   border-radius: 4px;
@@ -694,7 +694,7 @@
   line-height: 1;
 }
 
-.exception-button.kga-mobile {
+.kga-exception-button.kga-mobile {
   border-radius: 5px;
   padding: 6px;
   font-size: 14px;
@@ -704,7 +704,7 @@
   touch-action: manipulation;
 }
 
-.exception-button.kga-mobile-phone {
+.kga-exception-button.kga-mobile-phone {
   border-radius: 5px;
   padding: 5px;
   font-size: 13px;
@@ -714,7 +714,7 @@
   touch-action: manipulation;
 }
 
-.exception-button:hover {
+.kga-exception-button:hover {
   background: var(--interactive-hover);
   transform: translateY(-1px);
 }
@@ -723,14 +723,14 @@
    11. Help Area
    ======================================== */
 
-.help-container {
+.kga-help-container {
   display: flex;
   align-items: center;
   margin-left: 4px;
   flex-shrink: 0;
 }
 
-.tooltip-help-area {
+.kga-tooltip-help-area {
   padding: 6px 10px;
   border-top: 1px solid var(--background-modifier-border);
   background: var(--background-secondary);
@@ -743,20 +743,20 @@
   flex-shrink: 0;
 }
 
-.tooltip-help-area.kga-mobile {
+.kga-tooltip-help-area.kga-mobile {
   padding: 5px 9px;
   font-size: 11px;
   min-height: 22px;
 }
 
-.tooltip-help-area.kga-mobile-phone {
+.kga-tooltip-help-area.kga-mobile-phone {
   padding: 4px 8px;
   font-size: 10px;
   min-height: 20px;
 }
 
 /* Help icon */
-.help-container > span {
+.kga-help-container > span {
   color: var(--text-muted);
   cursor: pointer;
   width: 18px;
@@ -774,19 +774,19 @@
   line-height: 1;
 }
 
-.help-container > span.kga-mobile {
+.kga-help-container > span.kga-mobile {
   width: 18px;
   height: 18px;
   font-size: 9px;
 }
 
-.help-container > span.kga-mobile-phone {
+.kga-help-container > span.kga-mobile-phone {
   width: 16px;
   height: 16px;
   font-size: 8px;
 }
 
-.help-container > span:hover {
+.kga-help-container > span:hover {
   background: var(--interactive-hover);
   border-color: var(--text-normal);
   color: var(--text-normal);
@@ -797,7 +797,7 @@
    12. AI Analysis Area
    ======================================== */
 
-.tooltip-ai-area {
+.kga-tooltip-ai-area {
   padding: 6px 10px;
   border-top: 1px solid var(--background-modifier-border);
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(16, 185, 129, 0.05));
@@ -811,26 +811,26 @@
   flex-shrink: 0;
 }
 
-.tooltip-ai-area.kga-mobile {
+.kga-tooltip-ai-area.kga-mobile {
   padding: 5px 9px;
   font-size: 11px;
   gap: 5px;
   min-height: 22px;
 }
 
-.tooltip-ai-area.kga-mobile-phone {
+.kga-tooltip-ai-area.kga-mobile-phone {
   padding: 4px 8px;
   font-size: 10px;
   gap: 4px;
   min-height: 20px;
 }
 
-.tooltip-ai-area > span:first-child {
+.kga-tooltip-ai-area > span:first-child {
   font-size: 12px;
   flex-shrink: 0;
 }
 
-.tooltip-ai-area > span:last-child {
+.kga-tooltip-ai-area > span:last-child {
   flex: 1;
   font-style: italic;
   font-size: 11px;
@@ -841,12 +841,12 @@
    13. AI Icon & Reasoning Text
    ======================================== */
 
-.ai-icon {
+.kga-ai-icon {
   font-size: 12px;
   flex-shrink: 0;
 }
 
-.ai-reasoning {
+.kga-ai-reasoning {
   flex: 1;
   font-style: italic;
   font-size: 11px;
@@ -854,7 +854,7 @@
 }
 
 /* Help icon - reusable class */
-.help-icon {
+.kga-help-icon {
   color: var(--text-muted);
   cursor: pointer;
   width: 18px;
@@ -872,19 +872,19 @@
   line-height: 1;
 }
 
-.help-icon.kga-mobile {
+.kga-help-icon.kga-mobile {
   width: 18px;
   height: 18px;
   font-size: 9px;
 }
 
-.help-icon.kga-mobile-phone {
+.kga-help-icon.kga-mobile-phone {
   width: 16px;
   height: 16px;
   font-size: 8px;
 }
 
-.help-icon:hover {
+.kga-help-icon:hover {
   background: var(--interactive-hover);
   border-color: var(--text-normal);
   color: var(--text-normal);

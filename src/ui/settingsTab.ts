@@ -81,11 +81,6 @@ export class ModernSettingsTab extends PluginSettingTab {
   private createHeader(containerEl: HTMLElement): void {
     const header = containerEl.createEl('div', { cls: 'ksc-header' });
 
-    const titleSetting = new Setting(header)
-      .setName('📝 한국어 맞춤법 도우미')
-      .setHeading();
-    titleSetting.settingEl.addClasses(['ksc-header-title']);
-
     header.createEl('p', {
       text: '플러그인 동작을 커스터마이징하고 AI 기능을 설정하세요',
       cls: 'ksc-header-subtitle'

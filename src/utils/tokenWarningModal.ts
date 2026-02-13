@@ -82,7 +82,7 @@ export class TokenWarningModal {
     // 확인 모달 표시
     return new Promise((resolve) => {
       const modal = document.createElement('div');
-      modal.className = 'modal-overlay token-warning-overlay korean-grammar-token-modal';
+      modal.className = 'modal-overlay kga-token-warning-overlay korean-grammar-token-modal';
 
       const modalContent = this.createTokenWarningModal(tokenUsage, isOverMaxTokens, maxTokens);
       modal.appendChild(modalContent);
@@ -192,94 +192,94 @@ export class TokenWarningModal {
    */
   private static createTokenWarningModal(tokenUsage: TokenUsage, isOverMaxTokens: boolean, maxTokens: number): HTMLElement {
     const content = document.createElement('div');
-    content.className = 'token-warning-content';
+    content.className = 'kga-token-warning-content';
 
     const headerInfo = content.appendChild(document.createElement('div'));
-    headerInfo.className = 'token-warning-header';
+    headerInfo.className = 'kga-token-warning-header';
 
     const title = headerInfo.appendChild(document.createElement('h3'));
-    title.className = 'token-warning-title';
+    title.className = 'kga-token-warning-title';
     title.textContent = isOverMaxTokens ? '토큰 사용량 확인' : '토큰 사용량 안내';
 
     const description = headerInfo.appendChild(document.createElement('p'));
-    description.className = 'token-warning-description';
+    description.className = 'kga-token-warning-description';
     description.textContent = isOverMaxTokens ? '설정된 한계를 초과했습니다' : '예상 사용량이 높습니다';
 
     const details = content.appendChild(document.createElement('div'));
-    details.className = 'token-warning-details';
+    details.className = 'kga-token-warning-details';
 
     const stats = details.appendChild(document.createElement('div'));
-    stats.className = 'token-warning-stats';
+    stats.className = 'kga-token-warning-stats';
 
     const totalTokenItem = stats.appendChild(document.createElement('div'));
-    totalTokenItem.className = 'token-stat-item';
+    totalTokenItem.className = 'kga-token-stat-item';
 
     const totalTokenNumber = totalTokenItem.appendChild(document.createElement('div'));
-    totalTokenNumber.className = 'token-stat-number';
+    totalTokenNumber.className = 'kga-token-stat-number';
     totalTokenNumber.textContent = tokenUsage.totalEstimated.toLocaleString();
 
     const totalTokenLabel = totalTokenItem.appendChild(document.createElement('div'));
-    totalTokenLabel.className = 'token-stat-label';
+    totalTokenLabel.className = 'kga-token-stat-label';
     totalTokenLabel.textContent = '총 토큰';
 
     const costItem = stats.appendChild(document.createElement('div'));
-    costItem.className = 'token-stat-item';
+    costItem.className = 'kga-token-stat-item';
 
     const costNumber = costItem.appendChild(document.createElement('div'));
-    costNumber.className = 'token-stat-number';
+    costNumber.className = 'kga-token-stat-number';
     costNumber.textContent = tokenUsage.estimatedCost;
 
     const costLabel = costItem.appendChild(document.createElement('div'));
-    costLabel.className = 'token-stat-label';
+    costLabel.className = 'kga-token-stat-label';
     costLabel.textContent = '예상 비용';
 
     const rec = details.appendChild(document.createElement('div'));
-    rec.className = 'token-warning-recommendation';
+    rec.className = 'kga-token-warning-recommendation';
 
     const recText = rec.appendChild(document.createElement('div'));
-    recText.className = 'token-warning-recommendation-text';
+    recText.className = 'kga-token-warning-recommendation-text';
     recText.textContent = `입력: ${tokenUsage.inputTokens.toLocaleString()} • 출력: ${tokenUsage.estimatedOutputTokens.toLocaleString()}`;
 
     if (isOverMaxTokens) {
       const overLimit = content.appendChild(document.createElement('div'));
-      overLimit.className = 'token-warning-over-limit';
+      overLimit.className = 'kga-token-warning-over-limit';
 
       const overLimitIcon = overLimit.appendChild(document.createElement('div'));
-      overLimitIcon.className = 'token-warning-over-limit-icon';
+      overLimitIcon.className = 'kga-token-warning-over-limit-icon';
       overLimitIcon.textContent = '⚠️';
 
       const overLimitText = overLimit.appendChild(document.createElement('div'));
-      overLimitText.className = 'token-warning-over-limit-text';
+      overLimitText.className = 'kga-token-warning-over-limit-text';
 
       const overLimitTitle = overLimitText.appendChild(document.createElement('div'));
-      overLimitTitle.className = 'token-warning-over-limit-title';
+      overLimitTitle.className = 'kga-token-warning-over-limit-title';
       overLimitTitle.textContent = '설정된 최대 토큰을 초과했습니다';
 
       const overLimitDesc = overLimitText.appendChild(document.createElement('div'));
-      overLimitDesc.className = 'token-warning-over-limit-description';
+      overLimitDesc.className = 'kga-token-warning-over-limit-description';
       overLimitDesc.textContent = `현재 설정: ${maxTokens.toLocaleString()} 토큰 → 초과량: ${(tokenUsage.totalEstimated - maxTokens).toLocaleString()} 토큰`;
     }
 
     const actions = content.appendChild(document.createElement('div'));
-    actions.className = 'token-warning-actions';
+    actions.className = 'kga-token-warning-actions';
 
     const cancelBtn = document.createElement('button');
     cancelBtn.id = 'token-warning-cancel';
-    cancelBtn.className = 'token-warning-btn token-warning-btn-cancel';
+    cancelBtn.className = 'kga-token-warning-btn kga-token-warning-btn-cancel';
     cancelBtn.textContent = '취소';
     actions.appendChild(cancelBtn);
 
     if (isOverMaxTokens) {
       const updateBtn = document.createElement('button');
       updateBtn.id = 'token-warning-update-settings';
-      updateBtn.className = 'token-warning-btn token-warning-btn-settings';
+      updateBtn.className = 'kga-token-warning-btn kga-token-warning-btn-settings';
       updateBtn.textContent = '설정 업데이트 후 진행';
       actions.appendChild(updateBtn);
     }
 
     const proceedBtn = document.createElement('button');
     proceedBtn.id = 'token-warning-proceed';
-    proceedBtn.className = 'token-warning-btn token-warning-btn-proceed';
+    proceedBtn.className = 'kga-token-warning-btn kga-token-warning-btn-proceed';
     proceedBtn.textContent = isOverMaxTokens ? '강제 진행' : '계속 진행';
     actions.appendChild(proceedBtn);
 

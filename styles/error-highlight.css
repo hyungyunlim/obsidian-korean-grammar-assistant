@@ -12,17 +12,17 @@
     background: rgba(var(--color-red-rgb), 0.2);
 }
 
-.clickable-error {
+.kga-clickable-error {
     cursor: pointer;
     position: relative;
 }
 
-.clickable-error:hover {
+.kga-clickable-error:hover {
     background: rgba(var(--color-red-rgb), 0.25);
     border-bottom: 2px solid var(--color-red);
 }
 
-.clickable-error:active {
+.kga-clickable-error:active {
     background: rgba(var(--color-red-rgb), 0.3);
 }
 
@@ -34,17 +34,17 @@
     font-weight: 500;
 }
 
-.spell-corrected.clickable-error {
+.spell-corrected.kga-clickable-error {
     cursor: pointer;
     position: relative;
 }
 
-.spell-corrected.clickable-error:hover {
+.spell-corrected.kga-clickable-error:hover {
     background: rgba(var(--color-green-rgb), 0.25);
     border-bottom: 2px solid var(--color-green);
 }
 
-.spell-corrected.clickable-error:active {
+.spell-corrected.kga-clickable-error:active {
     background: rgba(var(--color-green-rgb), 0.3);
 }
 
@@ -56,17 +56,17 @@
     font-weight: 500;
 }
 
-.spell-exception-processed.clickable-error {
+.spell-exception-processed.kga-clickable-error {
     cursor: pointer;
     position: relative;
 }
 
-.spell-exception-processed.clickable-error:hover {
+.spell-exception-processed.kga-clickable-error:hover {
     background: rgba(var(--color-blue-rgb), 0.25);
     border-bottom: 2px solid var(--color-blue);
 }
 
-.spell-exception-processed.clickable-error:active {
+.spell-exception-processed.kga-clickable-error:active {
     background: rgba(var(--color-blue-rgb), 0.3);
 }
 
@@ -78,17 +78,17 @@
     font-weight: 500;
 }
 
-.spell-original-kept.clickable-error {
+.spell-original-kept.kga-clickable-error {
     cursor: pointer;
     position: relative;
 }
 
-.spell-original-kept.clickable-error:hover {
+.spell-original-kept.kga-clickable-error:hover {
     background: rgba(255, 165, 0, 0.25);
     border-bottom: 2px solid #e67e00;
 }
 
-.spell-original-kept.clickable-error:active {
+.spell-original-kept.kga-clickable-error:active {
     background: rgba(255, 165, 0, 0.35);
 }
 
@@ -100,17 +100,17 @@
     font-weight: 500;
 }
 
-.spell-user-edited.clickable-error {
+.spell-user-edited.kga-clickable-error {
     cursor: pointer;
     position: relative;
 }
 
-.spell-user-edited.clickable-error:hover {
+.spell-user-edited.kga-clickable-error:hover {
     background: rgba(139, 92, 246, 0.25);
     border-bottom: 2px solid #8b5cf6;
 }
 
-.spell-user-edited.clickable-error:active {
+.spell-user-edited.kga-clickable-error:active {
     background: rgba(139, 92, 246, 0.35);
 }
 

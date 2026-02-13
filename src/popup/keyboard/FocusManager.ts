@@ -30,9 +30,9 @@ export class FocusManager implements IPopupComponent {
   private focusObserver?: MutationObserver;
 
   // CSS 클래스 상수
-  private readonly FOCUS_CLASS = 'keyboard-focused';
-  private readonly FOCUS_HIGHLIGHT_CLASS = 'focus-highlight';
-  private readonly EDIT_MODE_CLASS = 'edit-mode-active';
+  private readonly FOCUS_CLASS = 'kga-keyboard-focused';
+  private readonly FOCUS_HIGHLIGHT_CLASS = 'kga-focus-highlight';
+  private readonly EDIT_MODE_CLASS = 'kga-edit-mode-active';
 
   constructor() {
     this.focusState = this.createInitialFocusState();
@@ -55,7 +55,7 @@ export class FocusManager implements IPopupComponent {
   }
 
   render(): HTMLElement {
-    const container = createEl('div', { cls: 'focus-manager' });
+    const container = createEl('div', { cls: 'kga-focus-manager' });
     this.containerElement = container;
     
     // 포커스 하이라이트용 스타일 추가
@@ -409,7 +409,7 @@ export class FocusManager implements IPopupComponent {
         100% { opacity: 1; }
       }
       
-      .${this.FOCUS_CLASS}.focus-pulse {
+      .${this.FOCUS_CLASS}.kga-focus-pulse {
         animation: focusPulse 1s ease-in-out infinite;
       }
     `;

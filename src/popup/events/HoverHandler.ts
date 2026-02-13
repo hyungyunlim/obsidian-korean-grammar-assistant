@@ -105,7 +105,7 @@ export class HoverHandler {
    */
   private createTooltipContainer(): void {
     this.tooltipContainer = document.createElement('div');
-    this.tooltipContainer.className = 'popup-tooltip-container';
+    this.tooltipContainer.className = 'kga-popup-tooltip-container';
     document.body.appendChild(this.tooltipContainer);
   }
 
@@ -240,8 +240,8 @@ export class HoverHandler {
     
     // 네비게이션 버튼 호버
     if (target.classList.contains('nav-button') ||
-        target.classList.contains('pagination-btn') ||
-        target.closest('.nav-button, .pagination-btn')) {
+        target.classList.contains('kga-pagination-btn') ||
+        target.closest('.nav-button, .kga-pagination-btn')) {
       return 'navigation-hint';
     }
     
@@ -300,37 +300,37 @@ export class HoverHandler {
   ): Promise<TooltipConfig | null> {
     
     let content = '';
-    let className = 'hover-tooltip';
+    let className = 'kga-hover-tooltip';
     
     switch (actionType) {
       case 'error-preview':
         content = await this.createErrorPreviewContent(context);
-        className = 'error-preview-tooltip';
+        className = 'kga-error-preview-tooltip';
         break;
         
       case 'suggestion-tooltip':
         content = await this.createSuggestionTooltipContent(context);
-        className = 'suggestion-tooltip';
+        className = 'kga-suggestion-tooltip';
         break;
         
       case 'ai-info':
         content = await this.createAIInfoContent(context);
-        className = 'ai-info-tooltip';
+        className = 'kga-ai-info-tooltip';
         break;
         
       case 'help-tooltip':
         content = await this.createHelpTooltipContent(context);
-        className = 'help-tooltip';
+        className = 'kga-help-tooltip';
         break;
         
       case 'button-hint':
         content = await this.createButtonHintContent(context);
-        className = 'button-hint-tooltip';
+        className = 'kga-button-hint-tooltip';
         break;
         
       case 'navigation-hint':
         content = await this.createNavigationHintContent(context);
-        className = 'navigation-hint-tooltip';
+        className = 'kga-navigation-hint-tooltip';
         break;
         
       default:
@@ -361,17 +361,17 @@ export class HoverHandler {
     if (correctionIndex === undefined) return '';
     
     // 기본 오류 정보
-    let content = `<div class="error-preview-content">`;
-    content += `<div class="error-title">맞춤법 오류 #${correctionIndex + 1}</div>`;
+    let content = `<div class="kga-error-preview-content">`;
+    content += `<div class="kga-error-title">맞춤법 오류 #${correctionIndex + 1}</div>`;
     
     // 오류 텍스트
     const errorText = target.textContent || '';
     if (errorText) {
-      content += `<div class="error-original">원본: "${errorText}"</div>`;
+      content += `<div class="kga-error-original">원본: "${errorText}"</div>`;
     }
     
     // 추가 정보 (Phase 7에서 상태 관리자와 연결 예정)
-    content += `<div class="error-hint">클릭하여 수정 제안 확인</div>`;
+    content += `<div class="kga-error-hint">클릭하여 수정 제안 확인</div>`;
     content += `</div>`;
     
     return content;
@@ -386,9 +386,9 @@ export class HoverHandler {
     const suggestionText = target.textContent || '';
     if (!suggestionText) return '';
     
-    let content = `<div class="suggestion-tooltip-content">`;
-    content += `<div class="suggestion-text">"${suggestionText}"</div>`;
-    content += `<div class="suggestion-hint">클릭하여 이 제안 적용</div>`;
+    let content = `<div class="kga-suggestion-tooltip-content">`;
+    content += `<div class="kga-suggestion-text">"${suggestionText}"</div>`;
+    content += `<div class="kga-suggestion-hint">클릭하여 이 제안 적용</div>`;
     content += `</div>`;
     
     return content;
@@ -404,15 +404,15 @@ export class HoverHandler {
     const confidence = target.dataset.confidence || '';
     const reasoning = target.dataset.reasoning || '';
     
-    let content = `<div class="ai-info-content">`;
-    content += `<div class="ai-title">🤖 AI 분석 정보</div>`;
+    let content = `<div class="kga-ai-info-content">`;
+    content += `<div class="kga-ai-title">🤖 AI 분석 정보</div>`;
     
     if (confidence) {
-      content += `<div class="ai-confidence">신뢰도: ${confidence}%</div>`;
+      content += `<div class="kga-ai-confidence">신뢰도: ${confidence}%</div>`;
     }
     
     if (reasoning) {
-      content += `<div class="ai-reasoning">${reasoning}</div>`;
+      content += `<div class="kga-ai-reasoning">${reasoning}</div>`;
     }
     
     content += `</div>`;
@@ -429,8 +429,8 @@ export class HoverHandler {
     const helpText = target.dataset.help || target.title || '';
     if (!helpText) return '';
     
-    let content = `<div class="help-tooltip-content">`;
-    content += `<div class="help-text">${helpText}</div>`;
+    let content = `<div class="kga-help-tooltip-content">`;
+    content += `<div class="kga-help-text">${helpText}</div>`;
     content += `</div>`;
     
     return content;
@@ -445,14 +445,14 @@ export class HoverHandler {
     const buttonText = target.textContent || '';
     const shortcut = target.dataset.shortcut || '';
     
-    let content = `<div class="button-hint-content">`;
+    let content = `<div class="kga-button-hint-content">`;
     
     if (buttonText) {
-      content += `<div class="button-name">${buttonText}</div>`;
+      content += `<div class="kga-button-name">${buttonText}</div>`;
     }
     
     if (shortcut) {
-      content += `<div class="button-shortcut">단축키: ${shortcut}</div>`;
+      content += `<div class="kga-button-shortcut">단축키: ${shortcut}</div>`;
     }
     
     content += `</div>`;
@@ -480,8 +480,8 @@ export class HoverHandler {
     
     if (!hintText) return '';
     
-    let content = `<div class="navigation-hint-content">`;
-    content += `<div class="navigation-text">${hintText}</div>`;
+    let content = `<div class="kga-navigation-hint-content">`;
+    content += `<div class="kga-navigation-text">${hintText}</div>`;
     content += `</div>`;
     
     return content;
@@ -496,7 +496,7 @@ export class HoverHandler {
    */
   private createTooltipElement(config: TooltipConfig): HTMLElement {
     const tooltip = document.createElement('div');
-    tooltip.className = `popup-tooltip ${config.className || ''} kga-dynamic-position kga-tooltip-enter`;
+    tooltip.className = `kga-popup-tooltip ${config.className || ''} kga-dynamic-position kga-tooltip-enter`;
 
     // Set position using CSS variables
     tooltip.style.setProperty('--kga-pos-left', `${config.position.x}px`);

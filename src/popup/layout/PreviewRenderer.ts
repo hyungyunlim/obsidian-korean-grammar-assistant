@@ -853,7 +853,7 @@ export class PreviewRenderer implements IPopupComponent {
       span.textContent = segment.text;
       
       if (segment.correctionIndex !== undefined) {
-        span.className = `clickable-error ${segment.className || ''}`;
+        span.className = `kga-clickable-error ${segment.className || ''}`;
         span.dataset.correctionIndex = segment.correctionIndex.toString();
         span.dataset.uniqueId = segment.uniqueId || '';
         span.setAttribute('tabindex', '0');

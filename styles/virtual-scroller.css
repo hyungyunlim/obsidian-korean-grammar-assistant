@@ -1,7 +1,7 @@
 /* styles/virtual-scroller.css */
 /* Virtual Scroller component styles using CSS variables */
 
-.virtual-scroller-container {
+.kga-virtual-scroller-container {
     width: 100%;
     height: 100%;
     display: flex;
@@ -12,7 +12,7 @@
     padding-bottom: var(--scroll-padding-bottom, 0);
 }
 
-.virtual-scroller-viewport {
+.kga-virtual-scroller-viewport {
     height: var(--vs-viewport-height, 400px);
     overflow-y: auto;
     overflow-x: hidden;
@@ -22,32 +22,32 @@
     will-change: scroll-position;
 }
 
-.virtual-scroller-viewport::-webkit-scrollbar {
+.kga-virtual-scroller-viewport::-webkit-scrollbar {
     width: 6px;
 }
 
-.virtual-scroller-viewport::-webkit-scrollbar-track {
+.kga-virtual-scroller-viewport::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.virtual-scroller-viewport::-webkit-scrollbar-thumb {
+.kga-virtual-scroller-viewport::-webkit-scrollbar-thumb {
     background: var(--background-modifier-border);
     border-radius: 3px;
     min-height: 40px;
 }
 
-.virtual-scroller-viewport::-webkit-scrollbar-thumb:hover {
+.kga-virtual-scroller-viewport::-webkit-scrollbar-thumb:hover {
     background: var(--background-modifier-border-hover);
 }
 
-.virtual-scroller-content {
+.kga-virtual-scroller-content {
     position: relative;
     width: 100%;
     height: var(--vs-content-height, 100%);
     min-height: 100%;
 }
 
-.virtual-scroller-item {
+.kga-virtual-scroller-item {
     position: absolute;
     width: 100%;
     height: var(--vs-item-height, 30px);

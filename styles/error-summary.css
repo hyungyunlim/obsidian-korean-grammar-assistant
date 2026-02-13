@@ -1,6 +1,6 @@
 /* styles/error-summary.css */
 
-#correctionPopup .error-summary {
+#correctionPopup .kga-error-summary {
     margin-top: 16px;
     padding-top: 16px;
     border-top: 1px solid var(--background-modifier-border);
@@ -14,21 +14,21 @@
     flex: 1 1 auto !important;
 }
 
-#correctionPopup .error-summary.collapsed .error-summary-content {
+#correctionPopup .kga-error-summary.collapsed .kga-error-summary-content {
     height: 0;
     overflow: hidden;
     opacity: 0;
     transition: all 0.3s ease;
 }
 
-#correctionPopup .error-summary:not(.collapsed) .error-summary-content {
+#correctionPopup .kga-error-summary:not(.collapsed) .kga-error-summary-content {
     height: 280px;
     overflow-y: auto;
     opacity: 1;
     transition: all 0.3s ease;
 }
 
-#correctionPopup .error-summary-toggle {
+#correctionPopup .kga-error-summary-toggle {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -38,20 +38,20 @@
     user-select: none;
 }
 
-#correctionPopup .error-summary-toggle .left-section {
+#correctionPopup .kga-error-summary-toggle .kga-left-section {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-#correctionPopup .error-summary-toggle:hover {
+#correctionPopup .kga-error-summary-toggle:hover {
     background: var(--background-modifier-hover);
     border-radius: 4px;
     margin: 0 -8px 12px -8px;
     padding: 8px;
 }
 
-#correctionPopup .error-summary-label {
+#correctionPopup .kga-error-summary-label {
     font-size: 12px;
     font-weight: 600;
     color: var(--text-muted);
@@ -59,7 +59,7 @@
     letter-spacing: 0.5px;
 }
 
-#correctionPopup .error-count-badge {
+#correctionPopup .kga-error-count-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -74,36 +74,36 @@
     line-height: 1;
 }
 
-#correctionPopup .toggle-icon {
+#correctionPopup .kga-toggle-icon {
     font-size: 12px;
     color: var(--text-muted);
     transition: transform 0.2s ease;
 }
 
-#correctionPopup .error-summary-content {
+#correctionPopup .kga-error-summary-content {
     scrollbar-width: thin;
     -webkit-overflow-scrolling: touch;
 }
 
-#correctionPopup .error-summary-content::-webkit-scrollbar {
+#correctionPopup .kga-error-summary-content::-webkit-scrollbar {
     width: 6px;
 }
 
-#correctionPopup .error-summary-content::-webkit-scrollbar-track {
+#correctionPopup .kga-error-summary-content::-webkit-scrollbar-track {
     background: var(--background-secondary);
 }
 
-#correctionPopup .error-summary-content::-webkit-scrollbar-thumb {
+#correctionPopup .kga-error-summary-content::-webkit-scrollbar-thumb {
     background: var(--background-modifier-border);
     border-radius: 3px;
 }
 
-#correctionPopup .error-summary-content::-webkit-scrollbar-thumb:hover {
+#correctionPopup .kga-error-summary-content::-webkit-scrollbar-thumb:hover {
     background: var(--background-modifier-border-hover);
 }
 
 /* Improved compact error item styles */
-#correctionPopup .error-item-compact {
+#correctionPopup .kga-error-item-compact {
     margin-bottom: 4px !important;
     padding: 6px 8px !important;
     background: var(--background-secondary-alt) !important;
@@ -114,18 +114,18 @@
     line-height: 1.3 !important;
 }
 
-#correctionPopup .error-item-compact:hover {
+#correctionPopup .kga-error-item-compact:hover {
     background: var(--background-modifier-hover) !important;
 }
 
-#correctionPopup .error-row {
+#correctionPopup .kga-error-row {
     display: flex !important;
     align-items: center !important;
     gap: 8px !important;
     margin-bottom: 3px !important;
 }
 
-#correctionPopup .error-original-compact {
+#correctionPopup .kga-error-original-compact {
     min-width: 60px !important;
     font-weight: 600 !important;
     color: var(--color-red) !important;
@@ -139,31 +139,31 @@
 }
 
 /* 수정된 상태의 원본 텍스트 스타일 */
-#correctionPopup .error-original-compact.corrected {
+#correctionPopup .kga-error-original-compact.corrected {
     color: var(--color-green) !important;
     background: rgba(var(--color-green-rgb), 0.15) !important;
 }
 
 /* 예외처리된 상태의 원본 텍스트 스타일 */  
-#correctionPopup .error-original-compact.exception-processed {
+#correctionPopup .kga-error-original-compact.exception-processed {
     color: var(--color-blue) !important;
     background: rgba(var(--color-blue-rgb), 0.15) !important;
 }
 
 /* 원본 유지된 상태의 원본 텍스트 스타일 */
-#correctionPopup .error-original-compact.original-kept {
+#correctionPopup .kga-error-original-compact.original-kept {
     color: var(--color-orange) !important;
     background: rgba(var(--color-orange-rgb), 0.15) !important;
 }
 
 /* 사용자 편집된 상태의 원본 텍스트 스타일 */
-#correctionPopup .error-original-compact.user-edited {
+#correctionPopup .kga-error-original-compact.user-edited {
     color: #8b5cf6 !important;
     background: rgba(139, 92, 246, 0.15) !important;
 }
 
 /* 편집 모드 input 스타일 */
-#correctionPopup .error-original-input {
+#correctionPopup .kga-error-original-input {
     min-width: 60px !important;
     font-weight: 600 !important;
     color: #8b5cf6 !important;
@@ -180,7 +180,7 @@
 
 /* 모바일 편집 모드 개선 */
 @media (max-width: 768px) {
-    #correctionPopup .error-original-input {
+    #correctionPopup .kga-error-original-input {
         min-width: 80px !important;
         font-size: 14px !important;
         padding: 6px 8px !important;
@@ -189,7 +189,7 @@
 }
 
 /* 모바일 편집 버튼 컨테이너 */
-#correctionPopup .mobile-edit-container {
+#correctionPopup .kga-mobile-edit-container {
     display: flex !important;
     align-items: center !important;
     gap: 4px !important;
@@ -198,14 +198,14 @@
 }
 
 /* 편집 모드일 때 input이 최대한 공간 차지 */
-#correctionPopup .mobile-edit-container .error-original-input {
+#correctionPopup .kga-mobile-edit-container .kga-error-original-input {
     flex: 1 !important;
     max-width: none !important;
     min-width: auto !important;
 }
 
 /* 모바일 편집 버튼 스타일 */
-#correctionPopup .mobile-edit-btn {
+#correctionPopup .kga-mobile-edit-btn {
     padding: 6px 8px !important;
     font-size: 12px !important;
     border: none !important;
@@ -221,32 +221,32 @@
     justify-content: center !important;
 }
 
-#correctionPopup .mobile-edit-btn.save {
+#correctionPopup .kga-mobile-edit-btn.save {
     background: #10b981 !important;
     color: white !important;
 }
 
-#correctionPopup .mobile-edit-btn.cancel {
+#correctionPopup .kga-mobile-edit-btn.cancel {
     background: #ef4444 !important;
     color: white !important;
 }
 
-#correctionPopup .mobile-edit-btn:hover {
+#correctionPopup .kga-mobile-edit-btn:hover {
     opacity: 0.8 !important;
 }
 
-#correctionPopup .mobile-edit-btn:active {
+#correctionPopup .kga-mobile-edit-btn:active {
     transform: scale(0.95) !important;
 }
 
 /* 모바일 편집 모드일 때 수정 제안 및 예외 처리 버튼 강제 숨김 */
 @media (max-width: 768px) {
-    #correctionPopup .mobile-edit-container ~ .error-suggestions-compact,
-    #correctionPopup .mobile-edit-container ~ .error-exception-btn,
-    #correctionPopup .error-card:has(.mobile-edit-container) .error-suggestions-compact,
-    #correctionPopup .error-card:has(.mobile-edit-container) .error-exception-btn,
-    #correctionPopup .error-card:has(.mobile-edit-container) .suggestion-compact,
-    #correctionPopup .error-card:has(.mobile-edit-container) .keep-original {
+    #correctionPopup .kga-mobile-edit-container ~ .kga-error-suggestions-compact,
+    #correctionPopup .kga-mobile-edit-container ~ .kga-error-exception-btn,
+    #correctionPopup .kga-error-card:has(.kga-mobile-edit-container) .kga-error-suggestions-compact,
+    #correctionPopup .kga-error-card:has(.kga-mobile-edit-container) .kga-error-exception-btn,
+    #correctionPopup .kga-error-card:has(.kga-mobile-edit-container) .kga-suggestion-compact,
+    #correctionPopup .kga-error-card:has(.kga-mobile-edit-container) .kga-keep-original {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
@@ -259,32 +259,32 @@
 }
 
 /* 편집 모드일 때 수정 제안 및 예외 처리 버튼 숨기기 (폴백) */
-#correctionPopup .error-card.editing-mode .error-suggestions-compact,
-#correctionPopup .error-card.editing-mode .error-exception-btn,
-#correctionPopup .error-card.editing-mode .suggestion-compact,
-#correctionPopup .error-card.editing-mode .keep-original {
+#correctionPopup .kga-error-card.kga-editing-mode .kga-error-suggestions-compact,
+#correctionPopup .kga-error-card.kga-editing-mode .kga-error-exception-btn,
+#correctionPopup .kga-error-card.kga-editing-mode .kga-suggestion-compact,
+#correctionPopup .kga-error-card.kga-editing-mode .kga-keep-original {
     display: none !important;
     visibility: hidden !important;
     opacity: 0 !important;
 }
 
 /* 편집 모드일 때 카드 레이아웃 조정 */
-#correctionPopup .error-card.editing-mode {
+#correctionPopup .kga-error-card.kga-editing-mode {
     padding: 8px !important;
 }
 
-#correctionPopup .error-card.editing-mode .error-content-compact {
+#correctionPopup .kga-error-card.kga-editing-mode .kga-error-content-compact {
     gap: 4px !important;
 }
 
-#correctionPopup .error-suggestions-compact {
+#correctionPopup .kga-error-suggestions-compact {
     display: flex !important;
     flex-wrap: wrap !important;
     gap: 4px !important;
     flex: 1 !important;
 }
 
-#correctionPopup .suggestion-compact {
+#correctionPopup .kga-suggestion-compact {
     background: var(--background-primary) !important;
     border: 1px solid var(--background-modifier-border) !important;
     border-radius: 8px !important;
@@ -297,30 +297,30 @@
     font-weight: 500 !important;
 }
 
-#correctionPopup .suggestion-compact:hover {
+#correctionPopup .kga-suggestion-compact:hover {
     background: var(--interactive-hover) !important;
     border-color: var(--interactive-accent) !important;
 }
 
-#correctionPopup .suggestion-compact.selected {
+#correctionPopup .kga-suggestion-compact.selected {
     background: var(--interactive-accent) !important;
     color: var(--text-on-accent) !important;
     border-color: var(--interactive-accent) !important;
 }
 
-#correctionPopup .suggestion-compact.keep-original {
+#correctionPopup .kga-suggestion-compact.kga-keep-original {
     background: var(--background-modifier-hover) !important;
     color: var(--text-muted) !important;
     font-size: 10px !important;
     font-weight: 400 !important;
 }
 
-#correctionPopup .suggestion-compact.keep-original.selected {
+#correctionPopup .kga-suggestion-compact.kga-keep-original.selected {
     background: var(--text-muted) !important;
     color: var(--background-primary) !important;
 }
 
-#correctionPopup .error-help-compact {
+#correctionPopup .kga-error-help-compact {
     padding: 4px 8px !important;
     border-top: 1px solid var(--background-modifier-border) !important;
     background: var(--background-secondary) !important;
@@ -335,7 +335,7 @@
 }
 
 /* Error placeholder styles */
-#correctionPopup .error-placeholder {
+#correctionPopup .kga-error-placeholder {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -348,20 +348,20 @@
     border: 1px dashed var(--background-modifier-border);
 }
 
-#correctionPopup .placeholder-icon {
+#correctionPopup .kga-placeholder-icon {
     font-size: 32px;
     color: var(--color-green);
     margin-bottom: 12px;
 }
 
-#correctionPopup .placeholder-text {
+#correctionPopup .kga-placeholder-text {
     font-size: 14px;
     font-weight: 500;
     color: var(--text-normal);
     margin-bottom: 6px;
 }
 
-#correctionPopup .placeholder-subtext {
+#correctionPopup .kga-placeholder-subtext {
     font-size: 12px;
     color: var(--text-muted);
     opacity: 0.8;

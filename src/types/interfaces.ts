@@ -308,9 +308,6 @@ export interface ExtendedWindow extends Window {
     isHovered?: boolean;
   };
   tooltipKeepOpenMode?: boolean;
-  koreanGrammarPlugin?: {
-    instance?: unknown;
-  };
   Notice?: new (message: string, timeout?: number) => void;
   sanitizeHTMLToDom?: (html: string) => DocumentFragment;
   getEventListeners?: (element: Element) => Record<string, unknown[]>;
@@ -351,11 +348,3 @@ export interface EventContext {
   platform?: 'desktop' | 'mobile';
 }
 
-/**
- * Obsidian Plugin 인터페이스 확장
- */
-export interface PluginInstance {
-  settings?: PluginSettings;
-  orchestrator?: unknown;
-  instance?: unknown;
-}

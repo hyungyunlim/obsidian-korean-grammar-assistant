@@ -64,7 +64,7 @@ export class KeyboardManager implements IPopupComponent {
   }
 
   render(): HTMLElement {
-    const container = createEl('div', { cls: 'keyboard-manager' });
+    const container = createEl('div', { cls: 'kga-keyboard-manager' });
     this.containerElement = container;
     
     // 키보드 힌트 표시 (데스크톱에서만)
@@ -337,7 +337,7 @@ export class KeyboardManager implements IPopupComponent {
   }
 
   private createKeyboardHints(): HTMLElement {
-    const hintsContainer = createEl('div', { cls: 'keyboard-hints' });
+    const hintsContainer = createEl('div', { cls: 'kga-keyboard-hints' });
     
     const hints = [
       { key: 'Tab', desc: '다음 오류' },
@@ -349,12 +349,12 @@ export class KeyboardManager implements IPopupComponent {
     ];
 
     hints.forEach(hint => {
-      const hintElement = createEl('div', { cls: 'keyboard-hint' });
+      const hintElement = createEl('div', { cls: 'kga-keyboard-hint' });
       
-      const keyElement = createEl('kbd', { cls: 'keyboard-hint-key' });
+      const keyElement = createEl('kbd', { cls: 'kga-keyboard-hint-key' });
       keyElement.textContent = hint.key;
       
-      const descElement = createEl('span', { cls: 'keyboard-hint-desc' });
+      const descElement = createEl('span', { cls: 'kga-keyboard-hint-desc' });
       descElement.textContent = hint.desc;
       
       hintElement.appendChild(keyElement);
@@ -370,7 +370,7 @@ export class KeyboardManager implements IPopupComponent {
     const container = this.containerElement;
     if (!container) return;
 
-    const hintsContainer = container.querySelector('.keyboard-hints');
+    const hintsContainer = container.querySelector('.kga-keyboard-hints');
     if (hintsContainer && !this.shouldShowKeyboardHints()) {
       hintsContainer.remove();
     } else if (!hintsContainer && this.shouldShowKeyboardHints()) {

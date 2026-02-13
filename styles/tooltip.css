@@ -1,7 +1,7 @@
 /* styles/tooltip.css */
 
 /* === Tooltip Container === */
-.popup-tooltip-container {
+.kga-popup-tooltip-container {
     position: fixed;
     top: 0;
     left: 0;
@@ -10,7 +10,7 @@
 }
 
 /* === Base Tooltip Styles === */
-.popup-tooltip {
+.kga-popup-tooltip {
     position: absolute;
     background: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
@@ -25,131 +25,131 @@
 }
 
 /* Default max-width for all tooltips */
-.popup-tooltip:not(.help-tooltip):not(.button-hint-tooltip):not(.navigation-hint-tooltip) {
+.kga-popup-tooltip:not(.kga-help-tooltip):not(.kga-button-hint-tooltip):not(.kga-navigation-hint-tooltip) {
     max-width: 300px;
 }
 
 /* === Tooltip Animation States === */
-.popup-tooltip.kga-tooltip-enter {
+.kga-popup-tooltip.kga-tooltip-enter {
     opacity: 0;
     transform: translateY(-5px);
 }
 
-.popup-tooltip.kga-tooltip-visible {
+.kga-popup-tooltip.kga-tooltip-visible {
     opacity: 1;
     transform: translateY(0);
 }
 
-.popup-tooltip.kga-tooltip-exit {
+.kga-popup-tooltip.kga-tooltip-exit {
     opacity: 0;
     transform: translateY(-5px);
 }
 
 /* === Dynamic Positioning === */
-.popup-tooltip.kga-dynamic-position {
+.kga-popup-tooltip.kga-dynamic-position {
     left: var(--kga-pos-left);
     top: var(--kga-pos-top);
 }
 
 /* === Tooltip Type Classes === */
-.error-preview-tooltip {
+.kga-error-preview-tooltip {
     border-color: var(--text-error);
     border-left: 3px solid var(--text-error);
 }
 
-.suggestion-tooltip {
+.kga-suggestion-tooltip {
     border-color: var(--text-accent);
     border-left: 3px solid var(--text-accent);
 }
 
-.ai-info-tooltip {
+.kga-ai-info-tooltip {
     border-color: var(--interactive-accent);
     border-left: 3px solid var(--interactive-accent);
     background: var(--background-secondary);
 }
 
-.help-tooltip {
+.kga-help-tooltip {
     border-color: var(--text-muted);
     max-width: 250px;
 }
 
-.button-hint-tooltip {
+.kga-button-hint-tooltip {
     font-size: 11px;
     padding: 6px 10px;
 }
 
-.navigation-hint-tooltip {
+.kga-navigation-hint-tooltip {
     font-size: 11px;
     padding: 6px 10px;
 }
 
 /* === Tooltip Content Sections === */
-.error-preview-content .error-title {
+.kga-error-preview-content .kga-error-title {
     font-weight: 600;
     margin-bottom: 4px;
     color: var(--text-error);
 }
 
-.error-preview-content .error-original {
+.kga-error-preview-content .kga-error-original {
     margin-bottom: 4px;
     font-style: italic;
 }
 
-.error-preview-content .error-hint {
+.kga-error-preview-content .kga-error-hint {
     font-size: 10px;
     color: var(--text-muted);
     margin-top: 4px;
 }
 
-.suggestion-tooltip-content .suggestion-text {
+.kga-suggestion-tooltip-content .kga-suggestion-text {
     font-weight: 500;
     margin-bottom: 4px;
 }
 
-.suggestion-tooltip-content .suggestion-hint {
+.kga-suggestion-tooltip-content .kga-suggestion-hint {
     font-size: 10px;
     color: var(--text-muted);
 }
 
-.ai-info-content .ai-title {
+.kga-ai-info-content .kga-ai-title {
     font-weight: 600;
     margin-bottom: 6px;
 }
 
-.ai-info-content .ai-confidence {
+.kga-ai-info-content .kga-ai-confidence {
     font-size: 11px;
     margin-bottom: 4px;
     color: var(--interactive-accent);
 }
 
-.ai-info-content .ai-reasoning {
+.kga-ai-info-content .kga-ai-reasoning {
     font-size: 11px;
     color: var(--text-muted);
     line-height: 1.5;
 }
 
-.help-tooltip-content .help-text {
+.kga-help-tooltip-content .kga-help-text {
     line-height: 1.5;
 }
 
-.button-hint-content .button-name {
+.kga-button-hint-content .kga-button-name {
     font-weight: 500;
     margin-bottom: 2px;
 }
 
-.button-hint-content .button-shortcut {
+.kga-button-hint-content .kga-button-shortcut {
     font-size: 10px;
     color: var(--text-muted);
     font-family: var(--font-monospace);
 }
 
-.navigation-hint-content .navigation-text {
+.kga-navigation-hint-content .kga-navigation-text {
     font-weight: 500;
 }
 
 /* === Responsive Adjustments === */
 @media (max-width: 768px) {
-    .popup-tooltip {
+    .kga-popup-tooltip {
         max-width: 250px;
         font-size: 11px;
     }

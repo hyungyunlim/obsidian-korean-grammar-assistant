@@ -138,8 +138,8 @@ export class ClickHandler {
     
     // 네비게이션 버튼 클릭
     if (target.classList.contains('nav-button') ||
-        target.classList.contains('pagination-btn') ||
-        target.closest('.nav-button, .pagination-btn')) {
+        target.classList.contains('kga-pagination-btn') ||
+        target.closest('.nav-button, .kga-pagination-btn')) {
       return 'navigation';
     }
     
@@ -420,7 +420,7 @@ export class ClickHandler {
     // 클릭 가능한 클래스들
     const clickableClasses = [
       'error-text', 'error-highlight', 'suggestion-item',
-      'nav-button', 'pagination-btn', 'btn', 'toggle-btn',
+      'nav-button', 'kga-pagination-btn', 'btn', 'toggle-btn',
       'edit-btn', 'error-edit-btn'
     ];
     
