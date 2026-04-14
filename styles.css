@@ -1404,20 +1404,6 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   background: var(--background-modifier-hover) !important;
   transition: all 0.2s ease !important;
 }
-.kga-focus-highlight {
-  background-color: var(--interactive-hover) !important;
-  transition: all 0.2s ease !important;
-}
-.error-card.kga-keyboard-focused {
-  border-color: var(--interactive-accent) !important;
-  box-shadow: 0 0 0 1px var(--interactive-accent) !important;
-}
-.kga-edit-mode-active .kga-keyboard-focused {
-  outline-color: var(--color-accent) !important;
-}
-.kga-keyboard-focused.kga-focus-pulse {
-  animation: focusPulse 1s ease-in-out infinite;
-}
 .kga-error-item-compact.kga-keyboard-focused {
   background: var(--background-modifier-hover) !important;
   border-left: 3px solid var(--interactive-accent) !important;
@@ -3650,25 +3636,4 @@ body.spell-popup-open #correctionPopup [contenteditable] {
 }
 .korean-grammar-popup-desktop {
   border-radius: 8px;
-}
-
-/* Expanded hover zone for morpheme-based hover area */
-.korean-grammar-expanded-hover-zone {
-  position: relative;
-  z-index: 2;
-}
-.korean-grammar-expanded-hover-zone::before {
-  content: '';
-  position: absolute;
-  left: -5px;
-  right: -5px;
-  top: -2px;
-  bottom: -2px;
-  background: rgba(var(--color-red-rgb), 0.03);
-  border-radius: 3px;
-  pointer-events: none;
-  z-index: -1;
-}
-.theme-dark .korean-grammar-expanded-hover-zone::before {
-  background: rgba(var(--color-red-rgb), 0.05);
 }
