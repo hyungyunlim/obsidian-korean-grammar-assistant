@@ -19,6 +19,7 @@ import { Logger } from './src/utils/logger';
 // Import inline mode components
 import { errorDecorationField, temporarySuggestionModeField, InlineModeService } from './src/services/inlineModeService';
 import { SpellCheckApiService } from './src/services/api';
+import { globalInlineTooltip } from './src/ui/inlineTooltip';
 
 // 한글 맞춤법 검사 아이콘 등록
 addIcon(
@@ -153,6 +154,9 @@ export default class KoreanGrammarPlugin extends Plugin {
         return true;
       },
     });
+
+    // 인라인 툴팁에 App 인스턴스 설정
+    globalInlineTooltip.setApp(this.app);
 
     // 인라인 모드가 활성화된 경우 확장 기능 등록
     if (this.settings.inlineMode.enabled) {
@@ -793,7 +797,7 @@ export default class KoreanGrammarPlugin extends Plugin {
         // @ts-ignore - Obsidian 내부 API 사용
         const currentEditorView = (activeView as any).editor?.cm;
         if (currentEditorView) {
-          InlineModeService.setEditorView(currentEditorView, this.settings, this.app, async (s) => { this.settings = s; await this.saveSettings(); });
+          InlineModeService.setEditorView(currentEditorView, this.settings, this.app, async (s) => { this.settings = s; await this.saveSettings(); }, this);
         }
       }
     }));
@@ -808,13 +812,13 @@ export default class KoreanGrammarPlugin extends Plugin {
       }
 
       // 마크다운 뷰로 변경되었을 때만 새로운 뷰 설정
-      if (leaf?.view?.getViewType() === 'markdown' && this.settings?.inlineMode?.enabled) {
-        const markdownView = leaf.view as MarkdownView;
+      if (leaf?.view instanceof MarkdownView && this.settings?.inlineMode?.enabled) {
+        const markdownView = leaf.view;
         if (markdownView?.editor) {
           // @ts-ignore - Obsidian 내부 API 사용
           const currentEditorView = (markdownView as any).editor?.cm;
           if (currentEditorView) {
-            InlineModeService.setEditorView(currentEditorView, this.settings, this.app, async (s) => { this.settings = s; await this.saveSettings(); });
+            InlineModeService.setEditorView(currentEditorView, this.settings, this.app, async (s) => { this.settings = s; await this.saveSettings(); }, this);
           }
         }
       }

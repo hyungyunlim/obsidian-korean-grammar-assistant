@@ -50,8 +50,7 @@ class ErrorWidget extends WidgetType {
   toDOM(view: EditorView): HTMLElement {
     const span = document.createElement('span');
     span.className = 'korean-grammar-error-inline';
-    span.style.backgroundColor = 'rgba(255, 0, 0, 0.2)';
-    span.style.borderBottom = '2px wavy red';
+    // Styles defined in styles.css
     span.textContent = this.originalText;
     
     // 클릭 시 수정 제안 표시

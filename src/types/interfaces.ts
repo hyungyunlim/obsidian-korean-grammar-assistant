@@ -298,23 +298,6 @@ export interface MorphemeAnalysis {
 }
 
 /**
- * 확장된 Window 인터페이스
- */
-export interface ExtendedWindow extends Window {
-  globalInlineTooltip?: {
-    show: (error: InlineError, element: HTMLElement, trigger: 'hover' | 'click', position?: { x: number; y: number }) => void;
-    hide: () => void;
-    visible?: boolean;
-    isHovered?: boolean;
-  };
-  tooltipKeepOpenMode?: boolean;
-  Notice?: new (message: string, timeout?: number) => void;
-  sanitizeHTMLToDom?: (html: string) => DocumentFragment;
-  getEventListeners?: (element: Element) => Record<string, unknown[]>;
-  app?: App;
-}
-
-/**
  * Phase 7: UI System 타입 정의
  */
 

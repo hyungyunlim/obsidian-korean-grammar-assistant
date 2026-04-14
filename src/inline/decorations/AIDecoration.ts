@@ -6,6 +6,7 @@
 import { Decoration, WidgetType } from '@codemirror/view';
 import { InlineError, AIAnalysisResult } from '../../types/interfaces';
 import { Logger } from '../../utils/logger';
+import { globalInlineTooltip } from '../../ui/inlineTooltip';
 
 /**
  * AI 상태 표시 위젯
@@ -316,8 +317,8 @@ class AITextWidget extends WidgetType {
     
     span.addEventListener('mouseleave', () => {
       setTimeout(() => {
-        if ((window as any).globalInlineTooltip && !(window as any).globalInlineTooltip.isHovered) {
-          (window as any).globalInlineTooltip.hide();
+        if (globalInlineTooltip && !globalInlineTooltip.isHovered) {
+          globalInlineTooltip.hide();
         }
       }, 500);
     });
@@ -366,12 +367,12 @@ class AITextWidget extends WidgetType {
       aiSelectedValue: this.aiText
     };
     
-    if ((window as any).globalInlineTooltip) {
+    if (globalInlineTooltip) {
       const mousePosition = { x: event.clientX, y: event.clientY };
-      (window as any).globalInlineTooltip.show(mockError, element, 'hover', mousePosition);
+      globalInlineTooltip.show(mockError, element, 'hover', mousePosition);
     }
   }
-  
+
   eq(other: AITextWidget): boolean {
     return this.aiText === other.aiText && 
            this.errorId === other.errorId && 

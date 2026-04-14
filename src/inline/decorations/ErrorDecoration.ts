@@ -7,6 +7,7 @@ import { Decoration, WidgetType } from '@codemirror/view';
 import { EnhancedInlineError } from '../types/InlineTypes';
 import { InlineError } from '../../types/interfaces';
 import { Logger } from '../../utils/logger';
+import { globalInlineTooltip } from '../../ui/inlineTooltip';
 
 /**
  * AI 교정 텍스트 Widget - Replace Decoration용
@@ -112,16 +113,16 @@ export class AITextWidget extends WidgetType {
     };
     
     // 글로벌 툴팁 표시
-    if ((window as any).globalInlineTooltip) {
+    if (globalInlineTooltip) {
       const mousePosition = { x: event.clientX, y: event.clientY };
-      (window as any).globalInlineTooltip.show(mockError, element, 'hover', mousePosition);
+      globalInlineTooltip.show(mockError, element, 'hover', mousePosition);
     }
   }
-  
+
   private hideTooltip(): void {
     setTimeout(() => {
-      if ((window as any).globalInlineTooltip && !(window as any).globalInlineTooltip.isHovered) {
-        (window as any).globalInlineTooltip.hide();
+      if (globalInlineTooltip && !globalInlineTooltip.isHovered) {
+        globalInlineTooltip.hide();
       }
     }, 500);
   }

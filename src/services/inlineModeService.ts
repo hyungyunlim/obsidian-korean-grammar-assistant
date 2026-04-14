@@ -1,6 +1,6 @@
 import { EditorView, WidgetType, Decoration, DecorationSet } from '@codemirror/view';
 import { StateField, StateEffect } from '@codemirror/state';
-import { Correction, InlineError, ExtendedWindow, PluginSettings } from '../types/interfaces';
+import { Correction, InlineError, PluginSettings } from '../types/interfaces';
 import { Logger } from '../utils/logger';
 import { globalInlineTooltip } from '../ui/inlineTooltip';
 import { Scope, App, Platform } from 'obsidian';
@@ -11,8 +11,6 @@ import { NotificationUtils } from '../utils/notificationUtils';
 import { SpellCheckApiService } from './api';
 import { IgnoredWordsService } from './ignoredWords';
 
-// Type-safe window access helper
-const getExtendedWindow = (): ExtendedWindow => window as unknown as ExtendedWindow;
 
 /**
  * 🤖 AI 교정 텍스트 Widget - Replace Decoration용
@@ -71,19 +69,17 @@ class AITextWidget extends WidgetType {
       };
       
       // 툴팁 표시 (마우스 위치 포함)
-      const tooltip = getExtendedWindow().globalInlineTooltip;
-      if (tooltip) {
+      if (globalInlineTooltip) {
         const mousePosition = { x: e.clientX, y: e.clientY };
-        tooltip.show(mockError, span, 'hover', mousePosition);
+        globalInlineTooltip.show(mockError, span, 'hover', mousePosition);
       }
     });
-    
+
     span.addEventListener('mouseleave', () => {
       // 🔍 툴팁 숨기기 (더 긴 딜레이 - 툴팁으로 마우스 이동할 충분한 시간 확보)
       setTimeout(() => {
-        const tooltip = getExtendedWindow().globalInlineTooltip;
-        if (tooltip && !tooltip.isHovered) {
-          tooltip.hide();
+        if (globalInlineTooltip && !globalInlineTooltip.isHovered) {
+          globalInlineTooltip.hide();
         }
       }, 500); // 150ms → 500ms로 증가
     });
@@ -105,12 +101,11 @@ class AITextWidget extends WidgetType {
       InlineModeService.applyAIWidgetToEditor(this.errorId, this.aiText, this.originalText);
       
       // 툴팁 숨기기
-      const tooltip = getExtendedWindow().globalInlineTooltip;
-      if (tooltip) {
-        tooltip.hide();
+      if (globalInlineTooltip) {
+        globalInlineTooltip.hide();
       }
     });
-    
+
     // 🖱️ 더블클릭 이벤트 추가 (편집 모드)
     span.addEventListener('dblclick', (e) => {
       // 🔧 모바일에서는 터치 이벤트를 사용하므로 더블클릭 이벤트 무시
@@ -503,18 +498,19 @@ export class InlineModeService {
   private static saveSettingsCallback: ((settings: PluginSettings) => Promise<void>) | null = null;
   private static currentHoveredError: InlineError | null = null;
   private static hoverTimeout: NodeJS.Timeout | null = null;
+  private static plugin: any = null;
 
   /**
    * 에디터 뷰 및 설정 초기화
    */
-  static setEditorView(view: EditorView, settings?: PluginSettings, app?: App, saveSettingsCallback?: (settings: PluginSettings) => Promise<void>): void {
+  static setEditorView(view: EditorView, settings?: PluginSettings, app?: App, saveSettingsCallback?: (settings: PluginSettings) => Promise<void>, plugin?: any): void {
     // 🔧 새로운 에디터뷰가 이전과 다르면 이전 상태 완전 정리
     if (this.currentView && this.currentView !== view) {
       Logger.debug('인라인 모드: 이전 에디터뷰와 다름 - 상태 정리 중');
       this.clearErrors(this.currentView);
       this.activeErrors.clear(); // 전역 오류 상태도 완전 정리
     }
-    
+
     this.currentView = view;
     if (settings) {
       this.settings = settings;
@@ -524,6 +520,9 @@ export class InlineModeService {
     }
     if (saveSettingsCallback) {
       this.saveSettingsCallback = saveSettingsCallback;
+    }
+    if (plugin) {
+      this.plugin = plugin;
     }
 
     // 이벤트 리스너 추가
@@ -538,14 +537,22 @@ export class InlineModeService {
   /**
    * 이벤트 리스너 설정 (겹치는 오류 영역 처리 개선)
    */
+  private static registerDomEvent(el: HTMLElement, type: string, handler: (e: any) => void, options?: boolean | AddEventListenerOptions): void {
+    if (this.plugin) {
+      this.plugin.registerDomEvent(el, type, handler, options);
+    } else {
+      el.addEventListener(type, handler, options);
+    }
+  }
+
   private static setupEventListeners(view: EditorView): void {
     const editorDOM = view.dom;
-    
+
     // 🎯 커서 위치 변경 모니터링 설정
     this.setupCursorMonitoring(view);
-    
+
     // 호버 이벤트 (정확한 호버된 요소만 처리)
-    editorDOM.addEventListener('mouseenter', (e) => {
+    this.registerDomEvent(editorDOM, 'mouseenter', (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.classList.contains('korean-grammar-error-inline')) {
         const errorId = target.getAttribute('data-error-id');
@@ -579,8 +586,8 @@ export class InlineModeService {
         }
       }
     }, true);
-    
-    editorDOM.addEventListener('mouseleave', (e) => {
+
+    this.registerDomEvent(editorDOM, 'mouseleave', (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.classList.contains('korean-grammar-error-inline')) {
         const errorId = target.getAttribute('data-error-id');
@@ -605,7 +612,7 @@ export class InlineModeService {
     }, true);
     
     // 클릭 이벤트 (안전한 처리)
-    editorDOM.addEventListener('click', (e) => {
+    this.registerDomEvent(editorDOM, 'click', (e: MouseEvent) => {
       try {
         // 🔧 모바일에서는 터치 이벤트를 사용하므로 클릭 이벤트 무시
         if (Platform.isMobile) {
@@ -634,7 +641,7 @@ export class InlineModeService {
     }, true);
     
     // 포커스 이벤트 (오류 요소 클릭 시) - 무한 루프 방지 가드 추가
-    editorDOM.addEventListener('focus', (e) => {
+    this.registerDomEvent(editorDOM, 'focus', (e: FocusEvent) => {
       const target = e.target as HTMLElement;
       if (target.classList.contains('korean-grammar-error-inline')) {
         const errorId = target.getAttribute('data-error-id');
@@ -677,7 +684,7 @@ export class InlineModeService {
     Logger.log('📱 모바일 터치 이벤트 등록');
 
     // 터치 시작
-    editorDOM.addEventListener('touchstart', (e: TouchEvent) => {
+    this.registerDomEvent(editorDOM, 'touchstart', (e: TouchEvent) => {
       const target = e.target as HTMLElement;
       
       if (target.classList.contains('korean-grammar-error-inline')) {
@@ -722,7 +729,7 @@ export class InlineModeService {
     }, { passive: false });
 
     // 터치 끝
-    editorDOM.addEventListener('touchend', (e: TouchEvent) => {
+    this.registerDomEvent(editorDOM, 'touchend', (e: TouchEvent) => {
       const wasTouchTimer = touchTimer !== null;
       
       // 롱프레스 타이머 취소
@@ -759,7 +766,7 @@ export class InlineModeService {
     }, { passive: false });
 
     // 터치 취소
-    editorDOM.addEventListener('touchcancel', () => {
+    this.registerDomEvent(editorDOM, 'touchcancel', () => {
       if (touchTimer) {
         clearTimeout(touchTimer);
         touchTimer = null;
@@ -770,7 +777,7 @@ export class InlineModeService {
     }, { passive: true });
 
     // 터치 이동 (스크롤 감지로 롱프레스 취소)
-    editorDOM.addEventListener('touchmove', (e: TouchEvent) => {
+    this.registerDomEvent(editorDOM, 'touchmove', (e: TouchEvent) => {
       if (touchTimer && touchTarget) {
         const touch = e.touches[0];
         const moveDistance = Math.sqrt(
@@ -843,11 +850,10 @@ export class InlineModeService {
       this.clearFocusedError();
 
       // 툴팁도 숨기기
-      const tooltip = getExtendedWindow().globalInlineTooltip;
-      if (tooltip) {
-        tooltip.hide();
+      if (globalInlineTooltip) {
+        globalInlineTooltip.hide();
       }
-      
+
       // 해당 오류를 activeErrors에서 제거하고 decoration도 제거
       if (this.activeErrors.has(focusedErrorId)) {
         this.activeErrors.delete(focusedErrorId);
@@ -1308,7 +1314,7 @@ export class InlineModeService {
     if (shouldShowTooltip) {
       // 실제 호버된 요소가 전달되면 그것을 사용, 없으면 기존 방식으로 찾기
       const targetElement = hoveredElement || this.findErrorElement(error);
-      const tooltip = getExtendedWindow().globalInlineTooltip;
+      const tooltip = globalInlineTooltip;
       if (targetElement && tooltip) {
         // 툴팁 표시 (마우스 위치 정보 포함)
         tooltip.show(error, targetElement, 'hover', mousePosition);
@@ -1324,7 +1330,7 @@ export class InlineModeService {
     
     try {
       // 기존 툴팁 먼저 숨기기
-      const tooltip = getExtendedWindow().globalInlineTooltip;
+      const tooltip = globalInlineTooltip;
       if (tooltip) {
         tooltip.hide();
       }
@@ -1374,7 +1380,7 @@ export class InlineModeService {
       Logger.error('오류 클릭 처리 중 문제 발생:', err);
 
       // 에러 발생 시에도 툴팁 숨기기
-      const tooltip = getExtendedWindow().globalInlineTooltip;
+      const tooltip = globalInlineTooltip;
       if (tooltip) {
         tooltip.hide();
       }
@@ -1523,14 +1529,10 @@ export class InlineModeService {
             }
             
             // 성공 알림
-            if (getExtendedWindow().Notice) {
-              new (getExtendedWindow().Notice!)(`✅ "${newText}" 적용 완료`);
-            }
+            new Notice(`✅ "${newText}" 적용 완료`);
           } catch (replaceError) {
             Logger.error('텍스트 교체 실패:', replaceError);
-            if (getExtendedWindow().Notice) {
-              new (getExtendedWindow().Notice!)('❌ 텍스트 교체에 실패했습니다.');
-            }
+            new Notice('❌ 텍스트 교체에 실패했습니다.');
           }
         });
       } else {
@@ -1542,16 +1544,12 @@ export class InlineModeService {
         
         view.editor.replaceRange(newText, startPos, endPos);
         
-        if ((window as any).Notice) {
-          new (window as any).Notice(`✅ "${newText}" 적용 완료`);
-        }
+        new Notice(`✅ "${newText}" 적용 완료`);
       }
-      
+
     } catch (err) {
       Logger.error('AI Widget 에디터 적용 실패:', err);
-      if ((window as any).Notice) {
-        new (window as any).Notice('❌ 텍스트 적용에 실패했습니다.');
-      }
+      new Notice('❌ 텍스트 적용에 실패했습니다.');
     }
   }
 
@@ -1673,10 +1671,10 @@ export class InlineModeService {
     });
 
     // 툴팁 유지 모드가 아닐 때만 툴팁 숨기기
-    const isKeepOpenMode = getExtendedWindow().tooltipKeepOpenMode;
+    const isKeepOpenMode = globalInlineTooltip.tooltipKeepOpenMode;
     if (!isKeepOpenMode) {
       // 툴팁 숨기기 (확실하게)
-      const tooltip = getExtendedWindow().globalInlineTooltip;
+      const tooltip = globalInlineTooltip;
       if (tooltip) {
         tooltip.hide();
       }
@@ -1751,15 +1749,15 @@ export class InlineModeService {
     });
 
     // 툴팁이 표시 중이면 업데이트된 내용으로 다시 표시
-    if ((window as any).globalInlineTooltip && (window as any).globalInlineTooltip.visible) {
+    if (globalInlineTooltip && globalInlineTooltip.visible) {
       setTimeout(() => {
         const errorElement = this.findErrorElement(mergedError);
-        const tooltip = getExtendedWindow().globalInlineTooltip;
+        const tooltip = globalInlineTooltip;
         if (errorElement && tooltip) {
           // 기존 툴팁 숨기고 새로 표시
           tooltip.hide();
           setTimeout(() => {
-            const tooltip2 = getExtendedWindow().globalInlineTooltip;
+            const tooltip2 = globalInlineTooltip;
             if (tooltip2) {
               tooltip2.show(mergedError, errorElement, 'click');
             }
@@ -1801,8 +1799,8 @@ export class InlineModeService {
       const nextError = sortedErrors[nextIndex];
       if (nextError) {
         // 기존 툴팁 먼저 숨기기
-        if (getExtendedWindow().globalInlineTooltip) {
-          getExtendedWindow().globalInlineTooltip.hide();
+        if (globalInlineTooltip) {
+          globalInlineTooltip.hide();
         }
         
         this.setFocusedError(nextError);
@@ -1833,8 +1831,8 @@ export class InlineModeService {
       const prevError = sortedErrors[prevIndex];
       if (prevError) {
         // 기존 툴팁 먼저 숨기기
-        if (getExtendedWindow().globalInlineTooltip) {
-          getExtendedWindow().globalInlineTooltip.hide();
+        if (globalInlineTooltip) {
+          globalInlineTooltip.hide();
         }
         
         this.setFocusedError(prevError);
@@ -1972,8 +1970,8 @@ export class InlineModeService {
       const nextIndex = (currentIndex + 1) % sortedErrors.length;
       const nextError = sortedErrors[nextIndex];
       if (nextError) {
-        if (getExtendedWindow().globalInlineTooltip) {
-          getExtendedWindow().globalInlineTooltip.hide();
+        if (globalInlineTooltip) {
+          globalInlineTooltip.hide();
         }
         this.setFocusedError(nextError);
         Logger.log(`✅ 다음 오류로 이동 (Option+]): ${nextError.correction.original}`);
@@ -1999,8 +1997,8 @@ export class InlineModeService {
       const prevIndex = currentIndex <= 0 ? sortedErrors.length - 1 : currentIndex - 1;
       const prevError = sortedErrors[prevIndex];
       if (prevError) {
-        if (getExtendedWindow().globalInlineTooltip) {
-          getExtendedWindow().globalInlineTooltip.hide();
+        if (globalInlineTooltip) {
+          globalInlineTooltip.hide();
         }
         this.setFocusedError(prevError);
         Logger.log(`✅ 이전 오류로 이동 (Option+[): ${prevError.correction.original}`);
@@ -2057,8 +2055,8 @@ export class InlineModeService {
     this.currentSuggestionIndex = 0;
     
     // 툴팁 숨기기
-    if ((window as any).globalInlineTooltip) {
-      (window as any).globalInlineTooltip.hide();
+    if (globalInlineTooltip) {
+      globalInlineTooltip.hide();
     }
     
     Logger.debug('오류 포커스 해제');
@@ -2181,8 +2179,8 @@ export class InlineModeService {
     // }
     
     // 툴팁 정리
-    if (getExtendedWindow().globalInlineTooltip?.visible) {
-      (window as any).globalInlineTooltip.hide();
+    if (globalInlineTooltip?.visible) {
+      globalInlineTooltip.hide();
     }
     
     Logger.debug('인라인 모드: 서비스 정리됨 (겹치는 영역 처리 포함)');
@@ -2197,33 +2195,20 @@ export class InlineModeService {
     plugin.addCommand({
       id: 'inline-next-error',
       name: '다음 문법 오류로 이동',
-      callback: () => {
-        // 인라인 모드가 활성화되고 오류가 있는지 확인
-        if (this.activeErrors.size === 0) {
-          new Notice('현재 감지된 문법 오류가 없습니다. 인라인 모드를 활성화하고 문법 검사를 실행해주세요.');
-          return;
-        }
+      checkCallback: (checking: boolean) => {
+        if (this.activeErrors.size === 0) return false;
+        if (checking) return true;
 
-        // 🎯 커서 위치 기반으로 다음 오류 찾기
         const nextError = this.findNextErrorFromCursor();
-
         if (nextError) {
-          // 기존 툴팁 숨기기
-          const tooltip = getExtendedWindow().globalInlineTooltip;
-          if (tooltip) {
-            tooltip.hide();
-          }
-          
-          // 오류 위치로 이동 및 포커스 설정
+          if (globalInlineTooltip) globalInlineTooltip.hide();
           this.moveToError(nextError);
           this.setFocusedError(nextError);
-          
-          // Notice 제거 - 더 깔끔한 UX
-          // new Notice(`다음 오류: "${nextError.correction.original}"`);
           Logger.log(`✅ 다음 오류로 이동: ${nextError.correction.original}`);
         } else {
           new Notice('다음 오류를 찾을 수 없습니다.');
         }
+        return true;
       }
     });
 
@@ -2231,32 +2216,20 @@ export class InlineModeService {
     plugin.addCommand({
       id: 'inline-previous-error',
       name: '이전 문법 오류로 이동',
-      callback: () => {
-        if (this.activeErrors.size === 0) {
-          new Notice('현재 감지된 문법 오류가 없습니다. 인라인 모드를 활성화하고 문법 검사를 실행해주세요.');
-          return;
-        }
+      checkCallback: (checking: boolean) => {
+        if (this.activeErrors.size === 0) return false;
+        if (checking) return true;
 
-        // 🎯 커서 위치 기반으로 이전 오류 찾기
         const previousError = this.findPreviousErrorFromCursor();
-
         if (previousError) {
-          // 기존 툴팁 숨기기
-          const tooltip = getExtendedWindow().globalInlineTooltip;
-          if (tooltip) {
-            tooltip.hide();
-          }
-          
-          // 오류 위치로 이동 및 포커스 설정
+          if (globalInlineTooltip) globalInlineTooltip.hide();
           this.moveToError(previousError);
           this.setFocusedError(previousError);
-          
-          // Notice 제거 - 더 깔끔한 UX  
-          // new Notice(`이전 오류: "${previousError.correction.original}"`);
           Logger.log(`✅ 이전 오류로 이동: ${previousError.correction.original}`);
         } else {
           new Notice('이전 오류를 찾을 수 없습니다.');
         }
+        return true;
       }
     });
 
@@ -2264,40 +2237,27 @@ export class InlineModeService {
     plugin.addCommand({
       id: 'inline-next-suggestion',
       name: '다음 제안 선택',
-      callback: () => {
-        // 🎯 스마트 포커스: 포커스된 오류가 없으면 커서 위치에서 찾기
+      checkCallback: (checking: boolean) => {
+        if (!this.currentFocusedError && !this.findErrorAtCursor()) return false;
+        if (checking) return true;
+
         if (!this.currentFocusedError) {
           const errorAtCursor = this.findErrorAtCursor();
           if (errorAtCursor) {
             this.setFocusedError(errorAtCursor);
             Logger.log(`🎯 커서 위치에서 자동 포커스: ${errorAtCursor.correction.original}`);
-          } else {
-            new Notice('현재 포커스된 문법 오류가 없습니다. 커서를 오류 단어에 위치시키거나 먼저 오류를 선택해주세요.');
-            return;
           }
         }
-        
-                 if (!this.currentFocusedError || !this.currentFocusedError.correction) {
-           new Notice('현재 오류에 대한 제안이 없습니다.');
-           return;
-         }
 
-        // 🎯 원문 포함한 전체 제안 목록 (원문 → 제안1 → 제안2 → ...)
+        if (!this.currentFocusedError?.correction) return true;
+
         const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
-        if (!suggestions || suggestions.length === 0) {
-          new Notice('현재 오류에 대한 제안이 없습니다.');
-          return;
-        }
+        if (!suggestions || suggestions.length === 0) return true;
 
-        // 🎯 순환 구조로 다음 제안 인덱스 이동 (끝에서 처음으로)  
         this.currentSuggestionIndex = (this.currentSuggestionIndex + 1) % suggestions.length;
-        
-        // 🎯 실제 텍스트에 바로 반영 (Notice 대신)
         this.applyCurrentSuggestionTemporarily();
-        
-        // Notice 제거 - 텍스트에서 직접 확인 가능
-        // new Notice(`다음 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
         Logger.log(`✅ 다음 제안 적용: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+        return true;
       }
     });
 
@@ -2305,40 +2265,27 @@ export class InlineModeService {
     plugin.addCommand({
       id: 'inline-previous-suggestion',
       name: '이전 제안 선택',
-      callback: () => {
-        // 🎯 스마트 포커스: 포커스된 오류가 없으면 커서 위치에서 찾기
+      checkCallback: (checking: boolean) => {
+        if (!this.currentFocusedError && !this.findErrorAtCursor()) return false;
+        if (checking) return true;
+
         if (!this.currentFocusedError) {
           const errorAtCursor = this.findErrorAtCursor();
           if (errorAtCursor) {
             this.setFocusedError(errorAtCursor);
             Logger.log(`🎯 커서 위치에서 자동 포커스: ${errorAtCursor.correction.original}`);
-          } else {
-            new Notice('현재 포커스된 문법 오류가 없습니다. 커서를 오류 단어에 위치시키거나 먼저 오류를 선택해주세요.');
-            return;
           }
         }
-        
-        if (!this.currentFocusedError || !this.currentFocusedError.correction) {
-          new Notice('현재 오류에 대한 제안이 없습니다.');
-          return;
-        }
 
-        // 🎯 원문 포함한 전체 제안 목록 (원문 → 제안1 → 제안2 → ...)
+        if (!this.currentFocusedError?.correction) return true;
+
         const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
-        if (!suggestions || suggestions.length === 0) {
-          new Notice('현재 오류에 대한 제안이 없습니다.');
-          return;
-        }
+        if (!suggestions || suggestions.length === 0) return true;
 
-        // 🎯 순환 구조로 이전 제안 인덱스 이동 (처음에서 끝으로)
         this.currentSuggestionIndex = (this.currentSuggestionIndex - 1 + suggestions.length) % suggestions.length;
-        
-        // 🎯 실제 텍스트에 바로 반영 (Notice 대신)
         this.applyCurrentSuggestionTemporarily();
-        
-        // Notice 제거 - 텍스트에서 직접 확인 가능
-        // new Notice(`이전 제안: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
         Logger.log(`✅ 이전 제안 적용: ${suggestions[this.currentSuggestionIndex]} (${this.currentSuggestionIndex + 1}/${suggestions.length})`);
+        return true;
       }
     });
 
@@ -2346,18 +2293,12 @@ export class InlineModeService {
     plugin.addCommand({
       id: 'inline-apply-suggestion',
       name: '선택된 제안 적용',
-      callback: () => {
-        if (!this.currentFocusedError || !this.currentView || !this.currentFocusedError.correction) {
-          new Notice('현재 포커스된 문법 오류가 없습니다. 먼저 오류를 선택해주세요.');
-          return;
-        }
+      checkCallback: (checking: boolean) => {
+        if (!this.currentFocusedError || !this.currentView) return false;
+        if (checking) return true;
 
-        // 🎯 원문 포함한 전체 제안 목록 (원문 → 제안1 → 제안2 → ...)
         const suggestions = [this.currentFocusedError.correction.original, ...this.currentFocusedError.correction.corrected];
-        if (!suggestions || suggestions.length === 0) {
-          new Notice('현재 오류에 대한 제안이 없습니다.');
-          return;
-        }
+        if (!suggestions || suggestions.length === 0) return true;
 
         const selectedSuggestion = suggestions[this.currentSuggestionIndex];
         const originalText = this.currentFocusedError.correction.original;
@@ -2365,6 +2306,7 @@ export class InlineModeService {
         this.clearFocusedError();
         new Notice(`제안 적용: "${originalText}" → "${selectedSuggestion}"`);
         Logger.log(`✅ 제안 적용: "${originalText}" → "${selectedSuggestion}"`);
+        return true;
       }
     });
 
@@ -2372,15 +2314,14 @@ export class InlineModeService {
     plugin.addCommand({
       id: 'inline-unfocus',
       name: '문법 오류 포커스 해제',
-      callback: () => {
-        if (!this.currentFocusedError || !this.currentView) {
-          new Notice('현재 포커스된 문법 오류가 없습니다.');
-          return;
-        }
+      checkCallback: (checking: boolean) => {
+        if (!this.currentFocusedError || !this.currentView) return false;
+        if (checking) return true;
 
         this.clearFocusedError();
         new Notice('문법 오류 포커스를 해제했습니다.');
         Logger.log('✅ 키보드 네비게이션 해제');
+        return true;
       }
     });
 
@@ -2388,21 +2329,22 @@ export class InlineModeService {
     plugin.addCommand({
       id: 'toggle-inline-mode',
       name: '한국어 문법 인라인 모드 토글',
-      callback: () => {
-        // 설정에서 인라인 모드 토글
-        const currentState = plugin.settings?.inlineMode?.enabled || false;
-        if (plugin.settings?.inlineMode) {
-          plugin.settings.inlineMode.enabled = !currentState;
-          plugin.saveSettings();
-          
-          if (plugin.settings.inlineMode.enabled) {
-            plugin.enableInlineMode();
-            Logger.log('✅ 인라인 모드 활성화');
-          } else {
-            plugin.disableInlineMode();
-            Logger.log('✅ 인라인 모드 비활성화');
-          }
+      checkCallback: (checking: boolean) => {
+        if (!plugin.settings?.inlineMode) return false;
+        if (checking) return true;
+
+        const currentState = plugin.settings.inlineMode.enabled || false;
+        plugin.settings.inlineMode.enabled = !currentState;
+        plugin.saveSettings();
+
+        if (plugin.settings.inlineMode.enabled) {
+          plugin.enableInlineMode();
+          Logger.log('✅ 인라인 모드 활성화');
+        } else {
+          plugin.disableInlineMode();
+          Logger.log('✅ 인라인 모드 비활성화');
         }
+        return true;
       }
     });
   }

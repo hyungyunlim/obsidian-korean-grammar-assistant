@@ -1,3 +1,4 @@
+import { debounce } from 'obsidian';
 import { Logger } from '../utils/logger';
 import { clearElement } from '../utils/domUtils';
 
@@ -248,10 +249,11 @@ export class VirtualScroller {
     
     // 리사이즈 관찰자
     if (typeof ResizeObserver !== 'undefined') {
+      const debouncedUpdateSize = debounce(() => {
+        this.updateSize();
+      }, this.RESIZE_DEBOUNCE, true);
       this.resizeObserver = new ResizeObserver(() => {
-        this.debounce(() => {
-          this.updateSize();
-        }, this.RESIZE_DEBOUNCE)();
+        debouncedUpdateSize();
       });
       
       this.resizeObserver.observe(this.container);
@@ -276,22 +278,22 @@ export class VirtualScroller {
   /**
    * 스크롤 이벤트를 처리합니다
    */
-  private handleScroll = this.debounce(() => {
+  private handleScroll = debounce(() => {
     this.scrollTop = this.viewport.scrollTop;
     this.isScrolling = true;
-    
+
     this.calculateVisibleRange();
     this.renderVisibleItems();
-    
+
     // 스크롤 종료 감지
     if (this.scrollTimeout) {
       clearTimeout(this.scrollTimeout);
     }
-    
+
     this.scrollTimeout = setTimeout(() => {
       this.isScrolling = false;
     }, 150);
-  }, this.SCROLL_DEBOUNCE);
+  }, this.SCROLL_DEBOUNCE, true);
 
   /**
    * 표시할 아이템 범위를 계산합니다
@@ -422,20 +424,4 @@ export class VirtualScroller {
     return this.items.length * this.config.itemHeight;
   }
 
-  /**
-   * 디바운스 유틸리티
-   */
-  private debounce(func: Function, wait: number): () => void {
-    let timeout: NodeJS.Timeout;
-    
-    return function executedFunction(...args: any[]) {
-      const later = () => {
-        clearTimeout(timeout);
-        func(...args);
-      };
-      
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
-    };
-  }
 }

@@ -57,12 +57,7 @@ export class FocusManager implements IPopupComponent {
   render(): HTMLElement {
     const container = createEl('div', { cls: 'kga-focus-manager' });
     this.containerElement = container;
-    
-    // 포커스 하이라이트용 스타일 추가
-    const style = createEl('style');
-    style.textContent = this.getFocusStyles();
-    container.appendChild(style);
-    
+
     return container;
   }
 
@@ -380,38 +375,4 @@ export class FocusManager implements IPopupComponent {
     );
   }
 
-  private getFocusStyles(): string {
-    return `
-      .${this.FOCUS_CLASS} {
-        outline: 2px solid var(--interactive-accent) !important;
-        outline-offset: 2px !important;
-        position: relative !important;
-        z-index: 1000 !important;
-      }
-      
-      .${this.FOCUS_HIGHLIGHT_CLASS} {
-        background-color: var(--interactive-hover) !important;
-        transition: all 0.2s ease !important;
-      }
-      
-      .error-card.${this.FOCUS_CLASS} {
-        border-color: var(--interactive-accent) !important;
-        box-shadow: 0 0 0 1px var(--interactive-accent) !important;
-      }
-      
-      .${this.EDIT_MODE_CLASS} .${this.FOCUS_CLASS} {
-        outline-color: var(--color-accent) !important;
-      }
-      
-      @keyframes focusPulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.7; }
-        100% { opacity: 1; }
-      }
-      
-      .${this.FOCUS_CLASS}.kga-focus-pulse {
-        animation: focusPulse 1s ease-in-out infinite;
-      }
-    `;
-  }
 }

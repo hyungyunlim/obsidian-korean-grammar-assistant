@@ -6,16 +6,6 @@ import { InlineModeService } from '../services/inlineModeService';
 // ==================== Type Extensions ====================
 
 /**
- * Window 객체 확장 - 인라인 툴팁 전역 상태 및 서비스
- */
-interface InlineTooltipWindow extends Window {
-  tooltipProtected?: boolean;
-  tooltipKeepOpenMode?: boolean;
-  app?: App;
-  globalInlineTooltip?: InlineTooltip;
-}
-
-/**
  * Platform 확장 - 모바일 기기 타입 감지
  */
 interface ExtendedPlatform {
@@ -64,6 +54,18 @@ export class InlineTooltip {
   private hideTimeout: NodeJS.Timeout | null = null;
   public isHovered: boolean = false; // 🔍 툴팁 호버 상태 추적
 
+  // 모듈 수준 상태 (window 전역 변수 대체)
+  public tooltipKeepOpenMode: boolean = false;
+  public tooltipProtected: boolean = false;
+  private app: App | null = null;
+
+  /**
+   * Obsidian App 인스턴스 설정
+   */
+  setApp(app: App): void {
+    this.app = app;
+  }
+
   /**
    * 툴팁 표시
    */
@@ -84,7 +86,7 @@ export class InlineTooltip {
     // 모바일에서 키보드 숨기기 및 에디터 포커스 해제 (툴팁 보호)
     if (Platform.isMobile) {
       // 🔧 툴팁 보호 플래그 설정 (모바일에서는 툴팁 수동 닫기만 허용)
-      (window as InlineTooltipWindow).tooltipProtected = true;
+      this.tooltipProtected = true;
       
       setTimeout(() => {
         // 🔧 키보드 숨김 활성화 - 이전 방식 유지
@@ -113,7 +115,7 @@ export class InlineTooltip {
     
     // 🔧 모바일에서 강제 숨김 시 보호 플래그 해제
     if (Platform.isMobile && forceHide) {
-      (window as InlineTooltipWindow).tooltipProtected = false;
+      this.tooltipProtected = false;
       Logger.debug('📱 모바일 툴팁: 수동 닫기로 보호 플래그 해제');
     }
     
@@ -263,7 +265,7 @@ export class InlineTooltip {
     const isTablet = (Platform as ExtendedPlatform).isTablet || (viewportWidth <= 768 && viewportWidth > 480);
 
     // 🔧 Obsidian App 정보 활용
-    const app = (window as InlineTooltipWindow).app;
+    const app = this.app;
     let editorScrollInfo = null;
     let editorContainerRect = null;
     
@@ -1320,7 +1322,7 @@ export class InlineTooltip {
     Logger.log(`인라인 모드: 수정 제안 적용 (클릭 후 툴팁 유지) - "${mergedError.correction.original}" → "${suggestion}"`);
     
     // 툴팁 유지 모드 플래그 설정
-    (window as InlineTooltipWindow).tooltipKeepOpenMode = true;
+    this.tooltipKeepOpenMode = true;
 
     // 🔧 직접 import한 InlineModeService 사용
     try {
@@ -1332,7 +1334,7 @@ export class InlineTooltip {
 
     // 툴팁 유지 모드 해제 (약간의 지연 후)
     setTimeout(() => {
-      (window as InlineTooltipWindow).tooltipKeepOpenMode = false;
+      this.tooltipKeepOpenMode = false;
     }, 200);
     
     // 툴팁 상태 유지 (현재 오류 정보 업데이트는 InlineModeService에서 처리)
@@ -1597,7 +1599,7 @@ export class InlineTooltip {
   private blurEditorOnly(): void {
     try {
       // 옵시디언 API를 통한 에디터 포커스 해제만
-      const obsidianApp = (window as InlineTooltipWindow).app;
+      const obsidianApp = this.app;
       if (obsidianApp) {
         const activeView = obsidianApp.workspace.getActiveViewOfType(MarkdownView);
         if (activeView?.editor) {
@@ -1632,8 +1634,8 @@ export class InlineTooltip {
    */
   private hideKeyboardAndBlurEditor(): void {
     try {
-      // 1. 옵시디언 API를 통한 에디터 포커스 해제 (window를 통한 접근)
-      const obsidianApp = (window as InlineTooltipWindow).app;
+      // 1. 옵시디언 API를 통한 에디터 포커스 해제
+      const obsidianApp = this.app;
       if (obsidianApp) {
         const activeView = obsidianApp.workspace.getActiveViewOfType(MarkdownView);
         if (activeView?.editor) {
@@ -1850,9 +1852,6 @@ export class InlineTooltip {
 }
 
 /**
- * 전역 툴팁 인스턴스
+ * 전역 툴팁 인스턴스 (모듈 싱글톤으로 관리)
  */
 export const globalInlineTooltip = new InlineTooltip();
-
-// Window 객체에 노출 (InlineModeService에서 접근하기 위해)
-(window as InlineTooltipWindow).globalInlineTooltip = globalInlineTooltip;
