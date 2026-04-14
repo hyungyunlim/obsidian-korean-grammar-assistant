@@ -24,6 +24,7 @@
   "exclude": [
     "temp-reference/**",
     "docs-reference/**",
-    "node_modules/**"
+    "node_modules/**",
+    "src/inline/**"
   ]
 }
