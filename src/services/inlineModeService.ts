@@ -2889,25 +2889,21 @@ export class InlineModeService {
         currentStates[index] = { state: 'error', value: '' };
       });
 
-      const aiRequest = {
+      const aiRequest: any = {
         corrections,
         morphemeData: null,
-        userEdits: [], // 인라인 모드에서는 사용자 편집 없음
         currentStates,
-        originalText: corrections.map(c => c.original).join(' '), // 원본 텍스트 추가
+        originalText: corrections.map(c => c.original).join(' '),
         onProgress: progressCallback ? (current: number, total: number, message: string) => {
-          // AI 분석 서비스의 실제 배치 진행률을 그대로 전달
           progressCallback(current, total);
         } : undefined
       };
 
       // AI 분석 실행 (배치 기반 진행률 자동 업데이트)
       let analysisResults: any[] = [];
+      const aiService = new (await import('./aiAnalysisService')).AIAnalysisService(this.settings.ai);
       if (aiService && typeof aiService === 'object' && 'analyzeCorrections' in aiService) {
-        const analyzeMethod = (aiService as any).analyzeCorrections;
-        if (typeof analyzeMethod === 'function') {
-          analysisResults = await analyzeMethod.call(aiService, aiRequest);
-        }
+        analysisResults = await aiService.analyzeCorrections(aiRequest);
       }
 
       Logger.log(`🤖 AI 분석 완료: ${analysisResults.length}개 결과`);
