@@ -19,7 +19,7 @@ import { Logger } from './src/utils/logger';
 // Import inline mode components
 import { errorDecorationField, temporarySuggestionModeField, InlineModeService } from './src/services/inlineModeService';
 import { SpellCheckApiService } from './src/services/api';
-import { globalInlineTooltip } from './src/ui/inlineTooltip';
+import { inlineTooltip } from './src/ui/inlineTooltip';
 
 // 한글 맞춤법 검사 아이콘 등록
 addIcon(
@@ -156,7 +156,7 @@ export default class KoreanGrammarPlugin extends Plugin {
     });
 
     // 인라인 툴팁에 App 인스턴스 설정
-    globalInlineTooltip.setApp(this.app);
+    inlineTooltip.setApp(this.app);
 
     // 인라인 모드가 활성화된 경우 확장 기능 등록
     if (this.settings.inlineMode.enabled) {

@@ -31,6 +31,22 @@
   background-color: rgba(var(--color-red-rgb), 0.2) !important;
 }
 
+.korean-grammar-error-inline.kga-underline-solid {
+  text-decoration-style: solid !important;
+}
+
+.korean-grammar-error-inline.kga-underline-dotted {
+  text-decoration-style: dotted !important;
+}
+
+.korean-grammar-error-inline.kga-underline-dashed {
+  text-decoration-style: dashed !important;
+}
+
+.korean-grammar-error-inline.kga-underline-wavy {
+  text-decoration-style: wavy !important;
+}
+
 /* 🤖 AI 분석 결과별 색상 스타일 */
 .korean-grammar-error-inline[data-ai-status="exception"] {
   text-decoration: wavy underline #3b82f6 2px !important;

@@ -193,7 +193,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     steps.forEach(step => {
       infoBox.createEl('div', { 
         text: step,
-        attr: { style: 'margin-bottom: 4px;' }
+        cls: 'ksc-step-item'
       });
     });
   }
@@ -646,7 +646,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     if (this.plugin.settings.ignoredWords.length === 0) {
       container.createEl('div', {
         text: '예외 처리된 단어가 없습니다.',
-        attr: { style: 'color: var(--text-muted); text-align: center; padding: 20px;' }
+        cls: 'ksc-empty-state'
       });
       return;
     }
@@ -654,19 +654,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     this.plugin.settings.ignoredWords.forEach(word => {
       const tag = container.createEl('span', {
         text: word,
-        attr: { 
-          style: `
-            display: inline-block;
-            background: var(--interactive-accent);
-            color: var(--text-on-accent);
-            padding: 4px 8px;
-            margin: 2px;
-            border-radius: 12px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-          `
-        }
+        cls: 'ksc-tag'
       });
 
       // Hover 효과는 CSS :hover로 처리 (ignored-word-tag:hover)
@@ -716,8 +704,8 @@ export class ModernSettingsTab extends PluginSettingTab {
 
     // 결과 표시 영역 - ID를 부여하여 중복 방지
     const validationResult = validationSection.createEl('div', {
+      cls: 'ksc-toggle-section kga-hidden',
       attr: { 
-        style: 'display: none; margin-top: 16px;',
         id: 'validation-result-container'
       }
     });
@@ -730,12 +718,11 @@ export class ModernSettingsTab extends PluginSettingTab {
         this.createImprovedValidationDisplay(validationResult, validation, suggestions);
 
         validationResult.removeClass('kga-hidden');
-        validationResult.addClass('kga-block');
-        validationResult.className = ''; // 새로운 스타일에서는 클래스 제거
+        validationResult.removeClass('ksc-warning-box');
+        validationResult.addClass('ksc-toggle-section');
       } catch (error) {
         Logger.error('설정 검증 오류:', error);
         validationResult.removeClass('kga-hidden');
-        validationResult.addClass('kga-block');
         validationResult.className = 'ksc-warning-box';
         validationResult.textContent = '설정 검증 중 오류가 발생했습니다.';
       }
@@ -761,7 +748,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     const showBackupsBtn = buttonGroup.createEl('button', { text: '백업 목록' });
 
     const backupListContainer = backupSection.createEl('div', {
-      attr: { style: 'display: none; margin-top: 16px;' }
+      cls: 'ksc-toggle-section kga-hidden'
     });
 
     createBackupBtn.onclick = () => {
@@ -784,8 +771,7 @@ export class ModernSettingsTab extends PluginSettingTab {
       } else {
         backups.forEach((backup: any) => {
           const backupItem = backupListContainer.createEl('div', {
-            cls: 'ksc-info-box',
-            attr: { style: 'margin-bottom: 8px;' }
+            cls: 'ksc-info-box ksc-backup-item'
           });
           
           backupItem.createEl('strong', { text: backup.reason });
@@ -796,7 +782,7 @@ export class ModernSettingsTab extends PluginSettingTab {
           
           const restoreBtn = backupItem.createEl('button', { 
             text: '복원',
-            attr: { style: 'margin-top: 8px; font-size: 12px;' }
+            cls: 'ksc-restore-button'
           });
           
           restoreBtn.onclick = async () => {
@@ -1046,9 +1032,9 @@ export class ModernSettingsTab extends PluginSettingTab {
     
     // 로그 뷰어 컨테이너
     const logViewerContainer = logSection.createEl('div', {
+      cls: 'ksc-toggle-section kga-hidden',
       attr: { 
-        id: 'log-viewer-container',
-        style: 'display: none; margin-top: 16px;'
+        id: 'log-viewer-container'
       }
     });
 
@@ -1486,7 +1472,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     exceptions.forEach(exception => {
       infoBox.createEl('div', { 
         text: exception,
-        attr: { style: 'margin-bottom: 4px; color: var(--text-muted);' }
+        cls: 'ksc-muted-line'
       });
     });
 
@@ -1502,13 +1488,12 @@ export class ModernSettingsTab extends PluginSettingTab {
     container.empty();
     
     const statsBox = container.createEl('div', { 
-      cls: 'ksc-stats-box',
-      attr: { style: 'margin-top: 12px; padding: 12px; background: var(--background-secondary); border-radius: 6px;' }
+      cls: 'ksc-stats-box'
     });
     
     statsBox.createEl('div', { 
       text: '📊 필터링 통계',
-      attr: { style: 'font-weight: 600; margin-bottom: 8px;' }
+      cls: 'ksc-stats-title'
     });
     
     const statusText = this.plugin.settings.filterSingleCharErrors ? 
@@ -1517,13 +1502,13 @@ export class ModernSettingsTab extends PluginSettingTab {
     
     statsBox.createEl('div', { 
       text: statusText,
-      attr: { style: 'color: var(--text-muted); font-size: 14px;' }
+      cls: 'ksc-muted-text'
     });
     
     if (this.plugin.settings.filterSingleCharErrors) {
       statsBox.createEl('div', { 
         text: '💡 팁: 의미있는 한 글자 교정(조사, 어미 등)은 자동으로 예외 처리됩니다.',
-        attr: { style: 'color: var(--text-accent); font-size: 13px; margin-top: 4px;' }
+        cls: 'ksc-accent-tip'
       });
     }
   }
@@ -1551,15 +1536,12 @@ export class ModernSettingsTab extends PluginSettingTab {
     warningHeading.settingEl.addClasses(['ksc-section-title']);
 
     const warningBox = section.createEl('div', { 
-      cls: 'ksc-warning-box',
-      attr: { 
-        style: 'background: rgba(255, 196, 0, 0.1); border: 1px solid rgba(255, 196, 0, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 20px;'
-      }
+      cls: 'ksc-warning-box ksc-beta-warning-box'
     });
 
     warningBox.createEl('div', {
       text: '🧪 실험적 기능',
-      attr: { style: 'font-weight: 600; color: var(--text-warning); margin-bottom: 8px;' }
+      cls: 'ksc-warning-title'
     });
 
     const warnings = [
@@ -1572,7 +1554,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     warnings.forEach(warning => {
       warningBox.createEl('div', {
         text: `• ${warning}`,
-        attr: { style: 'color: var(--text-muted); margin-bottom: 4px; font-size: 14px;' }
+        cls: 'ksc-muted-line'
       });
     });
   }
@@ -1590,15 +1572,12 @@ export class ModernSettingsTab extends PluginSettingTab {
 
     // 기능 설명
     const descBox = section.createEl('div', { 
-      cls: 'ksc-info-box',
-      attr: { 
-        style: 'background: var(--background-secondary); border-radius: 8px; padding: 16px; margin-bottom: 20px;'
-      }
+      cls: 'ksc-info-box ksc-inline-desc-box'
     });
 
     descBox.createEl('div', {
       text: '🎯 에디터 내 실시간 맞춤법 검사',
-      attr: { style: 'font-weight: 600; margin-bottom: 8px;' }
+      cls: 'ksc-info-title'
     });
 
     const features = [
@@ -1611,7 +1590,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     features.forEach(feature => {
       descBox.createEl('div', {
         text: `• ${feature}`,
-        attr: { style: 'color: var(--text-muted); margin-bottom: 4px;' }
+        cls: 'ksc-muted-line'
       });
     });
 
@@ -1716,9 +1695,7 @@ export class ModernSettingsTab extends PluginSettingTab {
       // 📱 플랫폼별 설명 추가
       section.createEl('div', {
         text: '💡 자동 모드: 데스크톱에서는 호버, 모바일에서는 탭으로 자동 동작',
-        attr: { 
-          style: 'font-size: 0.9em; color: var(--text-muted); margin-top: 8px; padding: 8px; background: var(--background-secondary); border-radius: 4px;' 
-        }
+        cls: 'ksc-platform-tip'
       });
     }
   }

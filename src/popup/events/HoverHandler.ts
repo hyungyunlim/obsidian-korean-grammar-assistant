@@ -8,6 +8,7 @@
 import { EventContext } from './PopupEventManager';
 import { Platform } from 'obsidian';
 import { Logger } from '../../utils/logger';
+import { setCssVariable } from '../../utils/domUtils';
 
 /**
  * 호버 액션 타입
@@ -499,8 +500,8 @@ export class HoverHandler {
     tooltip.className = `kga-popup-tooltip ${config.className || ''} kga-dynamic-position kga-tooltip-enter`;
 
     // Set position using CSS variables
-    tooltip.style.setProperty('--kga-pos-left', `${config.position.x}px`);
-    tooltip.style.setProperty('--kga-pos-top', `${config.position.y}px`);
+    setCssVariable(tooltip, '--kga-pos-left', `${config.position.x}px`);
+    setCssVariable(tooltip, '--kga-pos-top', `${config.position.y}px`);
 
     tooltip.textContent = config.content;
 
@@ -538,8 +539,8 @@ export class HoverHandler {
     y = Math.max(10, y);
 
     // Update position using CSS variables
-    tooltip.style.setProperty('--kga-pos-left', `${x}px`);
-    tooltip.style.setProperty('--kga-pos-top', `${y}px`);
+    setCssVariable(tooltip, '--kga-pos-left', `${x}px`);
+    setCssVariable(tooltip, '--kga-pos-top', `${y}px`);
   }
 
   /**

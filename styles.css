@@ -359,6 +359,11 @@ body.spell-popup-open #correctionPopup [contenteditable] {
 }
 
 /* styles/preview.css */
+.kga-preview-empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 40px;
+}
 #correctionPopup .kga-preview-section {
   background: var(--background-secondary);
   border-radius: 8px;
@@ -1780,6 +1785,32 @@ body.spell-popup-open #correctionPopup [contenteditable] {
 .ksc-step-item {
   margin-bottom: 4px !important;
 }
+.ksc-muted-line {
+  color: var(--text-muted) !important;
+  margin-bottom: 4px !important;
+  font-size: 14px !important;
+}
+.ksc-muted-text {
+  color: var(--text-muted) !important;
+  font-size: 14px !important;
+}
+.ksc-accent-tip {
+  color: var(--text-accent) !important;
+  font-size: 13px !important;
+  margin-top: 4px !important;
+}
+.ksc-info-title,
+.ksc-stats-title,
+.ksc-warning-title {
+  font-weight: 600 !important;
+  margin-bottom: 8px !important;
+}
+.ksc-warning-title {
+  color: var(--text-warning) !important;
+}
+.ksc-toggle-section {
+  margin-top: 16px !important;
+}
 .ksc-collapsible-container {
   display: none !important;
   margin-top: 16px !important;
@@ -1793,6 +1824,33 @@ body.spell-popup-open #correctionPopup [contenteditable] {
 .ksc-restore-button {
   margin-top: 8px !important;
   font-size: 12px !important;
+}
+.ksc-stats-box,
+.ksc-inline-desc-box {
+  background: var(--background-secondary) !important;
+  border-radius: 8px !important;
+  padding: 16px !important;
+  margin-bottom: 20px !important;
+}
+.ksc-stats-box {
+  border-radius: 6px !important;
+  padding: 12px !important;
+  margin-top: 12px !important;
+}
+.ksc-beta-warning-box {
+  background: rgba(255, 196, 0, 0.1) !important;
+  border: 1px solid rgba(255, 196, 0, 0.3) !important;
+  border-radius: 8px !important;
+  padding: 16px !important;
+  margin-bottom: 20px !important;
+}
+.ksc-platform-tip {
+  font-size: 0.9em !important;
+  color: var(--text-muted) !important;
+  margin-top: 8px !important;
+  padding: 8px !important;
+  background: var(--background-secondary) !important;
+  border-radius: 4px !important;
 }
 .ksc-tag-hover {
   background: var(--interactive-accent-hover) !important;
@@ -2203,6 +2261,18 @@ body.spell-popup-open #correctionPopup [contenteditable] {
 .korean-grammar-error-inline:not([data-ai-status="exception"]):not([data-ai-status="keep-original"]):not([data-ai-status="corrected"]):hover {
   text-decoration: wavy underline var(--color-red) 2px !important;
   background-color: rgba(var(--color-red-rgb), 0.2) !important;
+}
+.korean-grammar-error-inline.kga-underline-solid {
+  text-decoration-style: solid !important;
+}
+.korean-grammar-error-inline.kga-underline-dotted {
+  text-decoration-style: dotted !important;
+}
+.korean-grammar-error-inline.kga-underline-dashed {
+  text-decoration-style: dashed !important;
+}
+.korean-grammar-error-inline.kga-underline-wavy {
+  text-decoration-style: wavy !important;
 }
 .korean-grammar-error-inline[data-ai-status=exception] {
   text-decoration: wavy underline #3b82f6 2px !important;
@@ -3590,6 +3660,51 @@ body.spell-popup-open #correctionPopup [contenteditable] {
 }
 .kga-pagination-container-hidden {
   display: none;
+}
+.kga-loading-progress-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.kga-loading-progress-icon {
+  font-size: 16px;
+  margin-right: 8px;
+}
+.kga-loading-progress-title-container {
+  flex: 1;
+}
+.kga-loading-progress-title {
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.2;
+}
+.kga-loading-progress-bar-container {
+  margin-bottom: 6px;
+}
+.kga-loading-progress-bar {
+  display: block;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 6px;
+  background: var(--background-modifier-border);
+}
+.kga-loading-progress-bar::-webkit-progress-bar {
+  background: var(--background-modifier-border);
+  border-radius: 6px;
+}
+.kga-loading-progress-bar::-webkit-progress-value {
+  background: var(--interactive-accent);
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+.kga-loading-progress-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1;
 }
 .korean-grammar-popup,
 .korean-grammar-popup-modern {

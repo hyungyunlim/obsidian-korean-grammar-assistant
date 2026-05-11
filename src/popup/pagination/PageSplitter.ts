@@ -30,7 +30,7 @@ export class PageSplitter implements IPopupComponent {
 
   render(): HTMLElement {
     // PageSplitter는 UI 컴포넌트가 아니므로 빈 div 반환
-    return createEl('div', { cls: 'page-splitter-placeholder', attr: { style: 'display: none;' } });
+    return createEl('div', { cls: ['page-splitter-placeholder', 'kga-hidden'] });
   }
 
   update(): void {

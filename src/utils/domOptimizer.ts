@@ -7,7 +7,11 @@ interface DOMUpdate {
   element: HTMLElement;
   property: string;
   value: any;
-  type: 'style' | 'attribute' | 'textContent' | 'className';
+  type: 'cssVar' | 'attribute' | 'textContent' | 'className';
+}
+
+interface DevToolsWindow extends Window {
+  getEventListeners?: (element: HTMLElement) => Record<string, unknown[]>;
 }
 
 /**
@@ -67,7 +71,7 @@ export class DOMOptimizer {
   scheduleUpdate(
     element: HTMLElement,
     updates: {
-      style?: Record<string, string>;
+      cssVars?: Record<string, string>;
       attributes?: Record<string, string>;
       textContent?: string;
       className?: string;
@@ -75,13 +79,13 @@ export class DOMOptimizer {
   ): void {
     // 각 업데이트 타입별로 큐에 추가
     Object.entries(updates).forEach(([type, value]) => {
-      if (type === 'style' && typeof value === 'object') {
+      if (type === 'cssVars' && typeof value === 'object') {
         Object.entries(value).forEach(([property, styleValue]) => {
           this.updateQueue.push({
             element,
             property,
             value: styleValue,
-            type: 'style'
+            type: 'cssVar'
           });
         });
       } else if (type === 'attributes' && typeof value === 'object') {
@@ -108,10 +112,10 @@ export class DOMOptimizer {
   }
 
   /**
-   * 스타일 업데이트를 배치로 처리합니다
+   * CSS 변수 업데이트를 배치로 처리합니다
    */
-  updateStyles(element: HTMLElement, styles: Record<string, string>): void {
-    this.scheduleUpdate(element, { style: styles });
+  updateStyles(element: HTMLElement, cssVars: Record<string, string>): void {
+    this.scheduleUpdate(element, { cssVars });
   }
 
   /**
@@ -298,8 +302,8 @@ export class DOMOptimizer {
       const { element, property, value, type } = update;
       
       switch (type) {
-        case 'style':
-          (element.style as any)[property] = value;
+        case 'cssVar':
+          element.style.setProperty(property, value);
           break;
         case 'attribute':
           element.setAttribute(property, value);
@@ -419,9 +423,10 @@ export class DOMOptimizer {
     // Chrome DevTools에서만 사용 가능한 getEventListeners() 활용 시도
     this.visibleElements.forEach(element => {
       try {
+        const devToolsWindow = window as DevToolsWindow;
         // 개발자 도구에서만 사용 가능
-        if (typeof (window as any).getEventListeners === 'function') {
-          const listeners = (window as any).getEventListeners(element);
+        if (typeof devToolsWindow.getEventListeners === 'function') {
+          const listeners = devToolsWindow.getEventListeners(element);
           
           if (listeners && typeof listeners === 'object') {
             Object.keys(listeners).forEach(eventType => {

@@ -1,6 +1,6 @@
 import { debounce } from 'obsidian';
 import { Logger } from '../utils/logger';
-import { clearElement } from '../utils/domUtils';
+import { clearElement, setCssVariable } from '../utils/domUtils';
 
 /**
  * 가상 스크롤 아이템 인터페이스
@@ -149,7 +149,7 @@ export class VirtualScroller {
   updateSize(newHeight?: number): void {
     if (newHeight) {
       this.config.containerHeight = newHeight;
-      this.viewport.style.setProperty('--vs-viewport-height', `${newHeight}px`);
+      setCssVariable(this.viewport, '--vs-viewport-height', `${newHeight}px`);
     }
 
     this.calculateVisibleRange();
@@ -216,27 +216,13 @@ export class VirtualScroller {
     
     // 뷰포트 (스크롤 가능한 영역)
     this.viewport = this.container.createEl('div', {
-      cls: 'kga-virtual-scroller-viewport',
-      attr: {
-        style: `
-          height: ${this.config.containerHeight}px;
-          overflow-y: auto;
-          overflow-x: hidden;
-          position: relative;
-        `
-      }
+      cls: 'kga-virtual-scroller-viewport'
     });
+    setCssVariable(this.viewport, '--vs-viewport-height', `${this.config.containerHeight}px`);
     
     // 콘텐츠 영역 (전체 높이를 가진 스크롤 영역)
     this.content = this.viewport.createEl('div', {
-      cls: 'kga-virtual-scroller-content',
-      attr: {
-        style: `
-          position: relative;
-          width: 100%;
-          min-height: 100%;
-        `
-      }
+      cls: 'kga-virtual-scroller-content'
     });
   }
 
@@ -361,12 +347,6 @@ export class VirtualScroller {
     
     this.updateItemPosition(element, index);
     
-    element.style.cssText += `
-      position: absolute;
-      width: 100%;
-      box-sizing: border-box;
-    `;
-    
     return element;
   }
 
@@ -375,8 +355,8 @@ export class VirtualScroller {
    */
   private updateItemPosition(element: HTMLElement, index: number): void {
     const top = index * this.config.itemHeight;
-    element.style.setProperty('--vs-item-offset', `${top}px`);
-    element.style.setProperty('--vs-item-height', `${this.config.itemHeight}px`);
+    setCssVariable(element, '--vs-item-offset', `${top}px`);
+    setCssVariable(element, '--vs-item-height', `${this.config.itemHeight}px`);
   }
 
   /**
@@ -414,7 +394,7 @@ export class VirtualScroller {
    */
   private updateContentHeight(): void {
     const totalHeight = this.getTotalHeight();
-    this.content.style.setProperty('--vs-content-height', `${totalHeight}px`);
+    setCssVariable(this.content, '--vs-content-height', `${totalHeight}px`);
   }
 
   /**

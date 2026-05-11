@@ -44,7 +44,7 @@ export class ShortcutHandler implements IPopupComponent {
 
   render(): HTMLElement {
     // ShortcutHandler는 UI 컴포넌트가 아니므로 빈 div 반환
-    return createEl('div', { cls: 'shortcut-handler-placeholder', attr: { style: 'display: none;' } });
+    return createEl('div', { cls: ['shortcut-handler-placeholder', 'kga-hidden'] });
   }
 
   update(): void {

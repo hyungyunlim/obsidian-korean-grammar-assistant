@@ -428,7 +428,7 @@ export class PreviewRenderer implements IPopupComponent {
    */
   private generateContentHTML(): string {
     if (!this.currentPageText) {
-      return '<p style="color: var(--text-muted); text-align: center; padding: 40px;">텍스트가 없습니다.</p>';
+      return '<p class="kga-preview-empty">텍스트가 없습니다.</p>';
     }
     
     let html = escapeHtml(this.currentPageText);

@@ -8,7 +8,7 @@ import { RenderContext, IPopupComponent, PopupState } from '../types/PopupTypes'
 import { Correction, PageCorrection, AIAnalysisResult } from '../../types/interfaces';
 import { Logger } from '../../utils/logger';
 import { setIcon } from 'obsidian';
-import { createEl } from '../../utils/domUtils';
+import { createEl, setCssVariable } from '../../utils/domUtils';
 import { escapeHtml } from '../../utils/htmlUtils';
 
 /**
@@ -668,7 +668,7 @@ export class SummaryRenderer implements IPopupComponent {
     if (Platform.isMobile) {
       const windowHeight = window.innerHeight;
       const maxHeight = Math.min(200, Math.floor(windowHeight * 0.3));
-      this.contentElement.style.setProperty('--summary-content-max-height', `${maxHeight}px`);
+      setCssVariable(this.contentElement, '--summary-content-max-height', `${maxHeight}px`);
     }
 
     Logger.debug('SummaryRenderer: 리사이즈 처리 완료');

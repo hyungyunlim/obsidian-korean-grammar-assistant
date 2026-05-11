@@ -199,6 +199,38 @@
   margin-bottom: 4px !important;
 }
 
+.ksc-muted-line {
+  color: var(--text-muted) !important;
+  margin-bottom: 4px !important;
+  font-size: 14px !important;
+}
+
+.ksc-muted-text {
+  color: var(--text-muted) !important;
+  font-size: 14px !important;
+}
+
+.ksc-accent-tip {
+  color: var(--text-accent) !important;
+  font-size: 13px !important;
+  margin-top: 4px !important;
+}
+
+.ksc-info-title,
+.ksc-stats-title,
+.ksc-warning-title {
+  font-weight: 600 !important;
+  margin-bottom: 8px !important;
+}
+
+.ksc-warning-title {
+  color: var(--text-warning) !important;
+}
+
+.ksc-toggle-section {
+  margin-top: 16px !important;
+}
+
 .ksc-collapsible-container {
   display: none !important;
   margin-top: 16px !important;
@@ -215,6 +247,37 @@
 .ksc-restore-button {
   margin-top: 8px !important;
   font-size: 12px !important;
+}
+
+.ksc-stats-box,
+.ksc-inline-desc-box {
+  background: var(--background-secondary) !important;
+  border-radius: 8px !important;
+  padding: 16px !important;
+  margin-bottom: 20px !important;
+}
+
+.ksc-stats-box {
+  border-radius: 6px !important;
+  padding: 12px !important;
+  margin-top: 12px !important;
+}
+
+.ksc-beta-warning-box {
+  background: rgba(255, 196, 0, 0.1) !important;
+  border: 1px solid rgba(255, 196, 0, 0.3) !important;
+  border-radius: 8px !important;
+  padding: 16px !important;
+  margin-bottom: 20px !important;
+}
+
+.ksc-platform-tip {
+  font-size: 0.9em !important;
+  color: var(--text-muted) !important;
+  margin-top: 8px !important;
+  padding: 8px !important;
+  background: var(--background-secondary) !important;
+  border-radius: 4px !important;
 }
 
 /* === Tag Hover States === */

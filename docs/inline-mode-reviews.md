@@ -12,12 +12,10 @@
 #### 1. **터치 타겟 크기 문제**
 ```typescript
 // 현재 제안된 인라인 오류 표시
-span.style.borderBottom = '2px wavy red';  // ❌ 터치하기 어려움
+span.classList.add('korean-grammar-error-inline');  // ❌ 터치하기 어려움
 
 // 모바일 최적화 필요
-span.style.minHeight = '44px';  // ✅ Apple 권장 최소 터치 타겟
-span.style.minWidth = '44px';
-span.style.padding = '8px';
+span.classList.add('korean-grammar-touch-target');  // ✅ Apple 권장 최소 터치 타겟
 ```
 
 **문제점**: 현재 제안된 `2px wavy red` 밑줄은 모바일에서 터치하기 매우 어려움  
@@ -610,7 +608,7 @@ class MorphemeInfoWidget extends WidgetType {
     
     // 기본 오류 표시
     container.textContent = this.word;
-    container.style.borderBottom = '2px wavy red';
+    container.classList.add('korean-grammar-error-inline');
     
     // 호버 시 형태소 정보 표시
     container.title = this.formatMorphemeInfo();

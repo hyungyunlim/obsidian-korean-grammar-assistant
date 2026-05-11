@@ -4,7 +4,7 @@
  */
 
 import { Logger } from './logger';
-import { Notice, Platform, MarkdownView } from 'obsidian';
+import { Notice, Platform } from 'obsidian';
 import type { AIAnalysisRequest } from '../types/interfaces';
 
 export interface TokenUsage {
@@ -371,26 +371,7 @@ export class TokenWarningModal {
    */
   private static hideKeyboardAndBlurEditor(): void {
     try {
-      // 1. 옵시디언 API를 통한 에디터 포커스 해제 (window를 통한 접근)
-      const obsidianApp = (window as any).app;
-      if (obsidianApp) {
-        const activeView = obsidianApp.workspace.getActiveViewOfType(MarkdownView);
-        if (activeView?.editor) {
-          // 에디터가 포커스되어 있는지 확인 후 포커스 해제
-          if ((activeView.editor as any).hasFocus?.()) {
-            Logger.log('📱 토큰 모달: 에디터 포커스 해제 시작');
-            (activeView.editor as any).blur?.();
-            
-            // CodeMirror 에디터 직접 접근
-            const cmEditor = (activeView.editor as any).cm;
-            if (cmEditor && cmEditor.dom) {
-              (cmEditor.dom as HTMLElement).blur();
-            }
-          }
-        }
-      }
-
-      // 2. DOM 레벨에서 모든 포커스 가능한 요소 포커스 해제
+      // DOM 레벨에서 현재 포커스된 요소 해제
       const focusedElement = document.activeElement as HTMLElement;
       if (focusedElement && focusedElement.blur) {
         focusedElement.blur();

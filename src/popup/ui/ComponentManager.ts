@@ -10,7 +10,7 @@ import { PageCorrection, CorrectionState, RenderContext } from '../../types/inte
 import { Logger } from '../../utils/logger';
 import { ErrorRenderer, ErrorRenderOptions } from './ErrorRenderer';
 import { InteractionHandler, InteractionConfig } from './InteractionHandler';
-import { createEl } from '../../utils/domUtils';
+import { createEl, parseHTMLSafely, setCssVariable } from '../../utils/domUtils';
 
 export interface ComponentConfig {
   containerSelector: string;
@@ -375,7 +375,7 @@ export class ComponentManager {
     // DOM 요소 생성 (Obsidian API 사용)
     const container = createEl('div');
     // sanitizeHTMLToDom을 사용하여 안전하게 HTML 파싱
-    const sanitized = (window as any).sanitizeHTMLToDom(html);
+    const sanitized = parseHTMLSafely(html);
     if (sanitized) {
       container.appendChild(sanitized);
     }
@@ -477,8 +477,8 @@ export class ComponentManager {
     const bottomPadding = totalHeight - visibleHeight;
 
     // CSS 변수 사용으로 인라인 스타일 제거
-    this.containerElement.style.setProperty('--scroll-padding-top', `${topPadding}px`);
-    this.containerElement.style.setProperty('--scroll-padding-bottom', `${bottomPadding}px`);
+    setCssVariable(this.containerElement, '--scroll-padding-top', `${topPadding}px`);
+    setCssVariable(this.containerElement, '--scroll-padding-bottom', `${bottomPadding}px`);
   }
 
   /**

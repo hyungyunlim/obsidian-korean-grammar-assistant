@@ -1,5 +1,6 @@
 import { InlineError } from '../types/interfaces';
 import { Logger } from '../utils/logger';
+import { setCssVariable } from '../utils/domUtils';
 import { Platform, MarkdownView, Notice, App, Editor } from 'obsidian';
 import { InlineModeService } from '../services/inlineModeService';
 
@@ -54,8 +55,8 @@ export class InlineTooltip {
   private hideTimeout: NodeJS.Timeout | null = null;
   public isHovered: boolean = false; // 🔍 툴팁 호버 상태 추적
 
-  // 모듈 수준 상태 (window 전역 변수 대체)
-  public tooltipKeepOpenMode: boolean = false;
+  // 모듈 수준 상태
+  public keepOpenMode: boolean = false;
   public tooltipProtected: boolean = false;
   private app: App | null = null;
 
@@ -346,8 +347,8 @@ export class InlineTooltip {
     if (hasAIAnalysis) {
       this.tooltip.classList.add('kga-has-ai');
     }
-    this.tooltip.style.setProperty('--kga-width', `${fixedWidth}px`);
-    this.tooltip.style.setProperty('--kga-fixed-height', `${fixedHeight}px`);
+    setCssVariable(this.tooltip, '--kga-width', `${fixedWidth}px`);
+    setCssVariable(this.tooltip, '--kga-fixed-height', `${fixedHeight}px`);
 
     // 화면 하단에 고정 (AI 분석에 따라 여백 조정)
     const safeBottomMargin = hasAIAnalysis ? 90 : 80; // AI 분석 시 적절한 여백
@@ -357,8 +358,8 @@ export class InlineTooltip {
     const finalTop = viewportHeight - fixedHeight - bottomOffset;
 
     // CSS 변수로 동적 위치 설정
-    this.tooltip.style.setProperty('--kga-left', `${finalLeft}px`);
-    this.tooltip.style.setProperty('--kga-top', `${finalTop}px`);
+    setCssVariable(this.tooltip, '--kga-left', `${finalLeft}px`);
+    setCssVariable(this.tooltip, '--kga-top', `${finalTop}px`);
 
     Logger.log(`📱 고정 툴팁 (${hasAIAnalysis ? 'AI+' : '기본'}): ${fixedWidth}x${fixedHeight}px (${Math.round((fixedWidth / viewportWidth) * 100)}% 너비)`, {
       position: `(${finalLeft}, ${finalTop})`,
@@ -397,10 +398,10 @@ export class InlineTooltip {
 
     // CSS 변수로 동적 크기 설정
     this.tooltip.classList.add('kga-dynamic-position');
-    this.tooltip.style.setProperty('--kga-width', `${adaptiveSize.width}px`);
-    this.tooltip.style.setProperty('--kga-max-height', `${adaptiveSize.maxHeight}px`);
-    this.tooltip.style.setProperty('--kga-min-width', `${adaptiveSize.minWidth}px`);
-    this.tooltip.style.setProperty('--kga-font-size', adaptiveSize.fontSize);
+    setCssVariable(this.tooltip, '--kga-width', `${adaptiveSize.width}px`);
+    setCssVariable(this.tooltip, '--kga-max-height', `${adaptiveSize.maxHeight}px`);
+    setCssVariable(this.tooltip, '--kga-min-width', `${adaptiveSize.minWidth}px`);
+    setCssVariable(this.tooltip, '--kga-font-size', adaptiveSize.fontSize);
 
     // 🎯 터치/마우스 위치 우선 고려 (모바일 엣지케이스 해결)
     let referenceCenterX: number;
@@ -499,8 +500,8 @@ export class InlineTooltip {
     finalLeft = Math.max(safeMargin, Math.min(finalLeft, viewportWidth - adaptiveSize.width - safeMargin));
 
     // 🔧 CSS 변수로 동적 위치 설정
-    this.tooltip.style.setProperty('--kga-left', `${finalLeft}px`);
-    this.tooltip.style.setProperty('--kga-top', `${finalTop}px`);
+    setCssVariable(this.tooltip, '--kga-left', `${finalLeft}px`);
+    setCssVariable(this.tooltip, '--kga-top', `${finalTop}px`);
     // All styling (z-index, visibility, box-shadow, border-radius) handled by CSS classes
 
     Logger.log(`📱 최종 모바일 툴팁 위치: ${adaptiveSize.width}x${adaptiveSize.maxHeight} at (${finalLeft}, ${finalTop})`, {
@@ -540,10 +541,10 @@ export class InlineTooltip {
 
     // CSS 변수로 동적 크기 설정
     this.tooltip.classList.add('kga-dynamic-position');
-    this.tooltip.style.setProperty('--kga-width', `${adaptiveSize.width}px`);
-    this.tooltip.style.setProperty('--kga-max-height', `${adaptiveSize.maxHeight}px`);
-    this.tooltip.style.setProperty('--kga-min-width', `${adaptiveSize.minWidth}px`);
-    this.tooltip.style.setProperty('--kga-font-size', adaptiveSize.fontSize);
+    setCssVariable(this.tooltip, '--kga-width', `${adaptiveSize.width}px`);
+    setCssVariable(this.tooltip, '--kga-max-height', `${adaptiveSize.maxHeight}px`);
+    setCssVariable(this.tooltip, '--kga-min-width', `${adaptiveSize.minWidth}px`);
+    setCssVariable(this.tooltip, '--kga-font-size', adaptiveSize.fontSize);
 
     const gap = 8;
     const minSpacing = 12;
@@ -647,8 +648,8 @@ export class InlineTooltip {
 
     // 🔧 CSS 변수로 동적 위치 설정
     this.tooltip.classList.add('kga-desktop');
-    this.tooltip.style.setProperty('--kga-left', `${finalLeft}px`);
-    this.tooltip.style.setProperty('--kga-top', `${finalTop}px`);
+    setCssVariable(this.tooltip, '--kga-left', `${finalLeft}px`);
+    setCssVariable(this.tooltip, '--kga-top', `${finalTop}px`);
 
     Logger.log(`🖥️ 데스크톱 툴팁 위치: ${adaptiveSize.width}x${adaptiveSize.maxHeight} at (${finalLeft}, ${finalTop})`, {
       corners: { isLeftEdge, isRightEdge, isTopEdge, isBottomEdge },
@@ -1322,7 +1323,7 @@ export class InlineTooltip {
     Logger.log(`인라인 모드: 수정 제안 적용 (클릭 후 툴팁 유지) - "${mergedError.correction.original}" → "${suggestion}"`);
     
     // 툴팁 유지 모드 플래그 설정
-    this.tooltipKeepOpenMode = true;
+    this.keepOpenMode = true;
 
     // 🔧 직접 import한 InlineModeService 사용
     try {
@@ -1334,7 +1335,7 @@ export class InlineTooltip {
 
     // 툴팁 유지 모드 해제 (약간의 지연 후)
     setTimeout(() => {
-      this.tooltipKeepOpenMode = false;
+      this.keepOpenMode = false;
     }, 200);
     
     // 툴팁 상태 유지 (현재 오류 정보 업데이트는 InlineModeService에서 처리)
@@ -1852,6 +1853,6 @@ export class InlineTooltip {
 }
 
 /**
- * 전역 툴팁 인스턴스 (모듈 싱글톤으로 관리)
+ * 공유 툴팁 인스턴스 (모듈 싱글톤으로 관리)
  */
-export const globalInlineTooltip = new InlineTooltip();
+export const inlineTooltip = new InlineTooltip();

@@ -28,6 +28,61 @@
   display: none;
 }
 
+/* Loading progress notice */
+.kga-loading-progress-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.kga-loading-progress-icon {
+  font-size: 16px;
+  margin-right: 8px;
+}
+
+.kga-loading-progress-title-container {
+  flex: 1;
+}
+
+.kga-loading-progress-title {
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.kga-loading-progress-bar-container {
+  margin-bottom: 6px;
+}
+
+.kga-loading-progress-bar {
+  display: block;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 6px;
+  background: var(--background-modifier-border);
+}
+
+.kga-loading-progress-bar::-webkit-progress-bar {
+  background: var(--background-modifier-border);
+  border-radius: 6px;
+}
+
+.kga-loading-progress-bar::-webkit-progress-value {
+  background: var(--interactive-accent);
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.kga-loading-progress-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
 /* ===================================================================
  * Popup Layout Manager Styles
  * =================================================================== */

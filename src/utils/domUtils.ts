@@ -142,6 +142,13 @@ export function setTextContent(element: HTMLElement, text: string): void {
 }
 
 /**
+ * CSS custom property 값을 설정합니다. 실제 스타일 규칙은 CSS 파일에 둡니다.
+ */
+export function setCssVariable(element: HTMLElement, name: string, value: string): void {
+  element.style.setProperty(name, value);
+}
+
+/**
  * 리스트 요소를 생성합니다.
  * @param items 리스트 항목들
  * @param ordered 순서가 있는 리스트인지 여부

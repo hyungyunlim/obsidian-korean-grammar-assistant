@@ -1,5 +1,11 @@
 /* styles/preview.css */
 
+.kga-preview-empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 40px;
+}
+
 #correctionPopup .kga-preview-section {
     background: var(--background-secondary);
     border-radius: 8px;

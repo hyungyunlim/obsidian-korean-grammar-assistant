@@ -308,49 +308,39 @@ export class LoadingManager {
     
     // 헤더 영역 (아이콘 + 제목)
     const header = this.progressElement.createEl('div', {
-      attr: { 
-        style: 'display: flex; align-items: center; margin-bottom: 8px;' 
-      }
+      cls: 'kga-loading-progress-header'
     });
     
     header.createEl('span', { 
       text: currentStepInfo?.icon || '⏳',
-      attr: { style: 'font-size: 16px; margin-right: 8px;' }
+      cls: 'kga-loading-progress-icon'
     });
     
     const titleContainer = header.createEl('div', { 
-      attr: { style: 'flex: 1;' }
+      cls: 'kga-loading-progress-title-container'
     });
     
     titleContainer.createEl('div', { 
       text: currentStepInfo?.title || '처리 중',
-      attr: { style: 'font-weight: 500; font-size: 13px; line-height: 1.2;' }
+      cls: 'kga-loading-progress-title'
     });
     
     // 진행률 바
     const progressBarContainer = this.progressElement.createEl('div', {
-      attr: { 
-        style: 'background: var(--background-modifier-border); border-radius: 6px; height: 4px; overflow: hidden; margin-bottom: 6px;' 
-      }
+      cls: 'kga-loading-progress-bar-container'
     });
     
-    progressBarContainer.createEl('div', {
-      attr: { 
-        style: `
-          background: var(--interactive-accent);
-          height: 100%;
-          width: ${percentage}%;
-          transition: width 0.3s ease;
-          border-radius: 6px;
-        `
+    progressBarContainer.createEl('progress', {
+      cls: 'kga-loading-progress-bar',
+      attr: {
+        max: '100',
+        value: String(percentage)
       }
     });
     
     // 하단 정보 (간단하게)
     const footer = this.progressElement.createEl('div', {
-      attr: { 
-        style: 'display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); line-height: 1;' 
-      }
+      cls: 'kga-loading-progress-footer'
     });
     
     footer.createEl('span', { text: `${percentage}%` });

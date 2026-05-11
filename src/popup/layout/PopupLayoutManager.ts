@@ -15,7 +15,7 @@ import { HeaderRenderer } from './HeaderRenderer';
 import { PreviewRenderer } from './PreviewRenderer';
 import { SummaryRenderer } from './SummaryRenderer';
 import { Logger } from '../../utils/logger';
-import { createEl } from '../../utils/domUtils';
+import { createEl, setCssVariable } from '../../utils/domUtils';
 
 /**
  * 레이아웃 변경 이벤트 타입
@@ -249,8 +249,8 @@ export class PopupLayoutManager implements IPopupComponent {
 
     // 동적 계산이 필요한 스타일만 JavaScript로 설정
     // (maxWidth, maxHeight는 브레이크포인트에 따라 달라짐)
-    container.style.setProperty('--kga-max-width', this.getMaxWidth());
-    container.style.setProperty('--kga-max-height', this.getMaxHeight());
+    setCssVariable(container, '--kga-max-width', this.getMaxWidth());
+    setCssVariable(container, '--kga-max-height', this.getMaxHeight());
 
     // 커스텀 클래스 추가
     if (this.layoutState.customClasses.length > 0) {
@@ -590,8 +590,8 @@ export class PopupLayoutManager implements IPopupComponent {
     const top = Math.max(0, (viewportHeight - rect.height) / 2);
 
     // 동적 계산이 필요한 위치 스타일만 JavaScript로 설정
-    this.containerElement.style.setProperty('--kga-pos-left', `${left}px`);
-    this.containerElement.style.setProperty('--kga-pos-top', `${top}px`);
+    setCssVariable(this.containerElement, '--kga-pos-left', `${left}px`);
+    setCssVariable(this.containerElement, '--kga-pos-top', `${top}px`);
   }
   
   /**

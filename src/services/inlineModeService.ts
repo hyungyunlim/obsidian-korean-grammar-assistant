@@ -2,7 +2,7 @@ import { EditorView, WidgetType, Decoration, DecorationSet } from '@codemirror/v
 import { StateField, StateEffect } from '@codemirror/state';
 import { Correction, InlineError, PluginSettings } from '../types/interfaces';
 import { Logger } from '../utils/logger';
-import { globalInlineTooltip } from '../ui/inlineTooltip';
+import { inlineTooltip } from '../ui/inlineTooltip';
 import { Scope, App, Platform } from 'obsidian';
 import { Notice } from 'obsidian';
 import { MarkdownView } from 'obsidian';
@@ -69,17 +69,17 @@ class AITextWidget extends WidgetType {
       };
       
       // 툴팁 표시 (마우스 위치 포함)
-      if (globalInlineTooltip) {
+      if (inlineTooltip) {
         const mousePosition = { x: e.clientX, y: e.clientY };
-        globalInlineTooltip.show(mockError, span, 'hover', mousePosition);
+        inlineTooltip.show(mockError, span, 'hover', mousePosition);
       }
     });
 
     span.addEventListener('mouseleave', () => {
       // 🔍 툴팁 숨기기 (더 긴 딜레이 - 툴팁으로 마우스 이동할 충분한 시간 확보)
       setTimeout(() => {
-        if (globalInlineTooltip && !globalInlineTooltip.isHovered) {
-          globalInlineTooltip.hide();
+        if (inlineTooltip && !inlineTooltip.isHovered) {
+          inlineTooltip.hide();
         }
       }, 500); // 150ms → 500ms로 증가
     });
@@ -101,8 +101,8 @@ class AITextWidget extends WidgetType {
       InlineModeService.applyAIWidgetToEditor(this.errorId, this.aiText, this.originalText);
       
       // 툴팁 숨기기
-      if (globalInlineTooltip) {
-        globalInlineTooltip.hide();
+      if (inlineTooltip) {
+        inlineTooltip.hide();
       }
     });
 
@@ -215,10 +215,8 @@ class ErrorWidget extends WidgetType {
     span.textContent = this.error.correction.original;
     
     // 설정에 따른 오버라이드
-    if (this.underlineStyle !== 'wavy' || this.underlineColor !== 'var(--color-red)') {
-      span.style.setProperty('text-decoration-style', this.underlineStyle, 'important');
-      span.style.setProperty('text-decoration-color', this.underlineColor, 'important');
-    }
+    span.classList.add(`kga-underline-${this.underlineStyle}`);
+    span.setAttribute('data-underline-color', this.underlineColor);
     
     // 호버 이벤트 (300ms 딜레이)
     if (this.onHover) {
@@ -850,8 +848,8 @@ export class InlineModeService {
       this.clearFocusedError();
 
       // 툴팁도 숨기기
-      if (globalInlineTooltip) {
-        globalInlineTooltip.hide();
+      if (inlineTooltip) {
+        inlineTooltip.hide();
       }
 
       // 해당 오류를 activeErrors에서 제거하고 decoration도 제거
@@ -1314,7 +1312,7 @@ export class InlineModeService {
     if (shouldShowTooltip) {
       // 실제 호버된 요소가 전달되면 그것을 사용, 없으면 기존 방식으로 찾기
       const targetElement = hoveredElement || this.findErrorElement(error);
-      const tooltip = globalInlineTooltip;
+      const tooltip = inlineTooltip;
       if (targetElement && tooltip) {
         // 툴팁 표시 (마우스 위치 정보 포함)
         tooltip.show(error, targetElement, 'hover', mousePosition);
@@ -1330,7 +1328,7 @@ export class InlineModeService {
     
     try {
       // 기존 툴팁 먼저 숨기기
-      const tooltip = globalInlineTooltip;
+      const tooltip = inlineTooltip;
       if (tooltip) {
         tooltip.hide();
       }
@@ -1380,7 +1378,7 @@ export class InlineModeService {
       Logger.error('오류 클릭 처리 중 문제 발생:', err);
 
       // 에러 발생 시에도 툴팁 숨기기
-      const tooltip = globalInlineTooltip;
+      const tooltip = inlineTooltip;
       if (tooltip) {
         tooltip.hide();
       }
@@ -1398,7 +1396,7 @@ export class InlineModeService {
       const element = targetElement || this.findErrorElement(error);
       if (element) {
         // 🔧 마우스/터치 위치 정보를 툴팁에 전달
-        globalInlineTooltip.show(error, element, 'click', touchPosition);
+        inlineTooltip.show(error, element, 'click', touchPosition);
       } else {
         Logger.warn(`인라인 모드: 타겟 요소를 찾을 수 없습니다 - ${error.correction.original}`);
       }
@@ -1671,10 +1669,10 @@ export class InlineModeService {
     });
 
     // 툴팁 유지 모드가 아닐 때만 툴팁 숨기기
-    const isKeepOpenMode = globalInlineTooltip.tooltipKeepOpenMode;
+    const isKeepOpenMode = inlineTooltip.keepOpenMode;
     if (!isKeepOpenMode) {
       // 툴팁 숨기기 (확실하게)
-      const tooltip = globalInlineTooltip;
+      const tooltip = inlineTooltip;
       if (tooltip) {
         tooltip.hide();
       }
@@ -1724,7 +1722,7 @@ export class InlineModeService {
     // activeErrors 맵 업데이트
     this.activeErrors.set(mergedError.uniqueId, mergedError);
 
-    // decoration 업데이트를 위해 다시 표시 (getErrorStyle 메서드 사용)
+    // decoration 업데이트를 위해 다시 표시
     const mergedErrors = [mergedError];
     
     Logger.debug(`🔧 병합된 오류 decoration 업데이트: "${mergedError.correction.original}"`);
@@ -1749,15 +1747,15 @@ export class InlineModeService {
     });
 
     // 툴팁이 표시 중이면 업데이트된 내용으로 다시 표시
-    if (globalInlineTooltip && globalInlineTooltip.visible) {
+    if (inlineTooltip && inlineTooltip.visible) {
       setTimeout(() => {
         const errorElement = this.findErrorElement(mergedError);
-        const tooltip = globalInlineTooltip;
+        const tooltip = inlineTooltip;
         if (errorElement && tooltip) {
           // 기존 툴팁 숨기고 새로 표시
           tooltip.hide();
           setTimeout(() => {
-            const tooltip2 = globalInlineTooltip;
+            const tooltip2 = inlineTooltip;
             if (tooltip2) {
               tooltip2.show(mergedError, errorElement, 'click');
             }
@@ -1799,8 +1797,8 @@ export class InlineModeService {
       const nextError = sortedErrors[nextIndex];
       if (nextError) {
         // 기존 툴팁 먼저 숨기기
-        if (globalInlineTooltip) {
-          globalInlineTooltip.hide();
+        if (inlineTooltip) {
+          inlineTooltip.hide();
         }
         
         this.setFocusedError(nextError);
@@ -1831,8 +1829,8 @@ export class InlineModeService {
       const prevError = sortedErrors[prevIndex];
       if (prevError) {
         // 기존 툴팁 먼저 숨기기
-        if (globalInlineTooltip) {
-          globalInlineTooltip.hide();
+        if (inlineTooltip) {
+          inlineTooltip.hide();
         }
         
         this.setFocusedError(prevError);
@@ -1970,8 +1968,8 @@ export class InlineModeService {
       const nextIndex = (currentIndex + 1) % sortedErrors.length;
       const nextError = sortedErrors[nextIndex];
       if (nextError) {
-        if (globalInlineTooltip) {
-          globalInlineTooltip.hide();
+        if (inlineTooltip) {
+          inlineTooltip.hide();
         }
         this.setFocusedError(nextError);
         Logger.log(`✅ 다음 오류로 이동 (Option+]): ${nextError.correction.original}`);
@@ -1997,8 +1995,8 @@ export class InlineModeService {
       const prevIndex = currentIndex <= 0 ? sortedErrors.length - 1 : currentIndex - 1;
       const prevError = sortedErrors[prevIndex];
       if (prevError) {
-        if (globalInlineTooltip) {
-          globalInlineTooltip.hide();
+        if (inlineTooltip) {
+          inlineTooltip.hide();
         }
         this.setFocusedError(prevError);
         Logger.log(`✅ 이전 오류로 이동 (Option+[): ${prevError.correction.original}`);
@@ -2055,8 +2053,8 @@ export class InlineModeService {
     this.currentSuggestionIndex = 0;
     
     // 툴팁 숨기기
-    if (globalInlineTooltip) {
-      globalInlineTooltip.hide();
+    if (inlineTooltip) {
+      inlineTooltip.hide();
     }
     
     Logger.debug('오류 포커스 해제');
@@ -2072,7 +2070,7 @@ export class InlineModeService {
     const elements = document.querySelectorAll(`[data-error-id="${this.currentFocusedError.uniqueId}"]`);
     if (elements.length > 0) {
       const targetElement = elements[0] as HTMLElement;
-      globalInlineTooltip.show(this.currentFocusedError, targetElement, 'click');
+      inlineTooltip.show(this.currentFocusedError, targetElement, 'click');
       Logger.debug(`포커스된 오류에 툴팁 표시: ${this.currentFocusedError.correction.original}`);
     }
   }
@@ -2179,8 +2177,8 @@ export class InlineModeService {
     // }
     
     // 툴팁 정리
-    if (globalInlineTooltip?.visible) {
-      globalInlineTooltip.hide();
+    if (inlineTooltip?.visible) {
+      inlineTooltip.hide();
     }
     
     Logger.debug('인라인 모드: 서비스 정리됨 (겹치는 영역 처리 포함)');
@@ -2201,7 +2199,7 @@ export class InlineModeService {
 
         const nextError = this.findNextErrorFromCursor();
         if (nextError) {
-          if (globalInlineTooltip) globalInlineTooltip.hide();
+          if (inlineTooltip) inlineTooltip.hide();
           this.moveToError(nextError);
           this.setFocusedError(nextError);
           Logger.log(`✅ 다음 오류로 이동: ${nextError.correction.original}`);
@@ -2222,7 +2220,7 @@ export class InlineModeService {
 
         const previousError = this.findPreviousErrorFromCursor();
         if (previousError) {
-          if (globalInlineTooltip) globalInlineTooltip.hide();
+          if (inlineTooltip) inlineTooltip.hide();
           this.moveToError(previousError);
           this.setFocusedError(previousError);
           Logger.log(`✅ 이전 오류로 이동: ${previousError.correction.original}`);
@@ -2611,38 +2609,6 @@ export class InlineModeService {
   }
 
   /**
-   * 다크모드를 고려한 오류 스타일을 생성합니다.
-   */
-  static getErrorStyle(underlineStyle: string, underlineColor: string, isHover: boolean = false, aiStatus?: string, aiColor?: string, aiBackgroundColor?: string): string {
-    // 다크모드 감지
-    const isDarkMode = document.body.classList.contains('theme-dark');
-    
-    let actualColor: string;
-    let actualBgColor: string;
-    
-    // 🤖 AI 분석 결과가 있으면 AI 색상 사용
-    if (aiStatus && aiColor && aiBackgroundColor) {
-      actualColor = aiColor;
-      actualBgColor = isHover ? aiBackgroundColor.replace('0.1', '0.2') : aiBackgroundColor;
-      
-      Logger.debug(`🎨 AI 색상 적용: ${aiStatus} - ${actualColor}`);
-    } else {
-      // 기본 오류 색상 (빨간색)
-      if (isDarkMode) {
-        // 다크모드: --color-red (#fb464c)와 투명도 조절
-        actualColor = isHover ? 'var(--color-red)' : 'var(--color-red)';
-        actualBgColor = isHover ? 'rgba(var(--color-red-rgb), 0.2)' : 'rgba(var(--color-red-rgb), 0.1)';
-      } else {
-        // 라이트모드: --color-red (#e93147)와 투명도 조절  
-        actualColor = isHover ? 'var(--color-red)' : 'var(--color-red)';
-        actualBgColor = isHover ? 'rgba(var(--color-red-rgb), 0.15)' : 'rgba(var(--color-red-rgb), 0.08)';
-      }
-    }
-    
-    return `text-decoration-line: underline !important; text-decoration-style: ${underlineStyle} !important; text-decoration-color: ${actualColor} !important; text-decoration-thickness: 2px !important; background-color: ${actualBgColor} !important; cursor: pointer !important;`;
-  }
-
-  /**
    * 🎯 컨텍스트 기반 호버 영역 확장
    * 주변 형태소 정보를 활용하여 더 넓은 호버 영역 제공
    */
@@ -2657,11 +2623,8 @@ export class InlineModeService {
       const tokenBoundaries = this.getTokenBoundaries(error);
       if (!tokenBoundaries) return;
 
-      // 확장된 호버 영역 스타일 적용
-      const expandedStyle = this.createExpandedHoverStyle(tokenBoundaries);
-      
       // 가상의 확장된 호버 영역 생성 (실제 DOM 조작 없이 감지 영역만 확장)
-      this.createExpandedHoverZone(element, expandedStyle, error);
+      this.createExpandedHoverZone(element, error);
       
       Logger.debug(`🎯 호버 영역 확장: ${error.correction.original} (토큰: ${tokenBoundaries.startToken}-${tokenBoundaries.endToken})`);
       
@@ -2723,33 +2686,9 @@ export class InlineModeService {
   }
 
   /**
-   * 확장된 호버 스타일 생성
-   */
-  private static createExpandedHoverStyle(boundaries: { startToken: number; endToken: number; contextText: string }): string {
-    const isDarkMode = document.body.classList.contains('theme-dark');
-    
-    return `
-      position: relative;
-      z-index: 2;
-      &::before {
-        content: '';
-        position: absolute;
-        left: -5px;
-        right: -5px;
-        top: -2px;
-        bottom: -2px;
-        background: ${isDarkMode ? 'rgba(var(--color-red-rgb), 0.05)' : 'rgba(var(--color-red-rgb), 0.03)'};
-        border-radius: 3px;
-        pointer-events: none;
-        z-index: -1;
-      }
-    `;
-  }
-
-  /**
    * 확장된 호버 감지 영역 생성
    */
-  private static createExpandedHoverZone(originalElement: HTMLElement, style: string, error: InlineError): void {
+  private static createExpandedHoverZone(originalElement: HTMLElement, error: InlineError): void {
     // 기존 확장 영역 제거
     const existingZone = originalElement.parentElement?.querySelector('.korean-grammar-expanded-hover');
     if (existingZone) {
