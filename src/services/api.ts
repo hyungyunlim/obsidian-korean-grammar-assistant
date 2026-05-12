@@ -190,7 +190,8 @@ export class SpellCheckApiService {
   private manageCacheSize(): void {
     if (this.morphemeCache.size > this.maxCacheSize) {
       // 가장 오래된 항목부터 제거 (Map은 삽입 순서를 유지)
-      const firstKey: string | undefined = this.morphemeCache.keys().next().value;
+      const iter = this.morphemeCache.keys().next();
+      const firstKey: string | undefined = iter.done ? undefined : iter.value;
       if (firstKey !== undefined) {
         this.morphemeCache.delete(firstKey);
       }

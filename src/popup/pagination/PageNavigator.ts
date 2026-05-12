@@ -191,7 +191,7 @@ export class PageNavigator implements IPopupComponent {
       return true;
 
     } catch (error: unknown) {
-      const errorMessage = `페이지 이동 중 오류 발생: ${error}`;
+      const errorMessage = `페이지 이동 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`;
       Logger.error('[PageNavigator] 페이지 이동 오류', { error: errorMessage });
       
       // 이전 페이지로 복원

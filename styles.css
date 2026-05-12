@@ -25,7 +25,6 @@
   will-change: auto;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
-  min-height: 100vh;
   min-height: 100dvh;
   touch-action: none;
   user-select: none;
@@ -74,7 +73,6 @@ body.spell-popup-open {
   overflow: hidden !important;
   position: fixed !important;
   width: 100% !important;
-  height: 100vh !important;
   height: 100dvh !important;
 }
 body.spell-popup-open input,
@@ -521,7 +519,6 @@ body.spell-popup-open #correctionPopup [contenteditable] {
   font-feature-settings: "liga" 1, "kern" 1;
   flex: 1;
   overflow-y: auto;
-  text-indent: 0;
   padding: 16px;
   min-height: 200px;
 }
@@ -727,10 +724,10 @@ body.spell-popup-open #correctionPopup [contenteditable] {
 @media (max-width: 768px) {
   #correctionPopup .kga-mobile-edit-container ~ .kga-error-suggestions-compact,
   #correctionPopup .kga-mobile-edit-container ~ .kga-error-exception-btn,
-  #correctionPopup .kga-error-card:has(.kga-mobile-edit-container) .kga-error-suggestions-compact,
-  #correctionPopup .kga-error-card:has(.kga-mobile-edit-container) .kga-error-exception-btn,
-  #correctionPopup .kga-error-card:has(.kga-mobile-edit-container) .kga-suggestion-compact,
-  #correctionPopup .kga-error-card:has(.kga-mobile-edit-container) .kga-keep-original {
+  #correctionPopup .kga-error-card.kga-editing-mode .kga-error-suggestions-compact,
+  #correctionPopup .kga-error-card.kga-editing-mode .kga-error-exception-btn,
+  #correctionPopup .kga-error-card.kga-editing-mode .kga-suggestion-compact,
+  #correctionPopup .kga-error-card.kga-editing-mode .kga-keep-original {
     display: none !important;
     visibility: hidden !important;
     opacity: 0 !important;
@@ -1112,33 +1109,6 @@ body.spell-popup-open #correctionPopup [contenteditable] {
 }
 .spell-user-edited.kga-clickable-error:active {
   background: rgba(139, 92, 246, 0.35);
-}
-.korean-grammar-error-inline[data-ai-status=exception] {
-  text-decoration: wavy underline #3b82f6 2px !important;
-  background-color: rgba(59, 130, 246, 0.1) !important;
-}
-.korean-grammar-error-inline[data-ai-status=keep-original] {
-  text-decoration: wavy underline #f59e0b 2px !important;
-  background-color: rgba(245, 158, 11, 0.1) !important;
-}
-.korean-grammar-error-inline[data-ai-status=exception]:hover {
-  background-color: rgba(59, 130, 246, 0.2) !important;
-}
-.korean-grammar-error-inline[data-ai-status=keep-original]:hover {
-  background-color: rgba(245, 158, 11, 0.2) !important;
-}
-.korean-grammar-ai-widget {
-  color: #10b981;
-  text-decoration: wavy underline #10b981 2px;
-  background-color: rgba(16, 185, 129, 0.1);
-  cursor: pointer;
-  display: inline;
-  font-family: inherit;
-  font-size: inherit;
-  line-height: inherit;
-}
-.korean-grammar-ai-widget:hover {
-  background-color: rgba(16, 185, 129, 0.2);
 }
 .korean-grammar-ai-widget:focus {
   outline: 2px solid #10b981;

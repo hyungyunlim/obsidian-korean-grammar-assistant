@@ -240,13 +240,14 @@
 }
 
 /* 모바일 편집 모드일 때 수정 제안 및 예외 처리 버튼 강제 숨김 */
+/* :has() 대신 .kga-editing-mode 클래스로 처리 (JS에서 추가됨) */
 @media (max-width: 768px) {
     #correctionPopup .kga-mobile-edit-container ~ .kga-error-suggestions-compact,
     #correctionPopup .kga-mobile-edit-container ~ .kga-error-exception-btn,
-    #correctionPopup .kga-error-card:has(.kga-mobile-edit-container) .kga-error-suggestions-compact,
-    #correctionPopup .kga-error-card:has(.kga-mobile-edit-container) .kga-error-exception-btn,
-    #correctionPopup .kga-error-card:has(.kga-mobile-edit-container) .kga-suggestion-compact,
-    #correctionPopup .kga-error-card:has(.kga-mobile-edit-container) .kga-keep-original {
+    #correctionPopup .kga-error-card.kga-editing-mode .kga-error-suggestions-compact,
+    #correctionPopup .kga-error-card.kga-editing-mode .kga-error-exception-btn,
+    #correctionPopup .kga-error-card.kga-editing-mode .kga-suggestion-compact,
+    #correctionPopup .kga-error-card.kga-editing-mode .kga-keep-original {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;

@@ -183,7 +183,6 @@
     font-feature-settings: "liga" 1, "kern" 1;
     flex: 1;
     overflow-y: auto;
-    text-indent: 0;
     padding: 16px;
     min-height: 200px;
 }

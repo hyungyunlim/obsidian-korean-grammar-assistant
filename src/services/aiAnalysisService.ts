@@ -676,18 +676,18 @@ export class AIAnalysisService {
       
       // 🔧 JSON 파싱 시도 + 추가 복구 로직
       try {
-        parsedResponse = JSON.parse(jsonString);
+        parsedResponse = JSON.parse(jsonString) as unknown[];
       } catch (parseError) {
         Logger.warn('초기 JSON 파싱 실패, 추가 복구 시도:', parseError);
-        
+
         // 마지막 쉼표 제거 시도
         let fixedJson = jsonString.replace(/,\s*$/, '');
         if (!fixedJson.endsWith(']')) {
           fixedJson += ']';
         }
-        
+
         try {
-          parsedResponse = JSON.parse(fixedJson);
+          parsedResponse = JSON.parse(fixedJson) as unknown[];
           Logger.debug('쉼표 제거로 JSON 복구 성공');
         } catch {
           // 마지막 불완전한 객체 제거 시도
@@ -695,7 +695,7 @@ export class AIAnalysisService {
           if (lastCommaIndex > 0) {
             const cutJson = jsonString.substring(0, lastCommaIndex) + ']';
             try {
-              parsedResponse = JSON.parse(cutJson);
+              parsedResponse = JSON.parse(cutJson) as unknown[];
               Logger.debug('불완전 객체 제거로 JSON 복구 성공');
             } catch {
               throw parseError; // 원래 오류 다시 던지기

@@ -48,12 +48,14 @@ export class AnthropicClient implements AIClient {
       const messageResponse = response.json as AnthropicMessageResponse;
       return messageResponse.content[0].text.trim();
     } else {
+      const responseJson: unknown = response.json;
       Logger.error('[Anthropic] API 응답 오류:', {
         status: response.status,
         text: response.text,
-        json: response.json
+        json: responseJson,
       });
-      throw new Error(`Anthropic API 오류: ${response.status} - ${response.text || JSON.stringify(response.json)}`);
+      const bodyText = response.text || JSON.stringify(responseJson ?? null);
+      throw new Error(`Anthropic API 오류: ${response.status} - ${bodyText}`);
     }
   }
 }

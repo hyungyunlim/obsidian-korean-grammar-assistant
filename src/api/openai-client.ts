@@ -117,12 +117,14 @@ export class OpenAIClient implements AIClient {
       const chatResponse = response.json as OpenAIChatResponse;
       return chatResponse.choices[0].message.content.trim();
     } else {
+      const responseJson: unknown = response.json;
       Logger.error('API 응답 오류:', {
         status: response.status,
         text: response.text,
-        json: response.json
+        json: responseJson,
       });
-      throw new Error(`OpenAI API 오류: ${response.status} - ${response.text || JSON.stringify(response.json)}`);
+      const bodyText = response.text || JSON.stringify(responseJson ?? null);
+      throw new Error(`OpenAI API 오류: ${response.status} - ${bodyText}`);
     }
   }
 }

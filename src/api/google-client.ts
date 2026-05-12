@@ -68,15 +68,18 @@ export class GoogleClient implements AIClient {
       if (text) {
         return text.trim();
       }
-      Logger.error('[Google] API 응답 형식 오류:', response.json);
+      const formatJson: unknown = response.json;
+      Logger.error('[Google] API 응답 형식 오류:', formatJson);
       throw new Error('Google API 응답 형식이 올바르지 않습니다.');
     } else {
+      const responseJson: unknown = response.json;
       Logger.error('[Google] API 응답 오류:', {
         status: response.status,
         text: response.text,
-        json: response.json
+        json: responseJson,
       });
-      throw new Error(`Google API 오류: ${response.status} - ${response.text || JSON.stringify(response.json)}`);
+      const bodyText = response.text || JSON.stringify(responseJson ?? null);
+      throw new Error(`Google API 오류: ${response.status} - ${bodyText}`);
     }
   }
 }

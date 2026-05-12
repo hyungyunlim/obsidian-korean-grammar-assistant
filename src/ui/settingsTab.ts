@@ -1080,8 +1080,8 @@ export class ModernSettingsTab extends PluginSettingTab {
     const metricsInterval = window.setInterval(updateMetrics, 15000);
 
     // 정리 함수 등록
-    const originalHide = this.hide.bind(this);
-    this.hide = () => {
+    const originalHide: () => void = this.hide.bind(this);
+    this.hide = (): void => {
       window.clearInterval(metricsInterval);
       originalHide();
     };
