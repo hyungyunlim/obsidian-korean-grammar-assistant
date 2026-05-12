@@ -190,7 +190,7 @@ export class PageNavigator implements IPopupComponent {
 
       return true;
 
-    } catch (error) {
+    } catch (error: unknown) {
       const errorMessage = `페이지 이동 중 오류 발생: ${error}`;
       Logger.error('[PageNavigator] 페이지 이동 오류', { error: errorMessage });
       
@@ -345,7 +345,9 @@ export class PageNavigator implements IPopupComponent {
     controls.appendChild(lastButton);
     
     // 클릭 이벤트 등록
-    const clickHandler = this.handleNavigationClick.bind(this);
+    const clickHandler: (this: HTMLDivElement, ev: MouseEvent) => void = (ev) => {
+      void this.handleNavigationClick(ev);
+    };
     controls.addEventListener('click', clickHandler);
     this.eventListeners.push(() => controls.removeEventListener('click', clickHandler));
     
@@ -405,8 +407,8 @@ export class PageNavigator implements IPopupComponent {
   }
 
   private async handleNavigationClick(event: Event): Promise<void> {
-    const target = event.target as HTMLElement;
-    const action = target.getAttribute('data-action');
+    const target = event.target as HTMLElement | null;
+    const action = target?.getAttribute('data-action') ?? null;
     
     if (!action || this.isNavigating) return;
 
@@ -430,7 +432,7 @@ export class PageNavigator implements IPopupComponent {
     if (this.onPageChangeCallback) {
       try {
         this.onPageChangeCallback(event);
-      } catch (error) {
+      } catch (error: unknown) {
         Logger.error('[PageNavigator] 페이지 변경 콜백 오류', { error });
       }
     }
@@ -440,7 +442,7 @@ export class PageNavigator implements IPopupComponent {
     if (this.onNavigationErrorCallback) {
       try {
         this.onNavigationErrorCallback(error);
-      } catch (callbackError) {
+      } catch (callbackError: unknown) {
         Logger.error('[PageNavigator] 네비게이션 오류 콜백 오류', { callbackError });
       }
     }

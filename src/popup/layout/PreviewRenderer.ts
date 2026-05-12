@@ -91,7 +91,7 @@ export class PreviewRenderer implements IPopupComponent {
       
       Logger.log('PreviewRenderer: 초기화 완료');
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('PreviewRenderer: 초기화 중 오류', error);
       throw error;
     }
@@ -121,7 +121,7 @@ export class PreviewRenderer implements IPopupComponent {
       
       return this.containerElement;
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('PreviewRenderer: 렌더링 중 오류', error);
       throw error;
     }
@@ -165,7 +165,7 @@ export class PreviewRenderer implements IPopupComponent {
       
       Logger.debug('PreviewRenderer: 업데이트 완료', { updatedFields: Object.keys(state) });
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('PreviewRenderer: 업데이트 중 오류', error);
     }
   }
@@ -201,7 +201,7 @@ export class PreviewRenderer implements IPopupComponent {
       
       Logger.log('PreviewRenderer: 정리 완료');
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('PreviewRenderer: 정리 중 오류', error);
     }
   }
@@ -374,7 +374,7 @@ export class PreviewRenderer implements IPopupComponent {
       
       Logger.debug('PreviewRenderer: 콘텐츠 업데이트 완료');
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('PreviewRenderer: 콘텐츠 업데이트 중 오류', error);
     }
   }
@@ -719,7 +719,7 @@ export class PreviewRenderer implements IPopupComponent {
     for (const listener of this.errorClickListeners) {
       try {
         listener(event);
-      } catch (error) {
+      } catch (error: unknown) {
         Logger.error('PreviewRenderer: 오류 클릭 리스너 실행 중 오류', { error, event });
       }
     }
@@ -732,7 +732,7 @@ export class PreviewRenderer implements IPopupComponent {
     for (const listener of this.pageChangeListeners) {
       try {
         listener(event);
-      } catch (error) {
+      } catch (error: unknown) {
         Logger.error('PreviewRenderer: 페이지 변경 리스너 실행 중 오류', { error, event });
       }
     }

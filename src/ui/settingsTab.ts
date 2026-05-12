@@ -1067,7 +1067,7 @@ export class ModernSettingsTab extends PluginSettingTab {
           additionalStats.createDiv({ text: `• ${metric}` });
         });
         
-      } catch (_error) {
+      } catch {
         clearElement(metricsDisplay);
         metricsDisplay.createDiv({ text: '메트릭을 가져올 수 없습니다.' });
       }

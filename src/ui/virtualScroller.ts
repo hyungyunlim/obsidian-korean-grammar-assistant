@@ -231,7 +231,10 @@ export class VirtualScroller {
    */
   private setupEventListeners(): void {
     // 스크롤 이벤트 (디바운싱 적용)
-    this.viewport.addEventListener('scroll', this.handleScroll.bind(this));
+    const scrollHandler: (this: HTMLElement, ev: Event) => void = () => {
+      this.handleScroll();
+    };
+    this.viewport.addEventListener('scroll', scrollHandler);
     
     // 리사이즈 관찰자
     if (typeof ResizeObserver !== 'undefined') {

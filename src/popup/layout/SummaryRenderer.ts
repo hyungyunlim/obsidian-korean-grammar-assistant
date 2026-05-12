@@ -84,7 +84,7 @@ export class SummaryRenderer implements IPopupComponent {
       
       Logger.log('SummaryRenderer: 초기화 완료');
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('SummaryRenderer: 초기화 중 오류', error);
       throw error;
     }
@@ -115,7 +115,7 @@ export class SummaryRenderer implements IPopupComponent {
       
       return this.containerElement;
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('SummaryRenderer: 렌더링 중 오류', error);
       throw error;
     }
@@ -153,7 +153,7 @@ export class SummaryRenderer implements IPopupComponent {
       
       Logger.debug('SummaryRenderer: 업데이트 완료', { updatedFields: Object.keys(state) });
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('SummaryRenderer: 업데이트 중 오류', error);
     }
   }
@@ -188,7 +188,7 @@ export class SummaryRenderer implements IPopupComponent {
       
       Logger.log('SummaryRenderer: 정리 완료');
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('SummaryRenderer: 정리 중 오류', error);
     }
   }
@@ -726,7 +726,7 @@ export class SummaryRenderer implements IPopupComponent {
     for (const listener of this.errorCardListeners) {
       try {
         listener(event);
-      } catch (error) {
+      } catch (error: unknown) {
         Logger.error('SummaryRenderer: 오류 카드 리스너 실행 중 오류', { error, event });
       }
     }
@@ -739,7 +739,7 @@ export class SummaryRenderer implements IPopupComponent {
     for (const listener of this.summaryToggleListeners) {
       try {
         listener(event);
-      } catch (error) {
+      } catch (error: unknown) {
         Logger.error('SummaryRenderer: 요약 토글 리스너 실행 중 오류', { error, event });
       }
     }

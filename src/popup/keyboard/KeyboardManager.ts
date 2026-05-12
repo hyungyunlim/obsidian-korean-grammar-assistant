@@ -135,7 +135,7 @@ export class KeyboardManager implements IPopupComponent {
       this.isEnabled = true;
       
       Logger.log('[KeyboardManager] 키보드 네비게이션 활성화');
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('[KeyboardManager] 키보드 네비게이션 활성화 실패', { error });
     }
   }
@@ -155,7 +155,7 @@ export class KeyboardManager implements IPopupComponent {
       this.isEnabled = false;
       
       Logger.log('[KeyboardManager] 키보드 네비게이션 비활성화');
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('[KeyboardManager] 키보드 네비게이션 비활성화 실패', { error });
     }
   }

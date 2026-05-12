@@ -451,7 +451,7 @@ export class PopupStateManager implements IPopupStateManager {
     for (const listener of this.listeners) {
       try {
         listener(this.state, changedFields);
-      } catch (error) {
+      } catch (error: unknown) {
         Logger.error('PopupStateManager: 리스너 실행 중 오류', { error, changedFields });
       }
     }

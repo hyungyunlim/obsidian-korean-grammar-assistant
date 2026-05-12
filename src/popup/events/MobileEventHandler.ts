@@ -138,7 +138,7 @@ export class MobileEventHandler {
       
       return true;
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('MobileEventHandler: 터치 시작 중 오류', error);
       return false;
     }
@@ -164,7 +164,7 @@ export class MobileEventHandler {
       
       return true;
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('MobileEventHandler: 터치 이동 중 오류', error);
       return false;
     }
@@ -189,7 +189,7 @@ export class MobileEventHandler {
       
       return true;
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('MobileEventHandler: 터치 종료 중 오류', error);
       return false;
     }
@@ -227,7 +227,7 @@ export class MobileEventHandler {
       
       return true;
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('MobileEventHandler: 터치홀드 처리 중 오류', error);
       return false;
     }
@@ -455,7 +455,7 @@ export class MobileEventHandler {
     this.executeCallbacks(result, {
       target: touchInfo.target,
       eventType: 'touchstart'
-    }).catch(error => {
+    }).catch((error: unknown) => {
       Logger.error('MobileEventHandler: 롱프레스 콜백 실행 중 오류', error);
     });
   }
@@ -483,7 +483,7 @@ export class MobileEventHandler {
       };
       
       // 비동기로 콜백 실행
-      this.executeCallbacks(result, context).catch(error => {
+      this.executeCallbacks(result, context).catch((error: unknown) => {
         Logger.error('MobileEventHandler: 더블탭 콜백 실행 중 오류', error);
       });
     }
@@ -763,7 +763,7 @@ export class MobileEventHandler {
     for (const callback of callbacks) {
       try {
         await callback(result, context);
-      } catch (error) {
+      } catch (error: unknown) {
         Logger.error('MobileEventHandler: 콜백 실행 중 오류', { 
           action: result.action, 
           error 

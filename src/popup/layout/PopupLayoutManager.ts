@@ -114,7 +114,7 @@ export class PopupLayoutManager implements IPopupComponent {
       
       Logger.log('PopupLayoutManager: 초기화 완료');
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('PopupLayoutManager: 초기화 중 오류', error);
       throw error;
     }
@@ -148,7 +148,7 @@ export class PopupLayoutManager implements IPopupComponent {
       
       return this.containerElement;
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('PopupLayoutManager: 렌더링 중 오류', error);
       throw error;
     }
@@ -179,7 +179,7 @@ export class PopupLayoutManager implements IPopupComponent {
       
       Logger.debug('PopupLayoutManager: 업데이트 완료', { updatedFields: Object.keys(state) });
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('PopupLayoutManager: 업데이트 중 오류', error);
     }
   }
@@ -219,7 +219,7 @@ export class PopupLayoutManager implements IPopupComponent {
       
       Logger.log('PopupLayoutManager: 정리 완료');
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('PopupLayoutManager: 정리 중 오류', error);
     }
   }
@@ -276,7 +276,7 @@ export class PopupLayoutManager implements IPopupComponent {
       
       Logger.debug('PopupLayoutManager: 헤더 렌더링 완료');
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('PopupLayoutManager: 헤더 렌더링 중 오류', error);
     }
   }
@@ -299,7 +299,7 @@ export class PopupLayoutManager implements IPopupComponent {
 
       Logger.debug('PopupLayoutManager: 미리보기 렌더링 완료');
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('PopupLayoutManager: 미리보기 렌더링 중 오류', error);
     }
   }
@@ -320,7 +320,7 @@ export class PopupLayoutManager implements IPopupComponent {
       
       Logger.debug('PopupLayoutManager: 오류 요약 렌더링 완료');
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('PopupLayoutManager: 오류 요약 렌더링 중 오류', error);
     }
   }
@@ -350,7 +350,7 @@ export class PopupLayoutManager implements IPopupComponent {
 
       Logger.debug('PopupLayoutManager: 푸터 렌더링 완료');
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('PopupLayoutManager: 푸터 렌더링 중 오류', error);
     }
   }
@@ -523,7 +523,7 @@ export class PopupLayoutManager implements IPopupComponent {
       
       Logger.debug('PopupLayoutManager: 리사이즈 처리 완료');
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('PopupLayoutManager: 리사이즈 처리 중 오류', error);
     }
   }
@@ -762,7 +762,7 @@ export class PopupLayoutManager implements IPopupComponent {
     for (const listener of this.layoutListeners) {
       try {
         listener(event);
-      } catch (error) {
+      } catch (error: unknown) {
         Logger.error('PopupLayoutManager: 레이아웃 변경 리스너 실행 중 오류', { error, event });
       }
     }

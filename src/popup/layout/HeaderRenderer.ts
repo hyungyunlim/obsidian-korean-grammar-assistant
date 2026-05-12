@@ -66,7 +66,7 @@ export class HeaderRenderer implements IPopupComponent {
       
       Logger.log('HeaderRenderer: 초기화 완료');
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('HeaderRenderer: 초기화 중 오류', error);
       throw error;
     }
@@ -94,7 +94,7 @@ export class HeaderRenderer implements IPopupComponent {
       
       return this.containerElement;
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('HeaderRenderer: 렌더링 중 오류', error);
       throw error;
     }
@@ -126,7 +126,7 @@ export class HeaderRenderer implements IPopupComponent {
       
       Logger.debug('HeaderRenderer: 업데이트 완료', { updatedFields: Object.keys(state) });
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('HeaderRenderer: 업데이트 중 오류', error);
     }
   }
@@ -157,7 +157,7 @@ export class HeaderRenderer implements IPopupComponent {
       
       Logger.log('HeaderRenderer: 정리 완료');
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('HeaderRenderer: 정리 중 오류', error);
     }
   }
@@ -548,7 +548,7 @@ export class HeaderRenderer implements IPopupComponent {
     for (const listener of this.buttonListeners) {
       try {
         listener(event);
-      } catch (error) {
+      } catch (error: unknown) {
         Logger.error('HeaderRenderer: 버튼 리스너 실행 중 오류', { error, event });
       }
     }

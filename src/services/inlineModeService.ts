@@ -374,7 +374,8 @@ export const errorDecorationField = StateField.define<DecorationSet>({
         decorations = decorations.update({
           filter: (from, to, decoration) => {
             // Mark decoration의 attributes에서 error-id 확인
-            const errorId = decoration.spec.attributes?.['data-error-id'];
+            const spec = decoration.spec as { attributes?: Record<string, string> };
+            const errorId = spec.attributes?.['data-error-id'];
             return errorId ? !errorIds.includes(errorId) : true;
           }
         });
@@ -891,7 +892,7 @@ export class InlineModeService {
           const apiService = new SpellCheckApiService();
           // Bareun API의 MorphemeResponse는 런타임에 MorphemeInfo로 호환되는 구조이므로 unknown을 거쳐 좁힘
           finalMorphemeData = (await apiService.analyzeMorphemes(fullText, this.settings)) as unknown as MorphemeInfo;
-          Logger.log(`📋 형태소 분석 완료: ${!!finalMorphemeData ? '성공' : '실패'}`);
+          Logger.log(`📋 형태소 분석 완료: ${finalMorphemeData ? '성공' : '실패'}`);
 
         } catch (error) {
           Logger.error('인라인 모드: 형태소 분석 실패, 기본 로직 사용:', error);
@@ -1014,10 +1015,11 @@ export class InlineModeService {
 
     } catch (error) {
       Logger.error('인라인 모드 오류 표시 실패:', error);
-      
+
       // 오류 알림
       NotificationUtils.hideNotice(analysisNotice);
-      NotificationUtils.showApiErrorNotice('general', error.message);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      NotificationUtils.showApiErrorNotice('general', errorMessage);
     }
 
     Logger.log(`인라인 모드: 맞춤법 검사 처리 완료`);

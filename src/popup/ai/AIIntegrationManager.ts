@@ -143,7 +143,7 @@ export class AIIntegrationManager implements IPopupServiceManager {
 
       return results;
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('AI 분석 중 오류 발생:', error);
       throw error;
     } finally {

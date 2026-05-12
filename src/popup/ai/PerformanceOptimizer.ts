@@ -73,7 +73,7 @@ export class PerformanceOptimizer implements IPopupServiceManager {
     this.cleanupCallbacks.forEach(callback => {
       try {
         callback();
-      } catch (error) {
+      } catch (error: unknown) {
         Logger.error('정리 콜백 실행 중 오류:', error);
       }
     });
@@ -184,7 +184,7 @@ export class PerformanceOptimizer implements IPopupServiceManager {
       
       try {
         callback();
-      } catch (error) {
+      } catch (error: unknown) {
         Logger.error('스케줄된 렌더링 중 오류:', error);
       } finally {
         this.performanceMetrics.renderTime = performance.now() - startTime;
@@ -216,7 +216,7 @@ export class PerformanceOptimizer implements IPopupServiceManager {
         this.optimizeHiddenElement(element);
       }
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('요소 레이아웃 최적화 중 오류:', error);
     }
   }
@@ -278,7 +278,7 @@ export class PerformanceOptimizer implements IPopupServiceManager {
         domElementCount: this.performanceMetrics.domElementCount
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('메모리 최적화 중 오류:', error);
     }
   }
@@ -338,7 +338,7 @@ export class PerformanceOptimizer implements IPopupServiceManager {
 
       this.performanceMetrics.lastUpdateTime = Date.now();
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('성능 메트릭 업데이트 중 오류:', error);
     }
   }

@@ -24,7 +24,7 @@ export interface EventContext {
   isError?: boolean;
   isSuggestion?: boolean;
   isNavigation?: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -178,7 +178,7 @@ export class PopupEventManager implements IPopupServiceManager {
           
           // Promise인 경우 에러 처리
           if (result instanceof Promise) {
-            result.catch(error => {
+            result.catch((error: unknown) => {
               Logger.error('PopupEventManager: 비동기 이벤트 핸들러 오류', { 
                 eventType: rule.eventType,
                 selector: rule.selector,
@@ -187,7 +187,7 @@ export class PopupEventManager implements IPopupServiceManager {
             });
           }
           
-        } catch (error) {
+        } catch (error: unknown) {
           Logger.error('PopupEventManager: 이벤트 핸들러 오류', { 
             eventType: rule.eventType,
             selector: rule.selector,
@@ -534,12 +534,12 @@ export class PopupEventManager implements IPopupServiceManager {
         const result = callback(event, context);
         
         if (result instanceof Promise) {
-          result.catch(error => {
+          result.catch((error: unknown) => {
             Logger.error('PopupEventManager: 직접 리스너 비동기 오류', { eventType, error });
           });
         }
         
-      } catch (error) {
+      } catch (error: unknown) {
         Logger.error('PopupEventManager: 직접 리스너 오류', { eventType, error });
       }
     };

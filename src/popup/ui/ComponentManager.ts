@@ -369,7 +369,15 @@ export class ComponentManager {
     let html = template.html;
     Object.entries(bindings).forEach(([key, value]) => {
       const placeholder = `{{${key}}}`;
-      html = html.replace(new RegExp(placeholder, 'g'), String(value));
+      const stringValue =
+        value === null || value === undefined
+          ? ''
+          : typeof value === 'string'
+            ? value
+            : typeof value === 'number' || typeof value === 'boolean'
+              ? String(value)
+              : JSON.stringify(value);
+      html = html.replace(new RegExp(placeholder, 'g'), stringValue);
     });
 
     // DOM 요소 생성 (Obsidian API 사용)
@@ -414,7 +422,10 @@ export class ComponentManager {
   private setupVirtualScrolling(): void {
     if (!this.containerElement) return;
 
-    this.containerElement.addEventListener('scroll', this.handleScroll.bind(this));
+    const scrollHandler: (this: HTMLElement, ev: Event) => void = () => {
+      this.handleScroll();
+    };
+    this.containerElement.addEventListener('scroll', scrollHandler);
     this.virtualScrollEnabled = true;
 
     Logger.debug('ComponentManager: 가상 스크롤링 설정 완료');

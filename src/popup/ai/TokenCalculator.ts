@@ -93,7 +93,7 @@ export class TokenCalculator implements IPopupServiceManager {
 
       return tokenUsage;
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('토큰 사용량 계산 중 오류:', error);
       
       // 오류 발생 시 기본값 반환
@@ -157,7 +157,7 @@ export class TokenCalculator implements IPopupServiceManager {
       Logger.log('사용자 토큰 경고 응답', { approved: userApproved });
       return userApproved;
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('토큰 경고 모달 표시 중 오류:', error);
       return false;
     }

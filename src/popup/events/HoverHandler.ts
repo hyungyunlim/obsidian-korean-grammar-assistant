@@ -132,8 +132,8 @@ export class HoverHandler {
       const actionType = this.determineHoverAction(context);
       
       // 지연 후 툴팁 표시
-      this.hoverTimer = window.setTimeout(async () => {
-        await this.showHoverTooltip(actionType, context, event as MouseEvent);
+      this.hoverTimer = window.setTimeout(() => {
+        void this.showHoverTooltip(actionType, context, event as MouseEvent);
       }, this.HOVER_DELAY);
       
       // 호버 결과 생성
@@ -149,7 +149,7 @@ export class HoverHandler {
       
       return true;
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('HoverHandler: 호버 시작 중 오류', error);
       return false;
     }
@@ -188,7 +188,7 @@ export class HoverHandler {
       
       return true;
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('HoverHandler: 호버 종료 중 오류', error);
       return false;
     }
@@ -662,7 +662,7 @@ export class HoverHandler {
     for (const callback of callbacks) {
       try {
         await callback(result, context);
-      } catch (error) {
+      } catch (error: unknown) {
         Logger.error('HoverHandler: 콜백 실행 중 오류', { 
           action: result.action, 
           error 

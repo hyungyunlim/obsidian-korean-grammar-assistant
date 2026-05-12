@@ -75,7 +75,9 @@ export class PaginationManager implements IPopupComponent {
     container.appendChild(navContainer);
     
     // 이벤트 리스너 등록
-    const clickHandler = this.handleNavigationClick.bind(this);
+    const clickHandler: (this: HTMLDivElement, ev: MouseEvent) => void = (ev) => {
+      this.handleNavigationClick(ev);
+    };
     container.addEventListener('click', clickHandler);
     this.eventListeners.push(() => container.removeEventListener('click', clickHandler));
     
@@ -361,8 +363,8 @@ export class PaginationManager implements IPopupComponent {
   }
 
   private handleNavigationClick(event: Event): void {
-    const target = event.target as HTMLElement;
-    const action = target.getAttribute('data-action');
+    const target = event.target as HTMLElement | null;
+    const action = target?.getAttribute('data-action') ?? null;
 
     switch (action) {
       case 'prev-page':

@@ -188,8 +188,12 @@ export default class KoreanGrammarPlugin extends Plugin {
   }
 
   async loadSettings() {
-    const savedData = await this.loadData();
-    this.settings = SettingsService.mergeWithDefaults(savedData || {});
+    const savedData: unknown = await this.loadData();
+    const partial: Partial<PluginSettings> =
+      savedData && typeof savedData === 'object' && !Array.isArray(savedData)
+        ? (savedData as Partial<PluginSettings>)
+        : {};
+    this.settings = SettingsService.mergeWithDefaults(partial);
   }
 
   async saveSettings() {

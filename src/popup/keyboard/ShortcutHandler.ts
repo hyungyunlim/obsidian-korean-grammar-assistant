@@ -87,7 +87,7 @@ export class ShortcutHandler implements IPopupComponent {
           description: shortcut.description
         });
         
-      } catch (error) {
+      } catch (error: unknown) {
         Logger.error('[ShortcutHandler] 단축키 등록 실패', {
           shortcut: shortcut.action,
           error

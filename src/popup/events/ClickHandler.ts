@@ -104,7 +104,7 @@ export class ClickHandler {
       
       return result.success;
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('ClickHandler: 클릭 처리 중 오류', error);
       return false;
     }
@@ -381,7 +381,7 @@ export class ClickHandler {
     for (const callback of callbacks) {
       try {
         await callback(result, context);
-      } catch (error) {
+      } catch (error: unknown) {
         Logger.error('ClickHandler: 콜백 실행 중 오류', { 
           action: result.action, 
           error 

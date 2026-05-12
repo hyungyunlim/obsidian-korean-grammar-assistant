@@ -95,9 +95,11 @@ export class InteractionHandler {
       window.clearTimeout(this.debounceTimers.get(debounceKey));
     }
 
-    const timer = window.setTimeout(async () => {
-      await this.performStateUpdate(context, oldState);
-      this.debounceTimers.delete(debounceKey);
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        await this.performStateUpdate(context, oldState);
+        this.debounceTimers.delete(debounceKey);
+      })();
     }, this.config.debounceMs);
 
     this.debounceTimers.set(debounceKey, timer);
@@ -151,7 +153,7 @@ export class InteractionHandler {
         isFocused
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('InteractionHandler: 상태 업데이트 실패', error);
     }
   }
@@ -322,7 +324,7 @@ export class InteractionHandler {
     this.stateChangeListeners.forEach(listener => {
       try {
         listener(event);
-      } catch (error) {
+      } catch (error: unknown) {
         Logger.error('InteractionHandler: 상태 변경 리스너 오류', error);
       }
     });

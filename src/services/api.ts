@@ -153,7 +153,7 @@ export class SpellCheckApiService {
           throw new Error(`형태소 분석 API 요청 실패: ${response.status}`);
         }
 
-        const data = response.json ?? JSON.parse(response.text || '{}');
+        const data: MorphemeResponse = (response.json as MorphemeResponse | undefined) ?? (JSON.parse(response.text || '{}') as MorphemeResponse);
         Logger.debug('형태소 분석 API 응답 성공:', {
           textLength: text.length,
           tokensCount: data.sentences?.reduce((count: number, sentence: Sentence) => count + sentence.tokens.length, 0) || 0,
@@ -190,8 +190,10 @@ export class SpellCheckApiService {
   private manageCacheSize(): void {
     if (this.morphemeCache.size > this.maxCacheSize) {
       // 가장 오래된 항목부터 제거 (Map은 삽입 순서를 유지)
-      const firstKey = this.morphemeCache.keys().next().value;
-      this.morphemeCache.delete(firstKey);
+      const firstKey: string | undefined = this.morphemeCache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.morphemeCache.delete(firstKey);
+      }
     }
   }
 
@@ -260,7 +262,7 @@ export class SpellCheckApiService {
       throw new Error(`API 요청 실패: ${response.status}`);
     }
 
-    const data: BareunResponse = response.json ?? JSON.parse(response.text || '{}');
+    const data: BareunResponse = (response.json as BareunResponse | undefined) ?? (JSON.parse(response.text || '{}') as BareunResponse);
     return this.parseBareunResults(data, text, settings);
   }
 

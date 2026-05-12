@@ -37,6 +37,16 @@ interface SettingsProfile {
 }
 
 /**
+ * 설정 가져오기 봉투(envelope) 인터페이스 - 외부 JSON 파싱 결과 타입
+ */
+interface SettingsImportEnvelope {
+  version?: string;
+  timestamp?: number;
+  settings?: PluginSettings;
+  metadata?: Record<string, unknown>;
+}
+
+/**
  * 설정 변경 히스토리 인터페이스
  */
 interface SettingsChange {
@@ -155,7 +165,7 @@ export class AdvancedSettingsService {
     const backup: SettingsBackup = {
       timestamp: Date.now(),
       version: '0.2.0', // 현재 플러그인 버전
-      settings: JSON.parse(JSON.stringify(settings)), // 깊은 복사
+      settings: JSON.parse(JSON.stringify(settings)) as PluginSettings, // 깊은 복사
       reason
     };
 
@@ -179,11 +189,11 @@ export class AdvancedSettingsService {
     }
 
     const backup = this.backups[backupIndex];
-    const restoredSettings = JSON.parse(JSON.stringify(backup.settings));
+    const restoredSettings: PluginSettings = JSON.parse(JSON.stringify(backup.settings)) as PluginSettings;
 
-    Logger.debug('설정 복원:', { 
+    Logger.debug('설정 복원:', {
       backupTimestamp: new Date(backup.timestamp).toISOString(),
-      reason: backup.reason 
+      reason: backup.reason
     });
 
     return restoredSettings;
@@ -220,7 +230,7 @@ export class AdvancedSettingsService {
       id: this.generateId(),
       name: name.trim(),
       description: description.trim(),
-      settings: JSON.parse(JSON.stringify(settings)),
+      settings: JSON.parse(JSON.stringify(settings)) as Partial<PluginSettings>,
       isDefault: false,
       createdAt: Date.now(),
       lastUsed: Date.now()
@@ -300,8 +310,8 @@ export class AdvancedSettingsService {
     const change: SettingsChange = {
       timestamp: Date.now(),
       field,
-      oldValue: JSON.parse(JSON.stringify(oldValue)),
-      newValue: JSON.parse(JSON.stringify(newValue)),
+      oldValue: JSON.parse(JSON.stringify(oldValue)) as unknown,
+      newValue: JSON.parse(JSON.stringify(newValue)) as unknown,
       reason
     };
 
@@ -393,20 +403,20 @@ export class AdvancedSettingsService {
    */
   static importSettings(jsonData: string): { success: boolean; settings?: PluginSettings; error?: string } {
     try {
-      const importData = JSON.parse(jsonData);
-      
+      const importData = JSON.parse(jsonData) as SettingsImportEnvelope;
+
       // 기본 유효성 검사
       if (!importData.settings) {
         return { success: false, error: '유효하지 않은 설정 파일입니다' };
       }
 
-      const settings = importData.settings as PluginSettings;
+      const settings: PluginSettings = importData.settings;
       const validation = this.validateSettings(settings);
 
       if (!validation.isValid) {
-        return { 
-          success: false, 
-          error: `설정 유효성 검사 실패: ${validation.errors.join(', ')}` 
+        return {
+          success: false,
+          error: `설정 유효성 검사 실패: ${validation.errors.join(', ')}`
         };
       }
 

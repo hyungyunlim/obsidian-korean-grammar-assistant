@@ -167,7 +167,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
         isLongText: this.stateManager.getState().isLongText
       });
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('CorrectionPopupCore: 초기화 중 오류', error);
       throw error;
     }
@@ -356,7 +356,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
         isAvailable: this.aiIntegrationManager.isAIAvailable()
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('CorrectionPopupCore: AI 통합 관리자 초기화 실패:', error);
       // AI 관리자 초기화 실패는 전체 초기화를 중단하지 않음
       this.aiIntegrationManager = undefined;
@@ -381,7 +381,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
 
       Logger.log('CorrectionPopupCore: 성능 최적화 관리자 초기화 완료');
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('CorrectionPopupCore: 성능 최적화 관리자 초기화 실패:', error);
       // 성능 최적화 관리자 초기화 실패는 전체 초기화를 중단하지 않음
       this.performanceOptimizer = undefined;
@@ -419,7 +419,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
         hasEventManager: !!this.eventManager
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('CorrectionPopupCore: Event System 초기화 실패:', error);
       // Event System 초기화 실패는 전체 초기화를 중단하지 않음
       this.cleanupEventSystem();
@@ -479,7 +479,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
         hasComponentManager: !!this.componentManager
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('CorrectionPopupCore: UI System 초기화 실패:', error);
       // UI System 초기화 실패는 전체 초기화를 중단하지 않음
       this.cleanupUISystem();
@@ -673,7 +673,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
     this.keyboardManager.setKeyboardActionCallback(async (action, event) => {
       try {
         return await this.handleKeyboardAction(action, event);
-      } catch (error) {
+      } catch (error: unknown) {
         Logger.error('CorrectionPopupCore: 키보드 액션 처리 오류', { action, error });
         return false;
       }
@@ -780,7 +780,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
       
       Logger.log('CorrectionPopupCore: 팝업 표시');
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('CorrectionPopupCore: 팝업 표시 중 오류', error);
       throw error;
     }
@@ -807,7 +807,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
       
       Logger.log('CorrectionPopupCore: 팝업 숨김');
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('CorrectionPopupCore: 팝업 숨김 중 오류', error);
     }
   }
@@ -832,7 +832,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
       
       return finalText;
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('CorrectionPopupCore: 변경사항 적용 중 오류', error);
       throw error;
     }
@@ -1019,7 +1019,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
       
       Logger.log('CorrectionPopupCore: 리소스 정리 완료');
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('CorrectionPopupCore: 리소스 정리 중 오류', error);
     }
   }
@@ -1125,7 +1125,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
         this.performanceOptimizer.optimizeMemoryUsage();
       }
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('CorrectionPopupCore: AI 분석 중 오류', error);
       this.stateManager.updateState({ isAiAnalyzing: false });
       
@@ -1226,7 +1226,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
 
       Logger.log('CorrectionPopupCore: 오류 토글 완료', { correctionIndex });
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('CorrectionPopupCore: 오류 토글 중 오류', error);
     }
   }
@@ -1249,7 +1249,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
 
       Logger.log('CorrectionPopupCore: 제안 선택 완료', { correctionIndex, suggestionIndex });
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('CorrectionPopupCore: 제안 선택 중 오류', error);
     }
   }
@@ -1272,7 +1272,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
 
       Logger.log('CorrectionPopupCore: 편집 모드 진입', { correctionIndex, trigger });
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('CorrectionPopupCore: 편집 모드 중 오류', error);
     }
   }
@@ -1310,7 +1310,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
           Logger.warn('CorrectionPopupCore: 알 수 없는 네비게이션 액션', { action });
       }
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('CorrectionPopupCore: 네비게이션 액션 중 오류', error);
     }
   }
@@ -1338,7 +1338,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
           Logger.warn('CorrectionPopupCore: 알 수 없는 UI 토글 대상', { target });
       }
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('CorrectionPopupCore: UI 토글 액션 중 오류', error);
     }
   }
@@ -1362,7 +1362,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
         trigger: 'touch-hold'
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('CorrectionPopupCore: 터치홀드 액션 중 오류', error);
     }
   }
@@ -1387,7 +1387,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
           Logger.warn('CorrectionPopupCore: 지원되지 않는 스와이프 방향', { direction });
       }
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('CorrectionPopupCore: 스와이프 액션 중 오류', error);
     }
   }
