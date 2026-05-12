@@ -301,8 +301,8 @@ export class PaginationManager implements IPopupComponent {
 
   private calculateDynamicCharsPerPage(): number {
     // DOM 요소 기반 동적 페이지 크기 계산
-    const previewElement = document.getElementById('resultPreview');
-    const errorSummary = document.getElementById('errorSummary');
+    const previewElement = activeDocument.getElementById('resultPreview');
+    const errorSummary = activeDocument.getElementById('errorSummary');
 
     if (previewElement) {
       const previewRect = previewElement.getBoundingClientRect();
@@ -329,7 +329,7 @@ export class PaginationManager implements IPopupComponent {
   }
 
   private isErrorSummaryExpanded(): boolean {
-    const errorSummary = document.getElementById('errorSummary');
+    const errorSummary = activeDocument.getElementById('errorSummary');
     return errorSummary ? !errorSummary.classList.contains('collapsed') : true;
   }
 

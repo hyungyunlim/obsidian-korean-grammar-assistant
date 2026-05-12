@@ -1,10 +1,39 @@
-import { App, PluginSettingTab, Setting, Notice } from 'obsidian';
+import { App, PluginSettingTab, Setting, Notice, Modal } from 'obsidian';
 import KoreanGrammarPlugin from '../../main';
-import { AI_PROVIDER_DEFAULTS } from '../constants/aiModels';
-import { AdvancedSettingsService } from '../services/advancedSettingsService';
 import { IgnoredWordsService } from '../services/ignoredWords';
 import { Logger } from '../utils/logger';
-import { createMetricsDisplay, createValidationDisplay, clearElement } from '../utils/domUtils';
+import { createMetricsDisplay, clearElement } from '../utils/domUtils';
+
+/**
+ * 간단한 확인 모달 - confirm() 대체용
+ */
+class KGAConfirmModal extends Modal {
+  private message: string;
+  private onConfirm: () => void;
+
+  constructor(app: App, message: string, onConfirm: () => void) {
+    super(app);
+    this.message = message;
+    this.onConfirm = onConfirm;
+  }
+
+  onOpen(): void {
+    const { contentEl } = this;
+    contentEl.createEl('p', { text: this.message });
+    const btns = contentEl.createDiv({ cls: 'modal-button-container' });
+    const cancelBtn = btns.createEl('button', { text: '취소' });
+    cancelBtn.addEventListener('click', () => this.close());
+    const okBtn = btns.createEl('button', { text: '확인', cls: 'mod-cta' });
+    okBtn.addEventListener('click', () => {
+      this.close();
+      this.onConfirm();
+    });
+  }
+
+  onClose(): void {
+    this.contentEl.empty();
+  }
+}
 
 /**
  * 탭 타입 정의
@@ -33,7 +62,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     // CSS styles are defined in styles.css
 
     // 메인 래퍼 생성
-    const mainWrapper = containerEl.createEl('div', { cls: 'ksc-settings-wrapper' });
+    const mainWrapper = containerEl.createDiv({ cls: 'ksc-settings-wrapper' });
 
     // 헤더 섹션
     this.createHeader(mainWrapper);
@@ -42,7 +71,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     this.createTabNavigation(mainWrapper);
 
     // 콘텐츠 컨테이너 생성
-    this.contentContainer = mainWrapper.createEl('div', { cls: 'ksc-content-container' });
+    this.contentContainer = mainWrapper.createDiv({ cls: 'ksc-content-container' });
 
     // 현재 탭 콘텐츠 렌더링
     this.renderCurrentTab();
@@ -79,7 +108,7 @@ export class ModernSettingsTab extends PluginSettingTab {
    * 헤더 섹션 생성
    */
   private createHeader(containerEl: HTMLElement): void {
-    const header = containerEl.createEl('div', { cls: 'ksc-header' });
+    const header = containerEl.createDiv({ cls: 'ksc-header' });
 
     header.createEl('p', {
       text: '플러그인 동작을 커스터마이징하고 AI 기능을 설정하세요',
@@ -91,7 +120,7 @@ export class ModernSettingsTab extends PluginSettingTab {
    * 탭 네비게이션 생성
    */
   private createTabNavigation(containerEl: HTMLElement): void {
-    this.tabContainer = containerEl.createEl('div', { cls: 'ksc-tab-nav' });
+    this.tabContainer = containerEl.createDiv({ cls: 'ksc-tab-nav' });
 
     const tabs = [
       { id: 'basic', label: '기본 설정', icon: '⚙️', desc: 'API 키 및 기본 옵션' },
@@ -108,12 +137,12 @@ export class ModernSettingsTab extends PluginSettingTab {
         attr: { 'data-tab': tab.id }
       });
 
-      tabButton.createEl('span', {
+      tabButton.createSpan({
         text: tab.icon,
         cls: 'ksc-tab-icon'
       });
 
-      tabButton.createEl('span', {
+      tabButton.createSpan({
         text: tab.label,
         cls: 'ksc-tab-label'
       });
@@ -169,7 +198,7 @@ export class ModernSettingsTab extends PluginSettingTab {
    * 사용법 안내 섹션을 생성합니다
    */
   private createUsageGuideSection(containerEl: HTMLElement): void {
-    const section = containerEl.createEl('div', { cls: 'ksc-section' });
+    const section = containerEl.createDiv({ cls: 'ksc-section' });
     
     // 사용법 안내 헤딩
     new Setting(section)
@@ -177,7 +206,7 @@ export class ModernSettingsTab extends PluginSettingTab {
       .setDesc('플러그인의 기본 사용 방법을 안내합니다.')
       .setHeading();
 
-    const infoBox = section.createEl('div', { cls: 'ksc-info-box' });
+    const infoBox = section.createDiv({ cls: 'ksc-info-box' });
     
     const steps = [
       '1️⃣ 텍스트를 선택하고 리본 아이콘을 클릭하거나 명령 팔레트에서 실행',
@@ -191,7 +220,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     infoBox.createEl('br');
     
     steps.forEach(step => {
-      infoBox.createEl('div', { 
+      infoBox.createDiv({ 
         text: step,
         cls: 'ksc-step-item'
       });
@@ -202,7 +231,7 @@ export class ModernSettingsTab extends PluginSettingTab {
    * API 설정 섹션을 생성합니다
    */
   private createAPISettingsSection(containerEl: HTMLElement): void {
-    const section = containerEl.createEl('div', { cls: 'ksc-section' });
+    const section = containerEl.createDiv({ cls: 'ksc-section' });
     
     // API 설정 헤딩
     new Setting(section)
@@ -210,7 +239,7 @@ export class ModernSettingsTab extends PluginSettingTab {
       .setDesc('Bareun.ai 맞춤법 검사 서비스 연결을 위한 설정입니다.')
       .setHeading();
 
-    const settingsGroup = section.createEl('div', { cls: 'ksc-setting-group' });
+    const settingsGroup = section.createDiv({ cls: 'ksc-setting-group' });
 
     // API 키 설정
     new Setting(settingsGroup)
@@ -258,16 +287,16 @@ export class ModernSettingsTab extends PluginSettingTab {
       });
 
     // API 정보 박스
-    const apiInfoBox = section.createEl('div', { cls: 'ksc-info-box' });
+    const apiInfoBox = section.createDiv({ cls: 'ksc-info-box' });
     apiInfoBox.createEl('strong', { text: '💡 API 키 발급 안내' });
     apiInfoBox.createEl('br');
-    apiInfoBox.createEl('span', { text: 'API 키는 ' });
-    const bareunLink = apiInfoBox.createEl('a', { 
+    apiInfoBox.createSpan({ text: 'API 키는 ' });
+    apiInfoBox.createEl('a', {
       text: 'Bareun.ai 웹사이트',
       href: 'https://bareun.ai',
       attr: { target: '_blank' }
     });
-    apiInfoBox.createEl('span', { text: '에서 발급받을 수 있습니다.' });
+    apiInfoBox.createSpan({ text: '에서 발급받을 수 있습니다.' });
   }
 
   /**
@@ -275,7 +304,7 @@ export class ModernSettingsTab extends PluginSettingTab {
    */
   private createAISettingsTab(containerEl: HTMLElement): void {
     // AI 기능 토글 섹션
-    const aiToggleSection = containerEl.createEl('div', { cls: 'ksc-section' });
+    const aiToggleSection = containerEl.createDiv({ cls: 'ksc-section' });
     
     // AI 자동 교정 헤딩
     new Setting(aiToggleSection)
@@ -283,7 +312,7 @@ export class ModernSettingsTab extends PluginSettingTab {
       .setDesc('AI가 문맥을 분석하여 최적의 수정사항을 자동으로 선택합니다.')
       .setHeading();
 
-    const settingsGroup = aiToggleSection.createEl('div', { cls: 'ksc-setting-group' });
+    const settingsGroup = aiToggleSection.createDiv({ cls: 'ksc-setting-group' });
 
     new Setting(settingsGroup)
       .setName("AI 기능 활성화")
@@ -307,7 +336,7 @@ export class ModernSettingsTab extends PluginSettingTab {
       this.createAIAdvancedSection(containerEl);
     } else {
       // AI 비활성화 안내
-      const disabledInfo = containerEl.createEl('div', { cls: 'ksc-info-box' });
+      const disabledInfo = containerEl.createDiv({ cls: 'ksc-info-box' });
       disabledInfo.createEl('strong', { text: '💡 AI 기능을 활성화하면 다음과 같은 기능을 사용할 수 있습니다:' });
       disabledInfo.createEl('br');
       disabledInfo.createEl('br');
@@ -320,7 +349,7 @@ export class ModernSettingsTab extends PluginSettingTab {
       ];
       
       features.forEach(feature => {
-        disabledInfo.createEl('div', { text: feature });
+        disabledInfo.createDiv({ text: feature });
       });
     }
   }
@@ -329,7 +358,7 @@ export class ModernSettingsTab extends PluginSettingTab {
    * AI 제공자 선택 섹션을 생성합니다
    */
   private createAIProviderSection(containerEl: HTMLElement): void {
-    const providerSection = containerEl.createEl('div', { cls: 'ksc-section' });
+    const providerSection = containerEl.createDiv({ cls: 'ksc-section' });
     
     // AI 제공자 헤딩
     new Setting(providerSection)
@@ -337,7 +366,7 @@ export class ModernSettingsTab extends PluginSettingTab {
       .setDesc('사용할 AI 서비스를 선택하고 API 키를 설정하세요.')
       .setHeading();
 
-    const settingsGroup = providerSection.createEl('div', { cls: 'ksc-setting-group' });
+    const settingsGroup = providerSection.createDiv({ cls: 'ksc-setting-group' });
 
     // 제공자 선택
     new Setting(settingsGroup)
@@ -418,7 +447,7 @@ export class ModernSettingsTab extends PluginSettingTab {
    * AI 모델 설정 섹션을 생성합니다
    */
   private createAIModelSection(containerEl: HTMLElement): void {
-    const modelSection = containerEl.createEl('div', { cls: 'ksc-section' });
+    const modelSection = containerEl.createDiv({ cls: 'ksc-section' });
     
     // 모델 설정 헤딩
     new Setting(modelSection)
@@ -426,7 +455,7 @@ export class ModernSettingsTab extends PluginSettingTab {
       .setDesc('사용할 AI 모델과 세부 설정을 구성하세요.')
       .setHeading();
 
-    const settingsGroup = modelSection.createEl('div', { cls: 'ksc-setting-group' });
+    const settingsGroup = modelSection.createDiv({ cls: 'ksc-setting-group' });
 
     const provider = this.plugin.settings.ai.provider;
     const modelOptions = this.getModelOptions(provider);
@@ -483,7 +512,7 @@ export class ModernSettingsTab extends PluginSettingTab {
    * AI 고급 설정 섹션을 생성합니다
    */
   private createAIAdvancedSection(containerEl: HTMLElement): void {
-    const advancedSection = containerEl.createEl('div', { cls: 'ksc-section' });
+    const advancedSection = containerEl.createDiv({ cls: 'ksc-section' });
     
     // 고급 설정 헤딩
     new Setting(advancedSection)
@@ -491,7 +520,7 @@ export class ModernSettingsTab extends PluginSettingTab {
       .setDesc('AI 모델의 상세한 동작을 조정할 수 있습니다.')
       .setHeading();
 
-    const settingsGroup = advancedSection.createEl('div', { cls: 'ksc-setting-group' });
+    const settingsGroup = advancedSection.createDiv({ cls: 'ksc-setting-group' });
 
     // 최대 토큰 수 설정
     new Setting(settingsGroup)
@@ -558,7 +587,7 @@ export class ModernSettingsTab extends PluginSettingTab {
    * 예외 단어 관리 섹션을 생성합니다
    */
   private createIgnoredWordsSection(containerEl: HTMLElement): void {
-    const section = containerEl.createEl('div', { cls: 'ksc-section' });
+    const section = containerEl.createDiv({ cls: 'ksc-section' });
     
     // 예외 단어 관리 헤딩
     new Setting(section)
@@ -566,16 +595,16 @@ export class ModernSettingsTab extends PluginSettingTab {
       .setDesc('맞춤법 검사에서 제외할 단어들을 관리합니다.')
       .setHeading();
 
-    const countInfo = section.createEl('div', {
+    const countInfo = section.createDiv({
       cls: 'ksc-info-box',
       text: `현재 ${IgnoredWordsService.getIgnoredWordsCount(this.plugin.settings)}개의 단어가 예외 처리되어 있습니다.`
     });
 
     // 태그 클라우드 컨테이너
-    const tagCloudContainer = section.createEl('div', { cls: 'ksc-tag-cloud' });
+    const tagCloudContainer = section.createDiv({ cls: 'ksc-tag-cloud' });
 
     // 입력 영역
-    const inputContainer = section.createEl('div', { cls: 'ksc-setting-group' });
+    const inputContainer = section.createDiv({ cls: 'ksc-setting-group' });
 
     new Setting(inputContainer)
       .setName("예외 단어 추가")
@@ -598,39 +627,41 @@ export class ModernSettingsTab extends PluginSettingTab {
             }
           });
 
-        text.inputEl.addEventListener('keydown', async (e) => {
+        text.inputEl.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
             const value = text.getValue().trim();
             if (value) {
               const words = value.split(',').map(w => w.trim()).filter(w => w.length > 0);
               if (words.length > 0) {
-                const updatedSettings = IgnoredWordsService.addMultipleIgnoredWords(words, this.plugin.settings);
-                this.plugin.settings = updatedSettings;
-                await this.plugin.saveSettings();
-                text.setValue('');
-                this.renderIgnoredWordsCloud(tagCloudContainer);
-                countInfo.textContent = `현재 ${IgnoredWordsService.getIgnoredWordsCount(this.plugin.settings)}개의 단어가 예외 처리되어 있습니다.`;
+                void (async () => {
+                  const updatedSettings = IgnoredWordsService.addMultipleIgnoredWords(words, this.plugin.settings);
+                  this.plugin.settings = updatedSettings;
+                  await this.plugin.saveSettings();
+                  text.setValue('');
+                  this.renderIgnoredWordsCloud(tagCloudContainer);
+                  countInfo.textContent = `현재 ${IgnoredWordsService.getIgnoredWordsCount(this.plugin.settings)}개의 단어가 예외 처리되어 있습니다.`;
+                })();
               }
             }
           }
         });
       });
 
-    const buttonContainer = section.createEl('div', { cls: 'ksc-button-group' });
+    const buttonContainer = section.createDiv({ cls: 'ksc-button-group' });
     
     const clearAllButton = buttonContainer.createEl('button', { 
       text: '🗑️ 전체 삭제',
       cls: 'mod-warning'
     });
 
-    clearAllButton.onclick = async () => {
-      if (confirm('모든 예외 단어를 삭제하시겠습니까?')) {
+    clearAllButton.onclick = () => {
+      new KGAConfirmModal(this.app, '모든 예외 단어를 삭제하시겠습니까?', async () => {
         this.plugin.settings.ignoredWords = [];
         await this.plugin.saveSettings();
         this.renderIgnoredWordsCloud(tagCloudContainer);
         countInfo.textContent = `현재 ${IgnoredWordsService.getIgnoredWordsCount(this.plugin.settings)}개의 단어가 예외 처리되어 있습니다.`;
-      }
+      }).open();
     };
 
     // 초기 태그 클라우드 렌더링
@@ -644,7 +675,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     clearElement(container);
 
     if (this.plugin.settings.ignoredWords.length === 0) {
-      container.createEl('div', {
+      container.createDiv({
         text: '예외 처리된 단어가 없습니다.',
         cls: 'ksc-empty-state'
       });
@@ -652,20 +683,20 @@ export class ModernSettingsTab extends PluginSettingTab {
     }
 
     this.plugin.settings.ignoredWords.forEach(word => {
-      const tag = container.createEl('span', {
+      const tag = container.createSpan({
         text: word,
         cls: 'ksc-tag'
       });
 
       // Hover 효과는 CSS :hover로 처리 (ignored-word-tag:hover)
 
-      tag.onclick = async () => {
-        if (confirm(`"${word}"를 예외 목록에서 제거하시겠습니까?`)) {
+      tag.onclick = () => {
+        new KGAConfirmModal(this.app, `"${word}"를 예외 목록에서 제거하시겠습니까?`, async () => {
           const updatedSettings = IgnoredWordsService.removeIgnoredWord(word, this.plugin.settings);
           this.plugin.settings = updatedSettings;
           await this.plugin.saveSettings();
           this.renderIgnoredWordsCloud(container);
-        }
+        }).open();
       };
     });
   }
@@ -691,7 +722,7 @@ export class ModernSettingsTab extends PluginSettingTab {
   private createValidationSection(containerEl: HTMLElement): void {
     const { AdvancedSettingsService } = require('../services/advancedSettingsService');
 
-    const validationSection = containerEl.createEl('div', { cls: 'ksc-section' });
+    const validationSection = containerEl.createDiv({ cls: 'ksc-section' });
     
     // 설정 검증 헤딩
     new Setting(validationSection)
@@ -699,11 +730,11 @@ export class ModernSettingsTab extends PluginSettingTab {
       .setDesc('현재 설정의 유효성을 검사하고 최적화 제안을 받습니다.')
       .setHeading();
 
-    const buttonGroup = validationSection.createEl('div', { cls: 'ksc-button-group' });
+    const buttonGroup = validationSection.createDiv({ cls: 'ksc-button-group' });
     const validateButton = buttonGroup.createEl('button', { text: '설정 검증', cls: 'mod-cta' });
 
     // 결과 표시 영역 - ID를 부여하여 중복 방지
-    const validationResult = validationSection.createEl('div', {
+    const validationResult = validationSection.createDiv({
       cls: 'ksc-toggle-section kga-hidden',
       attr: { 
         id: 'validation-result-container'
@@ -735,7 +766,7 @@ export class ModernSettingsTab extends PluginSettingTab {
   private createBackupSection(containerEl: HTMLElement): void {
     const { AdvancedSettingsService } = require('../services/advancedSettingsService');
 
-    const backupSection = containerEl.createEl('div', { cls: 'ksc-section' });
+    const backupSection = containerEl.createDiv({ cls: 'ksc-section' });
     
     // 백업 관리 헤딩
     new Setting(backupSection)
@@ -743,11 +774,11 @@ export class ModernSettingsTab extends PluginSettingTab {
       .setDesc('설정을 백업하고 필요시 이전 상태로 복원할 수 있습니다.')
       .setHeading();
 
-    const buttonGroup = backupSection.createEl('div', { cls: 'ksc-button-group' });
+    const buttonGroup = backupSection.createDiv({ cls: 'ksc-button-group' });
     const createBackupBtn = buttonGroup.createEl('button', { text: '백업 생성' });
     const showBackupsBtn = buttonGroup.createEl('button', { text: '백업 목록' });
 
-    const backupListContainer = backupSection.createEl('div', {
+    const backupListContainer = backupSection.createDiv({
       cls: 'ksc-toggle-section kga-hidden'
     });
 
@@ -764,18 +795,18 @@ export class ModernSettingsTab extends PluginSettingTab {
       clearElement(backupListContainer);
       
       if (backups.length === 0) {
-        backupListContainer.createEl('div', { 
+        backupListContainer.createDiv({ 
           text: '백업이 없습니다.',
           cls: 'ksc-info-box'
         });
       } else {
         backups.forEach((backup: any) => {
-          const backupItem = backupListContainer.createEl('div', {
+          const backupItem = backupListContainer.createDiv({
             cls: 'ksc-info-box ksc-backup-item'
           });
           
           backupItem.createEl('strong', { text: backup.reason });
-          backupItem.createEl('span', { text: ` (${backup.age})` });
+          backupItem.createSpan({ text: ` (${backup.age})` });
           backupItem.createEl('br');
           backupItem.createEl('small', { text: `${backup.timestamp} - 버전 ${backup.version}` });
           backupItem.createEl('br');
@@ -813,7 +844,7 @@ export class ModernSettingsTab extends PluginSettingTab {
   private createImportExportSection(containerEl: HTMLElement): void {
     const { AdvancedSettingsService } = require('../services/advancedSettingsService');
 
-    const importExportSection = containerEl.createEl('div', { cls: 'ksc-section' });
+    const importExportSection = containerEl.createDiv({ cls: 'ksc-section' });
     
     // 내보내기/가져오기 헤딩
     new Setting(importExportSection)
@@ -821,7 +852,7 @@ export class ModernSettingsTab extends PluginSettingTab {
       .setDesc('설정을 JSON 파일로 내보내거나 다른 기기에서 가져올 수 있습니다.')
       .setHeading();
 
-    const buttonGroup = importExportSection.createEl('div', { cls: 'ksc-button-group' });
+    const buttonGroup = importExportSection.createDiv({ cls: 'ksc-button-group' });
     const exportBtn = buttonGroup.createEl('button', { text: '설정 내보내기' });
     const importBtn = buttonGroup.createEl('button', { text: '설정 가져오기' });
     const resetBtn = buttonGroup.createEl('button', { 
@@ -834,7 +865,7 @@ export class ModernSettingsTab extends PluginSettingTab {
       
       const blob = new Blob([jsonData], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = createEl('a');
       a.href = url;
       a.download = `korean-grammar-settings-${new Date().toISOString().split('T')[0]}.json`;
       a.click();
@@ -844,7 +875,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     };
 
     importBtn.onclick = () => {
-      const input = document.createElement('input');
+      const input = createEl('input');
       input.type = 'file';
       input.accept = '.json';
       
@@ -875,15 +906,14 @@ export class ModernSettingsTab extends PluginSettingTab {
       input.click();
     };
 
-    resetBtn.onclick = async () => {
-      const confirmed = confirm('모든 설정을 기본값으로 재설정하시겠습니까? 현재 설정은 백업됩니다.');
-      if (confirmed) {
+    resetBtn.onclick = () => {
+      new KGAConfirmModal(this.app, '모든 설정을 기본값으로 재설정하시겠습니까? 현재 설정은 백업됩니다.', async () => {
         const defaultSettings = AdvancedSettingsService.resetToDefaults(this.plugin.settings);
         this.plugin.settings = defaultSettings;
         await this.plugin.saveSettings();
         this.display();
         new Notice("설정이 기본값으로 재설정되었습니다.");
-      }
+      }).open();
     };
   }
 
@@ -905,7 +935,7 @@ export class ModernSettingsTab extends PluginSettingTab {
    * 실시간 메트릭 섹션을 생성합니다
    */
   private createMetricsSection(containerEl: HTMLElement): void {
-    const metricsSection = containerEl.createEl('div', { cls: 'ksc-section' });
+    const metricsSection = containerEl.createDiv({ cls: 'ksc-section' });
     
     // 실시간 성능 메트릭 헤딩
     new Setting(metricsSection)
@@ -913,17 +943,17 @@ export class ModernSettingsTab extends PluginSettingTab {
       .setDesc('API 호출 성능과 캐시 효율성을 실시간으로 모니터링합니다.')
       .setHeading();
 
-    const metricsDisplay = metricsSection.createEl('div', {
+    const metricsDisplay = metricsSection.createDiv({
       cls: 'ksc-metrics',
       attr: { id: 'metrics-display-container' }
     });
 
     // 추가 통계 컶테이너 - ID로 중복 방지
-    const additionalStatsContainer = metricsSection.createEl('div', {
+    const additionalStatsContainer = metricsSection.createDiv({
       attr: { id: 'additional-stats-container' }
     });
 
-    const buttonGroup = metricsSection.createEl('div', { cls: 'ksc-button-group' });
+    const buttonGroup = metricsSection.createDiv({ cls: 'ksc-button-group' });
     const refreshBtn = buttonGroup.createEl('button', { text: '새로고침', cls: 'mod-cta' });
 
     const updateMetrics = () => {
@@ -940,7 +970,7 @@ export class ModernSettingsTab extends PluginSettingTab {
         
         // 추가 통계 섹션 - 기존 컴테이너 재사용
         clearElement(additionalStatsContainer);
-        const additionalStats = additionalStatsContainer.createEl('div', { cls: 'ksc-info-box' });
+        const additionalStats = additionalStatsContainer.createDiv({ cls: 'ksc-info-box' });
         
         additionalStats.createEl('strong', { text: '로그 통계:' });
         additionalStats.createEl('br');
@@ -951,7 +981,7 @@ export class ModernSettingsTab extends PluginSettingTab {
           `정보: ${logStats.INFO}`
         ];
         logMetrics.forEach(metric => {
-          additionalStats.createEl('div', { text: `• ${metric}` });
+          additionalStats.createDiv({ text: `• ${metric}` });
         });
         
         additionalStats.createEl('br');
@@ -965,12 +995,12 @@ export class ModernSettingsTab extends PluginSettingTab {
           `타임아웃: ${errorStats.TIMEOUT_ERROR}`
         ];
         errorMetrics.forEach(metric => {
-          additionalStats.createEl('div', { text: `• ${metric}` });
+          additionalStats.createDiv({ text: `• ${metric}` });
         });
         
-      } catch (error) {
+      } catch (_error) {
         clearElement(metricsDisplay);
-        metricsDisplay.createEl('div', { text: '메트릭을 가져올 수 없습니다.' });
+        metricsDisplay.createDiv({ text: '메트릭을 가져올 수 없습니다.' });
       }
     };
 
@@ -978,12 +1008,12 @@ export class ModernSettingsTab extends PluginSettingTab {
     updateMetrics(); // 초기 표시
 
     // 자동 업데이트 (15초마다)
-    const metricsInterval = setInterval(updateMetrics, 15000);
+    const metricsInterval = activeWindow.setInterval(updateMetrics, 15000);
     
     // 정리 함수 등록
     const originalHide = this.hide.bind(this);
     this.hide = () => {
-      clearInterval(metricsInterval);
+      activeWindow.clearInterval(metricsInterval);
       originalHide();
     };
   }
@@ -994,7 +1024,7 @@ export class ModernSettingsTab extends PluginSettingTab {
   private createLogManagementSection(containerEl: HTMLElement): void {
     const { Logger } = require('../utils/logger');
     
-    const logSection = containerEl.createEl('div', { cls: 'ksc-section' });
+    const logSection = containerEl.createDiv({ cls: 'ksc-section' });
     
     // 로그 관리 헤딩
     new Setting(logSection)
@@ -1011,27 +1041,27 @@ export class ModernSettingsTab extends PluginSettingTab {
       if (statsContainer) {
         clearElement(statsContainer);
         
-        const statsBox = statsContainer.createEl('div', { cls: 'ksc-info-box' });
+        const statsBox = statsContainer.createDiv({ cls: 'ksc-info-box' });
         statsBox.createEl('strong', { text: '📊 로그 통계' });
         statsBox.createEl('br');
-        statsBox.createEl('div', { text: `• 총 로그: ${stats.total}개` });
-        statsBox.createEl('div', { text: `• 정보: ${stats.INFO}개` });
-        statsBox.createEl('div', { text: `• 경고: ${stats.WARN}개` });
-        statsBox.createEl('div', { text: `• 오류: ${stats.ERROR}개` });
-        statsBox.createEl('div', { text: `• 디버그: ${stats.DEBUG}개` });
+        statsBox.createDiv({ text: `• 총 로그: ${stats.total}개` });
+        statsBox.createDiv({ text: `• 정보: ${stats.INFO}개` });
+        statsBox.createDiv({ text: `• 경고: ${stats.WARN}개` });
+        statsBox.createDiv({ text: `• 오류: ${stats.ERROR}개` });
+        statsBox.createDiv({ text: `• 디버그: ${stats.DEBUG}개` });
         statsBox.createEl('br');
-        statsBox.createEl('div', { text: `• 메모리 사용량: ${Math.round(memUsage.estimatedBytes / 1024)}KB` });
-        statsBox.createEl('div', { text: `• 최대 보관: 1000개` });
+        statsBox.createDiv({ text: `• 메모리 사용량: ${Math.round(memUsage.estimatedBytes / 1024)}KB` });
+        statsBox.createDiv({ text: `• 최대 보관: 1000개` });
       }
     };
 
     // 통계 컨테이너
-    const statsContainer = logSection.createEl('div', { 
+    logSection.createDiv({
       attr: { id: 'log-stats-container' }
     });
     
     // 로그 뷰어 컨테이너
-    const logViewerContainer = logSection.createEl('div', {
+    const logViewerContainer = logSection.createDiv({
       cls: 'ksc-toggle-section kga-hidden',
       attr: { 
         id: 'log-viewer-container'
@@ -1039,7 +1069,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     });
 
     // 버튼 그룹
-    const buttonGroup = logSection.createEl('div', { cls: 'ksc-button-group' });
+    const buttonGroup = logSection.createDiv({ cls: 'ksc-button-group' });
     const refreshStatsBtn = buttonGroup.createEl('button', { text: '통계 새로고침', cls: 'mod-cta' });
     const viewLogsBtn = buttonGroup.createEl('button', { text: '로그 보기' });
     const downloadLogsBtn = buttonGroup.createEl('button', { text: '로그 다운로드' });
@@ -1069,13 +1099,13 @@ export class ModernSettingsTab extends PluginSettingTab {
     };
 
     clearLogsBtn.onclick = () => {
-      if (confirm('모든 로그를 삭제하시겠습니까?')) {
+      new KGAConfirmModal(this.app, '모든 로그를 삭제하시겠습니까?', () => {
         Logger.clearHistory();
         updateLogStats();
         if (!logViewerContainer.hasClass('kga-hidden')) {
           this.displayLogViewer(logViewerContainer);
         }
-      }
+      }).open();
     };
   }
 
@@ -1089,7 +1119,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     const logs = Logger.getHistory();
     
     // 로그 필터 컨트롤
-    const filterContainer = container.createEl('div', { cls: 'ksc-log-filter' });
+    const filterContainer = container.createDiv({ cls: 'ksc-log-filter' });
     
     filterContainer.createEl('label', { text: '레벨 필터:' });
     const levelSelect = filterContainer.createEl('select');
@@ -1100,13 +1130,13 @@ export class ModernSettingsTab extends PluginSettingTab {
     levelSelect.createEl('option', { text: '디버그', value: 'DEBUG' });
 
     // 로그 내용 컨테이너
-    const logContent = container.createEl('div', { cls: 'ksc-log-content' });
+    const logContent = container.createDiv({ cls: 'ksc-log-content' });
 
     const displayLogs = (filteredLogs: any[]) => {
       clearElement(logContent);
       
       if (filteredLogs.length === 0) {
-        logContent.createEl('div', { 
+        logContent.createDiv({ 
           text: '표시할 로그가 없습니다.',
           cls: 'ksc-log-empty'
         });
@@ -1117,26 +1147,26 @@ export class ModernSettingsTab extends PluginSettingTab {
       const sortedLogs = [...filteredLogs].reverse();
       
       sortedLogs.forEach(log => {
-        const logLine = logContent.createEl('div', {
+        const logLine = logContent.createDiv({
           cls: `ksc-log-line ksc-log-${log.level.toLowerCase()}`
         });
         
         const timestamp = log.timestamp.toLocaleString('ko-KR');
         const levelIcon = this.getLogLevelIcon(log.level);
         
-        logLine.createEl('span', {
+        logLine.createSpan({
           text: `[${timestamp}] ${levelIcon} `,
           cls: 'ksc-log-timestamp'
         });
         
-        logLine.createEl('span', {
+        logLine.createSpan({
           text: log.message,
           cls: 'ksc-log-message'
         });
         
         if (log.data) {
           logLine.createEl('br');
-          logLine.createEl('span', {
+          logLine.createSpan({
             text: `  데이터: ${JSON.stringify(log.data, null, 2)}`,
             cls: 'ksc-log-data'
           });
@@ -1211,7 +1241,7 @@ export class ModernSettingsTab extends PluginSettingTab {
         .replace(/:/g, '-')          // :를 -로 변경 (파일명에서 :는 사용 불가)
         .replace(/\.\d{3}Z$/, '');   // 밀리초와 Z 제거
       
-      const a = document.createElement('a');
+      const a = createEl('a');
       a.href = url;
       a.download = `korean-grammar-logs-${timestamp}.json`;
       a.click();
@@ -1231,7 +1261,7 @@ export class ModernSettingsTab extends PluginSettingTab {
    * 성능 제어 섹션을 생성합니다
    */
   private createPerformanceControlSection(containerEl: HTMLElement): void {
-    const controlSection = containerEl.createEl('div', { cls: 'ksc-section' });
+    const controlSection = containerEl.createDiv({ cls: 'ksc-section' });
     
     // 성능 제어 헤딩
     new Setting(controlSection)
@@ -1239,15 +1269,15 @@ export class ModernSettingsTab extends PluginSettingTab {
       .setDesc('캐시 및 대기 중인 요청을 관리하여 성능을 최적화합니다.')
       .setHeading();
 
-    const buttonGroup = controlSection.createEl('div', { cls: 'ksc-button-group' });
+    const buttonGroup = controlSection.createDiv({ cls: 'ksc-button-group' });
     const clearCacheBtn = buttonGroup.createEl('button', { text: '캐시 정리' });
     const cancelRequestsBtn = buttonGroup.createEl('button', { text: '대기 요청 취소' });
 
     clearCacheBtn.onclick = () => {
       this.plugin.orchestrator.clearCache();
       // 캐시 정리 후 메트릭 업데이트
-      const metricsDisplay = document.getElementById('metrics-display-container');
-      const additionalStats = document.getElementById('additional-stats-container');
+      const metricsDisplay = activeDocument.getElementById('metrics-display-container');
+      const additionalStats = activeDocument.getElementById('additional-stats-container');
       if (metricsDisplay && additionalStats) {
         // 기존 updateMetrics 함수 호출
         try {
@@ -1260,7 +1290,7 @@ export class ModernSettingsTab extends PluginSettingTab {
           createMetricsDisplay(metricsDisplay, extendedMetrics);
           
           clearElement(additionalStats);
-          const additionalStatsBox = additionalStats.createEl('div', { cls: 'ksc-info-box' });
+          const additionalStatsBox = additionalStats.createDiv({ cls: 'ksc-info-box' });
           additionalStatsBox.createEl('strong', { text: '로그 통계:' });
           additionalStatsBox.createEl('br');
           const logMetrics = [
@@ -1270,7 +1300,7 @@ export class ModernSettingsTab extends PluginSettingTab {
             `정보: ${logStats.INFO}`
           ];
           logMetrics.forEach(metric => {
-            additionalStatsBox.createEl('div', { text: `• ${metric}` });
+            additionalStatsBox.createDiv({ text: `• ${metric}` });
           });
           additionalStatsBox.createEl('br');
           additionalStatsBox.createEl('strong', { text: '에러 분류:' });
@@ -1283,7 +1313,7 @@ export class ModernSettingsTab extends PluginSettingTab {
             `타임아웃: ${errorStats.TIMEOUT_ERROR}`
           ];
           errorMetrics.forEach(metric => {
-            additionalStatsBox.createEl('div', { text: `• ${metric}` });
+            additionalStatsBox.createDiv({ text: `• ${metric}` });
           });
         } catch (error) {
           Logger.error('메트릭 업데이트 오류:', error);
@@ -1296,7 +1326,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     };
 
     // 성능 팁 박스
-    const tipsBox = controlSection.createEl('div', { cls: 'ksc-info-box' });
+    const tipsBox = controlSection.createDiv({ cls: 'ksc-info-box' });
     tipsBox.createEl('strong', { text: '💡 성능 최적화 팁:' });
     tipsBox.createEl('br');
     tipsBox.createEl('br');
@@ -1309,7 +1339,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     ];
     
     tips.forEach(tip => {
-      tipsBox.createEl('div', { text: tip });
+      tipsBox.createDiv({ text: tip });
     });
   }
 
@@ -1320,20 +1350,20 @@ export class ModernSettingsTab extends PluginSettingTab {
     clearElement(parent);
     
     // 전체 결과 컨테이너 - 더 깔끔한 디자인
-    const resultContainer = parent.createEl('div', { cls: 'ksc-validation-result' });
+    const resultContainer = parent.createDiv({ cls: 'ksc-validation-result' });
 
     // 상태 요약 카드 (간소화)
-    const statusCard = resultContainer.createEl('div', { cls: 'ksc-status-card' });
+    const statusCard = resultContainer.createDiv({ cls: 'ksc-status-card' });
     
     // 상태 아이콘과 메시지를 한 줄로
-    const statusLine = statusCard.createEl('div', { cls: 'ksc-status-line' });
+    const statusLine = statusCard.createDiv({ cls: 'ksc-status-line' });
     
-    const statusIcon = statusLine.createEl('span', {
+    statusLine.createSpan({
       text: validation.isValid ? '✅' : '❌',
       cls: 'ksc-status-icon'
     });
-    
-    const statusText = statusLine.createEl('span', {
+
+    statusLine.createSpan({
       text: validation.isValid ? '모든 설정이 정상입니다' : '일부 설정에 문제가 있습니다',
       cls: 'ksc-status-text'
     });
@@ -1341,8 +1371,8 @@ export class ModernSettingsTab extends PluginSettingTab {
     // 문제가 있는 경우에만 상세 정보 표시
     if (!validation.isValid) {
       if (validation.errors && validation.errors.length > 0) {
-        const problemsSection = resultContainer.createEl('div', { cls: 'ksc-problems-section' });
-        problemsSection.createEl('div', { 
+        const problemsSection = resultContainer.createDiv({ cls: 'ksc-problems-section' });
+        problemsSection.createDiv({ 
           text: '🔧 해결해야 할 문제',
           cls: 'ksc-section-title'
         });
@@ -1356,8 +1386,8 @@ export class ModernSettingsTab extends PluginSettingTab {
 
     // 경고사항이 있으면 표시
     if (validation.warnings && validation.warnings.length > 0) {
-      const warningsSection = resultContainer.createEl('div', { cls: 'ksc-warnings-section' });
-      warningsSection.createEl('div', { 
+      const warningsSection = resultContainer.createDiv({ cls: 'ksc-warnings-section' });
+      warningsSection.createDiv({ 
         text: '⚠️ 주의사항',
         cls: 'ksc-section-title'
       });
@@ -1370,24 +1400,24 @@ export class ModernSettingsTab extends PluginSettingTab {
 
     // 최적화 제안이 있으면 표시 (간소화)
     if (suggestions && suggestions.length > 0) {
-      const suggestionsSection = resultContainer.createEl('div', { cls: 'ksc-suggestions-section' });
-      suggestionsSection.createEl('div', { 
+      const suggestionsSection = resultContainer.createDiv({ cls: 'ksc-suggestions-section' });
+      suggestionsSection.createDiv({ 
         text: '💡 개선 제안',
         cls: 'ksc-section-title'
       });
       
       suggestions.forEach((suggestion: any) => {
-        const suggestionCard = suggestionsSection.createEl('div', { cls: 'ksc-suggestion-card' });
+        const suggestionCard = suggestionsSection.createDiv({ cls: 'ksc-suggestion-card' });
         
         const impactBadge = suggestion.impact === 'high' ? '🔴' : 
                            suggestion.impact === 'medium' ? '🟡' : '🟢';
         
-        suggestionCard.createEl('div', {
+        suggestionCard.createDiv({
           text: `${impactBadge} ${suggestion.title}`,
           cls: 'ksc-suggestion-title'
         });
         
-        suggestionCard.createEl('div', {
+        suggestionCard.createDiv({
           text: suggestion.action,
           cls: 'ksc-suggestion-desc'
         });
@@ -1395,39 +1425,39 @@ export class ModernSettingsTab extends PluginSettingTab {
     }
 
     // 현재 설정 상태 요약 (더 유용한 정보로)
-    const summarySection = resultContainer.createEl('div', { cls: 'ksc-summary-section' });
-    summarySection.createEl('div', { 
+    const summarySection = resultContainer.createDiv({ cls: 'ksc-summary-section' });
+    summarySection.createDiv({ 
       text: '📋 현재 설정 상태',
       cls: 'ksc-section-title'
     });
     
-    const summaryGrid = summarySection.createEl('div', { cls: 'ksc-summary-grid' });
+    const summaryGrid = summarySection.createDiv({ cls: 'ksc-summary-grid' });
     
     // API 상태
-    const apiStatus = summaryGrid.createEl('div', { cls: 'ksc-summary-item' });
-    apiStatus.createEl('span', { text: 'API', cls: 'ksc-summary-label' });
-    apiStatus.createEl('span', { 
+    const apiStatus = summaryGrid.createDiv({ cls: 'ksc-summary-item' });
+    apiStatus.createSpan({ text: 'API', cls: 'ksc-summary-label' });
+    apiStatus.createSpan({ 
       text: this.plugin.settings.apiKey ? '✓ 설정됨' : '✗ 미설정',
       cls: this.plugin.settings.apiKey ? 'ksc-status-ok' : 'ksc-status-error'
     });
     
     // AI 상태
-    const aiStatus = summaryGrid.createEl('div', { cls: 'ksc-summary-item' });
-    aiStatus.createEl('span', { text: 'AI 기능', cls: 'ksc-summary-label' });
+    const aiStatus = summaryGrid.createDiv({ cls: 'ksc-summary-item' });
+    aiStatus.createSpan({ text: 'AI 기능', cls: 'ksc-summary-label' });
     const aiText = this.plugin.settings.ai.enabled ? 
       `✓ ${this.plugin.settings.ai.provider.toUpperCase()}` : '✗ 비활성화';
-    aiStatus.createEl('span', { 
+    aiStatus.createSpan({ 
       text: aiText,
       cls: this.plugin.settings.ai.enabled ? 'ksc-status-ok' : 'ksc-status-disabled'
     });
     
     // 예외 단어 상태
-    const ignoredStatus = summaryGrid.createEl('div', { cls: 'ksc-summary-item' });
-    ignoredStatus.createEl('span', { text: '예외 단어', cls: 'ksc-summary-label' });
+    const ignoredStatus = summaryGrid.createDiv({ cls: 'ksc-summary-item' });
+    ignoredStatus.createSpan({ text: '예외 단어', cls: 'ksc-summary-label' });
     const wordCount = this.plugin.settings.ignoredWords.length;
     const wordStatus = wordCount === 0 ? '없음' : 
                       wordCount > 100 ? `${wordCount}개 (많음)` : `${wordCount}개`;
-    ignoredStatus.createEl('span', { 
+    ignoredStatus.createSpan({ 
       text: wordStatus,
       cls: wordCount > 100 ? 'ksc-status-warning' : 'ksc-status-ok'
     });
@@ -1437,7 +1467,7 @@ export class ModernSettingsTab extends PluginSettingTab {
    * 필터링 옵션 섹션을 생성합니다
    */
   private createFilteringOptionsSection(containerEl: HTMLElement): void {
-    const section = containerEl.createEl('div', { cls: 'ksc-section' });
+    const section = containerEl.createDiv({ cls: 'ksc-section' });
     
     // 필터링 옵션 헤딩
     new Setting(section)
@@ -1457,7 +1487,7 @@ export class ModernSettingsTab extends PluginSettingTab {
         }));
 
     // 필터링 예외 케이스 안내
-    const infoBox = section.createEl('div', { cls: 'ksc-info-box' });
+    const infoBox = section.createDiv({ cls: 'ksc-info-box' });
     infoBox.createEl('strong', { text: '🛡️ 예외 처리되는 한 글자 교정' });
     infoBox.createEl('br');
     infoBox.createEl('br');
@@ -1470,14 +1500,14 @@ export class ModernSettingsTab extends PluginSettingTab {
     ];
     
     exceptions.forEach(exception => {
-      infoBox.createEl('div', { 
+      infoBox.createDiv({ 
         text: exception,
         cls: 'ksc-muted-line'
       });
     });
 
     // 필터링 통계 표시 (실시간)
-    const statsContainer = section.createEl('div', { cls: 'ksc-filter-stats' });
+    const statsContainer = section.createDiv({ cls: 'ksc-filter-stats' });
     this.updateFilteringStats(statsContainer);
   }
 
@@ -1487,11 +1517,11 @@ export class ModernSettingsTab extends PluginSettingTab {
   private updateFilteringStats(container: HTMLElement): void {
     container.empty();
     
-    const statsBox = container.createEl('div', { 
+    const statsBox = container.createDiv({ 
       cls: 'ksc-stats-box'
     });
     
-    statsBox.createEl('div', { 
+    statsBox.createDiv({ 
       text: '📊 필터링 통계',
       cls: 'ksc-stats-title'
     });
@@ -1500,13 +1530,13 @@ export class ModernSettingsTab extends PluginSettingTab {
       '✅ 한 글자 오류 필터링이 활성화되어 있습니다.' :
       '⚠️ 한 글자 오류 필터링이 비활성화되어 있습니다.';
     
-    statsBox.createEl('div', { 
+    statsBox.createDiv({ 
       text: statusText,
       cls: 'ksc-muted-text'
     });
     
     if (this.plugin.settings.filterSingleCharErrors) {
-      statsBox.createEl('div', { 
+      statsBox.createDiv({ 
         text: '💡 팁: 의미있는 한 글자 교정(조사, 어미 등)은 자동으로 예외 처리됩니다.',
         cls: 'ksc-accent-tip'
       });
@@ -1528,18 +1558,18 @@ export class ModernSettingsTab extends PluginSettingTab {
    * 베타 기능 경고 섹션을 생성합니다
    */
   private createBetaWarningSection(containerEl: HTMLElement): void {
-    const section = containerEl.createEl('div', { cls: 'ksc-section' });
+    const section = containerEl.createDiv({ cls: 'ksc-section' });
     
     const warningHeading = new Setting(section)
       .setName('⚠️ 베타 기능 안내')
       .setHeading();
     warningHeading.settingEl.addClasses(['ksc-section-title']);
 
-    const warningBox = section.createEl('div', { 
+    const warningBox = section.createDiv({ 
       cls: 'ksc-warning-box ksc-beta-warning-box'
     });
 
-    warningBox.createEl('div', {
+    warningBox.createDiv({
       text: '🧪 실험적 기능',
       cls: 'ksc-warning-title'
     });
@@ -1552,7 +1582,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     ];
 
     warnings.forEach(warning => {
-      warningBox.createEl('div', {
+      warningBox.createDiv({
         text: `• ${warning}`,
         cls: 'ksc-muted-line'
       });
@@ -1563,7 +1593,7 @@ export class ModernSettingsTab extends PluginSettingTab {
    * 인라인 모드 설정 섹션을 생성합니다
    */
   private createInlineModeSection(containerEl: HTMLElement): void {
-    const section = containerEl.createEl('div', { cls: 'ksc-section' });
+    const section = containerEl.createDiv({ cls: 'ksc-section' });
     
     const inlineHeading = new Setting(section)
       .setName('📝 인라인 모드')
@@ -1571,11 +1601,11 @@ export class ModernSettingsTab extends PluginSettingTab {
     inlineHeading.settingEl.addClasses(['ksc-section-title']);
 
     // 기능 설명
-    const descBox = section.createEl('div', { 
+    const descBox = section.createDiv({ 
       cls: 'ksc-info-box ksc-inline-desc-box'
     });
 
-    descBox.createEl('div', {
+    descBox.createDiv({
       text: '🎯 에디터 내 실시간 맞춤법 검사',
       cls: 'ksc-info-title'
     });
@@ -1588,7 +1618,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     ];
 
     features.forEach(feature => {
-      descBox.createEl('div', {
+      descBox.createDiv({
         text: `• ${feature}`,
         cls: 'ksc-muted-line'
       });
@@ -1693,7 +1723,7 @@ export class ModernSettingsTab extends PluginSettingTab {
           }));
 
       // 📱 플랫폼별 설명 추가
-      section.createEl('div', {
+      section.createDiv({
         text: '💡 자동 모드: 데스크톱에서는 호버, 모바일에서는 탭으로 자동 동작',
         cls: 'ksc-platform-tip'
       });

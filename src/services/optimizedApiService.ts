@@ -41,7 +41,7 @@ export class OptimizedSpellCheckService {
   private readonly requestTimeout: number;
   private readonly maxConcurrentBatches: number;
   private activeBatches = 0;
-  private batchTimer?: NodeJS.Timeout;
+  private batchTimer?: number;
   
   // 성능 메트릭
   private metrics = {
@@ -174,7 +174,7 @@ export class OptimizedSpellCheckService {
     this.requestQueue = [];
     
     if (this.batchTimer) {
-      clearTimeout(this.batchTimer);
+      activeWindow.clearTimeout(this.batchTimer);
       this.batchTimer = undefined;
     }
     
@@ -226,8 +226,8 @@ export class OptimizedSpellCheckService {
       this.updateMetrics(false, Date.now() - startTime);
       
       // 에러 분석 및 사용자 친화적 처리
-      const errorInfo = ErrorHandlerService.handleError(error, 'spell-check-api');
-      
+      ErrorHandlerService.handleError(error, 'spell-check-api');
+
       // 원본 에러를 그대로 throw (이미 ErrorHandlerService에서 사용자 알림 처리됨)
       throw error;
     }
@@ -252,7 +252,7 @@ export class OptimizedSpellCheckService {
     if (this.requestQueue.length >= this.maxBatchSize) {
       this.processBatch(settings);
     } else if (!this.batchTimer) {
-      this.batchTimer = setTimeout(() => {
+      this.batchTimer = activeWindow.setTimeout(() => {
         this.processBatch(settings);
       }, this.batchTimeout);
     }
@@ -271,7 +271,7 @@ export class OptimizedSpellCheckService {
     
     // 타이머 정리
     if (this.batchTimer) {
-      clearTimeout(this.batchTimer);
+      activeWindow.clearTimeout(this.batchTimer);
       this.batchTimer = undefined;
     }
     
@@ -315,7 +315,7 @@ export class OptimizedSpellCheckService {
       
       // 대기 중인 요청이 있으면 다음 배치 처리
       if (this.requestQueue.length > 0) {
-        setTimeout(() => this.scheduleBatchProcessing(settings), 100);
+        activeWindow.setTimeout(() => this.scheduleBatchProcessing(settings), 100);
       }
     }
   }
@@ -348,17 +348,17 @@ export class OptimizedSpellCheckService {
     timeoutMs: number
   ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
-      const timer = setTimeout(() => {
+      const timer = activeWindow.setTimeout(() => {
         reject(new Error(`요청 타임아웃 (${timeoutMs}ms)`));
       }, timeoutMs);
       
       fn()
         .then(result => {
-          clearTimeout(timer);
+          activeWindow.clearTimeout(timer);
           resolve(result);
         })
         .catch(error => {
-          clearTimeout(timer);
+          activeWindow.clearTimeout(timer);
           reject(error);
         });
     });

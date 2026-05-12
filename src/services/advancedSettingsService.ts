@@ -498,7 +498,7 @@ export class AdvancedSettingsService {
    * 고유 ID를 생성합니다
    */
   private static generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    return Date.now().toString(36) + Math.random().toString(36).substring(2);
   }
 
   /**

@@ -52,7 +52,7 @@ interface OptimizerConfig {
 export class MemoryOptimizer<T> {
   private chunks = new Map<string, MemoryChunk<T>>();
   private config: OptimizerConfig;
-  private cleanupTimer?: NodeJS.Timeout;
+  private cleanupTimer?: number;
   private stats = {
     totalAccess: 0,
     cacheHits: 0,
@@ -254,7 +254,7 @@ export class MemoryOptimizer<T> {
    */
   destroy(): void {
     if (this.cleanupTimer) {
-      clearInterval(this.cleanupTimer);
+      activeWindow.clearInterval(this.cleanupTimer);
       this.cleanupTimer = undefined;
     }
     
@@ -383,7 +383,7 @@ export class MemoryOptimizer<T> {
    * 정리 타이머를 시작합니다
    */
   private startCleanupTimer(): void {
-    this.cleanupTimer = setInterval(() => {
+    this.cleanupTimer = activeWindow.setInterval(() => {
       this.performCleanup();
     }, this.config.cleanupInterval);
   }

@@ -32,7 +32,7 @@ export class SpellCheckCacheService {
   private readonly maxSize: number;
   private readonly ttl: number; // TTL in milliseconds
   private readonly cleanupInterval: number;
-  private cleanupTimer?: NodeJS.Timeout;
+  private cleanupTimer?: number;
   
   // 통계 정보
   private stats = {
@@ -192,7 +192,7 @@ export class SpellCheckCacheService {
    */
   destroy(): void {
     if (this.cleanupTimer) {
-      clearInterval(this.cleanupTimer);
+      activeWindow.clearInterval(this.cleanupTimer);
       this.cleanupTimer = undefined;
     }
     this.clear();
@@ -266,7 +266,7 @@ export class SpellCheckCacheService {
    * 정리 타이머를 시작합니다
    */
   private startCleanupTimer(): void {
-    this.cleanupTimer = setInterval(() => {
+    this.cleanupTimer = activeWindow.setInterval(() => {
       this.cleanup();
     }, this.cleanupInterval);
   }

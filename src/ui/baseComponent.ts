@@ -11,7 +11,7 @@ export abstract class BaseComponent implements UIComponent {
   protected isDestroyed: boolean = false;
 
   constructor(tagName: string = 'div', className?: string) {
-    this.element = document.createElement(tagName);
+    this.element = createEl(tagName as keyof HTMLElementTagNameMap);
     if (className) {
       this.element.className = className;
     }

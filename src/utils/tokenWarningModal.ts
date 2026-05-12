@@ -4,7 +4,7 @@
  */
 
 import { Logger } from './logger';
-import { Notice, Platform } from 'obsidian';
+import { Platform } from 'obsidian';
 import type { AIAnalysisRequest } from '../types/interfaces';
 
 export interface TokenUsage {
@@ -81,7 +81,7 @@ export class TokenWarningModal {
 
     // 확인 모달 표시
     return new Promise((resolve) => {
-      const modal = document.createElement('div');
+      const modal = createDiv();
       modal.className = 'modal-overlay kga-token-warning-overlay korean-grammar-token-modal';
 
       const modalContent = this.createTokenWarningModal(tokenUsage, isOverMaxTokens, maxTokens);
@@ -89,15 +89,15 @@ export class TokenWarningModal {
 
       // 🔧 모바일에서 배경 커서/입력 차단 및 키보드 숨김
       if (Platform.isMobile) {
-        document.body.classList.add('spell-popup-open');
+        activeDocument.body.classList.add('spell-popup-open');
         this.hideKeyboardAndBlurEditor();
         Logger.debug('📱 토큰 모달: spell-popup-open 클래스 추가 및 키보드 숨김 처리');
       }
 
-      document.body.appendChild(modal);
-      
+      activeDocument.body.appendChild(modal);
+
       // 포커스 설정 (약간의 지연)
-      setTimeout(() => {
+      activeWindow.setTimeout(() => {
         modal.focus();
         Logger.debug('토큰 경고 모달: 포커스 설정 완료');
       }, 10);
@@ -106,7 +106,7 @@ export class TokenWarningModal {
       let handleResponse = (action: 'cancel' | 'proceed' | 'updateSettings') => {
         // 🔧 모바일에서 배경 입력 차단 해제 (CorrectionPopup과 동일한 방식)
         if (Platform.isMobile) {
-          document.body.classList.remove('spell-popup-open');
+          activeDocument.body.classList.remove('spell-popup-open');
           Logger.debug('📱 토큰 모달: spell-popup-open 클래스 제거로 배경 입력 복원');
         }
         
@@ -151,7 +151,7 @@ export class TokenWarningModal {
       
       // 글로벌 키보드 이벤트도 차단 (모달이 최상위에서 모든 키 입력 처리)
       const globalKeyHandler = (e: KeyboardEvent) => {
-        if (document.body.contains(modal)) {
+        if (activeDocument.body.contains(modal)) {
           Logger.debug(`토큰 경고 모달: 글로벌 키 이벤트 차단 - ${e.key}`);
           e.preventDefault();
           e.stopPropagation();
@@ -191,97 +191,71 @@ export class TokenWarningModal {
    * 토큰 경고 모달의 DOM 구조를 생성합니다.
    */
   private static createTokenWarningModal(tokenUsage: TokenUsage, isOverMaxTokens: boolean, maxTokens: number): HTMLElement {
-    const content = document.createElement('div');
-    content.className = 'kga-token-warning-content';
+    const content = createDiv({ cls: 'kga-token-warning-content' });
 
-    const headerInfo = content.appendChild(document.createElement('div'));
-    headerInfo.className = 'kga-token-warning-header';
+    const headerInfo = content.createDiv({ cls: 'kga-token-warning-header' });
 
-    const title = headerInfo.appendChild(document.createElement('h3'));
-    title.className = 'kga-token-warning-title';
+    const title = headerInfo.createEl('h3', { cls: 'kga-token-warning-title' });
     title.textContent = isOverMaxTokens ? '토큰 사용량 확인' : '토큰 사용량 안내';
 
-    const description = headerInfo.appendChild(document.createElement('p'));
-    description.className = 'kga-token-warning-description';
+    const description = headerInfo.createEl('p', { cls: 'kga-token-warning-description' });
     description.textContent = isOverMaxTokens ? '설정된 한계를 초과했습니다' : '예상 사용량이 높습니다';
 
-    const details = content.appendChild(document.createElement('div'));
-    details.className = 'kga-token-warning-details';
+    const details = content.createDiv({ cls: 'kga-token-warning-details' });
 
-    const stats = details.appendChild(document.createElement('div'));
-    stats.className = 'kga-token-warning-stats';
+    const stats = details.createDiv({ cls: 'kga-token-warning-stats' });
 
-    const totalTokenItem = stats.appendChild(document.createElement('div'));
-    totalTokenItem.className = 'kga-token-stat-item';
+    const totalTokenItem = stats.createDiv({ cls: 'kga-token-stat-item' });
 
-    const totalTokenNumber = totalTokenItem.appendChild(document.createElement('div'));
-    totalTokenNumber.className = 'kga-token-stat-number';
+    const totalTokenNumber = totalTokenItem.createDiv({ cls: 'kga-token-stat-number' });
     totalTokenNumber.textContent = tokenUsage.totalEstimated.toLocaleString();
 
-    const totalTokenLabel = totalTokenItem.appendChild(document.createElement('div'));
-    totalTokenLabel.className = 'kga-token-stat-label';
+    const totalTokenLabel = totalTokenItem.createDiv({ cls: 'kga-token-stat-label' });
     totalTokenLabel.textContent = '총 토큰';
 
-    const costItem = stats.appendChild(document.createElement('div'));
-    costItem.className = 'kga-token-stat-item';
+    const costItem = stats.createDiv({ cls: 'kga-token-stat-item' });
 
-    const costNumber = costItem.appendChild(document.createElement('div'));
-    costNumber.className = 'kga-token-stat-number';
+    const costNumber = costItem.createDiv({ cls: 'kga-token-stat-number' });
     costNumber.textContent = tokenUsage.estimatedCost;
 
-    const costLabel = costItem.appendChild(document.createElement('div'));
-    costLabel.className = 'kga-token-stat-label';
+    const costLabel = costItem.createDiv({ cls: 'kga-token-stat-label' });
     costLabel.textContent = '예상 비용';
 
-    const rec = details.appendChild(document.createElement('div'));
-    rec.className = 'kga-token-warning-recommendation';
+    const rec = details.createDiv({ cls: 'kga-token-warning-recommendation' });
 
-    const recText = rec.appendChild(document.createElement('div'));
-    recText.className = 'kga-token-warning-recommendation-text';
+    const recText = rec.createDiv({ cls: 'kga-token-warning-recommendation-text' });
     recText.textContent = `입력: ${tokenUsage.inputTokens.toLocaleString()} • 출력: ${tokenUsage.estimatedOutputTokens.toLocaleString()}`;
 
     if (isOverMaxTokens) {
-      const overLimit = content.appendChild(document.createElement('div'));
-      overLimit.className = 'kga-token-warning-over-limit';
+      const overLimit = content.createDiv({ cls: 'kga-token-warning-over-limit' });
 
-      const overLimitIcon = overLimit.appendChild(document.createElement('div'));
-      overLimitIcon.className = 'kga-token-warning-over-limit-icon';
+      const overLimitIcon = overLimit.createDiv({ cls: 'kga-token-warning-over-limit-icon' });
       overLimitIcon.textContent = '⚠️';
 
-      const overLimitText = overLimit.appendChild(document.createElement('div'));
-      overLimitText.className = 'kga-token-warning-over-limit-text';
+      const overLimitText = overLimit.createDiv({ cls: 'kga-token-warning-over-limit-text' });
 
-      const overLimitTitle = overLimitText.appendChild(document.createElement('div'));
-      overLimitTitle.className = 'kga-token-warning-over-limit-title';
+      const overLimitTitle = overLimitText.createDiv({ cls: 'kga-token-warning-over-limit-title' });
       overLimitTitle.textContent = '설정된 최대 토큰을 초과했습니다';
 
-      const overLimitDesc = overLimitText.appendChild(document.createElement('div'));
-      overLimitDesc.className = 'kga-token-warning-over-limit-description';
+      const overLimitDesc = overLimitText.createDiv({ cls: 'kga-token-warning-over-limit-description' });
       overLimitDesc.textContent = `현재 설정: ${maxTokens.toLocaleString()} 토큰 → 초과량: ${(tokenUsage.totalEstimated - maxTokens).toLocaleString()} 토큰`;
     }
 
-    const actions = content.appendChild(document.createElement('div'));
-    actions.className = 'kga-token-warning-actions';
+    const actions = content.createDiv({ cls: 'kga-token-warning-actions' });
 
-    const cancelBtn = document.createElement('button');
+    const cancelBtn = actions.createEl('button', { cls: 'kga-token-warning-btn kga-token-warning-btn-cancel' });
     cancelBtn.id = 'token-warning-cancel';
-    cancelBtn.className = 'kga-token-warning-btn kga-token-warning-btn-cancel';
     cancelBtn.textContent = '취소';
-    actions.appendChild(cancelBtn);
 
     if (isOverMaxTokens) {
-      const updateBtn = document.createElement('button');
+      const updateBtn = actions.createEl('button', { cls: 'kga-token-warning-btn kga-token-warning-btn-settings' });
       updateBtn.id = 'token-warning-update-settings';
-      updateBtn.className = 'kga-token-warning-btn kga-token-warning-btn-settings';
       updateBtn.textContent = '설정 업데이트 후 진행';
-      actions.appendChild(updateBtn);
     }
 
-    const proceedBtn = document.createElement('button');
+    const proceedBtn = actions.createEl('button', { cls: 'kga-token-warning-btn kga-token-warning-btn-proceed' });
     proceedBtn.id = 'token-warning-proceed';
-    proceedBtn.className = 'kga-token-warning-btn kga-token-warning-btn-proceed';
     proceedBtn.textContent = isOverMaxTokens ? '강제 진행' : '계속 진행';
-    actions.appendChild(proceedBtn);
 
     return content;
   }
@@ -372,14 +346,14 @@ export class TokenWarningModal {
   private static hideKeyboardAndBlurEditor(): void {
     try {
       // DOM 레벨에서 현재 포커스된 요소 해제
-      const focusedElement = document.activeElement as HTMLElement;
+      const focusedElement = activeDocument.activeElement as HTMLElement;
       if (focusedElement && focusedElement.blur) {
         focusedElement.blur();
         Logger.log('📱 토큰 모달: DOM 포커스 해제 완료');
       }
 
       // 3. CodeMirror 에디터 포커스 해제 (추가 안전장치)
-      const cmEditors = document.querySelectorAll('.cm-editor .cm-content');
+      const cmEditors = activeDocument.querySelectorAll('.cm-editor .cm-content');
       cmEditors.forEach(editor => {
         if (editor instanceof HTMLElement) {
           editor.blur();
@@ -387,16 +361,15 @@ export class TokenWarningModal {
       });
 
       // 4. 키보드 숨기기를 위한 더미 input 생성 및 포커스/블러
-      const hiddenInput = document.createElement('input');
+      const hiddenInput = activeDocument.body.createEl('input');
       hiddenInput.classList.add('kga-stealth-input');
-      document.body.appendChild(hiddenInput);
-      
+
       // 짧은 시간 후 포커스 후 즉시 블러하여 키보드 숨기기
-      setTimeout(() => {
+      activeWindow.setTimeout(() => {
         hiddenInput.focus();
-        setTimeout(() => {
+        activeWindow.setTimeout(() => {
           hiddenInput.blur();
-          document.body.removeChild(hiddenInput);
+          activeDocument.body.removeChild(hiddenInput);
           Logger.log('📱 토큰 모달: 키보드 숨김 처리 완료');
         }, 50);
       }, 100);

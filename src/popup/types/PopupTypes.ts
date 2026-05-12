@@ -5,7 +5,6 @@
 
 import { App, Scope, Editor, EditorPosition } from 'obsidian';
 import { Correction, PopupConfig, AIAnalysisResult, PageCorrection } from '../../types/interfaces';
-import { CorrectionStateManager } from '../../state/correctionState';
 import { AIAnalysisService } from '../../services/aiAnalysisService';
 
 // =============================================================================

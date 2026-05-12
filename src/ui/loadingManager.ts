@@ -262,7 +262,7 @@ export class LoadingManager {
     this.hideNotice();
     
     // 커스텀 토스트 컨테이너 생성 (styles are defined in styles.css)
-    const toastContainer = document.body.createEl('div', {
+    const toastContainer = activeDocument.body.createDiv({
       cls: 'spell-check-toast'
     });
     
@@ -272,7 +272,7 @@ export class LoadingManager {
     this.currentNotice = {
       hide: () => {
         toastContainer.addClass('kga-slide-out-down');
-        setTimeout(() => {
+        activeWindow.setTimeout(() => {
           toastContainer.remove();
         }, 200);
       }
@@ -307,26 +307,26 @@ export class LoadingManager {
     this.progressElement.empty();
     
     // 헤더 영역 (아이콘 + 제목)
-    const header = this.progressElement.createEl('div', {
+    const header = this.progressElement.createDiv({
       cls: 'kga-loading-progress-header'
     });
     
-    header.createEl('span', { 
+    header.createSpan({ 
       text: currentStepInfo?.icon || '⏳',
       cls: 'kga-loading-progress-icon'
     });
     
-    const titleContainer = header.createEl('div', { 
+    const titleContainer = header.createDiv({ 
       cls: 'kga-loading-progress-title-container'
     });
     
-    titleContainer.createEl('div', { 
+    titleContainer.createDiv({ 
       text: currentStepInfo?.title || '처리 중',
       cls: 'kga-loading-progress-title'
     });
     
     // 진행률 바
-    const progressBarContainer = this.progressElement.createEl('div', {
+    const progressBarContainer = this.progressElement.createDiv({
       cls: 'kga-loading-progress-bar-container'
     });
     
@@ -339,12 +339,12 @@ export class LoadingManager {
     });
     
     // 하단 정보 (간단하게)
-    const footer = this.progressElement.createEl('div', {
+    const footer = this.progressElement.createDiv({
       cls: 'kga-loading-progress-footer'
     });
     
-    footer.createEl('span', { text: `${percentage}%` });
-    footer.createEl('span', { text: `${progress.currentStep}/${progress.totalSteps}` });
+    footer.createSpan({ text: `${percentage}%` });
+    footer.createSpan({ text: `${progress.currentStep}/${progress.totalSteps}` });
   }
 
   /**

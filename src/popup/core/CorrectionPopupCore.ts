@@ -3,7 +3,7 @@
  * 모든 하위 모듈들을 관리하고 조율하는 중앙 제어 클래스
  */
 
-import { Editor, EditorPosition, App, Platform, Scope, Notice } from 'obsidian';
+import { App, Platform, Scope } from 'obsidian';
 import { 
   PopupCoreConfig, 
   PopupInitializationData, 
@@ -194,7 +194,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
     
     // 렌더 컨텍스트 생성
     const renderContext: RenderContext = {
-      container: document.createElement('div'), // 임시 컨테이너
+      container: createDiv(), // 임시 컨테이너
       state: this.stateManager.getState(),
       pagination: {
         pageBreaks: [],
@@ -260,7 +260,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
     
     // 렌더 컨텍스트 생성
     const renderContext: RenderContext = {
-      container: document.createElement('div'), // 임시 컨테이너
+      container: createDiv(), // 임시 컨테이너
       state: currentState,
       pagination: paginationState || {
         pageBreaks: [],
@@ -616,7 +616,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
     const paginationState = this.paginationManager?.getPaginationState();
 
     return {
-      container: this.containerElement || document.createElement('div'),
+      container: this.containerElement || createDiv(),
       state: currentState,
       pagination: paginationState || {
         pageBreaks: [],

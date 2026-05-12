@@ -51,8 +51,8 @@ export class InlineTooltip {
   private tooltip: HTMLElement | null = null;
   private currentError: InlineError | null = null;
   private isVisible: boolean = false;
-  private hoverTimeout: NodeJS.Timeout | null = null;
-  private hideTimeout: NodeJS.Timeout | null = null;
+  private hoverTimeout: number | null = null;
+  private hideTimeout: number | null = null;
   public isHovered: boolean = false; // 🔍 툴팁 호버 상태 추적
 
   // 모듈 수준 상태
@@ -89,7 +89,7 @@ export class InlineTooltip {
       // 🔧 툴팁 보호 플래그 설정 (모바일에서는 툴팁 수동 닫기만 허용)
       this.tooltipProtected = true;
       
-      setTimeout(() => {
+      activeWindow.setTimeout(() => {
         // 🔧 키보드 숨김 활성화 - 이전 방식 유지
         this.hideKeyboardAndBlurEditor();
         
@@ -134,12 +134,12 @@ export class InlineTooltip {
     
     // 호버 타이머 정리
     if (this.hoverTimeout) {
-      clearTimeout(this.hoverTimeout);
+      activeWindow.clearTimeout(this.hoverTimeout);
       this.hoverTimeout = null;
     }
     
     if (this.hideTimeout) {
-      clearTimeout(this.hideTimeout);
+      activeWindow.clearTimeout(this.hideTimeout);
       this.hideTimeout = null;
     }
   }
@@ -150,7 +150,7 @@ export class InlineTooltip {
   private scheduleHide(delay: number): void {
     this.clearHideTimeout(); // 기존 타이머 정리
     
-    this.hideTimeout = setTimeout(() => {
+    this.hideTimeout = activeWindow.setTimeout(() => {
       if (!this.isHovered) {
         Logger.debug(`🕐 예약된 툴팁 숨기기 실행 (${delay}ms 후)`);
         this.hide();
@@ -163,7 +163,7 @@ export class InlineTooltip {
    */
   private clearHideTimeout(): void {
     if (this.hideTimeout) {
-      clearTimeout(this.hideTimeout);
+      activeWindow.clearTimeout(this.hideTimeout);
       this.hideTimeout = null;
       Logger.debug('⏰ 툴팁 숨기기 타이머 취소');
     }
@@ -180,7 +180,7 @@ export class InlineTooltip {
    * 툴팁 생성
    */
   private createTooltip(error: InlineError, targetElement: HTMLElement, triggerType: 'hover' | 'click'): void {
-    this.tooltip = document.createElement('div');
+    this.tooltip = createDiv();
     this.tooltip.className = 'korean-grammar-inline-tooltip';
 
     const isMobile = Platform.isMobile;
@@ -243,7 +243,7 @@ export class InlineTooltip {
       this.scheduleHide(hideDelay);
     });
 
-    document.body.appendChild(this.tooltip);
+    activeDocument.body.appendChild(this.tooltip);
     
     // 모바일에서 툴팁 표시 로그
     if (isMobile) {
@@ -288,8 +288,8 @@ export class InlineTooltip {
     }
     
     // 🔧 스크롤 정보 고려 (Obsidian API 우선, 폴백은 기본 API)
-    const scrollTop = editorScrollInfo?.top || window.pageYOffset || document.documentElement.scrollTop;
-    const scrollLeft = editorScrollInfo?.left || window.pageXOffset || document.documentElement.scrollLeft;
+    const scrollTop = editorScrollInfo?.top || activeWindow.scrollY || activeDocument.documentElement.scrollTop;
+    const scrollLeft = editorScrollInfo?.left || activeWindow.scrollX || activeDocument.documentElement.scrollLeft;
     
     // 🔧 모바일 키보드 감지 (뷰포트 높이 변화로 추정)
     const baseViewportHeight = window.screen.height || viewportHeight;
@@ -686,12 +686,12 @@ export class InlineTooltip {
     }
 
     // 헤더 영역 - 닫기 버튼 포함
-    const header = this.tooltip.createEl('div', { cls: 'kga-tooltip-header' });
+    const header = this.tooltip.createDiv({ cls: 'kga-tooltip-header' });
     if (isMobile) header.classList.add('kga-mobile');
     if (isPhone) header.classList.add('kga-mobile-phone');
 
     // 🔧 헤더 텍스트 (필터링된 개수 반영)
-    const headerText = header.createEl('span', {
+    const headerText = header.createSpan({
       text: `${uniqueOriginalErrors.length}개 오류 병합됨`,
       cls: 'kga-header-text'
     });
@@ -727,24 +727,24 @@ export class InlineTooltip {
     });
 
     // 스크롤 가능한 내용 영역 - 모바일 최적화
-    const scrollContainer = this.tooltip.createEl('div', { cls: 'kga-tooltip-scroll-container' });
+    const scrollContainer = this.tooltip.createDiv({ cls: 'kga-tooltip-scroll-container' });
     if (isMobile) scrollContainer.classList.add('kga-mobile');
     if (isPhone) scrollContainer.classList.add('kga-mobile-phone');
 
     // 🔍 각 원본 오류별로 섹션 생성 - 모바일 최적화 (이미 중복 제거됨)
     uniqueOriginalErrors.forEach((originalError, index) => {
-      const errorSection = scrollContainer.createEl('div', { cls: 'kga-error-section' });
+      const errorSection = scrollContainer.createDiv({ cls: 'kga-error-section' });
       if (isMobile) errorSection.classList.add('kga-mobile');
       if (isPhone) errorSection.classList.add('kga-mobile-phone');
       if (index > 0) errorSection.classList.add('kga-bordered');
 
       // 한 줄 레이아웃 (오류 → 제안들) - 모바일 최적화
-      const errorLine = errorSection.createEl('div', { cls: 'kga-error-line' });
+      const errorLine = errorSection.createDiv({ cls: 'kga-error-line' });
       if (isMobile) errorLine.classList.add('kga-mobile');
       if (isPhone) errorLine.classList.add('kga-mobile-phone');
 
       // 오류 단어 표시 (고정 너비) - 모바일 최적화
-      const errorWord = errorLine.createEl('span', {
+      const errorWord = errorLine.createSpan({
         text: originalError.correction.original,
         cls: 'kga-error-word'
       });
@@ -752,12 +752,12 @@ export class InlineTooltip {
       if (isPhone) errorWord.classList.add('kga-mobile-phone');
 
       // 화살표 (고정) - 모바일 최적화
-      const arrow = errorLine.createEl('span', { text: '→', cls: 'kga-arrow' });
+      const arrow = errorLine.createSpan({ text: '→', cls: 'kga-arrow' });
       if (isMobile) arrow.classList.add('kga-mobile');
       if (isPhone) arrow.classList.add('kga-mobile-phone');
 
       // 수정 제안들을 가로로 나열 (남은 공간 활용) - 모바일 최적화
-      const suggestionsList = errorLine.createEl('div', { cls: 'kga-suggestions-list' });
+      const suggestionsList = errorLine.createDiv({ cls: 'kga-suggestions-list' });
       if (isMobile) suggestionsList.classList.add('kga-mobile');
       if (isPhone) suggestionsList.classList.add('kga-mobile-phone');
 
@@ -766,7 +766,7 @@ export class InlineTooltip {
       Logger.debug(`🔧 병합된 툴팁 제안 중복 제거: ${originalError.correction.corrected.length}개 → ${uniqueSuggestions.length}개`);
       
       uniqueSuggestions.forEach((suggestion, index) => {
-        const suggestionButton = suggestionsList.createEl('span', {
+        const suggestionButton = suggestionsList.createSpan({
           text: suggestion,
           cls: 'kga-suggestion-button'
         });
@@ -800,14 +800,14 @@ export class InlineTooltip {
 
       // 도움말 아이콘 추가 (원본 오류에 도움말이 있는 경우)
       if (originalError.correction.help) {
-        const helpContainer = errorLine.createEl('div', { cls: 'kga-help-container' });
+        const helpContainer = errorLine.createDiv({ cls: 'kga-help-container' });
 
         // 📖 도움말을 하단에 표시하는 인라인 방식 사용
         this.createInlineHelpIcon(originalError.correction.help, helpContainer, () => {
           let helpArea = this.tooltip!.querySelector('.kga-tooltip-help-area') as HTMLElement;
           if (!helpArea) {
             // 도움말 영역 생성
-            helpArea = this.tooltip!.createEl('div', { cls: 'kga-tooltip-help-area' });
+            helpArea = this.tooltip!.createDiv({ cls: 'kga-tooltip-help-area' });
             if (isMobile) helpArea.classList.add('kga-mobile');
             if (isPhone) helpArea.classList.add('kga-mobile-phone');
             helpArea.textContent = originalError.correction.help;
@@ -825,12 +825,12 @@ export class InlineTooltip {
     });
 
     // 하단 액션 컨테이너 (도움말 및 버튼들) - 아이폰 최적화
-    const actionsContainer = this.tooltip.createEl('div', { cls: 'kga-tooltip-actions' });
+    const actionsContainer = this.tooltip.createDiv({ cls: 'kga-tooltip-actions' });
     if (isMobile) actionsContainer.classList.add('kga-mobile');
     if (isPhone) actionsContainer.classList.add('kga-mobile-phone');
 
     // 정보 텍스트 - 아이폰 최적화
-    const infoText = actionsContainer.createEl('span', {
+    const infoText = actionsContainer.createSpan({
       text: isMobile ? (isPhone ? '개별 수정' : '개별 클릭 수정') : '개별 클릭으로 하나씩 수정',
       cls: 'kga-info-text'
     });
@@ -838,7 +838,7 @@ export class InlineTooltip {
     if (isPhone) infoText.classList.add('kga-mobile-phone');
 
     // 액션 버튼들 컨테이너 - 아이폰 최적화
-    const actionButtons = actionsContainer.createEl('div', { cls: 'kga-action-buttons' });
+    const actionButtons = actionsContainer.createDiv({ cls: 'kga-action-buttons' });
     if (isMobile) actionButtons.classList.add('kga-mobile');
     if (isPhone) actionButtons.classList.add('kga-mobile-phone');
 
@@ -936,12 +936,12 @@ export class InlineTooltip {
       return;
     }
     
-    let hideTimeout: NodeJS.Timeout | undefined;
+    let hideTimeout: number | undefined;
     let isHovering = false;
     
     const startHideTimer = () => {
-      if (hideTimeout) clearTimeout(hideTimeout);
-      hideTimeout = setTimeout(() => {
+      if (hideTimeout) activeWindow.clearTimeout(hideTimeout);
+      hideTimeout = activeWindow.setTimeout(() => {
         if (!isHovering) {
           Logger.debug('🔍 툴팁 자동 숨김');
           this.hide(true); // 강제 닫기
@@ -951,7 +951,7 @@ export class InlineTooltip {
 
     const cancelHideTimer = () => {
       if (hideTimeout) {
-        clearTimeout(hideTimeout);
+        activeWindow.clearTimeout(hideTimeout);
         hideTimeout = undefined;
       }
     };
@@ -1009,7 +1009,7 @@ export class InlineTooltip {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseover', onMouseOver);
       document.removeEventListener('click', onMouseClick);
-      if (hideTimeout) clearTimeout(hideTimeout);
+      if (hideTimeout) activeWindow.clearTimeout(hideTimeout);
       Logger.debug('🔍 호버 이벤트 정리 완료');
     };
   }
@@ -1034,12 +1034,12 @@ export class InlineTooltip {
     const isPhone = (Platform as ExtendedPlatform).isPhone || (window.innerWidth <= 480);
 
     // 헤더 영역 - 컴팩트한 크기로 축소
-    const header = this.tooltip.createEl('div', { cls: 'tooltip-header kga-single' });
+    const header = this.tooltip.createDiv({ cls: 'tooltip-header kga-single' });
     if (isMobile) header.classList.add('kga-mobile');
     if (isPhone) header.classList.add('kga-mobile-phone');
 
     // 헤더 텍스트 - 컴팩트
-    const headerText = header.createEl('span', {
+    const headerText = header.createSpan({
       text: '맞춤법 오류',
       cls: 'kga-header-text kga-single'
     });
@@ -1076,14 +1076,14 @@ export class InlineTooltip {
     });
 
     // 상단 메인 콘텐츠 영역 - 컴팩트한 패딩
-    const mainContent = this.tooltip.createEl('div', { cls: 'kga-tooltip-main-content' });
+    const mainContent = this.tooltip.createDiv({ cls: 'kga-tooltip-main-content' });
     if (isMobile) mainContent.classList.add('kga-mobile');
     if (isPhone) mainContent.classList.add('kga-mobile-phone');
 
     // 오류 단어 표시 (간소화) - 모바일 최적화 + 형태소 정보
-    const errorWordContainer = mainContent.createEl('div', { cls: 'kga-error-word-container' });
+    const errorWordContainer = mainContent.createDiv({ cls: 'kga-error-word-container' });
 
-    const errorWord = errorWordContainer.createEl('span', {
+    const errorWord = errorWordContainer.createSpan({
       text: error.correction.original,
       cls: 'kga-error-word'
     });
@@ -1104,7 +1104,7 @@ export class InlineTooltip {
 
     // 형태소 정보 표시 (중요한 품사만)
     if (error.morphemeInfo && this.isImportantPos(error.morphemeInfo.mainPos, error.morphemeInfo.tags)) {
-      const posInfo = errorWordContainer.createEl('span', {
+      const posInfo = errorWordContainer.createSpan({
         text: error.morphemeInfo.mainPos,
         cls: 'kga-pos-info'
       });
@@ -1114,7 +1114,7 @@ export class InlineTooltip {
     }
 
     // 화살표 - 모바일 최적화
-    const arrow = mainContent.createEl('span', { text: '→', cls: 'kga-arrow' });
+    const arrow = mainContent.createSpan({ text: '→', cls: 'kga-arrow' });
     if (isMobile) {
       arrow.classList.add('kga-mobile');
     }
@@ -1123,7 +1123,7 @@ export class InlineTooltip {
     }
 
     // 수정 제안들을 가로로 나열 - 모바일 최적화
-    const suggestionsList = mainContent.createEl('div', { cls: 'kga-suggestions-list' });
+    const suggestionsList = mainContent.createDiv({ cls: 'kga-suggestions-list' });
     if (isMobile) {
       suggestionsList.classList.add('kga-mobile');
     }
@@ -1136,7 +1136,7 @@ export class InlineTooltip {
     Logger.debug(`🔧 툴팁 제안 중복 제거: ${error.correction.corrected.length}개 → ${uniqueSuggestions.length}개`);
     
     uniqueSuggestions.forEach((suggestion, index) => {
-      const suggestionButton = suggestionsList.createEl('span', {
+      const suggestionButton = suggestionsList.createSpan({
         text: suggestion,
         cls: 'kga-suggestion-button'
       });
@@ -1174,7 +1174,7 @@ export class InlineTooltip {
     });
 
     // 액션 영역 (아이폰 최적화) - 메인 콘텐츠 내부로 이동
-    const actionsContainer = mainContent.createEl('div', { cls: 'kga-actions-container' });
+    const actionsContainer = mainContent.createDiv({ cls: 'kga-actions-container' });
     if (isMobile) {
       actionsContainer.classList.add('kga-mobile');
     }
@@ -1257,7 +1257,7 @@ export class InlineTooltip {
       this.createInlineHelpIcon(error.correction.help, actionsContainer, () => {
         if (!helpArea) {
           // 도움말 영역 생성
-          helpArea = this.tooltip!.createEl('div', { cls: 'kga-tooltip-help-area' });
+          helpArea = this.tooltip!.createDiv({ cls: 'kga-tooltip-help-area' });
           if (isMobile) {
             helpArea.classList.add('kga-mobile');
           }
@@ -1275,7 +1275,7 @@ export class InlineTooltip {
 
     // 🤖 AI 분석 결과 영역 (도움말 영역 아래)
     if (error.aiAnalysis) {
-      const aiArea = this.tooltip!.createEl('div', { cls: 'kga-tooltip-ai-area' });
+      const aiArea = this.tooltip!.createDiv({ cls: 'kga-tooltip-ai-area' });
       if (isMobile) {
         aiArea.classList.add('kga-mobile');
       }
@@ -1284,10 +1284,10 @@ export class InlineTooltip {
       }
 
       // 🤖 AI 아이콘
-      const aiIcon = aiArea.createEl('span', { text: '🤖', cls: 'kga-ai-icon' });
+      const aiIcon = aiArea.createSpan({ text: '🤖', cls: 'kga-ai-icon' });
 
       // AI 추천 이유 간단 표시
-      const reasoningText = aiArea.createEl('span', { cls: 'kga-ai-reasoning' });
+      const reasoningText = aiArea.createSpan({ cls: 'kga-ai-reasoning' });
 
       // AI 분석 이유를 짧게 표시 (첫 번째 문장만)
       if (error.aiAnalysis.reasoning) {
@@ -1309,7 +1309,7 @@ export class InlineTooltip {
         Logger.debug('📱 모바일 툴팁: 수동 닫기 모드 (닫기 버튼 또는 수정 적용으로만 닫힘)');
       } else {
         // 데스크톱: 바깥 클릭으로 닫기
-        setTimeout(() => {
+        activeWindow.setTimeout(() => {
           document.addEventListener('click', this.handleOutsideClick.bind(this), { once: true });
         }, 0);
       }
@@ -1334,7 +1334,7 @@ export class InlineTooltip {
     }
 
     // 툴팁 유지 모드 해제 (약간의 지연 후)
-    setTimeout(() => {
+    activeWindow.setTimeout(() => {
       this.keepOpenMode = false;
     }, 200);
     
@@ -1452,7 +1452,7 @@ export class InlineTooltip {
    * 도움말 아이콘 생성 (Inline 모드용) - 모바일 최적화
    */
   private createInlineHelpIcon(helpText: string, container: HTMLElement, onIconClick: () => void): void {
-    const helpIcon = container.createEl('span', { text: '?', cls: 'kga-help-icon' });
+    const helpIcon = container.createSpan({ text: '?', cls: 'kga-help-icon' });
 
     // 모바일 감지 (메서드 내에서 사용)
     const isMobile = Platform.isMobile;
@@ -1575,7 +1575,7 @@ export class InlineTooltip {
    */
   private hideCursorInBackground(): void {
     // 에디터 영역의 커서를 숨기기 위한 CSS 클래스 추가
-    const editorElements = document.querySelectorAll('.cm-editor');
+    const editorElements = activeDocument.querySelectorAll('.cm-editor');
     editorElements.forEach(editor => {
       editor.classList.add('korean-tooltip-cursor-hidden');
     });
@@ -1588,7 +1588,7 @@ export class InlineTooltip {
    */
   private showCursorInBackground(): void {
     // 에디터 영역의 커서 숨김 클래스 제거
-    const editorElements = document.querySelectorAll('.cm-editor');
+    const editorElements = activeDocument.querySelectorAll('.cm-editor');
     editorElements.forEach(editor => {
       editor.classList.remove('korean-tooltip-cursor-hidden');
     });
@@ -1619,7 +1619,7 @@ export class InlineTooltip {
       }
 
       // DOM 레벨에서 포커스 해제
-      const focusedElement = document.activeElement as HTMLElement;
+      const focusedElement = activeDocument.activeElement as HTMLElement;
       if (focusedElement && focusedElement.blur) {
         focusedElement.blur();
         Logger.log('📱 DOM 포커스 해제 완료 (키보드는 유지)');
@@ -1656,14 +1656,14 @@ export class InlineTooltip {
       }
 
       // 2. DOM 레벨에서 모든 포커스 가능한 요소 포커스 해제
-      const focusedElement = document.activeElement as HTMLElement;
+      const focusedElement = activeDocument.activeElement as HTMLElement;
       if (focusedElement && focusedElement.blur) {
         focusedElement.blur();
         Logger.log('📱 모바일: DOM 포커스 해제 완료');
       }
 
       // 3. CodeMirror 에디터 포커스 해제 (추가 안전장치)
-      const cmEditors = document.querySelectorAll('.cm-editor .cm-content');
+      const cmEditors = activeDocument.querySelectorAll('.cm-editor .cm-content');
       cmEditors.forEach(editor => {
         if (editor instanceof HTMLElement) {
           editor.blur();
@@ -1671,18 +1671,18 @@ export class InlineTooltip {
       });
 
       // 4. 키보드 숨기기 - 더 부드러운 방식 (깜빡임 최소화)
-      const hiddenInput = document.createElement('input');
+      const hiddenInput = createEl('input');
       hiddenInput.className = 'kga-hidden-input';
-      document.body.appendChild(hiddenInput);
+      activeDocument.body.appendChild(hiddenInput);
       
       // 더 짧은 지연시간으로 깜빡임 최소화
-      setTimeout(() => {
+      activeWindow.setTimeout(() => {
         hiddenInput.focus();
         // 즉시 블러 처리로 깜빡임 시간 단축
-        setTimeout(() => {
+        activeWindow.setTimeout(() => {
           hiddenInput.blur();
-          setTimeout(() => {
-            document.body.removeChild(hiddenInput);
+          activeWindow.setTimeout(() => {
+            activeDocument.body.removeChild(hiddenInput);
             Logger.log('📱 모바일: 키보드 숨김 처리 완료 (최적화됨)');
           }, 10);
         }, 10);

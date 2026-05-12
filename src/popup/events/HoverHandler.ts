@@ -65,7 +65,7 @@ export class HoverHandler {
   
   // 호버 상태 관리
   private currentHoverTarget?: HTMLElement;
-  private hoverTimer?: NodeJS.Timeout;
+  private hoverTimer?: number;
   private readonly HOVER_DELAY = 500; // 500ms
   
   // 툴팁 관리
@@ -105,9 +105,9 @@ export class HoverHandler {
    * 툴팁 컨테이너 생성
    */
   private createTooltipContainer(): void {
-    this.tooltipContainer = document.createElement('div');
+    this.tooltipContainer = createDiv();
     this.tooltipContainer.className = 'kga-popup-tooltip-container';
-    document.body.appendChild(this.tooltipContainer);
+    activeDocument.body.appendChild(this.tooltipContainer);
   }
 
   /**
@@ -132,7 +132,7 @@ export class HoverHandler {
       const actionType = this.determineHoverAction(context);
       
       // 지연 후 툴팁 표시
-      this.hoverTimer = setTimeout(async () => {
+      this.hoverTimer = activeWindow.setTimeout(async () => {
         await this.showHoverTooltip(actionType, context, event as MouseEvent);
       }, this.HOVER_DELAY);
       
@@ -496,7 +496,7 @@ export class HoverHandler {
    * 툴팁 요소 생성
    */
   private createTooltipElement(config: TooltipConfig): HTMLElement {
-    const tooltip = document.createElement('div');
+    const tooltip = createDiv();
     tooltip.className = `kga-popup-tooltip ${config.className || ''} kga-dynamic-position kga-tooltip-enter`;
 
     // Set position using CSS variables
@@ -506,7 +506,7 @@ export class HoverHandler {
     tooltip.textContent = config.content;
 
     // 애니메이션으로 나타나기
-    setTimeout(() => {
+    activeWindow.setTimeout(() => {
       tooltip.classList.remove('kga-tooltip-enter');
       tooltip.classList.add('kga-tooltip-visible');
     }, 10);
@@ -567,7 +567,7 @@ export class HoverHandler {
       this.activeTooltip.classList.add('kga-tooltip-exit');
 
       // DOM에서 제거
-      setTimeout(() => {
+      activeWindow.setTimeout(() => {
         if (this.activeTooltip && this.tooltipContainer) {
           this.tooltipContainer.removeChild(this.activeTooltip);
           this.activeTooltip = undefined;
@@ -585,7 +585,7 @@ export class HoverHandler {
    */
   private clearCurrentHover(): void {
     if (this.hoverTimer) {
-      clearTimeout(this.hoverTimer);
+      activeWindow.clearTimeout(this.hoverTimer);
       this.hoverTimer = undefined;
     }
     
@@ -724,7 +724,7 @@ export class HoverHandler {
     
     // 툴팁 컨테이너 제거
     if (this.tooltipContainer) {
-      document.body.removeChild(this.tooltipContainer);
+      activeDocument.body.removeChild(this.tooltipContainer);
       this.tooltipContainer = undefined;
     }
     

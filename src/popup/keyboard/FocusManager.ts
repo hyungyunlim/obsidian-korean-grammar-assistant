@@ -252,12 +252,12 @@ export class FocusManager implements IPopupComponent {
       
       if (shouldUpdate) {
         // 디바운스를 위해 지연 실행
-        setTimeout(() => this.updateFocusableElements(), 50);
+        activeWindow.setTimeout(() => this.updateFocusableElements(), 50);
       }
     });
 
     // 전체 문서를 관찰
-    this.focusObserver.observe(document.body, {
+    this.focusObserver.observe(activeDocument.body, {
       childList: true,
       subtree: true,
       attributes: true,
@@ -269,7 +269,7 @@ export class FocusManager implements IPopupComponent {
     const focusableElements: FocusableElement[] = [];
     
     // 오류 카드들 찾기
-    const errorCards = document.querySelectorAll('.error-card');
+    const errorCards = activeDocument.querySelectorAll('.error-card');
     errorCards.forEach((card, index) => {
       const htmlCard = card as HTMLElement;
       focusableElements.push({
@@ -282,7 +282,7 @@ export class FocusManager implements IPopupComponent {
     });
     
     // 네비게이션 버튼들 찾기
-    const navButtons = document.querySelectorAll('.pagination-button, .nav-button');
+    const navButtons = activeDocument.querySelectorAll('.pagination-button, .nav-button');
     navButtons.forEach((button, index) => {
       const htmlButton = button as HTMLElement;
       focusableElements.push({
@@ -295,7 +295,7 @@ export class FocusManager implements IPopupComponent {
     });
     
     // 액션 버튼들 찾기
-    const actionButtons = document.querySelectorAll('.header-button, .action-button');
+    const actionButtons = activeDocument.querySelectorAll('.header-button, .action-button');
     actionButtons.forEach((button, index) => {
       const htmlButton = button as HTMLElement;
       focusableElements.push({
@@ -343,7 +343,7 @@ export class FocusManager implements IPopupComponent {
       currentElement.element.classList.add(this.FOCUS_CLASS, this.FOCUS_HIGHLIGHT_CLASS);
       
       // 요소가 화면에 보이도록 스크롤
-      setTimeout(() => this.scrollToCurrentFocus(), 100);
+      activeWindow.setTimeout(() => this.scrollToCurrentFocus(), 100);
     }
   }
 
@@ -354,7 +354,7 @@ export class FocusManager implements IPopupComponent {
   }
 
   private updateEditModeStyles(): void {
-    const body = document.body;
+    const body = activeDocument.body;
     if (this.focusState.isEditMode) {
       body.classList.add(this.EDIT_MODE_CLASS);
     } else {

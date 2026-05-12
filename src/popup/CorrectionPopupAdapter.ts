@@ -3,7 +3,7 @@
  * 기존 CorrectionPopup API와 완전 호환되면서 새로운 모듈화된 구조로 점진적 마이그레이션 지원
  */
 
-import { Editor, EditorPosition, App, Platform, Scope, Notice } from 'obsidian';
+import { Editor, EditorPosition, App, Platform, Scope } from 'obsidian';
 import { CorrectionPopupCore } from './core/CorrectionPopupCore';
 import { 
   PopupCoreConfig, 
@@ -388,10 +388,10 @@ export class CorrectionPopupAdapter extends BaseComponent {
    * 레거시 모드 팝업 표시
    */
   private async showLegacy(
-    selectedText: string,
-    editor: Editor,
-    selectionStart: EditorPosition,
-    selectionEnd: EditorPosition
+    _selectedText: string,
+    _editor: Editor,
+    _selectionStart: EditorPosition,
+    _selectionEnd: EditorPosition
   ): Promise<void> {
     // 기존 CorrectionPopup의 show 로직을 여기에 구현
     // 이는 Phase 2에서 레이아웃 시스템과 함께 완전히 구현될 예정

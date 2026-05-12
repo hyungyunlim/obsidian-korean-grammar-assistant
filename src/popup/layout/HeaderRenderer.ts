@@ -453,7 +453,7 @@ export class HeaderRenderer implements IPopupComponent {
 
     // 아이콘 애니메이션 (분석 중일 때)
     const iconElement = this.aiButtonElement.querySelector('.korean-grammar-popup-header-button-icon');
-    if (iconElement && iconElement instanceof HTMLElement) {
+    if (iconElement instanceof HTMLElement) {
       if (this.isAiAnalyzing) {
         iconElement.classList.add('kga-spin');
       } else {

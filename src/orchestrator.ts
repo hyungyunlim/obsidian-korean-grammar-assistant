@@ -250,7 +250,6 @@ export class SpellCheckOrchestrator {
         this.onSettingsUpdated(this.settings);
       }
 
-      const addedCount = updatedSettings.ignoredWords.length - this.settings.ignoredWords.length + words.length;
       new Notice(`${words.length}개의 단어가 예외 처리 목록에 추가되었습니다.`);
     }
   }
@@ -299,7 +298,7 @@ export class SpellCheckOrchestrator {
    * 비동기 대기 헬퍼 함수
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(resolve => activeWindow.setTimeout(resolve, ms));
   }
 
   /**

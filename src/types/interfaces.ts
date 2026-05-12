@@ -1,4 +1,4 @@
-import { EditorPosition, Editor, App } from "obsidian";
+import { EditorPosition, Editor } from "obsidian";
 
 /**
  * 맞춤법 교정 정보를 나타내는 인터페이스

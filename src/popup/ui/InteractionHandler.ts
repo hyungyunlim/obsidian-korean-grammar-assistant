@@ -48,7 +48,7 @@ export class InteractionHandler {
   
   // 이벤트 관리
   private stateChangeListeners: ((event: StateChangeEvent) => void)[] = [];
-  private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
+  private debounceTimers: Map<string, number> = new Map();
   
   // UI 요소 캐시
   private summaryElements: Map<number, HTMLElement> = new Map();
@@ -91,10 +91,10 @@ export class InteractionHandler {
     // 디바운스 처리
     const debounceKey = `state-${correctionIndex}`;
     if (this.debounceTimers.has(debounceKey)) {
-      clearTimeout(this.debounceTimers.get(debounceKey));
+      activeWindow.clearTimeout(this.debounceTimers.get(debounceKey));
     }
 
-    const timer = setTimeout(async () => {
+    const timer = activeWindow.setTimeout(async () => {
       await this.performStateUpdate(context, oldState);
       this.debounceTimers.delete(debounceKey);
     }, this.config.debounceMs);
@@ -246,7 +246,7 @@ export class InteractionHandler {
       element.addEventListener('animationend', handleAnimationEnd);
       
       // 타임아웃으로 무한 대기 방지
-      setTimeout(() => {
+      activeWindow.setTimeout(() => {
         element.removeEventListener('animationend', handleAnimationEnd);
         element.classList.remove('state-transition', `from-${oldState}`, `to-${newState}`);
         resolve();
@@ -475,7 +475,7 @@ export class InteractionHandler {
    */
   dispose(): void {
     // 디바운스 타이머 정리
-    this.debounceTimers.forEach(timer => clearTimeout(timer));
+    this.debounceTimers.forEach(timer => activeWindow.clearTimeout(timer));
     this.debounceTimers.clear();
 
     // 상태 정리

@@ -71,8 +71,8 @@ export class MobileEventHandler {
   
   // 터치 상태 관리
   private activeTouches: Map<number, TouchInfo> = new Map();
-  private touchHoldTimers: Map<number, NodeJS.Timeout> = new Map();
-  private longPressTimers: Map<number, NodeJS.Timeout> = new Map();
+  private touchHoldTimers: Map<number, number> = new Map();
+  private longPressTimers: Map<number, number> = new Map();
   
   // 제스처 설정
   private readonly TOUCH_HOLD_DURATION = 500;    // 0.5초
@@ -366,7 +366,7 @@ export class MobileEventHandler {
    * 터치홀드 타이머 설정
    */
   private setTouchHoldTimer(touchId: number, touchInfo: TouchInfo): void {
-    const timer = setTimeout(() => {
+    const timer = activeWindow.setTimeout(() => {
       this.triggerTouchHold(touchInfo);
     }, this.TOUCH_HOLD_DURATION);
     
@@ -377,7 +377,7 @@ export class MobileEventHandler {
    * 롱프레스 타이머 설정
    */
   private setLongPressTimer(touchId: number, touchInfo: TouchInfo): void {
-    const timer = setTimeout(() => {
+    const timer = activeWindow.setTimeout(() => {
       this.triggerLongPress(touchInfo);
     }, this.LONG_PRESS_DURATION);
     
@@ -391,14 +391,14 @@ export class MobileEventHandler {
     // 터치홀드 타이머 정리
     const touchHoldTimer = this.touchHoldTimers.get(touchId);
     if (touchHoldTimer) {
-      clearTimeout(touchHoldTimer);
+      activeWindow.clearTimeout(touchHoldTimer);
       this.touchHoldTimers.delete(touchId);
     }
     
     // 롱프레스 타이머 정리
     const longPressTimer = this.longPressTimers.get(touchId);
     if (longPressTimer) {
-      clearTimeout(longPressTimer);
+      activeWindow.clearTimeout(longPressTimer);
       this.longPressTimers.delete(touchId);
     }
   }
@@ -407,10 +407,10 @@ export class MobileEventHandler {
    * 모든 타이머 정리
    */
   private clearAllTimers(): void {
-    this.touchHoldTimers.forEach(timer => clearTimeout(timer));
+    this.touchHoldTimers.forEach(timer => activeWindow.clearTimeout(timer));
     this.touchHoldTimers.clear();
     
-    this.longPressTimers.forEach(timer => clearTimeout(timer));
+    this.longPressTimers.forEach(timer => activeWindow.clearTimeout(timer));
     this.longPressTimers.clear();
   }
 
@@ -522,7 +522,7 @@ export class MobileEventHandler {
     }
 
     // 편집 가능한 input 요소 생성
-    const input = document.createElement('input');
+    const input = createEl('input');
     input.type = 'text';
     input.value = target.textContent || '';
     input.className = 'kga-error-original-input kga-mobile-edit-input';
@@ -537,7 +537,7 @@ export class MobileEventHandler {
     const buttonContainer = this.createEditButtonContainer(input, target, context);
 
     // 편집 컨테이너 생성
-    const editContainer = document.createElement('div');
+    const editContainer = createDiv();
     editContainer.className = 'kga-mobile-edit-container';
 
     editContainer.appendChild(input);
@@ -551,7 +551,7 @@ export class MobileEventHandler {
     this.editModeElements.set(target, input);
 
     // 포커스 및 선택
-    setTimeout(() => {
+    activeWindow.setTimeout(() => {
       input.focus();
       input.select();
     }, 100);
@@ -566,16 +566,16 @@ export class MobileEventHandler {
     context: EventContext
   ): HTMLElement {
 
-    const container = document.createElement('div');
+    const container = createDiv();
     container.className = 'kga-mobile-edit-buttons';
 
     // 완료 버튼
-    const confirmBtn = document.createElement('button');
+    const confirmBtn = createEl('button');
     confirmBtn.textContent = '✓';
     confirmBtn.className = 'kga-mobile-edit-confirm';
 
     // 취소 버튼
-    const cancelBtn = document.createElement('button');
+    const cancelBtn = createEl('button');
     cancelBtn.textContent = '✕';
     cancelBtn.className = 'kga-mobile-edit-cancel';
 

@@ -281,7 +281,7 @@ export class PerformanceOptimizer implements IPopupServiceManager {
     const elementsToRemove: Element[] = [];
     
     this.observedElements.forEach(element => {
-      if (!document.contains(element)) {
+      if (!activeDocument.contains(element)) {
         elementsToRemove.push(element);
       }
     });
@@ -317,7 +317,7 @@ export class PerformanceOptimizer implements IPopupServiceManager {
   private updatePerformanceMetrics(): void {
     try {
       // DOM 요소 수 계산
-      this.performanceMetrics.domElementCount = document.querySelectorAll('*').length;
+      this.performanceMetrics.domElementCount = activeDocument.querySelectorAll('*').length;
 
       // 메모리 사용량 추정 (브라우저 지원 시)
       if ('memory' in performance) {

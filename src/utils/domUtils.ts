@@ -93,7 +93,7 @@ export function createEl<K extends keyof HTMLElementTagNameMap>(
     attr?: Record<string, string>;
   }
 ): HTMLElementTagNameMap[K] {
-  const el = document.createElement(tag);
+  const el = activeDocument.createElement(tag);
   
   if (options) {
     if (options.cls) {
@@ -155,14 +155,13 @@ export function setCssVariable(element: HTMLElement, name: string, value: string
  * @returns 생성된 리스트 요소
  */
 export function createList(items: string[], ordered: boolean = false): HTMLElement {
-  const listElement = document.createElement(ordered ? 'ol' : 'ul');
-  
+  const listElement = createEl(ordered ? 'ol' : 'ul');
+
   items.forEach(item => {
-    const listItem = document.createElement('li');
+    const listItem = listElement.createEl('li');
     listItem.textContent = item;
-    listElement.appendChild(listItem);
   });
-  
+
   return listElement;
 }
 
@@ -172,7 +171,7 @@ export function createList(items: string[], ordered: boolean = false): HTMLEleme
  * @returns 생성된 단락 요소
  */
 export function createParagraph(text: string): HTMLParagraphElement {
-  const paragraph = document.createElement('p');
+  const paragraph = createEl('p');
   paragraph.textContent = text;
   return paragraph;
 }
@@ -185,7 +184,7 @@ export function createParagraph(text: string): HTMLParagraphElement {
  * @returns 생성된 링크 요소
  */
 export function createLink(text: string, href: string, target: string = '_blank'): HTMLAnchorElement {
-  const link = document.createElement('a');
+  const link = createEl('a');
   link.textContent = text;
   link.href = href;
   link.target = target;
@@ -200,7 +199,7 @@ export function createLink(text: string, href: string, target: string = '_blank'
 export function parseHTMLSafely(htmlString: string): DocumentFragment {
   // Obsidian의 sanitizeHTMLToDom 사용
   const sanitized = (window as ObsidianWindow).sanitizeHTMLToDom?.(htmlString);
-  const fragment = document.createDocumentFragment();
+  const fragment = createFragment();
   if (sanitized) {
     fragment.appendChild(sanitized);
   }

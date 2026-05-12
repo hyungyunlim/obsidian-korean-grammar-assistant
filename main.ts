@@ -1,8 +1,5 @@
 import {
   Plugin,
-  PluginSettingTab,
-  App,
-  Setting,
   addIcon,
   Notice,
   MarkdownView,
@@ -10,8 +7,7 @@ import {
 
 // Import modularized components
 import { PluginSettings } from './src/types/interfaces';
-import { DEFAULT_SETTINGS, SettingsService } from './src/services/settings';
-import { IgnoredWordsService } from './src/services/ignoredWords';
+import { SettingsService } from './src/services/settings';
 import { SpellCheckOrchestrator } from './src/orchestrator';
 import { ModernSettingsTab } from './src/ui/settingsTab';
 import { Logger } from './src/utils/logger';
@@ -54,7 +50,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       this.settings, 
       (updatedSettings) => {
         this.settings = updatedSettings;
-        this.saveSettings();
+        void this.saveSettings();
       }
     );
 
@@ -73,7 +69,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       checkCallback: (checking: boolean) => {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view) return false;
-        if (!checking) this.orchestrator.execute();
+        if (!checking) void this.orchestrator.execute();
         return true;
       },
     });
@@ -84,7 +80,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       checkCallback: (checking: boolean) => {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view) return false;
-        if (!checking) this.orchestrator.executeCurrentParagraph();
+        if (!checking) void this.orchestrator.executeCurrentParagraph();
         return true;
       },
     });
@@ -95,7 +91,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       checkCallback: (checking: boolean) => {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view) return false;
-        if (!checking) this.orchestrator.executeCurrentWord();
+        if (!checking) void this.orchestrator.executeCurrentWord();
         return true;
       },
     });
@@ -106,7 +102,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       checkCallback: (checking: boolean) => {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view) return false;
-        if (!checking) this.orchestrator.executeCurrentSentence();
+        if (!checking) void this.orchestrator.executeCurrentSentence();
         return true;
       },
     });
@@ -117,7 +113,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       checkCallback: (checking: boolean) => {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view || !this.settings.inlineMode.enabled) return false;
-        if (!checking) this.executeInlineSpellCheck();
+        if (!checking) void this.executeInlineSpellCheck();
         return true;
       },
     });
@@ -128,7 +124,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       checkCallback: (checking: boolean) => {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view || !this.settings.inlineMode.enabled || !this.settings.ai.enabled) return false;
-        if (!checking) this.executeInlineAIAnalysis();
+        if (!checking) void this.executeInlineAIAnalysis();
         return true;
       },
     });
@@ -139,7 +135,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       checkCallback: (checking: boolean) => {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view || !this.settings.inlineMode.enabled) return false;
-        if (!checking) this.executeInlineApplyAll();
+        if (!checking) void this.executeInlineApplyAll();
         return true;
       },
     });
@@ -150,7 +146,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       checkCallback: (checking: boolean) => {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view || !this.settings.inlineMode.enabled) return false;
-        if (!checking) this.executeInlineClearAll();
+        if (!checking) void this.executeInlineClearAll();
         return true;
       },
     });
@@ -421,7 +417,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       analysisNotice.setMessage(`🔢 선택 영역 내 ${selectionErrorCount}개 오류 분석 준비 중...`);
       
       // 잠시 대기 (UI 업데이트 시간 확보)
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => activeWindow.setTimeout(resolve, 500));
       
       // 3단계: AI API 호출 알림
       analysisNotice.setMessage(`🧠 선택 영역 AI 분석 중 (${modelInfo.model})... 수십 초 소요될 수 있습니다`);
@@ -472,7 +468,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       }
       
       // 잠시 대기 (UI 업데이트 시간 확보)
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => activeWindow.setTimeout(resolve, 500));
       
       // 3단계: AI API 호출 알림
       analysisNotice.setMessage(`🧠 AI 분석 중 (${modelInfo.model})... 수십 초 소요될 수 있습니다`);
@@ -526,7 +522,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       await InlineModeService.checkText(targetText);
 
       // 잠시 대기 (맞춤법 검사 완료 대기)
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => activeWindow.setTimeout(resolve, 1000));
 
       // 오류 개수 확인
       const errorCount = InlineModeService.getErrorCount();
@@ -540,7 +536,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       processNotice.setMessage(`✅ 맞춤법 검사 완료! ${errorCount}개 오류 발견 (빨간색 표시)`);
       
       // 사용자가 빨간색 오류를 확인할 수 있는 시간 (3초)
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => activeWindow.setTimeout(resolve, 3000));
 
       // 3단계: AI 분석 시작 알림
       const { getCurrentModelInfo } = await import('./src/constants/aiModels');
@@ -570,7 +566,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       }
       
       // 잠시 대기 (UI 업데이트 시간 확보)
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => activeWindow.setTimeout(resolve, 500));
       
       // 3단계: AI API 호출
       processNotice.setMessage(`🧠 AI 분석 중 (${modelInfo.model})... 수십 초 소요될 수 있습니다`);
@@ -754,7 +750,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       // 설정 업데이트 콜백
       const onSettingsUpdate = (newMaxTokens: number) => {
         this.settings.ai.maxTokens = newMaxTokens;
-        this.saveSettings();
+        void this.saveSettings();
         Logger.log(`인라인 모드: 최대 토큰을 ${newMaxTokens}으로 업데이트했습니다.`);
         new Notice(`⚙️ 최대 토큰이 ${newMaxTokens.toLocaleString()}으로 업데이트되었습니다.`, 3000);
       };

@@ -349,10 +349,10 @@ export class AIAnalysisService {
     
     // 평균 컨텍스트 길이 계산
     const avgContextLength = correctionContexts.reduce((sum, ctx) => sum + ctx.fullContext.length, 0) / correctionContexts.length;
-    const systemPromptLength = AI_PROMPTS.analysisSystem.length;
-    
+    const _systemPromptLength = AI_PROMPTS.analysisSystem.length;
+
     // 모델별 입력 토큰 제한 (대략적으로 계산)
-    const maxInputTokens = this.getModelMaxInputTokens(this.settings.model);
+    const _maxInputTokens = this.getModelMaxInputTokens(this.settings.model);
     
     // 🔧 JSON 응답 잘림 방지를 위해 보수적으로 계산
     // 각 교정당 JSON 응답: ~120자 예상 
@@ -548,7 +548,7 @@ export class AIAnalysisService {
             
             if (i < batches.length - 1) {
               // API 과부하 방지를 위한 배치 간격 (529 오류 방지)
-              await new Promise(resolve => setTimeout(resolve, 1500));
+              await new Promise(resolve => activeWindow.setTimeout(resolve, 1500));
             }
           } catch (error) {
             Logger.error(`배치 ${i + 1} 처리 실패:`, error);
@@ -691,7 +691,7 @@ export class AIAnalysisService {
         try {
           parsedResponse = JSON.parse(fixedJson);
           Logger.debug('쉼표 제거로 JSON 복구 성공');
-        } catch (secondError) {
+        } catch (_secondError) {
           // 마지막 불완전한 객체 제거 시도
           const lastCommaIndex = jsonString.lastIndexOf(',');
           if (lastCommaIndex > 0) {
@@ -699,7 +699,7 @@ export class AIAnalysisService {
             try {
               parsedResponse = JSON.parse(cutJson);
               Logger.debug('불완전 객체 제거로 JSON 복구 성공');
-            } catch (thirdError) {
+            } catch (_thirdError) {
               throw parseError; // 원래 오류 다시 던지기
             }
           } else {
@@ -906,10 +906,10 @@ export class AIAnalysisService {
     }
 
     // 2. 공백과 특수문자를 제거한 핵심 텍스트로 비교
-    const cleanAiValue = aiValue.replace(/[\s\*\~\-\+\[\]]/g, '');
+    const cleanAiValue = aiValue.replace(/[\s*~\-+[\]]/g, '');
     
     for (const option of validOptions) {
-      const cleanOption = option.replace(/[\s\*\~\-\+\[\]]/g, '');
+      const cleanOption = option.replace(/[\s*~\-+[\]]/g, '');
       
       // 핵심 텍스트가 정확히 일치하는 경우
       if (cleanAiValue === cleanOption) {

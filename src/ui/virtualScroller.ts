@@ -45,7 +45,7 @@ export class VirtualScroller {
   private currentRange: RenderRange = { startIndex: 0, endIndex: 0, visibleItems: [] };
   private scrollTop = 0;
   private isScrolling = false;
-  private scrollTimeout?: NodeJS.Timeout;
+  private scrollTimeout?: number;
   private resizeObserver?: ResizeObserver;
   
   // 성능 관련 설정
@@ -198,9 +198,9 @@ export class VirtualScroller {
     }
     
     if (this.scrollTimeout) {
-      clearTimeout(this.scrollTimeout);
+      activeWindow.clearTimeout(this.scrollTimeout);
     }
-    
+
     this.clearRenderedItems();
     this.viewport.removeEventListener('scroll', this.handleScroll);
     
@@ -215,13 +215,13 @@ export class VirtualScroller {
     this.container.className = 'kga-virtual-scroller-container';
     
     // 뷰포트 (스크롤 가능한 영역)
-    this.viewport = this.container.createEl('div', {
+    this.viewport = this.container.createDiv({
       cls: 'kga-virtual-scroller-viewport'
     });
     setCssVariable(this.viewport, '--vs-viewport-height', `${this.config.containerHeight}px`);
     
     // 콘텐츠 영역 (전체 높이를 가진 스크롤 영역)
-    this.content = this.viewport.createEl('div', {
+    this.content = this.viewport.createDiv({
       cls: 'kga-virtual-scroller-content'
     });
   }
@@ -273,10 +273,10 @@ export class VirtualScroller {
 
     // 스크롤 종료 감지
     if (this.scrollTimeout) {
-      clearTimeout(this.scrollTimeout);
+      activeWindow.clearTimeout(this.scrollTimeout);
     }
 
-    this.scrollTimeout = setTimeout(() => {
+    this.scrollTimeout = activeWindow.setTimeout(() => {
       this.isScrolling = false;
     }, 150);
   }, this.SCROLL_DEBOUNCE, true);
@@ -341,7 +341,7 @@ export class VirtualScroller {
    * 아이템 요소를 생성합니다
    */
   private createItemElement(item: VirtualItem, index: number): HTMLElement {
-    const element = document.createElement('div');
+    const element = createDiv();
     element.className = 'kga-virtual-scroller-item';
     element.dataset.virtualItemId = item.id;
     

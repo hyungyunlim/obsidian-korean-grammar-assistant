@@ -169,11 +169,11 @@ export class TokenCalculator implements IPopupServiceManager {
   private async showTokenWarningModal(tokenUsage: TokenUsage): Promise<boolean> {
     return new Promise((resolve) => {
       // 모달 컨테이너 생성
-      const modal = document.createElement('div');
+      const modal = createDiv();
       modal.className = 'modal-container kga-token-warning-modal';
 
       // 모달 콘텐츠
-      const content = document.createElement('div');
+      const content = createDiv();
       content.className = 'modal kga-token-warning-content';
 
       // DOM API를 사용한 안전한 모달 생성
@@ -190,12 +190,12 @@ export class TokenCalculator implements IPopupServiceManager {
       const tokenInfo = infoBox.createDiv();
       const tokenStrong = tokenInfo.createEl('strong');
       tokenStrong.textContent = '예상 토큰:';
-      tokenInfo.appendChild(document.createTextNode(` ${tokenUsage.totalEstimated.toLocaleString()}개`));
+      tokenInfo.appendText(` ${tokenUsage.totalEstimated.toLocaleString()}개`);
 
       const costInfo = infoBox.createDiv();
       const costStrong = costInfo.createEl('strong');
       costStrong.textContent = '예상 비용:';
-      costInfo.appendChild(document.createTextNode(` ${tokenUsage.estimatedCost}`));
+      costInfo.appendText(` ${tokenUsage.estimatedCost}`);
 
       if (tokenUsage.morphemeOptimized) {
         const optimizedInfo = infoBox.createDiv({ cls: 'kga-token-warning-optimized' });
@@ -214,12 +214,12 @@ export class TokenCalculator implements IPopupServiceManager {
       const cancelBtn = buttonContainer.createEl('button', { cls: 'kga-token-warning-cancel' });
       cancelBtn.textContent = '취소';
       modal.appendChild(content);
-      document.body.appendChild(modal);
+      activeDocument.body.appendChild(modal);
 
       // 버튼 이벤트
 
       const cleanup = () => {
-        document.body.removeChild(modal);
+        activeDocument.body.removeChild(modal);
       };
 
       proceedBtn?.addEventListener('click', () => {
@@ -236,11 +236,11 @@ export class TokenCalculator implements IPopupServiceManager {
       const handleKeyDown = (event: KeyboardEvent) => {
         if (event.key === 'Escape') {
           cleanup();
-          document.removeEventListener('keydown', handleKeyDown);
+          activeDocument.removeEventListener('keydown', handleKeyDown);
           resolve(false);
         }
       };
-      document.addEventListener('keydown', handleKeyDown);
+      activeDocument.addEventListener('keydown', handleKeyDown);
 
       // 모달 외부 클릭 처리
       modal.addEventListener('click', (event) => {

@@ -1,4 +1,4 @@
-import { Correction, CorrectionState } from '../types/interfaces';
+import { Correction } from '../types/interfaces';
 import { Logger } from '../utils/logger';
 
 /**

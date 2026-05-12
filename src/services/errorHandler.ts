@@ -269,7 +269,7 @@ export class ErrorHandlerService {
     }
 
     // 모든 재시도 실패
-    const finalErrorInfo = this.handleError(lastError, `${context} (재시도 ${retryConfig.maxRetries}회 실패)`);
+    this.handleError(lastError, `${context} (재시도 ${retryConfig.maxRetries}회 실패)`);
     throw lastError;
   }
 
@@ -299,7 +299,7 @@ export class ErrorHandlerService {
     
     // 해결 방안 제안 (있는 경우)
     if (suggestion) {
-      setTimeout(() => {
+      activeWindow.setTimeout(() => {
         new Notice(`💡 ${suggestion}`, 6000);
       }, 500);
     }
@@ -347,7 +347,7 @@ export class ErrorHandlerService {
    * 비동기 대기 헬퍼
    */
   private static sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(resolve => activeWindow.setTimeout(resolve, ms));
   }
 
   /**

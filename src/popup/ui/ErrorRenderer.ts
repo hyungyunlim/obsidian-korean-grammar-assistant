@@ -31,7 +31,7 @@ export class ErrorRenderer {
   private renderOptions: ErrorRenderOptions;
   private activeElements: Map<number, HTMLElement> = new Map();
   private tooltipCache: Map<string, HTMLElement> = new Map();
-  private animationTimeouts: Map<number, NodeJS.Timeout> = new Map();
+  private animationTimeouts: Map<number, number> = new Map();
 
   constructor(app: App, options: Partial<ErrorRenderOptions> = {}) {
     this.app = app;
@@ -195,16 +195,18 @@ export class ErrorRenderer {
     switch (state) {
       case 'error':
         return `맞춤법 오류: ${original}. ${suggestions?.length || 0}개의 수정 제안이 있습니다.`;
-      case 'corrected':
+      case 'corrected': {
         const corrected = (suggestions && suggestions.length > 0) ? suggestions[0].value : original;
         return `수정됨: ${original} → ${corrected}`;
+      }
       case 'exception-processed':
         return `예외 처리됨: ${original}. 향후 검사에서 제외됩니다.`;
       case 'original-kept':
         return `원본 유지: ${original}. 이번에만 유지됩니다.`;
-      case 'user-edited':
+      case 'user-edited': {
         const edited = correction.correction.userEditedValue || original;
         return `사용자 편집: ${original} → ${edited}`;
+      }
       default:
         return `오류: ${original}`;
     }
@@ -225,14 +227,14 @@ export class ErrorRenderer {
     // 기존 애니메이션 타이머 정리
     const existingTimeout = this.animationTimeouts.get(correctionIndex);
     if (existingTimeout) {
-      clearTimeout(existingTimeout);
+      activeWindow.clearTimeout(existingTimeout);
     }
 
     // 애니메이션 클래스 추가
     element.classList.add('focus-animation');
     
     // 애니메이션 종료 후 클래스 제거
-    const timeout = setTimeout(() => {
+    const timeout = activeWindow.setTimeout(() => {
       element.classList.remove('focus-animation');
       this.animationTimeouts.delete(correctionIndex);
     }, 600); // CSS 애니메이션 지속시간과 일치
@@ -449,7 +451,7 @@ export class ErrorRenderer {
       // 애니메이션 타이머 정리
       const timeout = this.animationTimeouts.get(correctionIndex);
       if (timeout) {
-        clearTimeout(timeout);
+        activeWindow.clearTimeout(timeout);
         this.animationTimeouts.delete(correctionIndex);
       }
 
@@ -466,7 +468,7 @@ export class ErrorRenderer {
    */
   dispose(): void {
     // 모든 애니메이션 타이머 정리
-    this.animationTimeouts.forEach(timeout => clearTimeout(timeout));
+    this.animationTimeouts.forEach(timeout => activeWindow.clearTimeout(timeout));
     this.animationTimeouts.clear();
 
     // 활성 요소 정리

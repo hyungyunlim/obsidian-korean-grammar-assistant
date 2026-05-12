@@ -268,16 +268,16 @@ export class SpellCheckApiService {
    * requestUrl 호출에 대한 타임아웃 래퍼
    */
   private async requestWithTimeout<T>(requestPromise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
-    let timeoutId: NodeJS.Timeout | undefined;
+    let timeoutId: number | undefined;
     const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+      timeoutId = activeWindow.setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
     });
 
     try {
       return await Promise.race([requestPromise, timeoutPromise]);
     } finally {
       if (timeoutId) {
-        clearTimeout(timeoutId);
+        activeWindow.clearTimeout(timeoutId);
       }
     }
   }
@@ -891,7 +891,7 @@ export class SpellCheckApiService {
     }
 
     // 2. 특수문자 → 한글 변환
-    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(original) && /[가-힣]/.test(suggestion)) {
+    if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~`]/.test(original) && /[가-힣]/.test(suggestion)) {
       return { isException: true, reason: '특수문자 → 한글 변환' };
     }
 

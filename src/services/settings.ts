@@ -1,3 +1,4 @@
+import { Platform } from 'obsidian';
 import { PluginSettings, InlineModeSettings } from '../types/interfaces';
 import { DEFAULT_AI_SETTINGS } from '../constants/aiModels';
 import { Logger } from '../utils/logger';
@@ -23,19 +24,21 @@ export const DEFAULT_INLINE_MODE_SETTINGS: InlineModeSettings = {
  */
 function loadApiConfig(): PluginSettings {
   try {
-    // Node.js 환경에서만 작동 (개발 시)
-    if (typeof require !== 'undefined') {
+    // 데스크톱 환경에서만 작동 (개발 시) - 모바일에서는 fs/path 사용 불가
+    if (Platform.isDesktopApp && typeof require !== 'undefined') {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const fs = require('fs');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const path = require('path');
       const configPath = path.join(__dirname, '../../api-config.json');
-      
+
       if (fs.existsSync(configPath)) {
         const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
         Logger.debug('로컬 API 설정 파일을 로드했습니다.');
         return config;
       }
     }
-  } catch (error) {
+  } catch (_error) {
     Logger.debug('로컬 API 설정 파일을 로드할 수 없습니다. 기본값을 사용합니다.');
   }
   

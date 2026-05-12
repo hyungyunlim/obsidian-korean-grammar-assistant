@@ -161,11 +161,10 @@ export class NotificationUtils {
    * 기존 Notice를 업데이트합니다 (진행률 표시용).
    */
   static updateNoticeMessage(notice: Notice, newMessage: string): void {
-    if (notice && notice.noticeEl) {
-      const messageEl = notice.noticeEl.querySelector('.notice-message');
-      if (messageEl) {
-        messageEl.textContent = newMessage;
-      }
+    const noticeAny = notice as unknown as { messageEl?: HTMLElement; noticeEl?: HTMLElement };
+    const el = noticeAny.messageEl ?? noticeAny.noticeEl;
+    if (notice && el) {
+      el.textContent = newMessage;
     }
   }
 
