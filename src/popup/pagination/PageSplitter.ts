@@ -5,6 +5,7 @@
 
 import { createEl } from '../../utils/domUtils';
 import { PageInfo, PageSplitOptions, IPopupComponent, RenderContext } from '../types/PopupTypes';
+import { Correction } from '../../types/interfaces';
 import { Logger } from '../../utils/logger';
 
 export class PageSplitter implements IPopupComponent {
@@ -262,7 +263,7 @@ export class PageSplitter implements IPopupComponent {
   /**
    * 페이지 정보에 오류 개수 업데이트
    */
-  updatePageErrorCounts(pages: PageInfo[], text: string, corrections: any[]): PageInfo[] {
+  updatePageErrorCounts(pages: PageInfo[], text: string, corrections: Correction[]): PageInfo[] {
     return pages.map(page => {
       let errorCount = 0;
       const pageText = text.slice(page.startPos, page.endPos);

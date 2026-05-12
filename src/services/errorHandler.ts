@@ -23,7 +23,36 @@ interface ErrorInfo {
   userMessage: string;
   suggestion?: string;
   retryable: boolean;
-  details?: any;
+  details?: unknown;
+}
+
+/**
+ * Helper: extract a printable message from an unknown error value.
+ */
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  if (error && typeof error === 'object' && 'message' in error) {
+    const m = (error as { message?: unknown }).message;
+    if (typeof m === 'string') return m;
+  }
+  try {
+    return String(error);
+  } catch {
+    return 'Unknown error';
+  }
+}
+
+/**
+ * Helper: extract the error name (e.g. 'TypeError', 'SyntaxError').
+ */
+function getErrorName(error: unknown): string {
+  if (error instanceof Error) return error.name;
+  if (error && typeof error === 'object' && 'name' in error) {
+    const n = (error as { name?: unknown }).name;
+    if (typeof n === 'string') return n;
+  }
+  return '';
 }
 
 /**
@@ -53,11 +82,14 @@ export class ErrorHandlerService {
   /**
    * 에러를 분석하고 적절한 대응 방안을 제공합니다
    */
-  static analyzeError(error: any, context?: string): ErrorInfo {
+  static analyzeError(error: unknown, context?: string): ErrorInfo {
     Logger.error('에러 분석 시작:', { error, context });
 
+    const message = getErrorMessage(error);
+    const name = getErrorName(error);
+
     // 네트워크 에러
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+    if (name === 'TypeError' && message.includes('fetch')) {
       return {
         type: 'NETWORK_ERROR',
         message: 'Network request failed',
@@ -69,7 +101,7 @@ export class ErrorHandlerService {
     }
 
     // API 키 에러
-    if (error.message?.includes('API 키') || error.message?.includes('api-key')) {
+    if (message.includes('API 키') || message.includes('api-key')) {
       return {
         type: 'API_KEY_ERROR',
         message: 'Invalid API key',
@@ -81,8 +113,8 @@ export class ErrorHandlerService {
     }
 
     // HTTP 상태 코드 기반 분류
-    if (error.message?.includes('API 요청 실패')) {
-      const statusMatch = error.message.match(/(\d{3})/);
+    if (message.includes('API 요청 실패')) {
+      const statusMatch = message.match(/(\d{3})/);
       const status = statusMatch ? parseInt(statusMatch[1]) : 0;
 
       switch (Math.floor(status / 100)) {
@@ -139,7 +171,7 @@ export class ErrorHandlerService {
     }
 
     // 타임아웃 에러
-    if (error.message?.includes('타임아웃') || error.message?.includes('timeout')) {
+    if (message.includes('타임아웃') || message.includes('timeout')) {
       return {
         type: 'TIMEOUT_ERROR',
         message: 'Request timeout',
@@ -151,7 +183,7 @@ export class ErrorHandlerService {
     }
 
     // JSON 파싱 에러
-    if (error.name === 'SyntaxError' || error.message?.includes('JSON')) {
+    if (name === 'SyntaxError' || message.includes('JSON')) {
       return {
         type: 'PARSE_ERROR',
         message: 'Failed to parse response',
@@ -163,7 +195,7 @@ export class ErrorHandlerService {
     }
 
     // 유효성 검사 에러
-    if (error.message?.includes('유효') || error.message?.includes('validation')) {
+    if (message.includes('유효') || message.includes('validation')) {
       return {
         type: 'VALIDATION_ERROR',
         message: 'Validation failed',
@@ -177,7 +209,7 @@ export class ErrorHandlerService {
     // 기본 (알 수 없는 에러)
     return {
       type: 'UNKNOWN_ERROR',
-      message: error.message || 'Unknown error occurred',
+      message: message || 'Unknown error occurred',
       userMessage: '예상치 못한 오류가 발생했습니다',
       suggestion: '문제가 계속되면 플러그인을 다시 로드하거나 Obsidian을 재시작해주세요.',
       retryable: true,
@@ -188,7 +220,7 @@ export class ErrorHandlerService {
   /**
    * 에러를 처리하고 사용자에게 적절한 피드백을 제공합니다
    */
-  static handleError(error: any, context?: string): ErrorInfo {
+  static handleError(error: unknown, context?: string): ErrorInfo {
     const errorInfo = this.analyzeError(error, context);
     
     Logger.error('에러 처리:', { 
@@ -214,7 +246,7 @@ export class ErrorHandlerService {
     const retryConfig = { ...this.DEFAULT_RETRY_CONFIG, ...config };
     const retryKey = `${context}_${Date.now()}`;
     
-    let lastError: any;
+    let lastError: unknown;
     let attempt = 0;
 
     while (attempt <= retryConfig.maxRetries) {

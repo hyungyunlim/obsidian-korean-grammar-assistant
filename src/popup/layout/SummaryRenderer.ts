@@ -28,7 +28,7 @@ export type ErrorCardEvent = {
   action: ErrorCardAction;
   correctionIndex: number;
   correction: Correction;
-  data?: any;
+  data?: unknown;
 };
 
 export type ErrorCardListener = (event: ErrorCardEvent) => void;
@@ -641,7 +641,7 @@ export class SummaryRenderer implements IPopupComponent {
   /**
    * 오류 카드 액션 처리
    */
-  private handleErrorCardAction(action: ErrorCardAction, index: number, correction: Correction, data?: any): void {
+  private handleErrorCardAction(action: ErrorCardAction, index: number, correction: Correction, data?: unknown): void {
     Logger.debug('SummaryRenderer: 오류 카드 액션', { action, index });
     
     // 오류 카드 이벤트 발생
@@ -793,7 +793,7 @@ export class SummaryRenderer implements IPopupComponent {
   /**
    * 디버그 정보
    */
-  getDebugInfo(): any {
+  getDebugInfo(): Record<string, unknown> {
     return {
       isInitialized: this.isInitialized,
       hasContainer: !!this.containerElement,

@@ -61,13 +61,15 @@ export class FocusManager implements IPopupComponent {
     return container;
   }
 
-  update(state: any): void {
-    if (state.currentFocusIndex !== undefined) {
-      this.setFocusIndex(state.currentFocusIndex);
+  update(state: { currentFocusIndex?: number; isEditMode?: boolean } | Partial<import('../types/PopupTypes').PopupState>): void {
+    const focusIdx = (state as { currentFocusIndex?: number }).currentFocusIndex;
+    if (focusIdx !== undefined) {
+      this.setFocusIndex(focusIdx);
     }
-    
-    if (state.isEditMode !== undefined) {
-      this.setEditMode(state.isEditMode);
+
+    const isEditMode = (state as { isEditMode?: boolean }).isEditMode;
+    if (isEditMode !== undefined) {
+      this.setEditMode(isEditMode);
     }
   }
 

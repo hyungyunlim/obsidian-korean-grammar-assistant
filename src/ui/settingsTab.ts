@@ -1,8 +1,51 @@
 import { App, PluginSettingTab, Setting, Notice, Modal } from 'obsidian';
 import KoreanGrammarPlugin from '../../main';
 import { IgnoredWordsService } from '../services/ignoredWords';
-import { Logger } from '../utils/logger';
+import { Logger, LogLevel } from '../utils/logger';
+import { AIProvider } from '../types/interfaces';
 import { createMetricsDisplay, clearElement } from '../utils/domUtils';
+
+/**
+ * 백업 항목 정보 (AdvancedSettingsService.getBackups 반환값과 일치)
+ */
+interface BackupEntry {
+  index: number;
+  timestamp: string;
+  reason: string;
+  version: string;
+  age: string;
+}
+
+/**
+ * 설정 검증 결과
+ */
+interface ValidationDisplayResult {
+  isValid: boolean;
+  errors?: string[];
+  warnings?: string[];
+  suggestions?: string[];
+}
+
+/**
+ * 최적화 제안 항목
+ */
+interface OptimizationSuggestionEntry {
+  type: 'performance' | 'cost' | 'usability';
+  title: string;
+  description: string;
+  impact: 'high' | 'medium' | 'low';
+  action: string;
+}
+
+/**
+ * 로그 항목 (Logger.getHistory 반환값과 일치)
+ */
+interface LogDisplayEntry {
+  timestamp: Date;
+  level: LogLevel;
+  message: string;
+  data?: unknown;
+}
 
 /**
  * 간단한 확인 모달 - confirm() 대체용
@@ -380,7 +423,7 @@ export class ModernSettingsTab extends PluginSettingTab {
           .addOption('ollama', '🟡 Ollama (로컬)')
           .setValue(this.plugin.settings.ai.provider)
           .onChange(async (value) => {
-            this.plugin.settings.ai.provider = value as any;
+            this.plugin.settings.ai.provider = value as AIProvider;
             await this.plugin.saveSettings();
             this.display(); // 제공자 변경 시 UI 새로고침
           });
@@ -800,7 +843,7 @@ export class ModernSettingsTab extends PluginSettingTab {
           cls: 'ksc-info-box'
         });
       } else {
-        backups.forEach((backup: any) => {
+        backups.forEach((backup: BackupEntry) => {
           const backupItem = backupListContainer.createDiv({
             cls: 'ksc-info-box ksc-backup-item'
           });
@@ -1132,7 +1175,7 @@ export class ModernSettingsTab extends PluginSettingTab {
     // 로그 내용 컨테이너
     const logContent = container.createDiv({ cls: 'ksc-log-content' });
 
-    const displayLogs = (filteredLogs: any[]) => {
+    const displayLogs = (filteredLogs: LogDisplayEntry[]) => {
       clearElement(logContent);
       
       if (filteredLogs.length === 0) {
@@ -1180,8 +1223,8 @@ export class ModernSettingsTab extends PluginSettingTab {
     // 필터 이벤트
     levelSelect.onchange = () => {
       const selectedLevel = levelSelect.value;
-      const filteredLogs = selectedLevel ? 
-        logs.filter((log: any) => log.level === selectedLevel) : 
+      const filteredLogs = selectedLevel ?
+        logs.filter((log: LogDisplayEntry) => log.level === selectedLevel) :
         logs;
       displayLogs(filteredLogs);
     };
@@ -1221,7 +1264,7 @@ export class ModernSettingsTab extends PluginSettingTab {
           statistics: stats,
           memoryUsage: memUsage
         },
-        logs: logs.map((log: any) => ({
+        logs: logs.map((log: LogDisplayEntry) => ({
           timestamp: log.timestamp.toISOString(),
           level: log.level,
           message: log.message,
@@ -1346,7 +1389,7 @@ export class ModernSettingsTab extends PluginSettingTab {
   /**
    * 개선된 검증 결과 디스플레이
    */
-  private createImprovedValidationDisplay(parent: HTMLElement, validation: any, suggestions: any[]): void {
+  private createImprovedValidationDisplay(parent: HTMLElement, validation: ValidationDisplayResult, suggestions: OptimizationSuggestionEntry[]): void {
     clearElement(parent);
     
     // 전체 결과 컨테이너 - 더 깔끔한 디자인
@@ -1406,7 +1449,7 @@ export class ModernSettingsTab extends PluginSettingTab {
         cls: 'ksc-section-title'
       });
       
-      suggestions.forEach((suggestion: any) => {
+      suggestions.forEach((suggestion: OptimizationSuggestionEntry) => {
         const suggestionCard = suggestionsSection.createDiv({ cls: 'ksc-suggestion-card' });
         
         const impactBadge = suggestion.impact === 'high' ? '🔴' : 

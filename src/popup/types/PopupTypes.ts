@@ -259,11 +259,11 @@ export interface PopupEventData {
   /** 이벤트 발생 시간 */
   timestamp: number;
   /** 이벤트 페이로드 */
-  payload?: any;
+  payload?: unknown;
   /** 이벤트 대상 */
   target?: HTMLElement;
   /** 이전 상태 (상태 변경 이벤트 시) */
-  previousState?: any;
+  previousState?: unknown;
 }
 
 /**
@@ -350,7 +350,7 @@ export interface IPopupEventManager {
   /** 이벤트 리스너 제거 */
   removeEventListener(type: PopupEventType, listener: PopupEventListener): void;
   /** 이벤트 발생 */
-  emit(type: PopupEventType, data?: any): void;
+  emit(type: PopupEventType, data?: unknown): void;
   /** 모든 리스너 제거 */
   removeAllListeners(): void;
 }

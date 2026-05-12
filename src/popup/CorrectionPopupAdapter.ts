@@ -531,7 +531,7 @@ export class CorrectionPopupAdapter extends BaseComponent {
   /**
    * 디버그 정보
    */
-  getDebugInfo(): any {
+  getDebugInfo(): Record<string, unknown> {
     return {
       migrationPhase: this.migrationPhase,
       currentImplementation: this.getCurrentImplementation(),

@@ -3,7 +3,9 @@ import {
   addIcon,
   Notice,
   MarkdownView,
+  Editor,
 } from "obsidian";
+import type { EditorView } from '@codemirror/view';
 
 // Import modularized components
 import { PluginSettings } from './src/types/interfaces';
@@ -22,6 +24,15 @@ addIcon(
   "han-spellchecker",
   `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 18 18" fill="currentColor"><path d="M3.6,3.9c1.3,0,2.9,0,4.2,0,.7,0,2.3-.5,2.3.7,0,.3-.3.5-.6.5-2.2,0-4.6.2-6.8,0-.4,0-.7-.4-.8-.8-.2-.7,1.2-.7,1.5-.4h0ZM6.1,11c-4.2,0-3.7-5.8.7-5.2,3.7.2,3.1,5.6-.5,5.2h-.2ZM3.6,1.6c.7,0,1.5.4,2.3.4.8.1,1.6,0,2.4,0,.8,1.2-1.4,1.5-2.9,1.3-.9,0-2.7-.8-1.9-1.7h0ZM6.3,9.7c2.5,0,1.9-3.4-.6-2.8-1.2.2-1.4,1.8-.5,2.4.2.2.9.2,1,.3h0ZM4.9,13.2c-.1-1.2,1.5-.9,1.6.1.4,1.5-.2,2.3,2,2.1,1,0,6.7-.6,5,1.1-2.3.5-5.4.7-7.6-.3-.6-.8-.3-2.2-.9-3h0ZM11.3,1.1c2.6-.3,1.5,3.8,2,5,.6.4,2.6-.5,2.8.7,0,.4-.3.6-.6.7-.7.1-1.6,0-2.3.1-.2.1,0,.5-.1,1.1,0,1,0,4.2-.8,4.2-.2,0-.5-.3-.6-.6-.3-1.4,0-3.4,0-5,0-1.9,0-3.8-.2-4.6-.1-.4-.5-1.2-.1-1.5h.1Z"/></svg>`
 );
+
+/**
+ * Obsidian의 Editor에서 내부 CodeMirror 6 EditorView를 가져온다.
+ * Obsidian 공식 API에는 노출되어 있지 않지만, 모든 마크다운 Editor 인스턴스에서 `cm` 속성으로 접근 가능하다.
+ */
+function getEditorView(editor: Editor | undefined | null): EditorView | undefined {
+  if (!editor) return undefined;
+  return (editor as Editor & { cm?: EditorView }).cm;
+}
 
 /**
  * 한국어 맞춤법 검사 플러그인
@@ -205,8 +216,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       return;
     }
 
-    // @ts-ignore - CodeMirror 6 에디터 뷰 접근
-    const editorView = (editor as any).cm;
+    const editorView = getEditorView(editor);
     if (!editorView) {
       new Notice("CodeMirror 에디터 뷰를 찾을 수 없습니다.");
       return;
@@ -293,7 +303,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       // InlineModeService 초기화 (키보드 단축키 지원을 위해 필요)
       const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
       if (activeView?.editor) {
-        const editorView = (activeView.editor as any).cm;
+        const editorView = getEditorView(activeView.editor);
         if (editorView) {
           InlineModeService.setEditorView(editorView, this.settings, this.app, async (s) => { this.settings = s; await this.saveSettings(); });
           Logger.log('인라인 모드: InlineModeService 키보드 스코프 초기화됨');
@@ -351,8 +361,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       // 문서 클릭 후 에디터 포커스가 없는 상태에서도 올바르게 작동하도록
       editor.focus(); // 에디터에 포커스 부여
       
-      // @ts-ignore - Obsidian 내부 API 사용
-      const currentEditorView = (activeView as any).editor?.cm;
+      const currentEditorView = getEditorView(activeView.editor);
       if (!currentEditorView) {
         Logger.error('현재 에디터뷰를 찾을 수 없습니다');
         new Notice('에디터뷰를 찾을 수 없습니다.');
@@ -513,7 +522,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       processNotice.setMessage(`📝 ${targetText.length}자 텍스트 맞춤법 검사 중...`);
 
       // 🔧 단일 InlineModeService 시스템 사용
-      const editorView = (activeView.editor as any)?.cm;
+      const editorView = getEditorView(activeView.editor);
       if (editorView) {
         InlineModeService.setEditorView(editorView, this.settings, this.app, async (s) => { this.settings = s; await this.saveSettings(); });
       }
@@ -613,7 +622,7 @@ export default class KoreanGrammarPlugin extends Plugin {
 
     try {
       // 에디터 뷰 설정
-      const editorView = (view.editor as any)?.cm;
+      const editorView = getEditorView(view.editor);
       if (editorView) {
         InlineModeService.setEditorView(editorView, this.settings, this.app, async (s) => { this.settings = s; await this.saveSettings(); });
       }
@@ -658,10 +667,10 @@ export default class KoreanGrammarPlugin extends Plugin {
 
     try {
       // 에디터 뷰 설정
-      const editorView = (view.editor as any)?.cm;
+      const editorView = getEditorView(view.editor);
       if (editorView) {
         InlineModeService.setEditorView(editorView, this.settings, this.app, async (s) => { this.settings = s; await this.saveSettings(); });
-        
+
         // 모든 오류 제거
         InlineModeService.clearErrors(editorView);
       }
@@ -695,8 +704,7 @@ export default class KoreanGrammarPlugin extends Plugin {
         return true;
       }
       
-      // @ts-ignore - Obsidian 내부 API 사용  
-      const currentEditorView = (activeView as any).editor?.cm;
+      const currentEditorView = getEditorView(activeView.editor);
       if (!currentEditorView || !InlineModeService.isCurrentView(currentEditorView)) {
         Logger.warn('현재 에디터뷰가 InlineModeService와 일치하지 않아서 토큰 경고 건너뜀');
         return true;
@@ -790,8 +798,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       // 새로운 문서에 인라인 모드 설정 (오류 상태는 깨끗한 상태에서 시작)
       const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
       if (activeView?.editor && this.settings?.inlineMode?.enabled) {
-        // @ts-ignore - Obsidian 내부 API 사용
-        const currentEditorView = (activeView as any).editor?.cm;
+        const currentEditorView = getEditorView(activeView.editor);
         if (currentEditorView) {
           InlineModeService.setEditorView(currentEditorView, this.settings, this.app, async (s) => { this.settings = s; await this.saveSettings(); }, this);
         }
@@ -811,8 +818,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       if (leaf?.view instanceof MarkdownView && this.settings?.inlineMode?.enabled) {
         const markdownView = leaf.view;
         if (markdownView?.editor) {
-          // @ts-ignore - Obsidian 내부 API 사용
-          const currentEditorView = (markdownView as any).editor?.cm;
+          const currentEditorView = getEditorView(markdownView.editor);
           if (currentEditorView) {
             InlineModeService.setEditorView(currentEditorView, this.settings, this.app, async (s) => { this.settings = s; await this.saveSettings(); }, this);
           }

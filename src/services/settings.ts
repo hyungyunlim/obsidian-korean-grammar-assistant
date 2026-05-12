@@ -26,9 +26,9 @@ function loadApiConfig(): PluginSettings {
   try {
     // 데스크톱 환경에서만 작동 (개발 시) - 모바일에서는 fs/path 사용 불가
     if (Platform.isDesktopApp && typeof require !== 'undefined') {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-var-requires -- Node 'fs' is only available at runtime on desktop; gated by Platform.isDesktopApp above
       const fs = require('fs');
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-var-requires -- Node 'path' is only available at runtime on desktop; gated by Platform.isDesktopApp above
       const path = require('path');
       const configPath = path.join(__dirname, '../../api-config.json');
 

@@ -1,8 +1,18 @@
 import { PluginSettings, SpellCheckResult, Correction } from '../types/interfaces';
-import { SpellCheckApiService } from './api';
-import { SpellCheckCacheService } from './cacheService';
+import { SpellCheckApiService, MorphemeResponse } from './api';
+import { SpellCheckCacheService, CacheStats } from './cacheService';
 import { ErrorHandlerService } from './errorHandler';
 import { Logger } from '../utils/logger';
+
+/**
+ * 형태소 캐시 통계 형태. 다운스트림은 CacheStats 형태를 기대하지만,
+ * 실제 SpellCheckApiService.getMorphemeCacheStats는 {size, maxSize}만 반환한다.
+ * 호환을 위해 CacheStats 구조를 채워 반환한다.
+ */
+interface MorphemeCacheRawStats {
+  size: number;
+  maxSize: number;
+}
 
 /**
  * 배치 요청 아이템 인터페이스
@@ -136,11 +146,21 @@ export class OptimizedSpellCheckService {
   /**
    * 서비스 성능 메트릭을 반환합니다
    */
-  getMetrics(): ApiMetrics & { cache: any; morphemeCache: any } {
+  getMetrics(): ApiMetrics & { cache: CacheStats; morphemeCache: CacheStats } {
     const avgResponseTime = this.metrics.responseTimes.length > 0
       ? this.metrics.responseTimes.reduce((a, b) => a + b, 0) / this.metrics.responseTimes.length
       : 0;
-    
+
+    const morphemeRaw: MorphemeCacheRawStats = this.apiService.getMorphemeCacheStats();
+    const morphemeCacheStats: CacheStats = {
+      totalRequests: 0,
+      cacheHits: 0,
+      cacheMisses: 0,
+      hitRatio: 0,
+      cacheSize: morphemeRaw.size,
+      memoryUsage: morphemeRaw.maxSize
+    };
+
     return {
       totalRequests: this.metrics.totalRequests,
       successfulRequests: this.metrics.successfulRequests,
@@ -149,7 +169,7 @@ export class OptimizedSpellCheckService {
       queueLength: this.requestQueue.length,
       activeBatches: this.activeBatches,
       cache: this.cacheService.getStats(),
-      morphemeCache: this.apiService.getMorphemeCacheStats() // ⭐ NEW: 형태소 캐시 통계
+      morphemeCache: morphemeCacheStats // ⭐ NEW: 형태소 캐시 통계
     };
   }
 
@@ -409,7 +429,7 @@ export class OptimizedSpellCheckService {
     text: string, 
     corrections: Correction[], 
     settings: PluginSettings,
-    morphemeData: any
+    morphemeData: MorphemeResponse
   ): Promise<Correction[]> {
     return await this.apiService.improveCorrectionsWithMorphemeData(text, corrections, settings, morphemeData);
   }
@@ -417,7 +437,7 @@ export class OptimizedSpellCheckService {
   /**
    * 형태소 분석을 수행합니다.
    */
-  async analyzeMorphemes(text: string, settings: PluginSettings): Promise<any> {
+  async analyzeMorphemes(text: string, settings: PluginSettings): Promise<MorphemeResponse> {
     return await this.apiService.analyzeMorphemes(text, settings);
   }
 }

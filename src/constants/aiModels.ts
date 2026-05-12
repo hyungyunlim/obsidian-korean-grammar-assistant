@@ -2,7 +2,7 @@
  * AI 모델 정의 및 제공자 설정
  */
 
-import { AIProvider } from '../types/interfaces';
+import { AIProvider, AISettings } from '../types/interfaces';
 
 // 기본 모델 설정
 export const AI_PROVIDER_DEFAULTS = {
@@ -145,7 +145,7 @@ export type RecommendedModel = typeof RECOMMENDED_MODELS_FOR_KOREAN[number];
 /**
  * AI 설정에서 현재 사용 중인 모델 정보를 가져옵니다.
  */
-export function getCurrentModelInfo(aiSettings: any): {
+export function getCurrentModelInfo(aiSettings: AISettings | null | undefined): {
   provider: string;
   model: string;
   displayName: string;
@@ -158,8 +158,15 @@ export function getCurrentModelInfo(aiSettings: any): {
     };
   }
 
-  const provider = aiSettings.provider || 'openai';
-  const model = aiSettings[`${provider}Model`] || AI_PROVIDER_DEFAULTS[provider as keyof typeof AI_PROVIDER_DEFAULTS];
+  const provider: AIProvider = aiSettings.provider || 'openai';
+  // 일부 사용자 설정에서 `${provider}Model` 형태의 키를 사용할 수 있어 안전하게 조회한다.
+  const extendedSettings = aiSettings as AISettings & Record<string, unknown>;
+  const providerModelKey = `${provider}Model`;
+  const providerModelValue = extendedSettings[providerModelKey];
+  const model =
+    (typeof providerModelValue === 'string' && providerModelValue) ||
+    aiSettings.model ||
+    AI_PROVIDER_DEFAULTS[provider];
 
   // 제공자별 표시명 정의
   const providerDisplayNames: Record<string, string> = {
@@ -202,7 +209,7 @@ export function getCurrentModelInfo(aiSettings: any): {
   };
 
   const providerName = providerDisplayNames[provider] || provider.toUpperCase();
-  const modelName = modelDisplayNames[model] || model;
+  const modelName = modelDisplayNames[model] ?? model;
   
   return {
     provider: providerName,

@@ -3,6 +3,22 @@ import { AIClient } from '../types/interfaces';
 import { API_ENDPOINTS, MODEL_PREFIXES } from '../constants/aiModels';
 import { Logger } from '../utils/logger';
 
+interface OpenAIModelEntry {
+  id: string;
+}
+
+interface OpenAIModelsResponse {
+  data: OpenAIModelEntry[];
+}
+
+interface OpenAIChatChoice {
+  message: { content: string };
+}
+
+interface OpenAIChatResponse {
+  choices: OpenAIChatChoice[];
+}
+
 export class OpenAIClient implements AIClient {
   constructor(private apiKey: string) {}
 
@@ -22,9 +38,10 @@ export class OpenAIClient implements AIClient {
       });
 
       if (response.status === 200) {
-        const models = response.json.data
-          .map((model: any) => model.id)
-          .filter((id: string) => 
+        const responseJson = response.json as OpenAIModelsResponse;
+        const models = responseJson.data
+          .map((model) => model.id)
+          .filter((id: string) =>
             MODEL_PREFIXES.openai.some(prefix => id.startsWith(prefix))
           )
           .sort();
@@ -97,7 +114,8 @@ export class OpenAIClient implements AIClient {
     }
 
     if (response.status === 200) {
-      return response.json.choices[0].message.content.trim();
+      const chatResponse = response.json as OpenAIChatResponse;
+      return chatResponse.choices[0].message.content.trim();
     } else {
       Logger.error('API 응답 오류:', {
         status: response.status,

@@ -28,6 +28,44 @@ import { CorrectionStateManager } from '../../state/correctionState';
 import { AIAnalysisService } from '../../services/aiAnalysisService';
 import { Logger } from '../../utils/logger';
 
+// =============================================================================
+// 액션 페이로드 타입 정의
+// =============================================================================
+
+interface ErrorToggleActionData {
+  correctionIndex: number;
+}
+
+interface SuggestionSelectActionData {
+  correctionIndex: number;
+  suggestionIndex: number;
+}
+
+interface EditModeActionData {
+  correctionIndex: number;
+  trigger?: string;
+}
+
+interface NavigationActionData {
+  action: 'next' | 'prev' | 'goto-page';
+  page?: number;
+}
+
+interface UIToggleActionData {
+  target: string;
+}
+
+interface TouchHoldActionData {
+  correctionIndex: number;
+}
+
+/** 안전한 객체 접근을 위한 record type-guard helper */
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null
+    ? value as Record<string, unknown>
+    : null;
+}
+
 /**
  * CorrectionPopup 핵심 오케스트레이터 클래스
  * 기존 CorrectionPopup 클래스와 완전 호환되면서 모듈화된 아키텍처 제공
@@ -950,7 +988,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
   /**
    * 디버그 정보
    */
-  getDebugInfo(): any {
+  getDebugInfo(): Record<string, unknown> {
     return {
       isInitialized: this.isInitialized,
       isVisible: this.isVisible,
@@ -1200,18 +1238,18 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
   /**
    * 오류 토글 액션 처리
    */
-  private async handleErrorToggleAction(data: any): Promise<void> {
+  private async handleErrorToggleAction(data: unknown): Promise<void> {
     Logger.debug('CorrectionPopupCore: 오류 토글 액션 처리', data);
-    
-    if (!data || data.correctionIndex === undefined) {
+
+    const record = asRecord(data);
+    if (!record || typeof record.correctionIndex !== 'number') {
       Logger.warn('CorrectionPopupCore: 오류 토글 액션에 유효하지 않은 데이터');
       return;
     }
 
     try {
-      // Phase 7에서 상태 관리자와 연결하여 오류 상태 토글 구현 예정
-      const correctionIndex = data.correctionIndex;
-      
+      const correctionIndex = record.correctionIndex;
+
       // 임시 구현: 현재 포커스를 해당 오류로 이동
       this.stateManager.updateState({
         currentFocusIndex: correctionIndex
@@ -1227,18 +1265,19 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
   /**
    * 제안 선택 액션 처리
    */
-  private async handleSuggestionSelectAction(data: any): Promise<void> {
+  private async handleSuggestionSelectAction(data: unknown): Promise<void> {
     Logger.debug('CorrectionPopupCore: 제안 선택 액션 처리', data);
-    
-    if (!data || data.correctionIndex === undefined || data.suggestionIndex === undefined) {
+
+    const record = asRecord(data);
+    if (!record || typeof record.correctionIndex !== 'number' || typeof record.suggestionIndex !== 'number') {
       Logger.warn('CorrectionPopupCore: 제안 선택 액션에 유효하지 않은 데이터');
       return;
     }
 
     try {
-      // Phase 7에서 상태 관리자와 연결하여 제안 적용 구현 예정
-      const { correctionIndex, suggestionIndex } = data;
-      
+      const correctionIndex = record.correctionIndex;
+      const suggestionIndex = record.suggestionIndex;
+
       Logger.log('CorrectionPopupCore: 제안 선택 완료', { correctionIndex, suggestionIndex });
 
     } catch (error) {
@@ -1249,18 +1288,19 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
   /**
    * 편집 모드 액션 처리
    */
-  private async handleEditModeAction(data: any): Promise<void> {
+  private async handleEditModeAction(data: unknown): Promise<void> {
     Logger.debug('CorrectionPopupCore: 편집 모드 액션 처리', data);
-    
-    if (!data || data.correctionIndex === undefined) {
+
+    const record = asRecord(data);
+    if (!record || typeof record.correctionIndex !== 'number') {
       Logger.warn('CorrectionPopupCore: 편집 모드 액션에 유효하지 않은 데이터');
       return;
     }
 
     try {
-      // Phase 7에서 UI 관리자와 연결하여 편집 모드 구현 예정
-      const { correctionIndex, trigger } = data;
-      
+      const correctionIndex = record.correctionIndex;
+      const trigger = typeof record.trigger === 'string' ? record.trigger : undefined;
+
       Logger.log('CorrectionPopupCore: 편집 모드 진입', { correctionIndex, trigger });
 
     } catch (error) {
@@ -1271,17 +1311,19 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
   /**
    * 네비게이션 액션 처리
    */
-  private async handleNavigationAction(data: any): Promise<void> {
+  private async handleNavigationAction(data: unknown): Promise<void> {
     Logger.debug('CorrectionPopupCore: 네비게이션 액션 처리', data);
-    
-    if (!data || !data.action) {
+
+    const record = asRecord(data);
+    if (!record || typeof record.action !== 'string') {
       Logger.warn('CorrectionPopupCore: 네비게이션 액션에 유효하지 않은 데이터');
       return;
     }
 
     try {
-      const { action, page } = data;
-      
+      const action = record.action;
+      const page = typeof record.page === 'number' ? record.page : undefined;
+
       switch (action) {
         case 'next':
           this.nextPage();
@@ -1307,17 +1349,18 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
   /**
    * UI 토글 액션 처리
    */
-  private async handleUIToggleAction(data: any): Promise<void> {
+  private async handleUIToggleAction(data: unknown): Promise<void> {
     Logger.debug('CorrectionPopupCore: UI 토글 액션 처리', data);
-    
-    if (!data || !data.target) {
+
+    const record = asRecord(data);
+    if (!record || typeof record.target !== 'string') {
       Logger.warn('CorrectionPopupCore: UI 토글 액션에 유효하지 않은 데이터');
       return;
     }
 
     try {
-      const { target } = data;
-      
+      const target = record.target;
+
       switch (target) {
         case 'error-summary':
           this.toggleErrorSummary();
@@ -1334,10 +1377,11 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
   /**
    * 터치홀드 액션 처리 (모바일)
    */
-  private async handleTouchHoldAction(data: any): Promise<void> {
+  private async handleTouchHoldAction(data: unknown): Promise<void> {
     Logger.debug('CorrectionPopupCore: 터치홀드 액션 처리', data);
-    
-    if (!data || data.correctionIndex === undefined) {
+
+    const record = asRecord(data);
+    if (!record || typeof record.correctionIndex !== 'number') {
       Logger.warn('CorrectionPopupCore: 터치홀드 액션에 유효하지 않은 데이터');
       return;
     }
@@ -1345,7 +1389,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
     try {
       // 터치홀드는 편집 모드로 전환
       await this.handleEditModeAction({
-        correctionIndex: data.correctionIndex,
+        correctionIndex: record.correctionIndex,
         trigger: 'touch-hold'
       });
 
@@ -1357,7 +1401,7 @@ export class CorrectionPopupCore implements LegacyPopupInterface {
   /**
    * 스와이프 액션 처리 (모바일)
    */
-  private async handleSwipeAction(direction: 'left' | 'right', data: any): Promise<void> {
+  private async handleSwipeAction(direction: 'left' | 'right', data: unknown): Promise<void> {
     Logger.debug('CorrectionPopupCore: 스와이프 액션 처리', { direction, data });
 
     try {

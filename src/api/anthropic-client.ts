@@ -3,6 +3,14 @@ import { AIClient } from '../types/interfaces';
 import { API_ENDPOINTS } from '../constants/aiModels';
 import { Logger } from '../utils/logger';
 
+interface AnthropicContentBlock {
+  text: string;
+}
+
+interface AnthropicMessageResponse {
+  content: AnthropicContentBlock[];
+}
+
 export class AnthropicClient implements AIClient {
   constructor(private apiKey: string) {}
 
@@ -37,7 +45,8 @@ export class AnthropicClient implements AIClient {
     });
 
     if (response.status === 200) {
-      return response.json.content[0].text.trim();
+      const messageResponse = response.json as AnthropicMessageResponse;
+      return messageResponse.content[0].text.trim();
     } else {
       Logger.error('[Anthropic] API 응답 오류:', {
         status: response.status,

@@ -1,6 +1,10 @@
 import { requestUrl } from 'obsidian';
 import { AIClient } from '../types/interfaces';
 
+interface OllamaGenerateResponse {
+  response: string;
+}
+
 export class OllamaClient implements AIClient {
   constructor(private endpoint: string) {}
 
@@ -44,7 +48,8 @@ export class OllamaClient implements AIClient {
     });
 
     if (response.status === 200) {
-      return response.json.response.trim();
+      const generateResponse = response.json as OllamaGenerateResponse;
+      return generateResponse.response.trim();
     } else {
       throw new Error(`Ollama API 오류: ${response.status} - ${response.text}`);
     }

@@ -1,5 +1,6 @@
+import { App } from 'obsidian';
 import { IPopupServiceManager, RenderContext } from '../types/PopupTypes';
-import { AISettings, AIAnalysisRequest, AIAnalysisResult, Correction } from '../../types/interfaces';
+import { AISettings, AIAnalysisRequest, AIAnalysisResult, Correction, MorphemeInfo } from '../../types/interfaces';
 import { AIAnalysisService } from '../../services/aiAnalysisService';
 import { TokenCalculator } from './TokenCalculator';
 import { Logger } from '../../utils/logger';
@@ -18,7 +19,7 @@ export class AIIntegrationManager implements IPopupServiceManager {
 
   constructor(
     private settings: AISettings,
-    private app: any // Obsidian App
+    private app: App
   ) {
     Logger.log('AIIntegrationManager 초기화됨');
   }
@@ -156,8 +157,8 @@ export class AIIntegrationManager implements IPopupServiceManager {
   public createAnalysisRequest(
     originalText: string,
     corrections: Correction[],
-    currentStates?: Record<string, any>,
-    morphemeData?: any
+    currentStates?: AIAnalysisRequest['currentStates'],
+    morphemeData?: MorphemeInfo
   ): AIAnalysisRequest {
     Logger.debug('AI 분석 요청 생성', { 
       textLength: originalText.length,

@@ -37,7 +37,7 @@ interface ExtendedHTMLElement extends HTMLElement {
 interface ExtendedEditor extends Editor {
   cm?: {
     dom?: HTMLElement;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 

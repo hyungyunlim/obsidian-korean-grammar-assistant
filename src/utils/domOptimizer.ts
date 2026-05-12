@@ -3,11 +3,13 @@ import { Logger } from './logger';
 /**
  * DOM 업데이트 배치 아이템 인터페이스
  */
+type DOMUpdateType = 'cssVar' | 'attribute' | 'textContent' | 'className';
+
 interface DOMUpdate {
   element: HTMLElement;
   property: string;
-  value: any;
-  type: 'cssVar' | 'attribute' | 'textContent' | 'className';
+  value: string;
+  type: DOMUpdateType;
 }
 
 interface DevToolsWindow extends Window {
@@ -97,12 +99,12 @@ export class DOMOptimizer {
             type: 'attribute'
           });
         });
-      } else {
+      } else if ((type === 'textContent' || type === 'className') && typeof value === 'string') {
         this.updateQueue.push({
           element,
           property: type,
           value,
-          type: type as any
+          type
         });
       }
     });

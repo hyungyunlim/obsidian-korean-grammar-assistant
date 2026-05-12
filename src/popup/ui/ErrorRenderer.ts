@@ -26,6 +26,9 @@ export interface ErrorElementData {
   isFocused: boolean;
 }
 
+/** HTMLElement with attached error data marker for ErrorRenderer */
+type ErrorHTMLElement = HTMLElement & { __errorData?: ErrorElementData };
+
 export class ErrorRenderer {
   private app: App;
   private renderOptions: ErrorRenderOptions;
@@ -217,7 +220,7 @@ export class ErrorRenderer {
    */
   private setElementData(element: HTMLElement, data: ErrorElementData): void {
     // 커스텀 프로퍼티로 데이터 저장 (이벤트 핸들러에서 사용)
-    (element as any).__errorData = data;
+    (element as ErrorHTMLElement).__errorData = data;
   }
 
   /**
@@ -265,7 +268,7 @@ export class ErrorRenderer {
     element.setAttribute('data-error-state', newState);
     
     // 데이터 업데이트
-    const currentData = (element as any).__errorData as ErrorElementData;
+    const currentData = (element as ErrorHTMLElement).__errorData;
     if (currentData) {
       currentData.state = newState;
       currentData.isActive = isActive;
@@ -309,7 +312,7 @@ export class ErrorRenderer {
     }
 
     // 데이터 업데이트
-    const currentData = (element as any).__errorData as ErrorElementData;
+    const currentData = (element as ErrorHTMLElement).__errorData;
     if (currentData) {
       currentData.isFocused = isFocused;
     }
@@ -431,8 +434,8 @@ export class ErrorRenderer {
     this.renderOptions = { ...this.renderOptions, ...options };
     
     // 모든 활성 요소에 새 옵션 적용
-    this.activeElements.forEach((element, index) => {
-      const data = (element as any).__errorData as ErrorElementData;
+    this.activeElements.forEach((element) => {
+      const data = (element as ErrorHTMLElement).__errorData;
       if (data) {
         element.className = '';
         element.classList.add(...this.getErrorClasses(data.state, data.isActive, data.isFocused).split(' '));

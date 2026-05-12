@@ -11,6 +11,30 @@ import { NotificationUtils } from '../utils/notificationUtils';
 import { SpellCheckApiService } from './api';
 import { IgnoredWordsService } from './ignoredWords';
 
+// 형태소 분석 모듈에서 사용하는 인터페이스 import
+import { MorphemeInfo } from '../types/interfaces';
+
+/**
+ * 🔌 인라인 모드가 호스트 플러그인에서 호출하는 최소 인터페이스.
+ * 실제 플러그인 클래스의 일부 기능만 사용합니다.
+ */
+interface InlineHostCommand {
+  id: string;
+  name: string;
+  callback?: () => void;
+  checkCallback?: (checking: boolean) => boolean | void;
+}
+
+interface InlineHostPlugin {
+  registerDomEvent: (el: HTMLElement, type: string, handler: (e: Event) => void, options?: boolean | AddEventListenerOptions) => void;
+  addCommand: (command: InlineHostCommand) => unknown;
+  settings?: PluginSettings;
+  saveSettings: () => Promise<void> | void;
+  enableInlineMode?: () => void;
+  disableInlineMode?: () => void;
+}
+
+
 
 /**
  * 🤖 AI 교정 텍스트 Widget - Replace Decoration용
@@ -496,12 +520,12 @@ export class InlineModeService {
   private static saveSettingsCallback: ((settings: PluginSettings) => Promise<void>) | null = null;
   private static currentHoveredError: InlineError | null = null;
   private static hoverTimeout: number | null = null;
-  private static plugin: any = null;
+  private static plugin: InlineHostPlugin | null = null;
 
   /**
    * 에디터 뷰 및 설정 초기화
    */
-  static setEditorView(view: EditorView, settings?: PluginSettings, app?: App, saveSettingsCallback?: (settings: PluginSettings) => Promise<void>, plugin?: any): void {
+  static setEditorView(view: EditorView, settings?: PluginSettings, app?: App, saveSettingsCallback?: (settings: PluginSettings) => Promise<void>, plugin?: InlineHostPlugin): void {
     // 🔧 새로운 에디터뷰가 이전과 다르면 이전 상태 완전 정리
     if (this.currentView && this.currentView !== view) {
       Logger.debug('인라인 모드: 이전 에디터뷰와 다름 - 상태 정리 중');
@@ -535,7 +559,7 @@ export class InlineModeService {
   /**
    * 이벤트 리스너 설정 (겹치는 오류 영역 처리 개선)
    */
-  private static registerDomEvent(el: HTMLElement, type: string, handler: (e: any) => void, options?: boolean | AddEventListenerOptions): void {
+  private static registerDomEvent(el: HTMLElement, type: string, handler: (e: Event) => void, options?: boolean | AddEventListenerOptions): void {
     if (this.plugin) {
       this.plugin.registerDomEvent(el, type, handler, options);
     } else {
@@ -897,7 +921,7 @@ export class InlineModeService {
   /**
    * 설정 업데이트
    */
-  static updateSettings(settings: any): void {
+  static updateSettings(settings: PluginSettings): void {
     this.settings = settings;
     Logger.debug('인라인 모드: 설정 업데이트됨');
   }
@@ -906,12 +930,12 @@ export class InlineModeService {
    * 오류 표시 (형태소 API 통합)
    */
   static async showErrors(
-    view: EditorView, 
-    corrections: Correction[], 
+    view: EditorView,
+    corrections: Correction[],
     underlineStyle: string = 'wavy',
     underlineColor: string = 'var(--color-red)',
     app?: App,
-    morphemeData?: any
+    morphemeData?: MorphemeInfo
   ): Promise<void> {
     if (!view || !corrections.length) {
       Logger.warn('인라인 모드: 뷰나 교정 데이터가 없습니다.');
@@ -943,9 +967,10 @@ export class InlineModeService {
           Logger.log('📋 형태소 분석 시작...');
           
           const apiService = new SpellCheckApiService();
-          finalMorphemeData = await apiService.analyzeMorphemes(fullText, this.settings);
+          // Bareun API의 MorphemeResponse는 런타임에 MorphemeInfo로 호환되는 구조이므로 unknown을 거쳐 좁힘
+          finalMorphemeData = (await apiService.analyzeMorphemes(fullText, this.settings)) as unknown as MorphemeInfo;
           Logger.log(`📋 형태소 분석 완료: ${!!finalMorphemeData ? '성공' : '실패'}`);
-          
+
         } catch (error) {
           Logger.error('인라인 모드: 형태소 분석 실패, 기본 로직 사용:', error);
         }
@@ -2187,7 +2212,7 @@ export class InlineModeService {
   /**
    * 인라인 모드 명령어 등록 (Command Palette 방식)
    */
-  static registerCommands(plugin: any): void {
+  static registerCommands(plugin: InlineHostPlugin): void {
 
     // 다음 오류로 이동
     plugin.addCommand({
@@ -2336,10 +2361,10 @@ export class InlineModeService {
         plugin.saveSettings();
 
         if (plugin.settings.inlineMode.enabled) {
-          plugin.enableInlineMode();
+          plugin.enableInlineMode?.();
           Logger.log('✅ 인라인 모드 활성화');
         } else {
-          plugin.disableInlineMode();
+          plugin.disableInlineMode?.();
           Logger.log('✅ 인라인 모드 비활성화');
         }
         return true;
@@ -2736,7 +2761,7 @@ export class InlineModeService {
   /**
    * 🔧 주어진 에디터뷰가 현재 InlineModeService가 관리하는 뷰인지 확인
    */
-  static isCurrentView(editorView: any): boolean {
+  static isCurrentView(editorView: EditorView): boolean {
     return this.currentView === editorView;
   }
 
@@ -2809,14 +2834,15 @@ export class InlineModeService {
 
     try {
       // 기존 오류들을 corrections 형태로 변환
-      const corrections: any[] = [];
+      const corrections: Correction[] = [];
       this.activeErrors.forEach((error) => {
         corrections.push({
           original: error.correction.original,
-          corrected: error.correction.corrected || []
+          corrected: error.correction.corrected || [],
+          help: error.correction.help
         });
       });
-      
+
       // AI 분석 서비스가 있는지 확인
       if (!this.settings) {
         throw new Error('AI 분석 서비스를 찾을 수 없습니다.');
@@ -2828,19 +2854,19 @@ export class InlineModeService {
         currentStates[index] = { state: 'error', value: '' };
       });
 
-      const aiRequest: any = {
+      const { AIAnalysisService } = await import('./aiAnalysisService');
+      const aiRequest: import('../types/interfaces').AIAnalysisRequest = {
         corrections,
-        morphemeData: null,
         currentStates,
         originalText: corrections.map(c => c.original).join(' '),
-        onProgress: progressCallback ? (current: number, total: number, message: string) => {
+        onProgress: progressCallback ? (current: number, total: number, _message: string) => {
           progressCallback(current, total);
         } : undefined
       };
 
       // AI 분석 실행 (배치 기반 진행률 자동 업데이트)
-      let analysisResults: any[] = [];
-      const aiService = new (await import('./aiAnalysisService')).AIAnalysisService(this.settings.ai);
+      let analysisResults: import('../types/interfaces').AIAnalysisResult[] = [];
+      const aiService = new AIAnalysisService(this.settings.ai);
       if (aiService && typeof aiService === 'object' && 'analyzeCorrections' in aiService) {
         analysisResults = await aiService.analyzeCorrections(aiRequest);
       }
@@ -3235,14 +3261,16 @@ export class InlineModeService {
     }
 
     // 선택 영역에 포함된 오류들만 필터링
-    const selectionErrors: any[] = [];
+    type SelectionErrorEntry = Correction & { morphemeInfo?: InlineError['morphemeInfo'] };
+    const selectionErrors: SelectionErrorEntry[] = [];
     const selectionErrorIds: string[] = [];
-    
+
     this.activeErrors.forEach((error, errorId) => {
       if (selectedText.includes(error.correction.original)) {
         selectionErrors.push({
           original: error.correction.original,
           corrected: error.correction.corrected || [],
+          help: error.correction.help,
           morphemeInfo: error.morphemeInfo
         });
         selectionErrorIds.push(errorId);
@@ -3308,7 +3336,7 @@ export class InlineModeService {
     underlineStyle: string = 'wavy',
     underlineColor: string = 'var(--color-red)',
     app?: App,
-    morphemeData?: any
+    morphemeData?: MorphemeInfo
   ): Promise<void> {
     if (!view || !corrections.length || !selectedText.trim()) {
       Logger.warn('인라인 모드: 선택 영역 오류 표시 - 필수 데이터가 없습니다.');
@@ -3355,7 +3383,7 @@ export class InlineModeService {
         try {
           NotificationUtils.updateNoticeMessage(analysisNotice, '📋 형태소 분석 중...');
           const apiService = new SpellCheckApiService();
-          finalMorphemeData = await apiService.analyzeMorphemes(selectedText, this.settings);
+          finalMorphemeData = (await apiService.analyzeMorphemes(selectedText, this.settings)) as unknown as MorphemeInfo;
         } catch (error) {
           Logger.warn('선택 영역 형태소 분석 실패, 기본 로직 사용:', error);
         }

@@ -137,7 +137,7 @@ export class PopupStateManager implements IPopupStateManager {
     for (const [key, value] of Object.entries(updates)) {
       if (this.state[key as keyof PopupState] !== value) {
         changedFields.push(key);
-        (this.state as any)[key] = value;
+        (this.state as unknown as Record<string, unknown>)[key] = value;
       }
     }
     
@@ -165,7 +165,7 @@ export class PopupStateManager implements IPopupStateManager {
     for (const [key, value] of Object.entries(updates)) {
       if (this.paginationState[key as keyof PaginationState] !== value) {
         changedFields.push(`pagination.${key}`);
-        (this.paginationState as any)[key] = value;
+        (this.paginationState as unknown as Record<string, unknown>)[key] = value;
       }
     }
     
@@ -195,7 +195,7 @@ export class PopupStateManager implements IPopupStateManager {
     for (const [key, value] of Object.entries(updates)) {
       if (this.layoutState[key as keyof LayoutState] !== value) {
         changedFields.push(`layout.${key}`);
-        (this.layoutState as any)[key] = value;
+        (this.layoutState as unknown as Record<string, unknown>)[key] = value;
       }
     }
     
@@ -219,7 +219,7 @@ export class PopupStateManager implements IPopupStateManager {
     for (const [key, value] of Object.entries(updates)) {
       if (this.focusState[key as keyof FocusState] !== value) {
         changedFields.push(`focus.${key}`);
-        (this.focusState as any)[key] = value;
+        (this.focusState as unknown as Record<string, unknown>)[key] = value;
       }
     }
     
@@ -247,7 +247,7 @@ export class PopupStateManager implements IPopupStateManager {
     for (const [key, value] of Object.entries(updates)) {
       if (this.aiState[key as keyof AIIntegrationState] !== value) {
         changedFields.push(`ai.${key}`);
-        (this.aiState as any)[key] = value;
+        (this.aiState as unknown as Record<string, unknown>)[key] = value;
       }
     }
     
@@ -501,7 +501,7 @@ export class PopupStateManager implements IPopupStateManager {
   /**
    * 전체 상태 디버그 정보
    */
-  getDebugInfo(): any {
+  getDebugInfo(): Record<string, unknown> {
     return {
       mainState: this.state,
       paginationState: this.paginationState,

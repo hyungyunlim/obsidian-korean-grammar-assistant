@@ -57,7 +57,7 @@ interface Sentence {
   refined: string;
 }
 
-interface MorphemeResponse {
+export interface MorphemeResponse {
   sentences: Sentence[];
   language: string;
 }

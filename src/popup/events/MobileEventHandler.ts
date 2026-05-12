@@ -43,7 +43,7 @@ interface TouchInfo {
 export interface GestureResult {
   success: boolean;
   action: MobileActionType;
-  data?: any;
+  data?: Record<string, unknown>;
   shouldPreventDefault?: boolean;
   shouldStopPropagation?: boolean;
 }
@@ -301,7 +301,7 @@ export class MobileEventHandler {
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
     
     let actionType: MobileActionType = 'unknown';
-    let gestureData: any = {};
+    let gestureData: Record<string, unknown> = {};
     
     // 스와이프 감지
     if (distance >= this.swipeConfig.minDistance && 
@@ -779,9 +779,9 @@ export class MobileEventHandler {
   /**
    * 디버그 정보
    */
-  public getDebugInfo(): any {
+  public getDebugInfo(): Record<string, unknown> {
     const callbackCounts: Record<string, number> = {};
-    
+
     this.callbacks.forEach((callbacks, actionType) => {
       callbackCounts[actionType] = callbacks.length;
     });

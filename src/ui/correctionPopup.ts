@@ -1,5 +1,5 @@
 import { Editor, EditorPosition, App, Platform, Scope, Notice, MarkdownView, Setting } from 'obsidian';
-import { Correction, PopupConfig, AIAnalysisResult, AIAnalysisRequest, PageCorrection } from '../types/interfaces';
+import { Correction, PopupConfig, AIAnalysisResult, AIAnalysisRequest, PageCorrection, MorphemeSentence, MorphemeToken } from '../types/interfaces';
 import { BaseComponent } from './baseComponent';
 import { CorrectionStateManager } from '../state/correctionState';
 import { escapeHtml } from '../utils/htmlUtils';
@@ -7,6 +7,17 @@ import { calculateDynamicCharsPerPage, splitTextIntoPages, escapeRegExp } from '
 import { AIAnalysisService } from '../services/aiAnalysisService';
 import { Logger } from '../utils/logger';
 import { clearElement } from '../utils/domUtils';
+
+/**
+ * 토큰 사용량 추정 결과 인터페이스
+ */
+interface TokenUsageEstimate {
+  inputTokens: number;
+  estimatedOutputTokens: number;
+  totalEstimated: number;
+  estimatedCost: string;
+  morphemeOptimized: boolean;
+}
 
 const HIDDEN_CLASS = 'kga-hidden';
 const FORCE_HIDDEN_CLASS = 'kga-force-hidden';
@@ -2477,8 +2488,8 @@ export class CorrectionPopup extends BaseComponent {
         Logger.debug('✅ orchestrator에서 형태소 분석 정보 전달받음:', {
           hasMorphemeInfo: !!morphemeInfo,
           sentencesCount: morphemeInfo?.sentences?.length || 0,
-          tokensCount: morphemeInfo?.sentences?.reduce((sum: number, s: any) => sum + (s.tokens?.length || 0), 0) || 0,
-          firstFewTokens: morphemeInfo?.sentences?.[0]?.tokens?.slice(0, 3)?.map((t: any) => t.text?.content) || []
+          tokensCount: morphemeInfo?.sentences?.reduce((sum: number, s: MorphemeSentence) => sum + (s.tokens?.length || 0), 0) || 0,
+          firstFewTokens: morphemeInfo?.sentences?.[0]?.tokens?.slice(0, 3)?.map((t: MorphemeToken) => t.text?.content) || []
         });
       } else {
         Logger.warn('❌ 형태소 분석 정보 없음 - 패턴 매칭만 사용');
@@ -2734,7 +2745,7 @@ export class CorrectionPopup extends BaseComponent {
    * 토큰 경고 모달의 DOM 구조를 생성합니다.
    * ⭐ 형태소 최적화 정보 포함
    */
-  private createTokenWarningModal(tokenUsage: any, isOverMaxTokens: boolean, maxTokens: number): HTMLElement {
+  private createTokenWarningModal(tokenUsage: TokenUsageEstimate, isOverMaxTokens: boolean, maxTokens: number): HTMLElement {
     const content = createDiv();
     content.className = 'kga-token-warning-content';
 
@@ -2867,13 +2878,7 @@ export class CorrectionPopup extends BaseComponent {
    * 형태소 최적화를 고려한 토큰 사용량을 추정합니다.
    * ⭐ NEW: 실제 사용될 프롬프트 기반 정확한 추정
    */
-  private async estimateTokenUsageWithMorphemes(request: AIAnalysisRequest): Promise<{
-    inputTokens: number;
-    estimatedOutputTokens: number;
-    totalEstimated: number;
-    estimatedCost: string;
-    morphemeOptimized: boolean;
-  }> {
+  private async estimateTokenUsageWithMorphemes(request: AIAnalysisRequest): Promise<TokenUsageEstimate> {
     try {
       // 🔧 효율성을 위해 토큰 경고에서는 형태소 분석 호출하지 않음
       // 대신 교정 개수를 기반으로 최적화 효과 추정

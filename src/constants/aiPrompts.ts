@@ -3,6 +3,8 @@
  * 성능 최적화를 위해 별도 파일로 분리
  */
 
+import type { Correction, CorrectionContext, MorphemeInfo, MorphemeToken } from '../types/interfaces';
+
 // AI 프롬프트 템플릿
 export const AI_PROMPTS = {
   analysisSystem: `당신은 한국어 맞춤법 검사 전문가입니다. 주어진 텍스트와 맞춤법 오류들을 분석하여 가장 적절한 수정사항을 선택해주세요.
@@ -93,7 +95,7 @@ export const AI_PROMPTS = {
   }
 ]`,
   
-  analysisUser: (originalText: string, corrections: any[]) => 
+  analysisUser: (originalText: string, corrections: Correction[]) =>
     `원문: "${originalText}"
 
 발견된 맞춤법 오류들:
@@ -103,7 +105,7 @@ ${corrections.map((correction, index) =>
 
 위 오류들에 대해 문맥을 고려하여 가장 적절한 선택을 해주세요.`,
 
-  analysisUserWithContext: (correctionContexts: any[]) => 
+  analysisUserWithContext: (correctionContexts: CorrectionContext[]) =>
     `총 ${correctionContexts.length}개의 맞춤법 오류들과 주변 문맥:
 
 ${correctionContexts.map((ctx, index) => {
@@ -141,7 +143,7 @@ ${correctionContexts.map((ctx, index) => {
 - 오류: "총" → 수정안: ["** 총", "**총"] → selectedValue: "** 총" (공백 포함 정확히)`,
 
   // 새로운 형태소 기반 프롬프트 ⭐ NEW
-  analysisUserWithMorphemes: (correctionContexts: any[], morphemeInfo?: any) => {
+  analysisUserWithMorphemes: (correctionContexts: CorrectionContext[], morphemeInfo?: MorphemeInfo | { tokens?: MorphemeToken[] } | null) => {
     let prompt = `총 ${correctionContexts.length}개의 맞춤법 오류 분석:
 
 ${correctionContexts.map((ctx, index) => {
@@ -174,20 +176,26 @@ ${correctionContexts.map((ctx, index) => {
 }).join('\n\n')}`;
 
     // 형태소 정보가 있으면 추가 (간소화된 버전)
-    if (morphemeInfo && morphemeInfo.tokens && morphemeInfo.tokens.length > 0) {
+    const morphemeTokens: MorphemeToken[] | undefined = morphemeInfo
+      ? ('tokens' in morphemeInfo
+          ? (morphemeInfo as { tokens?: MorphemeToken[] }).tokens
+          : (morphemeInfo as MorphemeInfo).sentences?.[0]?.tokens)
+      : undefined;
+    if (morphemeTokens && morphemeTokens.length > 0) {
       // 🔧 핵심 품사 정보만 추출 (토큰 절약)
-      const coreTokens = morphemeInfo.tokens.slice(0, 10); // 최대 10개 토큰만
-      const morphemeData = coreTokens.map((token: any) => {
-        const mainTag = token.morphemes[0]?.tag || 'UNK';
-        return `${token.text.content}(${mainTag})`;
+      const coreTokens = morphemeTokens.slice(0, 10); // 최대 10개 토큰만
+      const morphemeData = coreTokens.map((token) => {
+        const mainTag = token.morphemes?.[0]?.tag || 'UNK';
+        const content = token.text?.content ?? '';
+        return `${content}(${mainTag})`;
       }).join(', ');
-      
+
       prompt += `\n\n📋 품사 정보: ${morphemeData}
 💡 품사를 고려한 문법적 교정을 선택하세요.`;
     }
 
     // 고유명사가 있는 경우 특별 안내 추가
-    const hasProperNouns = correctionContexts.some((ctx: any) => ctx.isLikelyProperNoun);
+    const hasProperNouns = correctionContexts.some((ctx) => ctx.isLikelyProperNoun);
     if (hasProperNouns) {
       prompt += `\n\n🏷️ 고유명사 처리 가이드:
 

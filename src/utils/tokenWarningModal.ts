@@ -21,21 +21,39 @@ export interface TokenWarningSettings {
   maxTokens: number;
 }
 
+/**
+ * 기본 토큰 추정값 (AI 서비스가 반환하는 형태)
+ */
+export interface BaseTokenEstimation {
+  inputTokens: number;
+  estimatedOutputTokens: number;
+  totalEstimated: number;
+  estimatedCost: string;
+}
+
+/**
+ * AI 서비스의 최소 인터페이스 (토큰 경고 모달에서 사용)
+ */
+export interface TokenAwareAIService {
+  getProviderInfo?: () => { available?: boolean } | undefined;
+  estimateTokenUsage?: (request: AIAnalysisRequest) => BaseTokenEstimation | undefined;
+}
+
 export class TokenWarningModal {
   
   /**
    * 토큰 사용량 경고를 확인하고 사용자 확인을 받습니다.
    */
   static async checkTokenUsageWarning(
-    request: AIAnalysisRequest, 
-    aiService: any,
+    request: AIAnalysisRequest,
+    aiService: TokenAwareAIService | null | undefined,
     settings: TokenWarningSettings,
     onSettingsUpdate?: (newMaxTokens: number) => void
   ): Promise<boolean> {
     Logger.log('🔍 TokenWarningModal.checkTokenUsageWarning 시작');
     
     // AI 서비스에서 설정 확인
-    const aiSettings = aiService?.getProviderInfo();
+    const aiSettings = aiService?.getProviderInfo?.();
     Logger.log('🔍 AI 서비스 정보:', aiSettings);
     
     if (!aiService || !aiSettings?.available) {
@@ -263,7 +281,7 @@ export class TokenWarningModal {
   /**
    * 형태소 최적화를 고려한 토큰 사용량을 추정합니다.
    */
-  private static async estimateTokenUsageWithMorphemes(request: AIAnalysisRequest, aiService: any): Promise<TokenUsage> {
+  private static async estimateTokenUsageWithMorphemes(request: AIAnalysisRequest, aiService: TokenAwareAIService | null | undefined): Promise<TokenUsage> {
     try {
       Logger.log('🔍 토큰 추정 시작 - 요청 정보:', {
         correctionsCount: request.corrections.length,
@@ -290,7 +308,7 @@ export class TokenWarningModal {
       
       // 기본 토큰 추정
       Logger.log('🔍 AI 서비스 토큰 추정 호출 전');
-      const baseEstimation = aiService?.estimateTokenUsage(adjustedRequest) || {
+      const baseEstimation: BaseTokenEstimation = aiService?.estimateTokenUsage?.(adjustedRequest) ?? {
         inputTokens: 0,
         estimatedOutputTokens: 0,
         totalEstimated: 0,
@@ -324,7 +342,7 @@ export class TokenWarningModal {
       Logger.error('토큰 추정 실패, 기본값 사용:', error);
       
       // 실패 시 기본 추정 사용
-      const fallbackEstimation = aiService?.estimateTokenUsage(request) || {
+      const fallbackEstimation: BaseTokenEstimation = aiService?.estimateTokenUsage?.(request) ?? {
         inputTokens: 0,
         estimatedOutputTokens: 0,
         totalEstimated: 0,

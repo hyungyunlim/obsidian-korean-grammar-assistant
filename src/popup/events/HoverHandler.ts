@@ -34,7 +34,7 @@ export interface HoverResult {
   success: boolean;
   action: HoverActionType;
   state: HoverState;
-  data?: any;
+  data?: Record<string, unknown>;
   shouldShowTooltip?: boolean;
   tooltipContent?: string;
   tooltipPosition?: { x: number; y: number };
@@ -695,7 +695,7 @@ export class HoverHandler {
   /**
    * 디버그 정보
    */
-  public getDebugInfo(): any {
+  public getDebugInfo(): Record<string, unknown> {
     const callbackCounts: Record<string, number> = {};
     
     this.callbacks.forEach((callbacks, actionType) => {

@@ -637,7 +637,7 @@ export class PopupEventManager implements IPopupServiceManager {
   /**
    * 디버그 정보 반환
    */
-  public getDebugInfo(): any {
+  public getDebugInfo(): Record<string, unknown> {
     return {
       isActive: this.isEventSystemActive,
       hasContainer: !!this.containerElement,

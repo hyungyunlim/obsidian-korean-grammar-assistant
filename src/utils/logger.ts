@@ -10,7 +10,7 @@ interface LogEntry {
   timestamp: Date;
   level: LogLevel;
   message: string;
-  data?: any;
+  data?: unknown;
 }
 
 /**
@@ -47,7 +47,7 @@ export class Logger {
   /**
    * 일반 정보 로그
    */
-  static log(message: string, ...args: any[]): void {
+  static log(message: string, ...args: unknown[]): void {
     if (!this.shouldLog('INFO')) return;
     
     this.writeLog('INFO', message, args.length > 0 ? args : undefined);
@@ -59,7 +59,7 @@ export class Logger {
   /**
    * 디버그 로그 (개발 모드에서만)
    */
-  static debug(message: string, ...args: any[]): void {
+  static debug(message: string, ...args: unknown[]): void {
     if (!this.shouldLog('DEBUG')) return;
     
     this.writeLog('DEBUG', message, args.length > 0 ? args : undefined);
@@ -71,7 +71,7 @@ export class Logger {
   /**
    * 경고 로그
    */
-  static warn(message: string, ...args: any[]): void {
+  static warn(message: string, ...args: unknown[]): void {
     if (!this.shouldLog('WARN')) return;
     
     this.writeLog('WARN', message, args.length > 0 ? args : undefined);
@@ -83,7 +83,7 @@ export class Logger {
   /**
    * 에러 로그 (프로덕션에서도 표시)
    */
-  static error(message: string, ...args: any[]): void {
+  static error(message: string, ...args: unknown[]): void {
     if (!this.shouldLog('ERROR')) return;
     
     this.writeLog('ERROR', message, args.length > 0 ? args : undefined);
@@ -239,7 +239,7 @@ export class Logger {
   /**
    * 실제 로그 작성 (히스토리 관리)
    */
-  private static writeLog(level: LogLevel, message: string, data?: any): void {
+  private static writeLog(level: LogLevel, message: string, data?: unknown): void {
     if (!this.enableHistory || !this.shouldLog(level)) return;
 
     const logEntry: LogEntry = {

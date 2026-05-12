@@ -23,7 +23,7 @@ import { createEl, setCssVariable } from '../../utils/domUtils';
 export type LayoutChangeEvent = {
   area: LayoutArea;
   type: 'resize' | 'visibility' | 'content';
-  data: any;
+  data: unknown;
 };
 
 export type LayoutChangeListener = (event: LayoutChangeEvent) => void;
@@ -796,7 +796,7 @@ export class PopupLayoutManager implements IPopupComponent {
   /**
    * 디버그 정보
    */
-  getDebugInfo(): any {
+  getDebugInfo(): Record<string, unknown> {
     return {
       isInitialized: this.isInitialized,
       layoutState: this.layoutState,

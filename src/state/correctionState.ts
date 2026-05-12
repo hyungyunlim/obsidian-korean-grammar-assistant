@@ -5,7 +5,7 @@ import { Logger } from '../utils/logger';
  * 교정 상태 관리 클래스
  */
 export class CorrectionStateManager {
-  private states: Map<string | number, any> = new Map();
+  private states: Map<string | number, string | boolean> = new Map();
   private corrections: Correction[] = [];
   private ignoredWords: string[] = [];
   private userEditedValues: Map<number, string> = new Map();
@@ -88,7 +88,8 @@ export class CorrectionStateManager {
   getValue(correctionIndex: number): string {
     const isUserEdited = this.isUserEditedState(correctionIndex);
     const userEditedValue = this.userEditedValues.get(correctionIndex);
-    const statesValue = this.states.get(correctionIndex) || '';
+    const rawStatesValue = this.states.get(correctionIndex);
+    const statesValue: string = typeof rawStatesValue === 'string' ? rawStatesValue : '';
     
     // 사용자 편집 상태이고 편집값이 있으면 편집값 반환, 없으면 상태값 반환
     const finalValue = isUserEdited && userEditedValue !== undefined ? userEditedValue : statesValue;
@@ -695,7 +696,14 @@ export class CorrectionStateManager {
    * 디버그 정보를 가져옵니다.
    * @returns 디버그 정보 객체
    */
-  getDebugInfo(): any {
+  getDebugInfo(): {
+    correctionCount: number;
+    statesCount: number;
+    exceptionStatesCount: number;
+    originalKeptStatesCount: number;
+    userEditedValuesCount: number;
+    ignoredWordsCount: number;
+  } {
     // 예외 상태와 원본 유지 상태 개수 계산
     let exceptionStatesCount = 0;
     let originalKeptStatesCount = 0;

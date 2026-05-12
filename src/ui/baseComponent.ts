@@ -141,6 +141,6 @@ export abstract class BaseComponent implements UIComponent {
    * @param value CSS 값
    */
   setStyle(property: string, value: string): void {
-    (this.element.style as any)[property] = value;
+    (this.element.style as unknown as Record<string, string>)[property] = value;
   }
 }

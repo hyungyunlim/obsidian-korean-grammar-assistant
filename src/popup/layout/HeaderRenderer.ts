@@ -20,7 +20,7 @@ export type HeaderButtonType = 'ai-analyze' | 'settings' | 'help' | 'close';
  */
 export type HeaderButtonEvent = {
   type: HeaderButtonType;
-  data?: any;
+  data?: unknown;
 };
 
 export type HeaderButtonListener = (event: HeaderButtonEvent) => void;
@@ -625,7 +625,7 @@ export class HeaderRenderer implements IPopupComponent {
   /**
    * 디버그 정보
    */
-  getDebugInfo(): any {
+  getDebugInfo(): Record<string, unknown> {
     return {
       isInitialized: this.isInitialized,
       hasContainer: !!this.containerElement,

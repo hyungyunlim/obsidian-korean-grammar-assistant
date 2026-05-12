@@ -1,6 +1,7 @@
-import { App, Editor, Notice, MarkdownView } from 'obsidian';
-import { PluginSettings, SpellCheckResult } from './types/interfaces';
+import { App, Editor, EditorPosition, Notice, MarkdownView, TFile } from 'obsidian';
+import { PluginSettings, SpellCheckResult, Correction, MorphemeInfo, AIAnalysisResult } from './types/interfaces';
 import { OptimizedSpellCheckService } from './services/optimizedApiService';
+import type { MorphemeResponse } from './services/api';
 import { SettingsService } from './services/settings';
 import { IgnoredWordsService } from './services/ignoredWords';
 import { CorrectionPopup } from './ui/correctionPopup';
@@ -121,9 +122,10 @@ export class SpellCheckOrchestrator {
         Logger.error('맞춤법 검사 실행 오류:', error);
       }
 
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('Spell check orchestrator error:', error);
-      new Notice(`오류가 발생했습니다: ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      new Notice(`오류가 발생했습니다: ${message}`);
     }
   }
 
@@ -181,11 +183,11 @@ export class SpellCheckOrchestrator {
   private handleSpellCheckResult(
     result: SpellCheckResult,
     selectedText: string,
-    selectionStart: any,
-    selectionEnd: any,
+    selectionStart: EditorPosition,
+    selectionEnd: EditorPosition,
     editor: Editor,
-    file?: any,
-    morphemeInfo?: any
+    file?: TFile | null,
+    morphemeInfo?: MorphemeResponse | MorphemeInfo | null
   ): void {
     if (result.corrections.length === 0) {
       new Notice("수정할 것이 없습니다. 훌륭합니다!");
@@ -208,7 +210,8 @@ export class SpellCheckOrchestrator {
       end: selectionEnd,
       editor: editor,
       file: file, // ⭐ NEW: File 인스턴스 전달 (메타데이터 정보용)
-      morphemeInfo: morphemeInfo, // ⭐ NEW: 형태소 분석 정보 전달 (AI 분석용)
+      // MorphemeResponse는 PopupConfig의 MorphemeInfo와 구조적으로 호환된다.
+      morphemeInfo: (morphemeInfo as MorphemeInfo | undefined) ?? undefined,
       ignoredWords: IgnoredWordsService.getIgnoredWords(this.settings),
       onExceptionWordsAdded: (words: string[]) => this.handleExceptionWords(words)
     }, this.aiService, (newMaxTokens: number) => this.handleMaxTokensUpdate(newMaxTokens));
@@ -220,17 +223,19 @@ export class SpellCheckOrchestrator {
   /**
    * API 오류를 처리합니다.
    */
-  private handleApiError(error: any): void {
+  private handleApiError(error: unknown): void {
     Logger.error('API Error:', error);
-    
-    if (error.message?.includes('API 키')) {
+
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (message.includes('API 키')) {
       new Notice("API 키가 설정되지 않았습니다. 플러그인 설정에서 Bareun.ai API 키를 입력해주세요.");
-    } else if (error.message?.includes('API 요청 실패')) {
-      new Notice(`API 요청에 실패했습니다: ${error.message}`);
-    } else if (error.message?.includes('네트워크')) {
+    } else if (message.includes('API 요청 실패')) {
+      new Notice(`API 요청에 실패했습니다: ${message}`);
+    } else if (message.includes('네트워크')) {
       new Notice("네트워크 연결을 확인해주세요.");
     } else {
-      new Notice(`맞춤법 검사 중 오류가 발생했습니다: ${error.message}`);
+      new Notice(`맞춤법 검사 중 오류가 발생했습니다: ${message}`);
     }
   }
 
@@ -266,7 +271,7 @@ export class SpellCheckOrchestrator {
   /**
    * API 서비스 성능 메트릭을 반환합니다.
    */
-  getPerformanceMetrics(): any {
+  getPerformanceMetrics(): ReturnType<OptimizedSpellCheckService['getMetrics']> {
     return this.apiService.getMetrics();
   }
 
@@ -332,9 +337,10 @@ export class SpellCheckOrchestrator {
       // 기존 execute 메서드의 로직 재사용
       await this.performSpellCheck(selectedText, editor, paragraphData.from, paragraphData.to);
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('현재 문단 맞춤법 검사 중 오류 발생:', error);
-      new Notice(`현재 문단 맞춤법 검사 중 오류가 발생했습니다: ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      new Notice(`현재 문단 맞춤법 검사 중 오류가 발생했습니다: ${message}`);
     }
   }
 
@@ -375,9 +381,10 @@ export class SpellCheckOrchestrator {
       // 기존 execute 메서드의 로직 재사용
       await this.performSpellCheck(selectedText, editor, wordData.from, wordData.to);
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('현재 단어 맞춤법 검사 중 오류 발생:', error);
-      new Notice(`현재 단어 맞춤법 검사 중 오류가 발생했습니다: ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      new Notice(`현재 단어 맞춤법 검사 중 오류가 발생했습니다: ${message}`);
     }
   }
 
@@ -412,9 +419,10 @@ export class SpellCheckOrchestrator {
       // 기존 execute 메서드의 로직 재사용
       await this.performSpellCheck(selectedText, editor, sentenceData.from, sentenceData.to);
       
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('현재 문장 맞춤법 검사 중 오류 발생:', error);
-      new Notice(`현재 문장 맞춤법 검사 중 오류가 발생했습니다: ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      new Notice(`현재 문장 맞춤법 검사 중 오류가 발생했습니다: ${message}`);
     }
   }
 
@@ -422,10 +430,10 @@ export class SpellCheckOrchestrator {
    * 맞춤법 검사를 수행하는 공통 메서드
    */
   private async performSpellCheck(
-    selectedText: string, 
-    editor: Editor, 
-    from?: any, 
-    to?: any
+    selectedText: string,
+    editor: Editor,
+    from?: EditorPosition,
+    to?: EditorPosition
   ): Promise<void> {
     // File 인스턴스 가져오기
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -481,16 +489,17 @@ export class SpellCheckOrchestrator {
       } else {
         new Notice("수정할 것이 없습니다. 훌륭합니다!");
       }
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('맞춤법 검사 중 오류 발생:', error);
-      if (error.message.includes('API 키')) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes('API 키')) {
         new Notice("API 키가 설정되지 않았습니다. 플러그인 설정에서 Bareun.ai API 키를 입력해주세요.");
-      } else if (error.message.includes('요청')) {
-        new Notice(`API 요청에 실패했습니다: ${error.message}`);
-      } else if (error.message.includes('네트워크')) {
+      } else if (message.includes('요청')) {
+        new Notice(`API 요청에 실패했습니다: ${message}`);
+      } else if (message.includes('네트워크')) {
         new Notice("네트워크 연결을 확인해주세요.");
       } else {
-        new Notice(`맞춤법 검사 중 오류가 발생했습니다: ${error.message}`);
+        new Notice(`맞춤법 검사 중 오류가 발생했습니다: ${message}`);
       }
     } finally {
       LoadingManager.getInstance().complete();
@@ -528,7 +537,7 @@ export class WorkflowOrchestrator {
    * 인라인 모드용 AI 분석 수행
    * CorrectionPopup의 로직을 최대한 재활용
    */
-  async performAIAnalysisForInline(corrections: any[], morphemeData?: any): Promise<any[]> {
+  async performAIAnalysisForInline(corrections: Correction[], morphemeData?: MorphemeInfo): Promise<AIAnalysisResult[]> {
     try {
       Logger.log(`🤖 인라인 모드 AI 분석 시작: ${corrections.length}개 교정`);
 

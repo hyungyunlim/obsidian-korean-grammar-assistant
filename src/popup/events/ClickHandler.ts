@@ -27,7 +27,7 @@ export type ClickActionType =
 export interface ClickResult {
   success: boolean;
   action: ClickActionType;
-  data?: any;
+  data?: Record<string, unknown>;
   shouldUpdate?: boolean;
   preventDefault?: boolean;
 }
@@ -205,7 +205,7 @@ export class ClickHandler {
         return await this.handleEditMode(context);
         
       default:
-        return this.createResult(false, actionType, null, false, false);
+        return this.createResult(false, actionType, {}, false, false);
     }
   }
 
@@ -224,7 +224,7 @@ export class ClickHandler {
     
     if (context.correctionIndex === undefined) {
       Logger.warn('ClickHandler: 교정 인덱스가 없음');
-      return this.createResult(false, 'error-toggle', null, false, true);
+      return this.createResult(false, 'error-toggle', {}, false, true);
     }
     
     // 더블클릭인 경우 편집 모드로 전환
@@ -254,7 +254,7 @@ export class ClickHandler {
     
     if (context.correctionIndex === undefined || context.suggestionIndex === undefined) {
       Logger.warn('ClickHandler: 교정 또는 제안 인덱스가 없음');
-      return this.createResult(false, 'suggestion-select', null, false, true);
+      return this.createResult(false, 'suggestion-select', {}, false, true);
     }
     
     return this.createResult(true, 'suggestion-select', {
@@ -400,7 +400,7 @@ export class ClickHandler {
   private createResult(
     success: boolean,
     action: ClickActionType,
-    data: any,
+    data: Record<string, unknown>,
     shouldUpdate: boolean,
     preventDefault: boolean
   ): ClickResult {
@@ -460,7 +460,7 @@ export class ClickHandler {
   /**
    * 디버그 정보
    */
-  public getDebugInfo(): any {
+  public getDebugInfo(): Record<string, unknown> {
     const callbackCounts: Record<string, number> = {};
     
     this.callbacks.forEach((callbacks, actionType) => {

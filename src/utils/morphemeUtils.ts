@@ -1,4 +1,4 @@
-import { Correction } from '../types/interfaces';
+import { Correction, MorphemeInfo, MorphemeSentence, MorphemeToken, MorphemeAnalysis } from '../types/interfaces';
 import { Logger } from './logger';
 
 /**
@@ -15,8 +15,8 @@ export class MorphemeUtils {
    * @returns 중복 제거된 교정 배열
    */
   static removeDuplicateCorrections(
-    corrections: Correction[], 
-    morphemeData?: any, 
+    corrections: Correction[],
+    morphemeData?: MorphemeInfo | null,
     originalText?: string
   ): Correction[] {
     if (corrections.length <= 1) {
@@ -38,17 +38,19 @@ export class MorphemeUtils {
    * 형태소 정보를 기반으로 교정을 그룹화합니다.
    */
   private static groupCorrectionsByMorphemes(
-    corrections: Correction[], 
-    morphemeData: any, 
+    corrections: Correction[],
+    morphemeData: MorphemeInfo,
     originalText: string
   ): Correction[] {
     // 토큰 정보를 위치별로 매핑
-    const tokenMap = new Map<string, any>();
-    
+    const tokenMap = new Map<string, MorphemeToken>();
+
     if (morphemeData.sentences) {
-      morphemeData.sentences.forEach((sentence: any) => {
-        sentence.tokens?.forEach((token: any) => {
-          tokenMap.set(token.text.content, token);
+      morphemeData.sentences.forEach((sentence: MorphemeSentence) => {
+        sentence.tokens?.forEach((token: MorphemeToken) => {
+          if (token.text?.content) {
+            tokenMap.set(token.text.content, token);
+          }
         });
       });
     }
@@ -171,9 +173,9 @@ export class MorphemeUtils {
    * 형태소 토큰 정보를 기반으로 최적의 교정을 선택합니다.
    */
   private static selectBestCorrectionWithTokens(
-    corrections: Correction[], 
-    tokenMap: Map<string, any>, 
-    originalText: string, 
+    corrections: Correction[],
+    tokenMap: Map<string, MorphemeToken>,
+    originalText: string,
     position: number
   ): Correction | null {
     if (corrections.length === 0) return null;
@@ -183,7 +185,7 @@ export class MorphemeUtils {
     for (const correction of corrections) {
       if (tokenMap.has(correction.original)) {
         const token = tokenMap.get(correction.original);
-        Logger.debug(`토큰 기반 선택: "${correction.original}" (품사: ${token.morphemes?.[0]?.tag || 'unknown'})`);
+        Logger.debug(`토큰 기반 선택: "${correction.original}" (품사: ${token?.morphemes?.[0]?.tag || 'unknown'})`);
         return correction;
       }
     }
@@ -200,12 +202,12 @@ export class MorphemeUtils {
   /**
    * 형태소 분석 결과에서 고유명사/외국어를 감지합니다.
    */
-  static isProperNounFromMorphemes(text: string, morphemeInfo: any): boolean {
+  static isProperNounFromMorphemes(text: string, morphemeInfo: MorphemeInfo | null | undefined): boolean {
     if (!morphemeInfo || !morphemeInfo.sentences) return false;
 
     for (const sentence of morphemeInfo.sentences) {
       for (const token of sentence.tokens || []) {
-        if (token.text.content === text) {
+        if (token.text?.content === text) {
           for (const morpheme of token.morphemes || []) {
             const tag = morpheme.tag;
             // 고유명사, 외국어, 한자어 등 태그 확인
@@ -224,7 +226,7 @@ export class MorphemeUtils {
   /**
    * 형태소 분석 결과에서 품사 정보를 추출합니다.
    */
-  static extractPosInfo(text: string, morphemeInfo: any): {
+  static extractPosInfo(text: string, morphemeInfo: MorphemeInfo | null | undefined): {
     mainPos: string;
     tags: string[];
     confidence: number;
@@ -233,14 +235,14 @@ export class MorphemeUtils {
 
     for (const sentence of morphemeInfo.sentences) {
       for (const token of sentence.tokens || []) {
-        if (token.text.content === text) {
+        if (token.text?.content === text) {
           const morphemes = token.morphemes || [];
           if (morphemes.length > 0) {
             const mainMorpheme = morphemes[0];
             return {
               mainPos: this.tagToKorean(mainMorpheme.tag),
-              tags: morphemes.map((m: any) => m.tag),
-              confidence: token.confidence || 1.0
+              tags: morphemes.map((m: MorphemeAnalysis) => m.tag),
+              confidence: 1.0
             };
           }
         }

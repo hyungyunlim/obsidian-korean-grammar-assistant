@@ -276,7 +276,7 @@ export class LoadingManager {
           toastContainer.remove();
         }, 200);
       }
-    } as any;
+    } as unknown as Notice;
   }
 
   /**

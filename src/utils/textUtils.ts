@@ -1,6 +1,7 @@
 /**
  * 텍스트 처리 관련 유틸리티 함수들
  */
+import type { Editor, EditorPosition } from 'obsidian';
 import { Logger } from './logger';
 
 /**
@@ -171,7 +172,7 @@ export function calculateDynamicCharsPerPage(
  * @param editor 에디터 인스턴스
  * @returns 현재 문단의 텍스트와 선택 범위
  */
-export function getCurrentParagraph(editor: any): { text: string; from: any; to: any } {
+export function getCurrentParagraph(editor: Editor): { text: string; from: EditorPosition; to: EditorPosition } {
   const cursor = editor.getCursor();
   const currentLine = cursor.line;
   const totalLines = editor.lineCount();
@@ -258,7 +259,7 @@ export function getCurrentParagraph(editor: any): { text: string; from: any; to:
  * @param editor 에디터 인스턴스
  * @returns 현재 단어의 텍스트와 선택 범위, 단어가 없으면 null
  */
-export function getCurrentWord(editor: any): { text: string; from: any; to: any } | null {
+export function getCurrentWord(editor: Editor): { text: string; from: EditorPosition; to: EditorPosition } | null {
   const cursor = editor.getCursor();
   const wordRange = editor.wordAt(cursor);
   
@@ -282,7 +283,7 @@ export function getCurrentWord(editor: any): { text: string; from: any; to: any 
  * @param editor 에디터 인스턴스
  * @returns 현재 문장의 텍스트와 선택 범위
  */
-export function getCurrentSentence(editor: any): { text: string; from: any; to: any } {
+export function getCurrentSentence(editor: Editor): { text: string; from: EditorPosition; to: EditorPosition } {
   const cursor = editor.getCursor();
   const currentLine = cursor.line;
   const currentChar = cursor.ch;
@@ -412,8 +413,8 @@ export function getCurrentSentence(editor: any): { text: string; from: any; to: 
  * @param editor 에디터 인스턴스
  * @returns 문단들의 배열
  */
-export function getAllParagraphs(editor: any): Array<{ text: string; from: any; to: any; lineStart: number; lineEnd: number }> {
-  const paragraphs: Array<{ text: string; from: any; to: any; lineStart: number; lineEnd: number }> = [];
+export function getAllParagraphs(editor: Editor): Array<{ text: string; from: EditorPosition; to: EditorPosition; lineStart: number; lineEnd: number }> {
+  const paragraphs: Array<{ text: string; from: EditorPosition; to: EditorPosition; lineStart: number; lineEnd: number }> = [];
   const totalLines = editor.lineCount();
   
   let currentParagraphStart = -1;
@@ -490,14 +491,17 @@ export function getAllParagraphs(editor: any): Array<{ text: string; from: any; 
  * @param editor 에디터 인스턴스
  * @returns 현재 뷰포트에 보이는 문단들
  */
-export function getVisibleParagraphs(editor: any): Array<{ text: string; from: any; to: any; lineStart: number; lineEnd: number }> {
-  const scrollInfo = editor.getScrollInfo();
+export function getVisibleParagraphs(editor: Editor): Array<{ text: string; from: EditorPosition; to: EditorPosition; lineStart: number; lineEnd: number }> {
+  // CodeMirror's getScrollInfo() returns additional runtime fields (clientHeight, height, etc.)
+  // beyond Obsidian's declared { top; left } type.
+  const scrollInfo = editor.getScrollInfo() as { top: number; left: number; clientHeight?: number; height?: number };
   const allParagraphs = getAllParagraphs(editor);
-  
+
   // 대략적인 라인 높이 계산 (실제 CSS 값과 다를 수 있음)
   const lineHeight = 20; // 픽셀 단위
   const visibleStartLine = Math.floor(scrollInfo.top / lineHeight);
-  const visibleEndLine = Math.ceil((scrollInfo.top + scrollInfo.clientHeight) / lineHeight);
+  const clientHeight = scrollInfo.clientHeight ?? scrollInfo.height ?? 0;
+  const visibleEndLine = Math.ceil((scrollInfo.top + clientHeight) / lineHeight);
   
   const visibleParagraphs = allParagraphs.filter(paragraph => {
     // 문단이 뷰포트와 겹치는지 확인

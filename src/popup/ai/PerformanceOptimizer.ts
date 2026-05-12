@@ -1,5 +1,15 @@
+import { App } from 'obsidian';
 import { IPopupServiceManager, RenderContext } from '../types/PopupTypes';
 import { Logger } from '../../utils/logger';
+
+/** Chrome performance.memory non-standard extension typing */
+interface PerformanceWithMemory extends Performance {
+  memory?: {
+    usedJSHeapSize?: number;
+    totalJSHeapSize?: number;
+    jsHeapSizeLimit?: number;
+  };
+}
 
 /**
  * Phase 5: Performance Optimizer
@@ -21,7 +31,7 @@ export class PerformanceOptimizer implements IPopupServiceManager {
   private renderScheduled: boolean = false;
   private cleanupCallbacks: (() => void)[] = [];
 
-  constructor(private app: any) {
+  constructor(private app: App) {
     Logger.log('PerformanceOptimizer 초기화됨');
   }
 
@@ -320,9 +330,9 @@ export class PerformanceOptimizer implements IPopupServiceManager {
       this.performanceMetrics.domElementCount = activeDocument.querySelectorAll('*').length;
 
       // 메모리 사용량 추정 (브라우저 지원 시)
-      if ('memory' in performance) {
-        const memInfo = (performance as any).memory;
-        this.performanceMetrics.memoryUsage = memInfo.usedJSHeapSize || 0;
+      const memInfo = (performance as PerformanceWithMemory).memory;
+      if (memInfo) {
+        this.performanceMetrics.memoryUsage = memInfo.usedJSHeapSize ?? 0;
       }
 
       this.performanceMetrics.lastUpdateTime = Date.now();

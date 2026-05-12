@@ -9,7 +9,7 @@ interface VirtualItem {
   id: string;
   content: string;
   height?: number;
-  data?: any;
+  data?: unknown;
 }
 
 /**

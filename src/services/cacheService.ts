@@ -14,7 +14,7 @@ interface CacheItem {
 /**
  * 캐시 통계 인터페이스
  */
-interface CacheStats {
+export interface CacheStats {
   totalRequests: number;
   cacheHits: number;
   cacheMisses: number;

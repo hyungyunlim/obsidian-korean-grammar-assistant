@@ -806,7 +806,7 @@ export class PreviewRenderer implements IPopupComponent {
   /**
    * 디버그 정보
    */
-  getDebugInfo(): any {
+  getDebugInfo(): Record<string, unknown> {
     return {
       isInitialized: this.isInitialized,
       hasContainer: !!this.containerElement,

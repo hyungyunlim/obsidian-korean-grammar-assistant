@@ -8,7 +8,7 @@ import { ShortcutHandler } from './ShortcutHandler';
 import { FocusManager } from './FocusManager';
 import { PopupState, KeyboardAction, KeyboardNavigationState, IPopupComponent, RenderContext } from '../types/PopupTypes';
 import { Logger } from '../../utils/logger';
-import { Platform, Scope } from 'obsidian';
+import { App, Platform, Scope } from 'obsidian';
 
 export interface KeyboardEventResult {
   handled: boolean;
@@ -21,7 +21,7 @@ export class KeyboardManager implements IPopupComponent {
   private shortcutHandler: ShortcutHandler;
   private focusManager: FocusManager;
   private keyboardScope: Scope;
-  private app: any; // Obsidian App
+  private app: App;
   private isEnabled: boolean = false;
   private containerElement?: HTMLElement;
   private eventListeners: Array<() => void> = [];
@@ -33,7 +33,7 @@ export class KeyboardManager implements IPopupComponent {
   private onKeyboardActionCallback?: (action: KeyboardAction, event: KeyboardEvent) => Promise<boolean>;
   private onFocusChangeCallback?: (newFocusIndex: number) => void;
 
-  constructor(app: any) {
+  constructor(app: App) {
     this.app = app;
     this.keyboardScope = new Scope();
     this.shortcutHandler = new ShortcutHandler();
