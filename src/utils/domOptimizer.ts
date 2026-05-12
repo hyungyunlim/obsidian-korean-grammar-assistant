@@ -246,7 +246,7 @@ export class DOMOptimizer {
     if (this.isScheduled) return;
     
     this.isScheduled = true;
-    this.rafId = requestAnimationFrame(() => {
+    this.rafId = window.requestAnimationFrame(() => {
       this.flushUpdates();
     });
   }
@@ -317,7 +317,7 @@ export class DOMOptimizer {
           element.className = value;
           break;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.warn('DOM 업데이트 실패:', { update, error });
     }
   }
@@ -355,7 +355,7 @@ export class DOMOptimizer {
       maxDepth = Math.max(maxDepth, depth);
       
       for (const child of Array.from(node.children)) {
-        if (child instanceof HTMLElement) {
+        if (child.instanceOf(HTMLElement)) {
           traverse(child, depth + 1);
         }
       }
@@ -442,7 +442,7 @@ export class DOMOptimizer {
             });
           }
         }
-      } catch (error) {
+      } catch {
         // getEventListeners는 개발자 도구에서만 사용 가능하므로 에러는 무시
         Logger.debug('getEventListeners 호출 실패 (정상 동작)');
       }

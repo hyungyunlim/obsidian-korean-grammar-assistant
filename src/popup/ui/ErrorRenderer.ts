@@ -230,14 +230,14 @@ export class ErrorRenderer {
     // 기존 애니메이션 타이머 정리
     const existingTimeout = this.animationTimeouts.get(correctionIndex);
     if (existingTimeout) {
-      activeWindow.clearTimeout(existingTimeout);
+      window.clearTimeout(existingTimeout);
     }
 
     // 애니메이션 클래스 추가
     element.classList.add('focus-animation');
     
     // 애니메이션 종료 후 클래스 제거
-    const timeout = activeWindow.setTimeout(() => {
+    const timeout = window.setTimeout(() => {
       element.classList.remove('focus-animation');
       this.animationTimeouts.delete(correctionIndex);
     }, 600); // CSS 애니메이션 지속시간과 일치
@@ -454,7 +454,7 @@ export class ErrorRenderer {
       // 애니메이션 타이머 정리
       const timeout = this.animationTimeouts.get(correctionIndex);
       if (timeout) {
-        activeWindow.clearTimeout(timeout);
+        window.clearTimeout(timeout);
         this.animationTimeouts.delete(correctionIndex);
       }
 
@@ -471,7 +471,7 @@ export class ErrorRenderer {
    */
   dispose(): void {
     // 모든 애니메이션 타이머 정리
-    this.animationTimeouts.forEach(timeout => activeWindow.clearTimeout(timeout));
+    this.animationTimeouts.forEach(timeout => window.clearTimeout(timeout));
     this.animationTimeouts.clear();
 
     // 활성 요소 정리

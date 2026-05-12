@@ -349,11 +349,8 @@ export class AIAnalysisService {
     
     // 평균 컨텍스트 길이 계산
     const avgContextLength = correctionContexts.reduce((sum, ctx) => sum + ctx.fullContext.length, 0) / correctionContexts.length;
-    const _systemPromptLength = AI_PROMPTS.analysisSystem.length;
 
-    // 모델별 입력 토큰 제한 (대략적으로 계산)
-    const _maxInputTokens = this.getModelMaxInputTokens(this.settings.model);
-    
+
     // 🔧 JSON 응답 잘림 방지를 위해 보수적으로 계산
     // 각 교정당 JSON 응답: ~120자 예상 
     // 15개 = 1800자 → 토큰 제한 초과 위험
@@ -548,7 +545,7 @@ export class AIAnalysisService {
             
             if (i < batches.length - 1) {
               // API 과부하 방지를 위한 배치 간격 (529 오류 방지)
-              await new Promise(resolve => activeWindow.setTimeout(resolve, 1500));
+              await new Promise(resolve => window.setTimeout(resolve, 1500));
             }
           } catch (error) {
             Logger.error(`배치 ${i + 1} 처리 실패:`, error);
@@ -576,7 +573,8 @@ export class AIAnalysisService {
       return allResults;
     } catch (error) {
       Logger.error('분석 중 오류 발생:', error);
-      throw new Error(`AI 분석 실패: ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`AI 분석 실패: ${message}`);
     }
   }
 
@@ -691,7 +689,7 @@ export class AIAnalysisService {
         try {
           parsedResponse = JSON.parse(fixedJson);
           Logger.debug('쉼표 제거로 JSON 복구 성공');
-        } catch (_secondError) {
+        } catch {
           // 마지막 불완전한 객체 제거 시도
           const lastCommaIndex = jsonString.lastIndexOf(',');
           if (lastCommaIndex > 0) {
@@ -699,7 +697,7 @@ export class AIAnalysisService {
             try {
               parsedResponse = JSON.parse(cutJson);
               Logger.debug('불완전 객체 제거로 JSON 복구 성공');
-            } catch (_thirdError) {
+            } catch {
               throw parseError; // 원래 오류 다시 던지기
             }
           } else {
@@ -808,7 +806,8 @@ export class AIAnalysisService {
       if (error instanceof SyntaxError) {
         throw new Error(`JSON 형식 오류: ${error.message}. AI 응답이 올바른 JSON 형식이 아닙니다.`);
       } else {
-        throw new Error(`AI 응답 파싱 실패: ${error.message}`);
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`AI 응답 파싱 실패: ${message}`);
       }
     }
   }

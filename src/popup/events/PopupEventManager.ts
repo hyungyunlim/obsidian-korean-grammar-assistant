@@ -372,7 +372,7 @@ export class PopupEventManager implements IPopupServiceManager {
       this.clearTouchHoldTimer(touchId);
       
       // 새 타이머 설정
-      const timer = activeWindow.setTimeout(() => {
+      const timer = window.setTimeout(() => {
         this.handleTouchHold(target);
       }, this.TOUCH_HOLD_DURATION);
       
@@ -428,7 +428,7 @@ export class PopupEventManager implements IPopupServiceManager {
   private clearTouchHoldTimer(touchId: string): void {
     const timer = this.touchHoldTimers.get(touchId);
     if (timer) {
-      activeWindow.clearTimeout(timer);
+      window.clearTimeout(timer);
       this.touchHoldTimers.delete(touchId);
     }
   }
@@ -437,7 +437,7 @@ export class PopupEventManager implements IPopupServiceManager {
    * 모든 터치홀드 타이머 제거
    */
   private clearAllTouchHoldTimers(): void {
-    this.touchHoldTimers.forEach(timer => activeWindow.clearTimeout(timer));
+    this.touchHoldTimers.forEach(timer => window.clearTimeout(timer));
     this.touchHoldTimers.clear();
   }
 

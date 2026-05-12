@@ -179,7 +179,7 @@ export class PerformanceOptimizer implements IPopupServiceManager {
     this.renderScheduled = true;
     
     // requestAnimationFrame을 사용하여 브라우저 렌더링 사이클에 맞춤
-    requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
       const startTime = performance.now();
       
       try {
@@ -312,7 +312,8 @@ export class PerformanceOptimizer implements IPopupServiceManager {
   private cleanupCachedData(): void {
     // 성능 메트릭 이외의 임시 데이터 정리
     // (현재는 별도의 캐시가 없으므로 메트릭만 리셋)
-    const previousMetrics = { ...this.performanceMetrics };
+    const _previousMetrics = { ...this.performanceMetrics };
+    void _previousMetrics;
     this.performanceMetrics = {
       ...this.performanceMetrics,
       renderTime: 0 // 렌더링 시간만 리셋

@@ -6,7 +6,7 @@
  */
 
 import { App } from 'obsidian';
-import { PageCorrection, CorrectionState, RenderContext, EventContext } from '../../types/interfaces';
+import { PageCorrection, CorrectionState } from '../../types/interfaces';
 import { Logger } from '../../utils/logger';
 import { ErrorRenderer } from './ErrorRenderer';
 
@@ -73,8 +73,9 @@ export class InteractionHandler {
    * UI 상태 업데이트 처리
    */
   async handleStateChange(context: UIUpdateContext): Promise<void> {
-    const { correctionIndex, newState, isActive, isFocused, shouldAnimate, trigger } = context;
-    
+    const { correctionIndex, newState, isActive, isFocused, shouldAnimate: _shouldAnimate, trigger } = context;
+    void _shouldAnimate;
+
     // 이전 상태 저장
     const oldState = this.currentStates.get(correctionIndex) || 'error';
     
@@ -91,10 +92,10 @@ export class InteractionHandler {
     // 디바운스 처리
     const debounceKey = `state-${correctionIndex}`;
     if (this.debounceTimers.has(debounceKey)) {
-      activeWindow.clearTimeout(this.debounceTimers.get(debounceKey));
+      window.clearTimeout(this.debounceTimers.get(debounceKey));
     }
 
-    const timer = activeWindow.setTimeout(async () => {
+    const timer = window.setTimeout(async () => {
       await this.performStateUpdate(context, oldState);
       this.debounceTimers.delete(debounceKey);
     }, this.config.debounceMs);
@@ -246,7 +247,7 @@ export class InteractionHandler {
       element.addEventListener('animationend', handleAnimationEnd);
       
       // 타임아웃으로 무한 대기 방지
-      activeWindow.setTimeout(() => {
+      window.setTimeout(() => {
         element.removeEventListener('animationend', handleAnimationEnd);
         element.classList.remove('state-transition', `from-${oldState}`, `to-${newState}`);
         resolve();
@@ -475,7 +476,7 @@ export class InteractionHandler {
    */
   dispose(): void {
     // 디바운스 타이머 정리
-    this.debounceTimers.forEach(timer => activeWindow.clearTimeout(timer));
+    this.debounceTimers.forEach(timer => window.clearTimeout(timer));
     this.debounceTimers.clear();
 
     // 상태 정리

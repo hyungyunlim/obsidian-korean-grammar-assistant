@@ -3,8 +3,7 @@
  * 팝업 미리보기 영역(텍스트 표시, 오류 하이라이트)을 관리
  */
 
-import { Platform } from 'obsidian';
-import { RenderContext, IPopupComponent, PopupState, PaginationState } from '../types/PopupTypes';
+import { RenderContext, IPopupComponent, PopupState } from '../types/PopupTypes';
 import { Correction, PageCorrection } from '../../types/interfaces';
 import { Logger } from '../../utils/logger';
 import { createEl } from '../../utils/domUtils';

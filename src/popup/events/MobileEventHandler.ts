@@ -366,7 +366,7 @@ export class MobileEventHandler {
    * 터치홀드 타이머 설정
    */
   private setTouchHoldTimer(touchId: number, touchInfo: TouchInfo): void {
-    const timer = activeWindow.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       this.triggerTouchHold(touchInfo);
     }, this.TOUCH_HOLD_DURATION);
     
@@ -377,7 +377,7 @@ export class MobileEventHandler {
    * 롱프레스 타이머 설정
    */
   private setLongPressTimer(touchId: number, touchInfo: TouchInfo): void {
-    const timer = activeWindow.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       this.triggerLongPress(touchInfo);
     }, this.LONG_PRESS_DURATION);
     
@@ -391,14 +391,14 @@ export class MobileEventHandler {
     // 터치홀드 타이머 정리
     const touchHoldTimer = this.touchHoldTimers.get(touchId);
     if (touchHoldTimer) {
-      activeWindow.clearTimeout(touchHoldTimer);
+      window.clearTimeout(touchHoldTimer);
       this.touchHoldTimers.delete(touchId);
     }
     
     // 롱프레스 타이머 정리
     const longPressTimer = this.longPressTimers.get(touchId);
     if (longPressTimer) {
-      activeWindow.clearTimeout(longPressTimer);
+      window.clearTimeout(longPressTimer);
       this.longPressTimers.delete(touchId);
     }
   }
@@ -407,10 +407,10 @@ export class MobileEventHandler {
    * 모든 타이머 정리
    */
   private clearAllTimers(): void {
-    this.touchHoldTimers.forEach(timer => activeWindow.clearTimeout(timer));
+    this.touchHoldTimers.forEach(timer => window.clearTimeout(timer));
     this.touchHoldTimers.clear();
     
-    this.longPressTimers.forEach(timer => activeWindow.clearTimeout(timer));
+    this.longPressTimers.forEach(timer => window.clearTimeout(timer));
     this.longPressTimers.clear();
   }
 
@@ -551,7 +551,7 @@ export class MobileEventHandler {
     this.editModeElements.set(target, input);
 
     // 포커스 및 선택
-    activeWindow.setTimeout(() => {
+    window.setTimeout(() => {
       input.focus();
       input.select();
     }, 100);

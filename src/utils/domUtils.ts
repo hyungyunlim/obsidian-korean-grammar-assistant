@@ -231,7 +231,7 @@ export function clearElement(element: HTMLElement): void {
         break;
       }
     }
-  } catch (error) {
+  } catch {
     // 오류 발생 시 더 안전한 방법 사용
     element.textContent = '';
   }
@@ -315,11 +315,11 @@ export function createValidationDisplay(parent: HTMLElement, validation: Validat
   // 경고 섹션
   if (validation.warnings && validation.warnings.length > 0) {
     parent.createEl('br');
-    const warningHeader = parent.createEl('strong', { text: '경고:' });
+    parent.createEl('strong', { text: '경고:' });
     parent.createEl('br');
-    
+
     validation.warnings.forEach((warning: string) => {
-      const warningDiv = parent.createEl('div', { text: `⚠️ ${warning}` });
+      parent.createEl('div', { text: `⚠️ ${warning}` });
     });
   }
   

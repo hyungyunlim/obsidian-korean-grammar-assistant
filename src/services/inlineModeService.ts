@@ -101,7 +101,7 @@ class AITextWidget extends WidgetType {
 
     span.addEventListener('mouseleave', () => {
       // 🔍 툴팁 숨기기 (더 긴 딜레이 - 툴팁으로 마우스 이동할 충분한 시간 확보)
-      activeWindow.setTimeout(() => {
+      window.setTimeout(() => {
         if (inlineTooltip && !inlineTooltip.isHovered) {
           inlineTooltip.hide();
         }
@@ -219,84 +219,6 @@ class AITextWidget extends WidgetType {
 }
 
 /**
- * 오류 위젯 클래스
- * CodeMirror 6의 WidgetType을 확장하여 인라인 오류 표시
- */
-class ErrorWidget extends WidgetType {
-  constructor(
-    private error: InlineError,
-    private underlineStyle: string,
-    private underlineColor: string,
-    private onHover?: () => void,
-    private onClick?: () => void
-  ) {
-    super();
-  }
-
-  toDOM(view: EditorView): HTMLElement {
-    const span = createSpan();
-    span.className = 'korean-grammar-error-inline';
-    span.textContent = this.error.correction.original;
-    
-    // 설정에 따른 오버라이드
-    span.classList.add(`kga-underline-${this.underlineStyle}`);
-    span.setAttribute('data-underline-color', this.underlineColor);
-    
-    // 호버 이벤트 (300ms 딜레이)
-    if (this.onHover) {
-      let hoverTimeout: number;
-      
-      span.addEventListener('mouseenter', (e) => {
-        hoverTimeout = activeWindow.setTimeout(() => {
-          this.onHover?.();
-        }, 300);
-      });
-      
-      span.addEventListener('mouseleave', (e) => {
-        if (hoverTimeout) {
-          activeWindow.clearTimeout(hoverTimeout);
-        }
-      });
-    }
-    
-    // 클릭 이벤트
-    if (this.onClick) {
-      span.addEventListener('click', (e) => {
-        // 🔧 모바일에서는 터치 이벤트를 사용하므로 클릭 이벤트 무시
-        if (Platform.isMobile) {
-          Logger.debug('ErrorWidget: 모바일에서 클릭 이벤트 무시 (터치 이벤트 사용)');
-          return;
-        }
-        
-        e.preventDefault();
-        e.stopPropagation();
-        this.onClick?.();
-      });
-    }
-    
-    // 접근성 속성 (aria-label 제거 - 네이티브 툴팁 방지)
-    span.setAttribute('role', 'button');
-    span.setAttribute('tabindex', '0');
-    
-    Logger.debug(`오류 위젯 생성: ${this.error.correction.original}`);
-    return span;
-  }
-
-  eq(other: ErrorWidget): boolean {
-    return this.error.uniqueId === other.error.uniqueId && this.error.isActive === other.error.isActive;
-  }
-
-  updateDOM(dom: HTMLElement, view: EditorView): boolean {
-    // 상태가 변경된 경우 DOM 업데이트
-    if (!this.error.isActive) {
-      dom.classList.add('korean-grammar-inline-hidden');
-      return true;
-    }
-    return false;
-  }
-}
-
-/**
  * 오류 데코레이션 추가 Effect
  */
 export const addErrorDecorations = StateEffect.define<{
@@ -396,7 +318,7 @@ export const errorDecorationField = StateField.define<DecorationSet>({
     
     for (let effect of tr.effects) {
       if (effect.is(addErrorDecorations)) {
-        const { errors, underlineStyle: _underlineStyle, underlineColor: _underlineColor, preserveAIColors: _preserveAIColors = false } = effect.value;
+        const { errors } = effect.value;
         
         const newDecorations = errors.map(error => {
           // 포커스된 오류인지 확인 (현재는 항상 false이지만 나중에 상태 확인)
@@ -407,7 +329,7 @@ export const errorDecorationField = StateField.define<DecorationSet>({
             Logger.debug(`🔄 Replace Decoration 사용: "${error.correction.original}" → "${error.aiSelectedValue}"`);
             
             // 🔍 범위 검증 로깅 추가
-            const actualText = this.currentView?.state.doc.sliceString(error.start, error.end) || '';
+            const actualText = tr.state.doc.sliceString(error.start, error.end) || '';
             Logger.debug(`🔄 Replace 범위 검증: 예상="${error.correction.original}" (${error.correction.original.length}자), 실제="${actualText}" (${actualText.length}자), 범위=${error.start}-${error.end}`);
             
             return Decoration.replace({
@@ -600,7 +522,7 @@ export class InlineModeService {
           // 🎯 컨텍스트 기반 호버 영역 확장
           this.expandHoverAreaByMorphemes(target, error);
           
-          this.hoverTimeout = activeWindow.setTimeout(() => {
+          this.hoverTimeout = window.setTimeout(() => {
             // 호버 상태 업데이트 (실제 호버된 오류만 정확히 처리)
             this.currentHoveredError = error;
             this.handleErrorHover(error, target, mousePosition);
@@ -623,7 +545,7 @@ export class InlineModeService {
           this.clearHoverTimeout();
           
           // 지연 후 호버 상태 해제 (툴팁으로 마우스 이동 시간 확보)
-          activeWindow.setTimeout(() => {
+          window.setTimeout(() => {
             if (this.currentHoveredError?.uniqueId === errorId) {
               this.currentHoveredError = null;
               // 툴팁 자체 호버 처리에 맡김 (강제 숨김 제거)
@@ -723,7 +645,7 @@ export class InlineModeService {
           const error = this.activeErrors.get(errorId)!;
           
           // 롱프레스 타이머 시작 (툴팁보다 우선)
-          touchTimer = activeWindow.setTimeout(() => {
+          touchTimer = window.setTimeout(() => {
             if (touchTarget === target && this.activeErrors.has(errorId)) {
               Logger.log(`📱 롱프레스로 바로 수정: ${error.correction.original}`);
               
@@ -756,7 +678,7 @@ export class InlineModeService {
       
       // 롱프레스 타이머 취소
       if (touchTimer) {
-        activeWindow.clearTimeout(touchTimer);
+        window.clearTimeout(touchTimer);
         touchTimer = null;
       }
       
@@ -775,7 +697,7 @@ export class InlineModeService {
           e.stopPropagation();
           
           // 짧은 딜레이 후 툴팁 표시
-          activeWindow.setTimeout(() => {
+          window.setTimeout(() => {
             // 🔧 터치 위치 정보를 함께 전달
             const touchPosition = { x: touchStartPos.x, y: touchStartPos.y };
             this.handleErrorTooltip(error, target, touchPosition);
@@ -790,7 +712,7 @@ export class InlineModeService {
     // 터치 취소
     this.registerDomEvent(editorDOM, 'touchcancel', () => {
       if (touchTimer) {
-        activeWindow.clearTimeout(touchTimer);
+        window.clearTimeout(touchTimer);
         touchTimer = null;
         Logger.debug('📱 터치 취소됨');
       }
@@ -809,7 +731,7 @@ export class InlineModeService {
         
         // 일정 거리 이상 움직이면 롱프레스 취소
         if (moveDistance > MAX_TOUCH_MOVE) {
-          activeWindow.clearTimeout(touchTimer);
+          window.clearTimeout(touchTimer);
           touchTimer = null;
           touchTarget = null;
           Logger.debug(`📱 터치 이동으로 롱프레스 취소 (${Math.round(moveDistance)}px)`);
@@ -828,7 +750,7 @@ export class InlineModeService {
    */
   private static clearHoverTimeout(): void {
     if (this.hoverTimeout) {
-      activeWindow.clearTimeout(this.hoverTimeout);
+      window.clearTimeout(this.hoverTimeout);
       this.hoverTimeout = null;
     }
   }
@@ -840,7 +762,7 @@ export class InlineModeService {
     if (!this.app) return;
 
     // 간단한 포커스 체크를 위한 인터벌 설정 (성능상 문제없음)
-    activeWindow.setInterval(() => {
+    window.setInterval(() => {
       this.checkCursorPosition();
     }, 500); // 0.5초마다 체크
 
@@ -1534,7 +1456,7 @@ export class InlineModeService {
         this.currentView.requestMeasure();
         
         // 4. 약간의 지연 후 텍스트 교체 (decoration 제거가 DOM에 반영되도록)
-        requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
           try {
             const startPos = view.editor.offsetToPos(error.start);
             const endPos = view.editor.offsetToPos(error.end);
@@ -1773,13 +1695,13 @@ export class InlineModeService {
 
     // 툴팁이 표시 중이면 업데이트된 내용으로 다시 표시
     if (inlineTooltip && inlineTooltip.visible) {
-      activeWindow.setTimeout(() => {
+      window.setTimeout(() => {
         const errorElement = this.findErrorElement(mergedError);
         const tooltip = inlineTooltip;
         if (errorElement && tooltip) {
           // 기존 툴팁 숨기고 새로 표시
           tooltip.hide();
-          activeWindow.setTimeout(() => {
+          window.setTimeout(() => {
             const tooltip2 = inlineTooltip;
             if (tooltip2) {
               tooltip2.show(mergedError, errorElement, 'click');
@@ -2358,7 +2280,7 @@ export class InlineModeService {
 
         const currentState = plugin.settings.inlineMode.enabled || false;
         plugin.settings.inlineMode.enabled = !currentState;
-        plugin.saveSettings();
+        void plugin.saveSettings();
 
         if (plugin.settings.inlineMode.enabled) {
           plugin.enableInlineMode?.();
@@ -2616,7 +2538,7 @@ export class InlineModeService {
       // 🎯 3단계: 포커스 decoration 강제 재적용 (안정적 하이라이팅 유지)
       if (this.currentView && this.currentFocusedError) {
         // 약간의 지연을 두고 decoration 재적용 (DOM 업데이트 완료 후)
-        requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
           if (this.currentView && this.currentFocusedError) {
             this.currentView.dispatch({
               effects: [setFocusedErrorDecoration.of(this.currentFocusedError.uniqueId)]
@@ -2737,7 +2659,7 @@ export class InlineModeService {
     expandedZone.addEventListener('mouseleave', () => {
       Logger.debug(`🎯 확장 호버 영역 이탈: ${error.correction.original}`);
       // 지연 후 호버 해제 (툴팁으로 이동 시간 확보)
-      activeWindow.setTimeout(() => {
+      window.setTimeout(() => {
         if (this.currentHoveredError?.uniqueId === error.uniqueId) {
           this.currentHoveredError = null;
         }

@@ -4,6 +4,8 @@ import { IgnoredWordsService } from '../services/ignoredWords';
 import { Logger, LogLevel } from '../utils/logger';
 import { AIProvider } from '../types/interfaces';
 import { createMetricsDisplay, clearElement } from '../utils/domUtils';
+import { AdvancedSettingsService } from '../services/advancedSettingsService';
+import { ErrorHandlerService, ErrorType } from '../services/errorHandler';
 
 /**
  * 백업 항목 정보 (AdvancedSettingsService.getBackups 반환값과 일치)
@@ -45,6 +47,24 @@ interface LogDisplayEntry {
   level: LogLevel;
   message: string;
   data?: unknown;
+}
+
+/**
+ * 로그 통계 (Logger.getStats 반환값)
+ */
+type LogStats = Record<LogLevel, number> & { total: number };
+
+/**
+ * 에러 통계 (ErrorHandlerService.getErrorStats 반환값)
+ */
+type ErrorStats = Record<ErrorType, number>;
+
+/**
+ * 메모리 사용량 (Logger.getMemoryUsage 반환값)
+ */
+interface MemoryUsage {
+  historySize: number;
+  estimatedBytes: number;
 }
 
 /**
@@ -699,11 +719,13 @@ export class ModernSettingsTab extends PluginSettingTab {
     });
 
     clearAllButton.onclick = () => {
-      new KGAConfirmModal(this.app, '모든 예외 단어를 삭제하시겠습니까?', async () => {
-        this.plugin.settings.ignoredWords = [];
-        await this.plugin.saveSettings();
-        this.renderIgnoredWordsCloud(tagCloudContainer);
-        countInfo.textContent = `현재 ${IgnoredWordsService.getIgnoredWordsCount(this.plugin.settings)}개의 단어가 예외 처리되어 있습니다.`;
+      new KGAConfirmModal(this.app, '모든 예외 단어를 삭제하시겠습니까?', () => {
+        void (async () => {
+          this.plugin.settings.ignoredWords = [];
+          await this.plugin.saveSettings();
+          this.renderIgnoredWordsCloud(tagCloudContainer);
+          countInfo.textContent = `현재 ${IgnoredWordsService.getIgnoredWordsCount(this.plugin.settings)}개의 단어가 예외 처리되어 있습니다.`;
+        })();
       }).open();
     };
 
@@ -734,11 +756,13 @@ export class ModernSettingsTab extends PluginSettingTab {
       // Hover 효과는 CSS :hover로 처리 (ignored-word-tag:hover)
 
       tag.onclick = () => {
-        new KGAConfirmModal(this.app, `"${word}"를 예외 목록에서 제거하시겠습니까?`, async () => {
-          const updatedSettings = IgnoredWordsService.removeIgnoredWord(word, this.plugin.settings);
-          this.plugin.settings = updatedSettings;
-          await this.plugin.saveSettings();
-          this.renderIgnoredWordsCloud(container);
+        new KGAConfirmModal(this.app, `"${word}"를 예외 목록에서 제거하시겠습니까?`, () => {
+          void (async () => {
+            const updatedSettings = IgnoredWordsService.removeIgnoredWord(word, this.plugin.settings);
+            this.plugin.settings = updatedSettings;
+            await this.plugin.saveSettings();
+            this.renderIgnoredWordsCloud(container);
+          })();
         }).open();
       };
     });
@@ -763,8 +787,6 @@ export class ModernSettingsTab extends PluginSettingTab {
    * 설정 검증 섹션을 생성합니다
    */
   private createValidationSection(containerEl: HTMLElement): void {
-    const { AdvancedSettingsService } = require('../services/advancedSettingsService');
-
     const validationSection = containerEl.createDiv({ cls: 'ksc-section' });
     
     // 설정 검증 헤딩
@@ -807,8 +829,6 @@ export class ModernSettingsTab extends PluginSettingTab {
    * 백업 관리 섹션을 생성합니다
    */
   private createBackupSection(containerEl: HTMLElement): void {
-    const { AdvancedSettingsService } = require('../services/advancedSettingsService');
-
     const backupSection = containerEl.createDiv({ cls: 'ksc-section' });
     
     // 백업 관리 헤딩
@@ -859,14 +879,16 @@ export class ModernSettingsTab extends PluginSettingTab {
             cls: 'ksc-restore-button'
           });
           
-          restoreBtn.onclick = async () => {
-            const restored = AdvancedSettingsService.restoreSettings(backup.index);
-            if (restored) {
-              this.plugin.settings = restored;
-              await this.plugin.saveSettings();
-              this.display();
-              new Notice("설정이 복원되었습니다.");
-            }
+          restoreBtn.onclick = () => {
+            void (async () => {
+              const restored = AdvancedSettingsService.restoreSettings(backup.index);
+              if (restored) {
+                this.plugin.settings = restored;
+                await this.plugin.saveSettings();
+                this.display();
+                new Notice("설정이 복원되었습니다.");
+              }
+            })();
           };
         });
       }
@@ -885,8 +907,6 @@ export class ModernSettingsTab extends PluginSettingTab {
    * 내보내기/가져오기 섹션을 생성합니다
    */
   private createImportExportSection(containerEl: HTMLElement): void {
-    const { AdvancedSettingsService } = require('../services/advancedSettingsService');
-
     const importExportSection = containerEl.createDiv({ cls: 'ksc-section' });
     
     // 내보내기/가져오기 헤딩
@@ -927,20 +947,22 @@ export class ModernSettingsTab extends PluginSettingTab {
         if (!file) return;
         
         const reader = new FileReader();
-        reader.onload = async (e) => {
-          const content = e.target?.result as string;
-          const result = AdvancedSettingsService.importSettings(content);
-          
-          if (result.success && result.settings) {
-            AdvancedSettingsService.backupSettings(this.plugin.settings, '가져오기 전 백업');
-            
-            this.plugin.settings = result.settings;
-            await this.plugin.saveSettings();
-            this.display();
-            new Notice("설정이 가져오기되었습니다.");
-          } else {
-            new Notice(`설정 가져오기 실패: ${result.error}`);
-          }
+        reader.onload = (loadEvent) => {
+          void (async () => {
+            const content = loadEvent.target?.result as string;
+            const result = AdvancedSettingsService.importSettings(content);
+
+            if (result.success && result.settings) {
+              AdvancedSettingsService.backupSettings(this.plugin.settings, '가져오기 전 백업');
+
+              this.plugin.settings = result.settings;
+              await this.plugin.saveSettings();
+              this.display();
+              new Notice("설정이 가져오기되었습니다.");
+            } else {
+              new Notice(`설정 가져오기 실패: ${result.error}`);
+            }
+          })();
         };
         
         reader.readAsText(file);
@@ -950,12 +972,14 @@ export class ModernSettingsTab extends PluginSettingTab {
     };
 
     resetBtn.onclick = () => {
-      new KGAConfirmModal(this.app, '모든 설정을 기본값으로 재설정하시겠습니까? 현재 설정은 백업됩니다.', async () => {
-        const defaultSettings = AdvancedSettingsService.resetToDefaults(this.plugin.settings);
-        this.plugin.settings = defaultSettings;
-        await this.plugin.saveSettings();
-        this.display();
-        new Notice("설정이 기본값으로 재설정되었습니다.");
+      new KGAConfirmModal(this.app, '모든 설정을 기본값으로 재설정하시겠습니까? 현재 설정은 백업됩니다.', () => {
+        void (async () => {
+          const defaultSettings = AdvancedSettingsService.resetToDefaults(this.plugin.settings);
+          this.plugin.settings = defaultSettings;
+          await this.plugin.saveSettings();
+          this.display();
+          new Notice("설정이 기본값으로 재설정되었습니다.");
+        })();
       }).open();
     };
   }
@@ -1002,13 +1026,15 @@ export class ModernSettingsTab extends PluginSettingTab {
     const updateMetrics = () => {
       try {
         const metrics = this.plugin.orchestrator.getPerformanceMetrics();
-        
-        const { Logger } = require('../utils/logger');
-        const { ErrorHandlerService } = require('../services/errorHandler');
-        const logStats = Logger.getStats();
-        const errorStats = ErrorHandlerService.getErrorStats();
-        
-        const extendedMetrics = { ...metrics, logStats, errorStats };
+
+        const logStats: LogStats = Logger.getStats();
+        const errorStats: ErrorStats = ErrorHandlerService.getErrorStats();
+
+        const extendedMetrics = {
+          ...metrics,
+          logStats: this.toDisplayLogStats(logStats),
+          errorStats: this.toDisplayErrorStats(errorStats)
+        };
         createMetricsDisplay(metricsDisplay, extendedMetrics);
         
         // 추가 통계 섹션 - 기존 컴테이너 재사용
@@ -1051,12 +1077,12 @@ export class ModernSettingsTab extends PluginSettingTab {
     updateMetrics(); // 초기 표시
 
     // 자동 업데이트 (15초마다)
-    const metricsInterval = activeWindow.setInterval(updateMetrics, 15000);
-    
+    const metricsInterval = window.setInterval(updateMetrics, 15000);
+
     // 정리 함수 등록
     const originalHide = this.hide.bind(this);
     this.hide = () => {
-      activeWindow.clearInterval(metricsInterval);
+      window.clearInterval(metricsInterval);
       originalHide();
     };
   }
@@ -1065,8 +1091,6 @@ export class ModernSettingsTab extends PluginSettingTab {
    * 로그 관리 섹션을 생성합니다
    */
   private createLogManagementSection(containerEl: HTMLElement): void {
-    const { Logger } = require('../utils/logger');
-    
     const logSection = containerEl.createDiv({ cls: 'ksc-section' });
     
     // 로그 관리 헤딩
@@ -1077,8 +1101,8 @@ export class ModernSettingsTab extends PluginSettingTab {
 
     // 로그 통계 표시
     const updateLogStats = () => {
-      const stats = Logger.getStats();
-      const memUsage = Logger.getMemoryUsage();
+      const stats: LogStats = Logger.getStats();
+      const memUsage: MemoryUsage = Logger.getMemoryUsage();
       
       const statsContainer = logSection.querySelector('#log-stats-container') as HTMLElement;
       if (statsContainer) {
@@ -1156,10 +1180,9 @@ export class ModernSettingsTab extends PluginSettingTab {
    * 로그 뷰어를 표시합니다
    */
   private displayLogViewer(container: HTMLElement): void {
-    const { Logger } = require('../utils/logger');
     clearElement(container);
-    
-    const logs = Logger.getHistory();
+
+    const logs: LogDisplayEntry[] = Logger.getHistory();
     
     // 로그 필터 컨트롤
     const filterContainer = container.createDiv({ cls: 'ksc-log-filter' });
@@ -1222,14 +1245,44 @@ export class ModernSettingsTab extends PluginSettingTab {
 
     // 필터 이벤트
     levelSelect.onchange = () => {
-      const selectedLevel = levelSelect.value;
+      const selectedLevel = levelSelect.value as LogLevel | '';
       const filteredLogs = selectedLevel ?
-        logs.filter((log: LogDisplayEntry) => log.level === selectedLevel) :
+        logs.filter((log) => log.level === selectedLevel) :
         logs;
       displayLogs(filteredLogs);
     };
   }
 
+
+  /**
+   * Logger 통계를 createMetricsDisplay가 기대하는 소문자 키 형태로 변환합니다
+   */
+  private toDisplayLogStats(stats: LogStats): { debug: number; info: number; warn: number; error: number; total: number } {
+    return {
+      debug: stats.DEBUG,
+      info: stats.INFO,
+      warn: stats.WARN,
+      error: stats.ERROR,
+      total: stats.total
+    };
+  }
+
+  /**
+   * ErrorHandlerService 통계를 createMetricsDisplay가 기대하는 형태로 변환합니다
+   */
+  private toDisplayErrorStats(stats: ErrorStats): {
+    totalErrors: number;
+    errorsByCategory: Record<string, number>;
+    recentErrors: Array<{ timestamp: number; category: string; message: string }>;
+  } {
+    const errorsByCategory: Record<string, number> = { ...stats };
+    const totalErrors = Object.values(stats).reduce((sum, count) => sum + count, 0);
+    return {
+      totalErrors,
+      errorsByCategory,
+      recentErrors: []
+    };
+  }
 
   /**
    * 로그 레벨별 아이콘을 반환합니다
@@ -1248,12 +1301,10 @@ export class ModernSettingsTab extends PluginSettingTab {
    * 로그를 다운로드합니다
    */
   private downloadLogs(): void {
-    const { Logger } = require('../utils/logger');
-    
     try {
-      const logs = Logger.getHistory();
-      const stats = Logger.getStats();
-      const memUsage = Logger.getMemoryUsage();
+      const logs: LogDisplayEntry[] = Logger.getHistory();
+      const stats: LogStats = Logger.getStats();
+      const memUsage: MemoryUsage = Logger.getMemoryUsage();
       
       // 로그 데이터 구성
       const logData = {
@@ -1264,7 +1315,7 @@ export class ModernSettingsTab extends PluginSettingTab {
           statistics: stats,
           memoryUsage: memUsage
         },
-        logs: logs.map((log: LogDisplayEntry) => ({
+        logs: logs.map((log) => ({
           timestamp: log.timestamp.toISOString(),
           level: log.level,
           message: log.message,
@@ -1325,11 +1376,13 @@ export class ModernSettingsTab extends PluginSettingTab {
         // 기존 updateMetrics 함수 호출
         try {
           const metrics = this.plugin.orchestrator.getPerformanceMetrics();
-          const { Logger } = require('../utils/logger');
-          const { ErrorHandlerService } = require('../services/errorHandler');
-          const logStats = Logger.getStats();
-          const errorStats = ErrorHandlerService.getErrorStats();
-          const extendedMetrics = { ...metrics, logStats, errorStats };
+          const logStats: LogStats = Logger.getStats();
+          const errorStats: ErrorStats = ErrorHandlerService.getErrorStats();
+          const extendedMetrics = {
+            ...metrics,
+            logStats: this.toDisplayLogStats(logStats),
+            errorStats: this.toDisplayErrorStats(errorStats)
+          };
           createMetricsDisplay(metricsDisplay, extendedMetrics);
           
           clearElement(additionalStats);

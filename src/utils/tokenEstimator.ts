@@ -63,24 +63,7 @@ export function estimateAnalysisTokenUsage(correctionContexts: CorrectionContext
 /**
  * 토큰 사용량에 따른 대략적인 비용을 추정합니다 (USD 및 KRW).
  */
-export function estimateCost(tokens: number, provider: string): string {
-  const costs = {
-    openai: {
-      'gpt-4o': { input: 2.5, output: 10.0 }, // per 1M tokens (USD)
-      'gpt-4o-mini': { input: 0.15, output: 0.6 },
-      'gpt-4-turbo': { input: 10.0, output: 30.0 },
-      'gpt-4': { input: 30.0, output: 60.0 }
-    },
-    anthropic: {
-      'claude-3-5-sonnet-20241022': { input: 3.0, output: 15.0 },
-      'claude-3-5-haiku-20241022': { input: 0.25, output: 1.25 }
-    },
-    google: {
-      'gemini-1.5-pro': { input: 1.25, output: 5.0 },
-      'gemini-1.5-flash': { input: 0.075, output: 0.3 }
-    }
-  };
-  
+export function estimateCost(tokens: number, _provider: string): string {
   // 간단한 평균 비용 반환
   const avgCostPer1M = 2.0; // USD per 1M tokens (average)
   const estimatedCostUSD = (tokens / 1000000) * avgCostPer1M;

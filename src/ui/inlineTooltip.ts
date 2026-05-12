@@ -89,7 +89,7 @@ export class InlineTooltip {
       // 🔧 툴팁 보호 플래그 설정 (모바일에서는 툴팁 수동 닫기만 허용)
       this.tooltipProtected = true;
       
-      activeWindow.setTimeout(() => {
+      window.setTimeout(() => {
         // 🔧 키보드 숨김 활성화 - 이전 방식 유지
         this.hideKeyboardAndBlurEditor();
         
@@ -134,12 +134,12 @@ export class InlineTooltip {
     
     // 호버 타이머 정리
     if (this.hoverTimeout) {
-      activeWindow.clearTimeout(this.hoverTimeout);
+      window.clearTimeout(this.hoverTimeout);
       this.hoverTimeout = null;
     }
     
     if (this.hideTimeout) {
-      activeWindow.clearTimeout(this.hideTimeout);
+      window.clearTimeout(this.hideTimeout);
       this.hideTimeout = null;
     }
   }
@@ -150,7 +150,7 @@ export class InlineTooltip {
   private scheduleHide(delay: number): void {
     this.clearHideTimeout(); // 기존 타이머 정리
     
-    this.hideTimeout = activeWindow.setTimeout(() => {
+    this.hideTimeout = window.setTimeout(() => {
       if (!this.isHovered) {
         Logger.debug(`🕐 예약된 툴팁 숨기기 실행 (${delay}ms 후)`);
         this.hide();
@@ -163,7 +163,7 @@ export class InlineTooltip {
    */
   private clearHideTimeout(): void {
     if (this.hideTimeout) {
-      activeWindow.clearTimeout(this.hideTimeout);
+      window.clearTimeout(this.hideTimeout);
       this.hideTimeout = null;
       Logger.debug('⏰ 툴팁 숨기기 타이머 취소');
     }
@@ -590,7 +590,6 @@ export class InlineTooltip {
     // 🔧 세로 위치 (마우스 위치 최적화)
     const smallOffset = mousePosition ? 5 : gap; // 마우스 위치 있으면 최소 오프셋
     const availableSpaceBelow = Math.min(viewportHeight, editorTop + editorHeight) - referenceCenterY;
-    const availableSpaceAbove = referenceCenterY - editorTop;
     
     // 🔧 디버깅: 하단 감지 조건 확인
     Logger.debug(`🔍 하단 감지: isBottomEdge=${isBottomEdge}, availableSpaceBelow=${availableSpaceBelow}, 필요공간=${adaptiveSize.maxHeight + smallOffset + minSpacing}, 마우스Y=${mousePosition?.y}, 에디터하단=${editorTop + editorHeight}`);
@@ -691,7 +690,7 @@ export class InlineTooltip {
     if (isPhone) header.classList.add('kga-mobile-phone');
 
     // 🔧 헤더 텍스트 (필터링된 개수 반영)
-    const headerText = header.createSpan({
+    header.createSpan({
       text: `${uniqueOriginalErrors.length}개 오류 병합됨`,
       cls: 'kga-header-text'
     });
@@ -940,8 +939,8 @@ export class InlineTooltip {
     let isHovering = false;
     
     const startHideTimer = () => {
-      if (hideTimeout) activeWindow.clearTimeout(hideTimeout);
-      hideTimeout = activeWindow.setTimeout(() => {
+      if (hideTimeout) window.clearTimeout(hideTimeout);
+      hideTimeout = window.setTimeout(() => {
         if (!isHovering) {
           Logger.debug('🔍 툴팁 자동 숨김');
           this.hide(true); // 강제 닫기
@@ -951,7 +950,7 @@ export class InlineTooltip {
 
     const cancelHideTimer = () => {
       if (hideTimeout) {
-        activeWindow.clearTimeout(hideTimeout);
+        window.clearTimeout(hideTimeout);
         hideTimeout = undefined;
       }
     };
@@ -997,19 +996,19 @@ export class InlineTooltip {
     };
 
     // 이벤트 리스너 등록 (document 레벨)
-    document.addEventListener('mousemove', onMouseMove, { passive: true });
-    document.addEventListener('mouseover', onMouseOver, { passive: true });
-    document.addEventListener('click', onMouseClick);
+    activeDocument.addEventListener('mousemove', onMouseMove, { passive: true });
+    activeDocument.addEventListener('mouseover', onMouseOver, { passive: true });
+    activeDocument.addEventListener('click', onMouseClick);
 
     // 초기 타이머 시작
     startHideTimer();
 
     // 정리 함수 저장
     (this.tooltip as ExtendedHTMLElement)._cleanup = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseover', onMouseOver);
-      document.removeEventListener('click', onMouseClick);
-      if (hideTimeout) activeWindow.clearTimeout(hideTimeout);
+      activeDocument.removeEventListener('mousemove', onMouseMove);
+      activeDocument.removeEventListener('mouseover', onMouseOver);
+      activeDocument.removeEventListener('click', onMouseClick);
+      if (hideTimeout) window.clearTimeout(hideTimeout);
       Logger.debug('🔍 호버 이벤트 정리 완료');
     };
   }
@@ -1203,17 +1202,17 @@ export class InlineTooltip {
         }
       }, { passive: false });
 
-      exceptionButton.addEventListener('touchend', async (e) => {
+      exceptionButton.addEventListener('touchend', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        await this.addToExceptionWords(error);
+        void this.addToExceptionWords(error);
       }, { passive: false });
     }
 
     // 클릭 이벤트
-    exceptionButton.addEventListener('click', async (e) => {
+    exceptionButton.addEventListener('click', (e) => {
       e.stopPropagation();
-      await this.addToExceptionWords(error);
+      void this.addToExceptionWords(error);
     });
 
     // ❌ 오류 무시 버튼 (일시적 무시) - 모바일 최적화
@@ -1274,8 +1273,8 @@ export class InlineTooltip {
     }
 
     // 🤖 AI 분석 결과 영역 (도움말 영역 아래)
-    if (error.aiAnalysis) {
-      const aiArea = this.tooltip!.createDiv({ cls: 'kga-tooltip-ai-area' });
+    if (error.aiAnalysis && this.tooltip) {
+      const aiArea = this.tooltip.createDiv({ cls: 'kga-tooltip-ai-area' });
       if (isMobile) {
         aiArea.classList.add('kga-mobile');
       }
@@ -1284,7 +1283,7 @@ export class InlineTooltip {
       }
 
       // 🤖 AI 아이콘
-      const aiIcon = aiArea.createSpan({ text: '🤖', cls: 'kga-ai-icon' });
+      aiArea.createSpan({ text: '🤖', cls: 'kga-ai-icon' });
 
       // AI 추천 이유 간단 표시
       const reasoningText = aiArea.createSpan({ cls: 'kga-ai-reasoning' });
@@ -1309,8 +1308,9 @@ export class InlineTooltip {
         Logger.debug('📱 모바일 툴팁: 수동 닫기 모드 (닫기 버튼 또는 수정 적용으로만 닫힘)');
       } else {
         // 데스크톱: 바깥 클릭으로 닫기
-        activeWindow.setTimeout(() => {
-          document.addEventListener('click', this.handleOutsideClick.bind(this), { once: true });
+        window.setTimeout(() => {
+          const boundHandler = (ev: MouseEvent): void => { this.handleOutsideClick(ev); };
+          activeDocument.addEventListener('click', boundHandler, { once: true });
         }, 0);
       }
     }
@@ -1334,7 +1334,7 @@ export class InlineTooltip {
     }
 
     // 툴팁 유지 모드 해제 (약간의 지연 후)
-    activeWindow.setTimeout(() => {
+    window.setTimeout(() => {
       this.keepOpenMode = false;
     }, 200);
     
@@ -1665,7 +1665,7 @@ export class InlineTooltip {
       // 3. CodeMirror 에디터 포커스 해제 (추가 안전장치)
       const cmEditors = activeDocument.querySelectorAll('.cm-editor .cm-content');
       cmEditors.forEach(editor => {
-        if (editor instanceof HTMLElement) {
+        if (editor.instanceOf(HTMLElement)) {
           editor.blur();
         }
       });
@@ -1676,12 +1676,12 @@ export class InlineTooltip {
       activeDocument.body.appendChild(hiddenInput);
       
       // 더 짧은 지연시간으로 깜빡임 최소화
-      activeWindow.setTimeout(() => {
+      window.setTimeout(() => {
         hiddenInput.focus();
         // 즉시 블러 처리로 깜빡임 시간 단축
-        activeWindow.setTimeout(() => {
+        window.setTimeout(() => {
           hiddenInput.blur();
-          activeWindow.setTimeout(() => {
+          window.setTimeout(() => {
             activeDocument.body.removeChild(hiddenInput);
             Logger.log('📱 모바일: 키보드 숨김 처리 완료 (최적화됨)');
           }, 10);
@@ -1783,7 +1783,7 @@ export class InlineTooltip {
         break;
       
       case 'exception': // 🔵 파란색: 예외 사전 등록
-        this.addToExceptionWords(error);
+        void this.addToExceptionWords(error);
         break;
       
       case 'keep-original': // 🟠 주황색: 원본 유지 (변경 없음)

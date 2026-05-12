@@ -6,7 +6,7 @@
 import { createEl } from '../../utils/domUtils';
 import { PageSplitter } from './PageSplitter';
 import { PageNavigator } from './PageNavigator';
-import { PopupState, PaginationState, PageInfo, PageSplitOptions, IPopupComponent, RenderContext } from '../types/PopupTypes';
+import { PopupState, PaginationState, PageInfo, IPopupComponent, RenderContext } from '../types/PopupTypes';
 import { Correction, PageCorrection } from '../../types/interfaces';
 import { Logger } from '../../utils/logger';
 

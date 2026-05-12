@@ -1,7 +1,7 @@
 import { IPopupServiceManager, RenderContext } from '../types/PopupTypes';
-import { AISettings, AIAnalysisRequest, CorrectionContext } from '../../types/interfaces';
+import { AISettings, AIAnalysisRequest } from '../../types/interfaces';
 import { estimateAnalysisTokenUsage, estimateCost } from '../../utils/tokenEstimator';
-import { TokenUsage, TokenWarningSettings, TokenWarningModal } from '../../utils/tokenWarningModal';
+import { TokenUsage, TokenWarningSettings } from '../../utils/tokenWarningModal';
 import { Logger } from '../../utils/logger';
 import { Notice } from 'obsidian';
 

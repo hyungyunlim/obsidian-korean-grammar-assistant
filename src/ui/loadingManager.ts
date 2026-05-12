@@ -272,7 +272,7 @@ export class LoadingManager {
     this.currentNotice = {
       hide: () => {
         toastContainer.addClass('kga-slide-out-down');
-        activeWindow.setTimeout(() => {
+        window.setTimeout(() => {
           toastContainer.remove();
         }, 200);
       }

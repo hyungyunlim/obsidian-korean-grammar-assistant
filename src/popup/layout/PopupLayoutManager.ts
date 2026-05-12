@@ -339,7 +339,7 @@ export class PopupLayoutManager implements IPopupComponent {
       });
 
       // 푸터 버튼들 (적용, 취소 등)
-      const buttonContainer = createEl('div', {
+      createEl('div', {
         cls: 'korean-grammar-popup-footer-buttons',
         parent: this.footerElement
       });

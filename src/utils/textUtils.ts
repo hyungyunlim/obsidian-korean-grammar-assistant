@@ -78,7 +78,7 @@ export function findOptimalBreakPoint(
     const matches = Array.from(text.matchAll(pattern.regex));
     
     for (const match of matches) {
-      const endIndex = match.index! + match[0].length;
+      const endIndex = (match.index ?? 0) + match[0].length;
       
       // 허용 범위 내에 있는지 확인
       if (endIndex >= minLength && endIndex <= maxLength) {
@@ -298,7 +298,6 @@ export function getCurrentSentence(editor: Editor): { text: string; from: Editor
   const sentenceEndPatternGlobal = /[.!?。！？]/g;
   
   // 현재 커서 위치에서 앞쪽으로 문장 시작점 찾기
-  let sentenceStart = 0;
   let sentenceStartLine = currentLine;
   let sentenceStartChar = 0;
   

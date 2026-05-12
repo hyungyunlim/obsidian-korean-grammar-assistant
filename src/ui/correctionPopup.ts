@@ -1,9 +1,9 @@
-import { Editor, EditorPosition, App, Platform, Scope, Notice, MarkdownView, Setting } from 'obsidian';
+import { EditorPosition, App, Platform, Scope, Notice, MarkdownView, Setting } from 'obsidian';
 import { Correction, PopupConfig, AIAnalysisResult, AIAnalysisRequest, PageCorrection, MorphemeSentence, MorphemeToken } from '../types/interfaces';
 import { BaseComponent } from './baseComponent';
 import { CorrectionStateManager } from '../state/correctionState';
 import { escapeHtml } from '../utils/htmlUtils';
-import { calculateDynamicCharsPerPage, splitTextIntoPages, escapeRegExp } from '../utils/textUtils';
+import { calculateDynamicCharsPerPage, splitTextIntoPages } from '../utils/textUtils';
 import { AIAnalysisService } from '../services/aiAnalysisService';
 import { Logger } from '../utils/logger';
 import { clearElement } from '../utils/domUtils';
@@ -132,7 +132,7 @@ export class CorrectionPopup extends BaseComponent {
       this.cycleCurrentCorrectionNext();
       
       // 포커스 유지를 위해 하이라이트 강제 업데이트
-      activeWindow.setTimeout(() => {
+      window.setTimeout(() => {
         this.updateFocusHighlight();
       }, 50);
       
@@ -152,7 +152,7 @@ export class CorrectionPopup extends BaseComponent {
       this.cycleCurrentCorrectionPrev();
       
       // 포커스 유지를 위해 하이라이트 강제 업데이트
-      activeWindow.setTimeout(() => {
+      window.setTimeout(() => {
         this.updateFocusHighlight();
       }, 50);
       
@@ -220,7 +220,7 @@ export class CorrectionPopup extends BaseComponent {
       evt.preventDefault();
       evt.stopPropagation();
       evt.stopImmediatePropagation();
-      this.applyCorrections();
+      void this.applyCorrections();
       return false;
     });
 
@@ -403,7 +403,7 @@ export class CorrectionPopup extends BaseComponent {
       Logger.warn('AI 분석 버튼이 비활성화되어 있거나 찾을 수 없습니다.');
       // 직접 AI 분석 실행 시도
       if (this.aiService && !this.isAiAnalyzing) {
-        this.performAIAnalysis();
+        void this.performAIAnalysis();
       }
     }
   }
@@ -447,7 +447,7 @@ export class CorrectionPopup extends BaseComponent {
       Logger.debug(`포커스 인덱스를 0으로 설정`);
       
       // 약간의 지연을 두고 포커스 설정 (DOM이 완전히 렌더링된 후)
-      activeWindow.setTimeout(() => {
+      window.setTimeout(() => {
         Logger.debug('지연 후 포커스 하이라이트 업데이트 실행');
         this.updateFocusHighlight();
       }, 100);
@@ -574,7 +574,7 @@ export class CorrectionPopup extends BaseComponent {
     this.app.keymap.pushScope(this.keyboardScope);
     
     // 포커스 설정 (DOM 추가는 show() 메서드에서 처리됨)
-    activeWindow.setTimeout(() => {
+    window.setTimeout(() => {
       // 팝업에 포커스 설정하여 키보드 이벤트가 올바르게 전달되도록 함
       this.element.focus();
     }, 50);
@@ -599,7 +599,7 @@ export class CorrectionPopup extends BaseComponent {
     this.element.empty();
     
     // Popup overlay
-    const overlay = this.element.createDiv('kga-popup-overlay');
+    this.element.createDiv('kga-popup-overlay');
     
     // Popup content
     const content = this.element.createDiv('kga-popup-content');
@@ -617,7 +617,7 @@ export class CorrectionPopup extends BaseComponent {
     });
     
     // AI 서비스 상태에 따른 버튼 설정
-    this.updateAiButtonState(aiBtn);
+    void this.updateAiButtonState(aiBtn);
     headerTop.createEl('button', { cls: 'kga-close-btn-header', text: '×' });
     
     // Main content
@@ -663,8 +663,8 @@ export class CorrectionPopup extends BaseComponent {
     const errorToggle = errorSummary.createDiv('kga-error-summary-toggle');
     const leftSection = errorToggle.createDiv('kga-left-section');
     leftSection.createSpan({ cls: 'kga-error-summary-label', text: '오류 상세' });
-    const badge = leftSection.createSpan({ 
-      cls: 'kga-error-count-badge', 
+    leftSection.createSpan({
+      cls: 'kga-error-count-badge',
       text: this.getErrorStateCount().toString(),
       attr: { id: 'errorCountBadge' }
     });
@@ -863,20 +863,18 @@ export class CorrectionPopup extends BaseComponent {
       
       // 같은 위치에서 겹치는 단어들을 찾기
       let groupKey = originalText;
-      let foundOverlap = false;
-      
+
       // 기존 그룹들과 겹치는지 확인
       for (const [existingKey, existingGroup] of duplicateGroups) {
         if (existingGroup.length > 0) {
           const existingCorrection = existingGroup[0];
           const existingPos = existingCorrection.absolutePosition;
           const existingText = existingCorrection.correction.original;
-          
+
           // 같은 위치에서 시작하고 한 단어가 다른 단어를 포함하는 경우
-          if (position === existingPos && 
+          if (position === existingPos &&
               (originalText.includes(existingText) || existingText.includes(originalText))) {
             groupKey = existingKey;
-            foundOverlap = true;
             Logger.debug(`[${index}] 위치 기반 중복 발견: "${originalText}" ↔ "${existingText}" (위치: ${position})`);
             break;
           }
@@ -1365,8 +1363,8 @@ export class CorrectionPopup extends BaseComponent {
         return;
       }
     };
-    document.addEventListener('keydown', documentKeyListener);
-    this.cleanupFunctions.push(() => document.removeEventListener('keydown', documentKeyListener));
+    activeDocument.addEventListener('keydown', documentKeyListener);
+    this.cleanupFunctions.push(() => activeDocument.removeEventListener('keydown', documentKeyListener));
 
     // DOM 레벨에서 키보드 이벤트 처리 (백업)
     this.addEventListener(this.element, 'keydown', (evt: KeyboardEvent) => {
@@ -1444,8 +1442,8 @@ export class CorrectionPopup extends BaseComponent {
         this.close();
       }
     };
-    document.addEventListener('keydown', escKeyHandler);
-    this.cleanupFunctions.push(() => document.removeEventListener('keydown', escKeyHandler));
+    activeDocument.addEventListener('keydown', escKeyHandler);
+    this.cleanupFunctions.push(() => activeDocument.removeEventListener('keydown', escKeyHandler));
   }
 
   /**
@@ -1488,7 +1486,7 @@ export class CorrectionPopup extends BaseComponent {
           errorSummary.classList.toggle('collapsed');
           
           // 페이지네이션 재계산
-          activeWindow.setTimeout(() => {
+          window.setTimeout(() => {
             this.recalculatePagination();
             this.updateDisplay();
           }, 350);
@@ -1562,7 +1560,7 @@ export class CorrectionPopup extends BaseComponent {
       if (target.classList.contains('kga-clickable-error') || target.classList.contains('kga-error-original-compact')) {
         touchTarget = target;
         
-        touchTimer = activeWindow.setTimeout(() => {
+        touchTimer = window.setTimeout(() => {
           if (touchTarget) {
             Logger.log(`📱 터치홀드 편집 모드 진입: ${touchTarget.textContent}`);
             
@@ -1597,7 +1595,7 @@ export class CorrectionPopup extends BaseComponent {
     // 터치 끝 (타이머 취소)
     this.addEventListener(this.element, 'touchend', () => {
       if (touchTimer) {
-        activeWindow.clearTimeout(touchTimer);
+        window.clearTimeout(touchTimer);
         touchTimer = null;
         Logger.debug('📱 터치홀드 타이머 취소 (touchend)');
       }
@@ -1607,7 +1605,7 @@ export class CorrectionPopup extends BaseComponent {
     // 터치 취소 (드래그 등으로 인한 취소)
     this.addEventListener(this.element, 'touchcancel', () => {
       if (touchTimer) {
-        activeWindow.clearTimeout(touchTimer);
+        window.clearTimeout(touchTimer);
         touchTimer = null;
         Logger.debug('📱 터치홀드 타이머 취소 (touchcancel)');
       }
@@ -1626,7 +1624,7 @@ export class CorrectionPopup extends BaseComponent {
         const distanceY = Math.abs(touch.clientY - (rect.top + rect.height / 2));
         
         if (distanceX > moveThreshold || distanceY > moveThreshold) {
-          activeWindow.clearTimeout(touchTimer);
+          window.clearTimeout(touchTimer);
           touchTimer = null;
           touchTarget = null;
           Logger.debug('📱 터치홀드 타이머 취소 (이동 감지)');
@@ -1643,8 +1641,8 @@ export class CorrectionPopup extends BaseComponent {
   private bindApplyEvents(): void {
     const applyButton = this.element.querySelector('#applyCorrectionsButton');
     if (applyButton) {
-      this.addEventListener(applyButton as HTMLElement, 'click', async () => {
-        await this.applyCorrections();
+      this.addEventListener(applyButton as HTMLElement, 'click', () => {
+        void this.applyCorrections();
       });
     }
   }
@@ -1698,8 +1696,8 @@ export class CorrectionPopup extends BaseComponent {
   private bindAIAnalysisEvents(): void {
     const aiAnalyzeBtn = this.element.querySelector('#aiAnalyzeBtn');
     if (aiAnalyzeBtn && this.aiService) {
-      this.addEventListener(aiAnalyzeBtn as HTMLElement, 'click', async () => {
-        await this.performAIAnalysis();
+      this.addEventListener(aiAnalyzeBtn as HTMLElement, 'click', () => {
+        void this.performAIAnalysis();
       });
     }
   }
@@ -1750,15 +1748,15 @@ export class CorrectionPopup extends BaseComponent {
     // 오류 상세 영역 상태 확인 및 펼치기
     const errorSummary = this.element.querySelector('#errorSummary');
     const wasCollapsed = errorSummary && errorSummary.classList.contains('collapsed');
-    
-    if (wasCollapsed) {
-      errorSummary!.classList.remove('collapsed');
+
+    if (wasCollapsed && errorSummary) {
+      errorSummary.classList.remove('collapsed');
       Logger.debug('🔧 오류 상세 영역 펼침');
       this.updateDisplay(); // 페이지네이션 재계산
     }
 
     // DOM 업데이트 후 편집 모드 진입 (비동기 처리)
-    activeWindow.setTimeout(() => {
+    window.setTimeout(() => {
       const errorCard = this.element.querySelector(`[data-correction-index="${correctionIndex}"] .kga-error-original-compact`);
       if (errorCard) {
         Logger.debug(`🔧 편집 모드 진입 - 오류 상세 카드 찾음: index=${correctionIndex}`);
@@ -1771,7 +1769,7 @@ export class CorrectionPopup extends BaseComponent {
         Logger.debug('🔧 오토스크롤 수행');
         
         // 스크롤 완료 후 편집 모드 진입
-        activeWindow.setTimeout(() => {
+        window.setTimeout(() => {
           this.enterCardEditMode(errorCard as HTMLElement, correctionIndex);
         }, 300); // 스크롤 애니메이션 완료 대기
         
@@ -2092,7 +2090,7 @@ export class CorrectionPopup extends BaseComponent {
     originalElement.parentElement?.replaceChild(container, originalElement);
     
     // input에 포커스를 주고 텍스트 선택
-    activeWindow.setTimeout(() => {
+    window.setTimeout(() => {
       input.focus();
       input.select();
     }, 100);
@@ -2149,7 +2147,7 @@ export class CorrectionPopup extends BaseComponent {
     Logger.debug(`🎯 편집 완료 후 미리보기 포커스 이동: index=${correctionIndex}`);
     
     // DOM 업데이트 완료를 위해 짧은 지연
-    activeWindow.setTimeout(() => {
+    window.setTimeout(() => {
       // 현재 페이지의 교정사항들을 가져옴
       const rawCorrections = this.getCurrentCorrections();
       const uniqueCorrections = this.removeDuplicateCorrections(rawCorrections);
@@ -2181,7 +2179,7 @@ export class CorrectionPopup extends BaseComponent {
             
             // 포커스된 요소에 일시적 하이라이트 효과
             targetSpan.classList.add('kga-edit-completion-highlight');
-            activeWindow.setTimeout(() => {
+            window.setTimeout(() => {
               targetSpan.classList.remove('kga-edit-completion-highlight');
             }, 2000);
           } else {
@@ -2289,8 +2287,6 @@ export class CorrectionPopup extends BaseComponent {
     const paginationContainer = this.element.querySelector('#paginationContainer') as HTMLElement;
     const prevButton = this.element.querySelector('#prevPreviewPage') as HTMLButtonElement;
     const nextButton = this.element.querySelector('#nextPreviewPage') as HTMLButtonElement;
-    const pageInfo = this.element.querySelector('#previewPageInfo');
-    const pageCharsInfo = this.element.querySelector('#pageCharsInfo');
 
     // 페이지네이션 컨테이너 가시성 업데이트
     if (paginationContainer) {
@@ -2357,20 +2353,10 @@ export class CorrectionPopup extends BaseComponent {
         }
         
         await this.app.vault.process(file, (content) => {
-          // 전체 파일에서 선택된 영역 찾기 및 교체
-          const lines = content.split('\n');
-          let currentLine = 0;
-          let currentCol = 0;
-          
-          // 시작 위치까지 찾기
-          for (let i = 0; i < this.config.start.line; i++) {
-            currentLine++;
-          }
-          
           // 텍스트 교체 로직
           const beforeStart = content.substring(0, this.getOffsetFromPosition(content, this.config.start));
           const afterEnd = content.substring(this.getOffsetFromPosition(content, this.config.end));
-          
+
           return beforeStart + result.finalText + afterEnd;
         });
         
@@ -2434,7 +2420,7 @@ export class CorrectionPopup extends BaseComponent {
     
     // DOM에 추가된 후에 페이지네이션 계산 및 디스플레이 업데이트
     // requestAnimationFrame을 사용하여 브라우저가 레이아웃을 완료한 후 실행
-    requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
       Logger.log('DOM 추가 후 페이지네이션 재계산 시작');
       this.recalculatePagination();
       this.updateDisplay();
@@ -2460,7 +2446,7 @@ export class CorrectionPopup extends BaseComponent {
       return;
     }
 
-    if (!this.aiService.isAvailable()) {
+    if (!(await this.aiService.isAvailable())) {
       Logger.error('AI 서비스 사용 불가: 기능 비활성화 또는 API 키 없음');
       // 기존 오류 처리 방식과 동일하게 처리
       new Notice('❌ AI 기능이 비활성화되어 있거나 API 키가 설정되지 않았습니다. 플러그인 설정을 확인해주세요.', 5000);
@@ -2536,9 +2522,10 @@ export class CorrectionPopup extends BaseComponent {
 
     } catch (error) {
       Logger.error('AI 분석 실패:', error);
-      
+
       // 오류 알림 (Obsidian Notice 시스템 사용 - 일관성 확보)
-      new Notice(`❌ AI 분석 실패: ${error.message}`, 5000);
+      const message = error instanceof Error ? error.message : String(error);
+      new Notice(`❌ AI 분석 실패: ${message}`, 5000);
     } finally {
       this.isAiAnalyzing = false;
       
@@ -2929,7 +2916,9 @@ export class CorrectionPopup extends BaseComponent {
       
     } catch (error) {
       Logger.error('토큰 추정 실패, 기본값 사용:', error);
-      Logger.error('에러 스택:', error?.stack);
+      if (error instanceof Error) {
+        Logger.error('에러 스택:', error.stack);
+      }
       
       // 실패 시 기본 추정 사용
       const fallbackEstimation = this.aiService?.estimateTokenUsage(request) || {
@@ -3003,7 +2992,7 @@ export class CorrectionPopup extends BaseComponent {
       modal.classList.add(NO_OUTLINE_CLASS);
       
       // 강제로 포커스 설정 (지연 처리)
-      activeWindow.setTimeout(() => {
+      window.setTimeout(() => {
         modal.focus();
         Logger.debug('토큰 경고 모달: 포커스 설정 완료');
       }, 10);
@@ -3063,17 +3052,17 @@ export class CorrectionPopup extends BaseComponent {
         }
       };
       
-      document.addEventListener('keydown', globalKeyHandler, { capture: true });
-      document.addEventListener('keyup', globalKeyHandler, { capture: true });
-      window.addEventListener('keydown', globalKeyHandler, { capture: true });
+      activeDocument.addEventListener('keydown', globalKeyHandler, { capture: true });
+      activeDocument.addEventListener('keyup', globalKeyHandler, { capture: true });
+      activeWindow.addEventListener('keydown', globalKeyHandler, { capture: true });
       
       // 모달 제거 시 모든 이벤트 핸들러 제거
       const originalHandleResponse = handleResponse;
       handleResponse = (action: 'cancel' | 'proceed' | 'updateSettings') => {
         // 모든 이벤트 리스너 제거
-        document.removeEventListener('keydown', globalKeyHandler, { capture: true });
-        document.removeEventListener('keyup', globalKeyHandler, { capture: true });
-        window.removeEventListener('keydown', globalKeyHandler, { capture: true });
+        activeDocument.removeEventListener('keydown', globalKeyHandler, { capture: true });
+        activeDocument.removeEventListener('keyup', globalKeyHandler, { capture: true });
+        activeWindow.removeEventListener('keydown', globalKeyHandler, { capture: true });
         
         Logger.debug('토큰 경고 모달: 모든 이벤트 리스너 제거 완료');
         originalHandleResponse(action);
@@ -3175,7 +3164,7 @@ export class CorrectionPopup extends BaseComponent {
     closeBtn.title = '단축키 가이드 닫기';
     closeBtn.addEventListener('click', () => {
       hint.classList.add(FADE_OUT_CLASS);
-      activeWindow.setTimeout(() => hint.remove(), 200);
+      window.setTimeout(() => hint.remove(), 200);
     });
     header.appendChild(closeBtn);
     
@@ -3281,7 +3270,7 @@ export class CorrectionPopup extends BaseComponent {
         this.updateDisplay();
         
         // 레이아웃 변경 후 스크롤
-        activeWindow.setTimeout(() => {
+        window.setTimeout(() => {
           (targetItem as HTMLElement).scrollIntoView({ 
             behavior: 'smooth', 
             block: 'center',
@@ -3317,7 +3306,7 @@ export class CorrectionPopup extends BaseComponent {
     targetItem.classList.add('kga-error-item-highlighted');
     
     // 2초 후 하이라이트 제거
-    activeWindow.setTimeout(() => {
+    window.setTimeout(() => {
       targetItem.classList.remove('kga-error-item-highlighted');
     }, 2000);
     
@@ -3359,15 +3348,15 @@ export class CorrectionPopup extends BaseComponent {
     // 오류 상세 영역이 접혀있다면 펼치기
     const errorSummary = this.element.querySelector('#errorSummary');
     const wasCollapsed = errorSummary && errorSummary.classList.contains('collapsed');
-    
-    if (wasCollapsed) {
-      errorSummary!.classList.remove('collapsed');
+
+    if (wasCollapsed && errorSummary) {
+      errorSummary.classList.remove('collapsed');
       Logger.debug('⌨️ 오류 상세 영역 자동 펼침');
       this.updateDisplay(); // 페이지네이션 재계산
     }
 
     // DOM 업데이트 후 편집 모드 진입
-    activeWindow.setTimeout(() => {
+    window.setTimeout(() => {
       const errorCard = this.element.querySelector(`[data-correction-index="${actualIndex}"] .kga-error-original-compact`);
       if (errorCard) {
         Logger.debug(`⌨️ 편집 모드 진입 - 오류 상세 카드 찾음: index=${actualIndex}`);
@@ -3380,7 +3369,7 @@ export class CorrectionPopup extends BaseComponent {
         Logger.debug('⌨️ 오토스크롤 수행');
         
         // 스크롤 완료 후 편집 모드 진입
-        activeWindow.setTimeout(() => {
+        window.setTimeout(() => {
           this.enterCardEditMode(errorCard as HTMLElement, actualIndex);
         }, 300); // 스크롤 애니메이션 완료 대기
         

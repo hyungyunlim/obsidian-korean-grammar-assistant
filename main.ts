@@ -426,7 +426,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       analysisNotice.setMessage(`🔢 선택 영역 내 ${selectionErrorCount}개 오류 분석 준비 중...`);
       
       // 잠시 대기 (UI 업데이트 시간 확보)
-      await new Promise(resolve => activeWindow.setTimeout(resolve, 500));
+      await new Promise(resolve => window.setTimeout(resolve, 500));
       
       // 3단계: AI API 호출 알림
       analysisNotice.setMessage(`🧠 선택 영역 AI 분석 중 (${modelInfo.model})... 수십 초 소요될 수 있습니다`);
@@ -477,7 +477,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       }
       
       // 잠시 대기 (UI 업데이트 시간 확보)
-      await new Promise(resolve => activeWindow.setTimeout(resolve, 500));
+      await new Promise(resolve => window.setTimeout(resolve, 500));
       
       // 3단계: AI API 호출 알림
       analysisNotice.setMessage(`🧠 AI 분석 중 (${modelInfo.model})... 수십 초 소요될 수 있습니다`);
@@ -531,7 +531,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       await InlineModeService.checkText(targetText);
 
       // 잠시 대기 (맞춤법 검사 완료 대기)
-      await new Promise(resolve => activeWindow.setTimeout(resolve, 1000));
+      await new Promise(resolve => window.setTimeout(resolve, 1000));
 
       // 오류 개수 확인
       const errorCount = InlineModeService.getErrorCount();
@@ -545,7 +545,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       processNotice.setMessage(`✅ 맞춤법 검사 완료! ${errorCount}개 오류 발견 (빨간색 표시)`);
       
       // 사용자가 빨간색 오류를 확인할 수 있는 시간 (3초)
-      await new Promise(resolve => activeWindow.setTimeout(resolve, 3000));
+      await new Promise(resolve => window.setTimeout(resolve, 3000));
 
       // 3단계: AI 분석 시작 알림
       const { getCurrentModelInfo } = await import('./src/constants/aiModels');
@@ -575,7 +575,7 @@ export default class KoreanGrammarPlugin extends Plugin {
       }
       
       // 잠시 대기 (UI 업데이트 시간 확보)
-      await new Promise(resolve => activeWindow.setTimeout(resolve, 500));
+      await new Promise(resolve => window.setTimeout(resolve, 500));
       
       // 3단계: AI API 호출
       processNotice.setMessage(`🧠 AI 분석 중 (${modelInfo.model})... 수십 초 소요될 수 있습니다`);

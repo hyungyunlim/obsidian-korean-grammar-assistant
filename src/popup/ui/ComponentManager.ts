@@ -9,7 +9,7 @@ import { App } from 'obsidian';
 import { PageCorrection, CorrectionState, RenderContext } from '../../types/interfaces';
 import { Logger } from '../../utils/logger';
 import { ErrorRenderer, ErrorRenderOptions } from './ErrorRenderer';
-import { InteractionHandler, InteractionConfig } from './InteractionHandler';
+import { InteractionHandler } from './InteractionHandler';
 import { createEl, parseHTMLSafely, setCssVariable } from '../../utils/domUtils';
 
 export interface ComponentConfig {
@@ -34,7 +34,7 @@ export interface ComponentTemplate {
   name: string;
   html: string;
   css?: string;
-  bindings?: Record<string, any>;
+  bindings?: Record<string, unknown>;
 }
 
 export class ComponentManager {
@@ -492,9 +492,8 @@ export class ComponentManager {
           const correctionIndex = parseInt(element.dataset.correctionIndex || '-1');
           
           if (correctionIndex >= 0) {
-            // 보이는 상태 업데이트
-            const isVisible = entry.isIntersecting;
-            // 필요시 지연 로딩 처리
+            // 보이는 상태 업데이트 - 필요시 지연 로딩 처리
+            void entry.isIntersecting;
           }
         });
       },

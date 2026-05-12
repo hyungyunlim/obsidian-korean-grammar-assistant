@@ -123,7 +123,7 @@ ${correctionContexts.map((ctx, index) => {
       'original-kept': '🟠 원본유지',
       'user-edited': '🟣 사용자편집'
     };
-    const stateName = stateNames[ctx.currentState as keyof typeof stateNames] || `🔘 ${ctx.currentState}`;
+    const stateName = stateNames[ctx.currentState] || `🔘 ${ctx.currentState}`;
     contextInfo += `
    현재 상태: ${stateName} (값: "${ctx.currentValue}")`;
   }
@@ -161,7 +161,7 @@ ${correctionContexts.map((ctx, index) => {
       'original-kept': '🟠 원본유지',
       'user-edited': '🟣 사용자편집'
     };
-    const stateName = stateNames[ctx.currentState as keyof typeof stateNames] || `🔘 ${ctx.currentState}`;
+    const stateName = stateNames[ctx.currentState] || `🔘 ${ctx.currentState}`;
     contextInfo += `
    현재 상태: ${stateName} (값: "${ctx.currentValue}")`;
   }

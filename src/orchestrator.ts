@@ -44,7 +44,7 @@ export class SpellCheckOrchestrator {
   async execute(): Promise<void> {
     try {
       // 1. 활성 마크다운 뷰와 에디터 가져오기
-      const { editor, selectedText, selectionStart, selectionEnd, file } = this.getEditorInfo()!;
+      const { editor, selectedText, selectionStart, selectionEnd, file } = this.getEditorInfo();
       
       if (!selectedText || selectedText.trim().length === 0) {
         new Notice("검사할 텍스트가 없습니다.");
@@ -303,7 +303,7 @@ export class SpellCheckOrchestrator {
    * 비동기 대기 헬퍼 함수
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => activeWindow.setTimeout(resolve, ms));
+    return new Promise(resolve => window.setTimeout(resolve, ms));
   }
 
   /**

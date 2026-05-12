@@ -4,7 +4,7 @@
  */
 
 import { createEl } from '../../utils/domUtils';
-import { PopupState, PaginationState, PageInfo, IPopupComponent, RenderContext, PopupEventType } from '../types/PopupTypes';
+import { PopupState, PageInfo, IPopupComponent, RenderContext } from '../types/PopupTypes';
 import { Logger } from '../../utils/logger';
 
 export interface PageNavigationEvent {

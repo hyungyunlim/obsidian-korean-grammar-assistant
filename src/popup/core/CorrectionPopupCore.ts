@@ -28,37 +28,6 @@ import { CorrectionStateManager } from '../../state/correctionState';
 import { AIAnalysisService } from '../../services/aiAnalysisService';
 import { Logger } from '../../utils/logger';
 
-// =============================================================================
-// 액션 페이로드 타입 정의
-// =============================================================================
-
-interface ErrorToggleActionData {
-  correctionIndex: number;
-}
-
-interface SuggestionSelectActionData {
-  correctionIndex: number;
-  suggestionIndex: number;
-}
-
-interface EditModeActionData {
-  correctionIndex: number;
-  trigger?: string;
-}
-
-interface NavigationActionData {
-  action: 'next' | 'prev' | 'goto-page';
-  page?: number;
-}
-
-interface UIToggleActionData {
-  target: string;
-}
-
-interface TouchHoldActionData {
-  correctionIndex: number;
-}
-
 /** 안전한 객체 접근을 위한 record type-guard helper */
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null

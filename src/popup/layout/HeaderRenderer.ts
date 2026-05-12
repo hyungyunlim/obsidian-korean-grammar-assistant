@@ -4,11 +4,10 @@
  */
 
 import { Platform } from 'obsidian';
-import { RenderContext, IPopupComponent, PopupState, AIIntegrationState } from '../types/PopupTypes';
+import { RenderContext, IPopupComponent, PopupState } from '../types/PopupTypes';
 import { Logger } from '../../utils/logger';
 import { setIcon } from 'obsidian';
 import { createEl } from '../../utils/domUtils';
-import { clearElement } from '../../utils/domUtils';
 
 /**
  * 헤더 버튼 타입
@@ -214,7 +213,7 @@ export class HeaderRenderer implements IPopupComponent {
 
     // 페이지 정보 (긴 텍스트인 경우)
     if (this.context?.state.isLongText) {
-      const pageInfoElement = createEl('span', {
+      createEl('span', {
         cls: 'korean-grammar-popup-page-info',
         text: this.getPageInfoText(),
         parent: titleContainer
@@ -369,7 +368,7 @@ export class HeaderRenderer implements IPopupComponent {
 
     // 텍스트 추가 (아이콘 전용이 아닌 경우)
     if (!options.iconOnly && options.text) {
-      const textElement = createEl('span', {
+      createEl('span', {
         cls: 'korean-grammar-popup-header-button-text',
         text: options.text,
         parent: button
@@ -452,8 +451,8 @@ export class HeaderRenderer implements IPopupComponent {
     }
 
     // 아이콘 애니메이션 (분석 중일 때)
-    const iconElement = this.aiButtonElement.querySelector('.korean-grammar-popup-header-button-icon');
-    if (iconElement instanceof HTMLElement) {
+    const iconElement = this.aiButtonElement.querySelector<HTMLElement>('.korean-grammar-popup-header-button-icon');
+    if (iconElement) {
       if (this.isAiAnalyzing) {
         iconElement.classList.add('kga-spin');
       } else {

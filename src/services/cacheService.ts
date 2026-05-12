@@ -192,7 +192,7 @@ export class SpellCheckCacheService {
    */
   destroy(): void {
     if (this.cleanupTimer) {
-      activeWindow.clearInterval(this.cleanupTimer);
+      window.clearInterval(this.cleanupTimer);
       this.cleanupTimer = undefined;
     }
     this.clear();
@@ -266,7 +266,7 @@ export class SpellCheckCacheService {
    * 정리 타이머를 시작합니다
    */
   private startCleanupTimer(): void {
-    this.cleanupTimer = activeWindow.setInterval(() => {
+    this.cleanupTimer = window.setInterval(() => {
       this.cleanup();
     }, this.cleanupInterval);
   }

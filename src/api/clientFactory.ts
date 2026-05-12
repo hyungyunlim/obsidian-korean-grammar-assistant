@@ -27,7 +27,7 @@ export class AIClientFactory {
       case 'ollama':
         return new OllamaClient(settings.ollamaEndpoint);
       default:
-        throw new Error(`지원하지 않는 AI 제공자입니다: ${provider}`);
+        throw new Error(`지원하지 않는 AI 제공자입니다: ${String(provider)}`);
     }
   }
 

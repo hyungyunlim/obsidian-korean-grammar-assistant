@@ -198,7 +198,7 @@ export class VirtualScroller {
     }
     
     if (this.scrollTimeout) {
-      activeWindow.clearTimeout(this.scrollTimeout);
+      window.clearTimeout(this.scrollTimeout);
     }
 
     this.clearRenderedItems();
@@ -273,10 +273,10 @@ export class VirtualScroller {
 
     // 스크롤 종료 감지
     if (this.scrollTimeout) {
-      activeWindow.clearTimeout(this.scrollTimeout);
+      window.clearTimeout(this.scrollTimeout);
     }
 
-    this.scrollTimeout = activeWindow.setTimeout(() => {
+    this.scrollTimeout = window.setTimeout(() => {
       this.isScrolling = false;
     }, 150);
   }, this.SCROLL_DEBOUNCE, true);
@@ -311,8 +311,8 @@ export class VirtualScroller {
    */
   private renderVisibleItems(): void {
     const { startIndex, endIndex, visibleItems } = this.currentRange;
-    const { itemHeight } = this.config;
-    
+
+
     // 현재 범위 밖의 요소들 제거
     this.cleanupOutOfRangeItems(startIndex, endIndex);
     

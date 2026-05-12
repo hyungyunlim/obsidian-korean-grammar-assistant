@@ -194,7 +194,7 @@ export class OptimizedSpellCheckService {
     this.requestQueue = [];
     
     if (this.batchTimer) {
-      activeWindow.clearTimeout(this.batchTimer);
+      window.clearTimeout(this.batchTimer);
       this.batchTimer = undefined;
     }
     
@@ -270,10 +270,10 @@ export class OptimizedSpellCheckService {
     
     // 큐가 가득 찼거나 타임아웃 설정
     if (this.requestQueue.length >= this.maxBatchSize) {
-      this.processBatch(settings);
+      void this.processBatch(settings);
     } else if (!this.batchTimer) {
-      this.batchTimer = activeWindow.setTimeout(() => {
-        this.processBatch(settings);
+      this.batchTimer = window.setTimeout(() => {
+        void this.processBatch(settings);
       }, this.batchTimeout);
     }
   }
@@ -291,7 +291,7 @@ export class OptimizedSpellCheckService {
     
     // 타이머 정리
     if (this.batchTimer) {
-      activeWindow.clearTimeout(this.batchTimer);
+      window.clearTimeout(this.batchTimer);
       this.batchTimer = undefined;
     }
     
@@ -335,7 +335,7 @@ export class OptimizedSpellCheckService {
       
       // 대기 중인 요청이 있으면 다음 배치 처리
       if (this.requestQueue.length > 0) {
-        activeWindow.setTimeout(() => this.scheduleBatchProcessing(settings), 100);
+        window.setTimeout(() => this.scheduleBatchProcessing(settings), 100);
       }
     }
   }
@@ -368,18 +368,18 @@ export class OptimizedSpellCheckService {
     timeoutMs: number
   ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
-      const timer = activeWindow.setTimeout(() => {
+      const timer = window.setTimeout(() => {
         reject(new Error(`요청 타임아웃 (${timeoutMs}ms)`));
       }, timeoutMs);
       
       fn()
         .then(result => {
-          activeWindow.clearTimeout(timer);
+          window.clearTimeout(timer);
           resolve(result);
         })
-        .catch(error => {
-          activeWindow.clearTimeout(timer);
-          reject(error);
+        .catch((error: unknown) => {
+          window.clearTimeout(timer);
+          reject(error instanceof Error ? error : new Error(String(error)));
         });
     });
   }

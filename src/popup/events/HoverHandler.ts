@@ -132,7 +132,7 @@ export class HoverHandler {
       const actionType = this.determineHoverAction(context);
       
       // 지연 후 툴팁 표시
-      this.hoverTimer = activeWindow.setTimeout(async () => {
+      this.hoverTimer = window.setTimeout(async () => {
         await this.showHoverTooltip(actionType, context, event as MouseEvent);
       }, this.HOVER_DELAY);
       
@@ -506,7 +506,7 @@ export class HoverHandler {
     tooltip.textContent = config.content;
 
     // 애니메이션으로 나타나기
-    activeWindow.setTimeout(() => {
+    window.setTimeout(() => {
       tooltip.classList.remove('kga-tooltip-enter');
       tooltip.classList.add('kga-tooltip-visible');
     }, 10);
@@ -567,7 +567,7 @@ export class HoverHandler {
       this.activeTooltip.classList.add('kga-tooltip-exit');
 
       // DOM에서 제거
-      activeWindow.setTimeout(() => {
+      window.setTimeout(() => {
         if (this.activeTooltip && this.tooltipContainer) {
           this.tooltipContainer.removeChild(this.activeTooltip);
           this.activeTooltip = undefined;
@@ -585,7 +585,7 @@ export class HoverHandler {
    */
   private clearCurrentHover(): void {
     if (this.hoverTimer) {
-      activeWindow.clearTimeout(this.hoverTimer);
+      window.clearTimeout(this.hoverTimer);
       this.hoverTimer = undefined;
     }
     

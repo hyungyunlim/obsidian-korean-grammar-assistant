@@ -254,7 +254,7 @@ export class FocusManager implements IPopupComponent {
       
       if (shouldUpdate) {
         // 디바운스를 위해 지연 실행
-        activeWindow.setTimeout(() => this.updateFocusableElements(), 50);
+        window.setTimeout(() => this.updateFocusableElements(), 50);
       }
     });
 
@@ -345,7 +345,7 @@ export class FocusManager implements IPopupComponent {
       currentElement.element.classList.add(this.FOCUS_CLASS, this.FOCUS_HIGHLIGHT_CLASS);
       
       // 요소가 화면에 보이도록 스크롤
-      activeWindow.setTimeout(() => this.scrollToCurrentFocus(), 100);
+      window.setTimeout(() => this.scrollToCurrentFocus(), 100);
     }
   }
 

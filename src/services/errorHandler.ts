@@ -331,7 +331,7 @@ export class ErrorHandlerService {
     
     // 해결 방안 제안 (있는 경우)
     if (suggestion) {
-      activeWindow.setTimeout(() => {
+      window.setTimeout(() => {
         new Notice(`💡 ${suggestion}`, 6000);
       }, 500);
     }
@@ -379,7 +379,7 @@ export class ErrorHandlerService {
    * 비동기 대기 헬퍼
    */
   private static sleep(ms: number): Promise<void> {
-    return new Promise(resolve => activeWindow.setTimeout(resolve, ms));
+    return new Promise(resolve => window.setTimeout(resolve, ms));
   }
 
   /**

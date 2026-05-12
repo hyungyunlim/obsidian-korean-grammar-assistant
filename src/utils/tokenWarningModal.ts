@@ -115,7 +115,7 @@ export class TokenWarningModal {
       activeDocument.body.appendChild(modal);
 
       // 포커스 설정 (약간의 지연)
-      activeWindow.setTimeout(() => {
+      window.setTimeout(() => {
         modal.focus();
         Logger.debug('토큰 경고 모달: 포커스 설정 완료');
       }, 10);
@@ -373,7 +373,7 @@ export class TokenWarningModal {
       // 3. CodeMirror 에디터 포커스 해제 (추가 안전장치)
       const cmEditors = activeDocument.querySelectorAll('.cm-editor .cm-content');
       cmEditors.forEach(editor => {
-        if (editor instanceof HTMLElement) {
+        if (editor.instanceOf(HTMLElement)) {
           editor.blur();
         }
       });
@@ -383,9 +383,9 @@ export class TokenWarningModal {
       hiddenInput.classList.add('kga-stealth-input');
 
       // 짧은 시간 후 포커스 후 즉시 블러하여 키보드 숨기기
-      activeWindow.setTimeout(() => {
+      window.setTimeout(() => {
         hiddenInput.focus();
-        activeWindow.setTimeout(() => {
+        window.setTimeout(() => {
           hiddenInput.blur();
           activeDocument.body.removeChild(hiddenInput);
           Logger.log('📱 토큰 모달: 키보드 숨김 처리 완료');

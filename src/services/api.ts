@@ -270,14 +270,14 @@ export class SpellCheckApiService {
   private async requestWithTimeout<T>(requestPromise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
     let timeoutId: number | undefined;
     const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = activeWindow.setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+      timeoutId = window.setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
     });
 
     try {
       return await Promise.race([requestPromise, timeoutPromise]);
     } finally {
       if (timeoutId) {
-        activeWindow.clearTimeout(timeoutId);
+        window.clearTimeout(timeoutId);
       }
     }
   }

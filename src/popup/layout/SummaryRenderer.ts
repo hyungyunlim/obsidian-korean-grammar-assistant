@@ -9,7 +9,6 @@ import { Correction, PageCorrection, AIAnalysisResult } from '../../types/interf
 import { Logger } from '../../utils/logger';
 import { setIcon } from 'obsidian';
 import { createEl, setCssVariable } from '../../utils/domUtils';
-import { escapeHtml } from '../../utils/htmlUtils';
 
 /**
  * 오류 카드 액션 타입

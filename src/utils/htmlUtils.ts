@@ -98,7 +98,7 @@ export function temporaryHighlight(
   duration: number = 2000
 ): void {
   element.classList.add(className);
-  activeWindow.setTimeout(() => {
+  window.setTimeout(() => {
     element.classList.remove(className);
   }, duration);
 }
