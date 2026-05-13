@@ -9,9 +9,9 @@
 }
 
 #correctionPopup #errorSummary.kga-error-summary-expanded {
-    height: auto !important;
-    max-height: none !important;
-    flex: 1 1 auto !important;
+    height: auto;
+    max-height: none;
+    flex: 1 1 auto;
 }
 
 #correctionPopup .kga-error-summary.collapsed .kga-error-summary-content {
@@ -104,139 +104,146 @@
 
 /* Improved compact error item styles */
 #correctionPopup .kga-error-item-compact {
-    margin-bottom: 4px !important;
-    padding: 6px 8px !important;
-    background: var(--background-secondary-alt) !important;
-    border-radius: 4px !important;
-    border: 1px solid var(--background-modifier-border) !important;
-    transition: all 0.15s ease !important;
-    display: block !important;
-    line-height: 1.3 !important;
+    margin-bottom: 4px;
+    padding: 6px 8px;
+    background: var(--background-secondary-alt);
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    transition: all 0.15s ease;
+    display: block;
+    line-height: 1.3;
 }
 
 #correctionPopup .kga-error-item-compact:hover {
-    background: var(--background-modifier-hover) !important;
+    background: var(--background-modifier-hover);
 }
 
 #correctionPopup .kga-error-row {
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-    margin-bottom: 3px !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 3px;
 }
 
 #correctionPopup .kga-error-original-compact {
-    min-width: 60px !important;
-    font-weight: 600 !important;
-    color: var(--color-red) !important;
-    background: rgba(var(--color-red-rgb), 0.15) !important;
-    padding: 3px 6px !important;
-    text-align: center !important;
-    border-radius: 3px !important;
-    font-size: 12px !important;
-    flex-shrink: 0 !important;
-    transition: all 0.2s ease !important;
+    min-width: 60px;
+    font-weight: 600;
+    color: var(--color-red);
+    background: rgba(var(--color-red-rgb), 0.15);
+    padding: 3px 6px;
+    text-align: center;
+    border-radius: 3px;
+    font-size: 12px;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
 }
 
 /* 수정된 상태의 원본 텍스트 스타일 */
 #correctionPopup .kga-error-original-compact.corrected {
-    color: var(--color-green) !important;
-    background: rgba(var(--color-green-rgb), 0.15) !important;
+    color: var(--color-green);
+    background: rgba(var(--color-green-rgb), 0.15);
 }
 
 /* 예외처리된 상태의 원본 텍스트 스타일 */  
 #correctionPopup .kga-error-original-compact.exception-processed {
-    color: var(--color-blue) !important;
-    background: rgba(var(--color-blue-rgb), 0.15) !important;
+    color: var(--color-blue);
+    background: rgba(var(--color-blue-rgb), 0.15);
 }
 
 /* 원본 유지된 상태의 원본 텍스트 스타일 */
 #correctionPopup .kga-error-original-compact.original-kept {
-    color: var(--color-orange) !important;
-    background: rgba(var(--color-orange-rgb), 0.15) !important;
+    color: var(--color-orange);
+    background: rgba(var(--color-orange-rgb), 0.15);
 }
 
 /* 사용자 편집된 상태의 원본 텍스트 스타일 */
 #correctionPopup .kga-error-original-compact.user-edited {
-    color: #8b5cf6 !important;
-    background: rgba(139, 92, 246, 0.15) !important;
+    color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.15);
 }
 
 /* 편집 모드 input 스타일 */
 #correctionPopup .kga-error-original-input {
-    min-width: 60px !important;
-    font-weight: 600 !important;
-    color: #8b5cf6 !important;
-    background: rgba(139, 92, 246, 0.15) !important;
-    padding: 3px 6px !important;
-    text-align: center !important;
-    border-radius: 3px !important;
-    font-size: 12px !important;
-    flex-shrink: 0 !important;
-    border: 2px solid #8b5cf6 !important;
-    outline: none !important;
-    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3) !important;
+    min-width: 60px;
+    font-weight: 600;
+    color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.15);
+    padding: 3px 6px;
+    text-align: center;
+    border-radius: 3px;
+    font-size: 12px;
+    flex-shrink: 0;
+    border: 2px solid #8b5cf6;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
 }
 
 /* 모바일 편집 모드 개선 */
 @media (max-width: 768px) {
     #correctionPopup .kga-error-original-input {
-        min-width: 80px !important;
-        font-size: 14px !important;
-        padding: 6px 8px !important;
-        border-radius: 4px !important;
+        min-width: 80px;
+        font-size: 14px;
+        padding: 6px 8px;
+        border-radius: 4px;
     }
 }
 
 /* 모바일 편집 버튼 컨테이너 */
 #correctionPopup .kga-mobile-edit-container {
-    display: flex !important;
-    align-items: center !important;
-    gap: 4px !important;
-    flex-wrap: nowrap !important;
-    width: 100% !important;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: nowrap;
+    width: 100%;
 }
 
 /* 편집 모드일 때 input이 최대한 공간 차지 */
 #correctionPopup .kga-mobile-edit-container .kga-error-original-input {
-    flex: 1 !important;
-    max-width: none !important;
-    min-width: auto !important;
+    flex: 1;
+    max-width: none;
+    min-width: auto;
 }
 
 /* 모바일 편집 버튼 스타일 */
 #correctionPopup .kga-mobile-edit-btn {
-    padding: 6px 8px !important;
-    font-size: 12px !important;
-    border: none !important;
-    border-radius: 4px !important;
-    cursor: pointer !important;
-    font-weight: 500 !important;
-    white-space: nowrap !important;
-    flex-shrink: 0 !important;
-    min-width: 32px !important;
-    height: 32px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    padding: 6px 8px;
+    font-size: 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #correctionPopup .kga-mobile-edit-btn.save {
-    background: #10b981 !important;
-    color: white !important;
+    background: #10b981;
+    color: white;
 }
 
 #correctionPopup .kga-mobile-edit-btn.cancel {
-    background: #ef4444 !important;
-    color: white !important;
+    background: #ef4444;
+    color: white;
 }
 
 #correctionPopup .kga-mobile-edit-btn:hover {
-    opacity: 0.8 !important;
+    opacity: 0.8;
+}
+
+#correctionPopup .kga-mobile-edit-btn:focus-visible,
+#correctionPopup .kga-suggestion-compact:focus-visible,
+#correctionPopup .kga-error-summary-toggle:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 2px;
 }
 
 #correctionPopup .kga-mobile-edit-btn:active {
-    transform: scale(0.95) !important;
+    transform: scale(0.95);
 }
 
 /* 모바일 편집 모드일 때 수정 제안 및 예외 처리 버튼 강제 숨김 */
@@ -248,14 +255,14 @@
     #correctionPopup .kga-error-card.kga-editing-mode .kga-error-exception-btn,
     #correctionPopup .kga-error-card.kga-editing-mode .kga-suggestion-compact,
     #correctionPopup .kga-error-card.kga-editing-mode .kga-keep-original {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        height: 0 !important;
-        width: 0 !important;
-        overflow: hidden !important;
-        position: absolute !important;
-        left: -9999px !important;
+        display: none;
+        visibility: hidden;
+        opacity: 0;
+        height: 0;
+        width: 0;
+        overflow: hidden;
+        position: absolute;
+        left: -9999px;
     }
 }
 
@@ -264,75 +271,75 @@
 #correctionPopup .kga-error-card.kga-editing-mode .kga-error-exception-btn,
 #correctionPopup .kga-error-card.kga-editing-mode .kga-suggestion-compact,
 #correctionPopup .kga-error-card.kga-editing-mode .kga-keep-original {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
+    display: none;
+    visibility: hidden;
+    opacity: 0;
 }
 
 /* 편집 모드일 때 카드 레이아웃 조정 */
 #correctionPopup .kga-error-card.kga-editing-mode {
-    padding: 8px !important;
+    padding: 8px;
 }
 
 #correctionPopup .kga-error-card.kga-editing-mode .kga-error-content-compact {
-    gap: 4px !important;
+    gap: 4px;
 }
 
 #correctionPopup .kga-error-suggestions-compact {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 4px !important;
-    flex: 1 !important;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    flex: 1;
 }
 
 #correctionPopup .kga-suggestion-compact {
-    background: var(--background-primary) !important;
-    border: 1px solid var(--background-modifier-border) !important;
-    border-radius: 8px !important;
-    padding: 3px 6px !important;
-    font-size: 11px !important;
-    cursor: pointer !important;
-    transition: all 0.15s ease !important;
-    color: var(--text-normal) !important;
-    white-space: nowrap !important;
-    font-weight: 500 !important;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    padding: 3px 6px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    color: var(--text-normal);
+    white-space: nowrap;
+    font-weight: 500;
 }
 
 #correctionPopup .kga-suggestion-compact:hover {
-    background: var(--interactive-hover) !important;
-    border-color: var(--interactive-accent) !important;
+    background: var(--interactive-hover);
+    border-color: var(--interactive-accent);
 }
 
 #correctionPopup .kga-suggestion-compact.selected {
-    background: var(--interactive-accent) !important;
-    color: var(--text-on-accent) !important;
-    border-color: var(--interactive-accent) !important;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
 }
 
 #correctionPopup .kga-suggestion-compact.kga-keep-original {
-    background: var(--background-modifier-hover) !important;
-    color: var(--text-muted) !important;
-    font-size: 10px !important;
-    font-weight: 400 !important;
+    background: var(--background-modifier-hover);
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 400;
 }
 
 #correctionPopup .kga-suggestion-compact.kga-keep-original.selected {
-    background: var(--text-muted) !important;
-    color: var(--background-primary) !important;
+    background: var(--text-muted);
+    color: var(--background-primary);
 }
 
 #correctionPopup .kga-error-help-compact {
-    padding: 4px 8px !important;
-    border-top: 1px solid var(--background-modifier-border) !important;
-    background: var(--background-secondary) !important;
-    font-size: 10px !important;
-    color: var(--text-muted) !important;
-    line-height: 1.3 !important;
-    min-height: 20px !important;
-    flex-shrink: 0 !important;
-    margin: 0 !important;
-    display: flex !important;
-    align-items: center !important;
+    padding: 4px 8px;
+    border-top: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.3;
+    min-height: 20px;
+    flex-shrink: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
 }
 
 /* Error placeholder styles */

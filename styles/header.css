@@ -90,29 +90,29 @@
 
 /* === Button State Classes === */
 #correctionPopup .kga-header-button-disabled {
-    opacity: 0.6 !important;
-    cursor: not-allowed !important;
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 #correctionPopup .kga-header-button-enabled {
-    opacity: 1 !important;
-    cursor: pointer !important;
+    opacity: 1;
+    cursor: pointer;
 }
 
 #correctionPopup .kga-header-button-primary-hover {
-    background-color: var(--interactive-accent-hover) !important;
+    background-color: var(--interactive-accent-hover);
 }
 
 #correctionPopup .kga-header-button-secondary-hover {
-    background-color: var(--background-modifier-hover) !important;
+    background-color: var(--background-modifier-hover);
 }
 
 #correctionPopup .kga-header-button-primary {
-    background-color: var(--interactive-accent) !important;
+    background-color: var(--interactive-accent);
 }
 
 #correctionPopup .kga-header-button-secondary {
-    background-color: var(--background-primary) !important;
+    background-color: var(--background-primary);
 }
 
 /* === New Header Renderer Styles === */
@@ -176,24 +176,32 @@
 }
 
 .korean-grammar-popup-header-button-icon-only {
-    padding: 6px !important;
+    padding: 6px;
 }
 
 .korean-grammar-popup-header-button-primary {
-    background-color: var(--interactive-accent) !important;
-    color: var(--text-on-accent) !important;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
 }
 
 .korean-grammar-popup-header-button-primary:hover {
-    background-color: var(--interactive-accent-hover) !important;
+    background-color: var(--interactive-accent-hover);
 }
 
 .korean-grammar-popup-header-button-danger {
-    color: var(--text-error) !important;
+    color: var(--text-error);
 }
 
 .korean-grammar-popup-header-button:not(.korean-grammar-popup-header-button-primary):hover {
     background-color: var(--background-modifier-hover);
+}
+
+.korean-grammar-popup-header-button:focus-visible,
+#correctionPopup .kga-close-btn-header:focus-visible,
+#correctionPopup .kga-cancel-btn:focus-visible,
+#correctionPopup .kga-apply-btn:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 2px;
 }
 
 .korean-grammar-popup-header-button-icon {

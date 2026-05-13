@@ -81,88 +81,84 @@
 }
 
 /* Body scroll lock when popup is open */
-body.spell-popup-open {
-    overflow: hidden !important;
-    position: fixed !important;
-    width: 100% !important;
-    height: 100dvh !important; /* Dynamic viewport height */
+html body.spell-popup-open {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100dvh; /* Dynamic viewport height */
 }
 
 /* Mobile: Prevent any input focus within body when popup is open */
-body.spell-popup-open input,
-body.spell-popup-open textarea,
-body.spell-popup-open [contenteditable] {
-    pointer-events: none !important;
+html body.spell-popup-open :is(input, textarea, [contenteditable]) {
+    pointer-events: none;
 }
 
 /* But allow inputs within the popup to work */
-body.spell-popup-open #correctionPopup input,
-body.spell-popup-open #correctionPopup textarea,
-body.spell-popup-open #correctionPopup [contenteditable] {
-    pointer-events: auto !important;
-    height: 100% !important;
+html body.spell-popup-open #correctionPopup :is(input, textarea, [contenteditable]) {
+    pointer-events: auto;
+    height: 100%;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: none;
 }
 
 /* Utility helpers to replace inline styles */
 .kga-hidden {
-    display: none !important;
+    display: none;
 }
 
 .kga-force-hidden {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
+    display: none;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .kga-no-outline {
-    outline: none !important;
+    outline: none;
 }
 
 .kga-fade-out {
-    opacity: 0 !important;
+    opacity: 0;
 }
 
 .kga-stealth-input {
-    position: absolute !important;
-    left: -9999px !important;
-    top: -9999px !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
+    position: absolute;
+    left: -9999px;
+    top: -9999px;
+    opacity: 0;
+    pointer-events: none;
 }
 
 /* === Pointer Events Utilities === */
 .kga-pointer-events-none {
-    pointer-events: none !important;
+    pointer-events: none;
 }
 
 /* === Button State Classes === */
 .kga-button-disabled {
-    opacity: 0.5 !important;
-    cursor: not-allowed !important;
-    pointer-events: none !important;
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 .kga-button-enabled {
-    opacity: 1 !important;
-    cursor: pointer !important;
+    opacity: 1;
+    cursor: pointer;
 }
 
 /* === Element Visibility States === */
 .kga-collapsed {
-    display: none !important;
-    max-height: 0 !important;
+    display: none;
+    max-height: 0;
 }
 
 .kga-expanded {
-    display: block !important;
+    display: block;
 }
 
 /* === Animation Classes === */
 .kga-spin {
-    animation: kga-spin-animation 1s linear infinite !important;
+    animation: kga-spin-animation 1s linear infinite;
 }
 
 @keyframes kga-spin-animation {
@@ -175,7 +171,7 @@ body.spell-popup-open #correctionPopup [contenteditable] {
 }
 
 .kga-slide-out-down {
-    animation: kga-slideOutDown 0.2s ease-in !important;
+    animation: kga-slideOutDown 0.2s ease-in;
 }
 
 @keyframes kga-slideOutDown {
@@ -207,30 +203,35 @@ body.spell-popup-open #correctionPopup [contenteditable] {
 
 /* === Display States === */
 .kga-block {
-    display: block !important;
+    display: block;
 }
 
 .kga-inline-block {
-    display: inline-block !important;
+    display: inline-block;
 }
 
 .kga-flex {
-    display: flex !important;
+    display: flex;
 }
 
 /* === Opacity States === */
 .kga-opacity-full {
-    opacity: 1 !important;
+    opacity: 1;
 }
 
 .kga-opacity-half {
-    opacity: 0.5 !important;
+    opacity: 0.5;
 }
 
 .kga-opacity-60 {
-    opacity: 0.6 !important;
+    opacity: 0.6;
 }
 
 .kga-opacity-0 {
-    opacity: 0 !important;
+    opacity: 0;
+}
+
+.kga-hidden[aria-hidden="true"],
+.kga-force-hidden[aria-hidden="true"] {
+    display: none;
 }

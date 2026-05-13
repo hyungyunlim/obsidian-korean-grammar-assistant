@@ -1,7 +1,7 @@
 {
 	"id": "korean-grammar-assistant",
 	"name": "Korean Grammar Assistant",
-	"version": "0.3.4",
+	"version": "0.3.5",
 	"minAppVersion": "1.4.0",
 	"description": "Korean grammar and spelling checker with real-time inline editing (BETA) and AI-powered suggestions. Features modular architecture and mobile optimization.",
 	"author": "hyungyunlim",

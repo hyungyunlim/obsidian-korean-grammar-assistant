@@ -57,5 +57,12 @@
 
 /* Mobile Edit Mode: Hidden original element */
 .kga-mobile-edit-hidden {
-    display: none !important;
+    display: none;
+}
+
+.kga-mobile-edit-confirm:focus-visible,
+.kga-mobile-edit-cancel:focus-visible,
+.kga-mobile-edit-input:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 2px;
 }

@@ -1506,7 +1506,7 @@ export class InlineTooltip {
     }
 
     // 🔧 [필수] DOM 크기 측정을 위한 임시 CSS 클래스 적용
-    // kga-tooltip-measuring 클래스가 !important로 측정에 필요한 스타일을 오버라이드:
+    // kga-tooltip-measuring 클래스가 측정에 필요한 스타일을 후순위 규칙으로 오버라이드:
     // position: absolute, visibility: hidden, display: block,
     // width: auto, --kga-width: auto, max-width: none, min-width: none
     // 클래스 제거 시 원래 스타일시트/인라인 값이 자동으로 복원됨

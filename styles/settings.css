@@ -173,123 +173,123 @@
 
 /* === 설정 탭 클래스들 === */
 .ksc-tag {
-  display: inline-block !important;
-  background: var(--interactive-accent) !important;
-  color: var(--text-on-accent) !important;
-  padding: 3px 8px !important;
-  border-radius: 12px !important;
-  margin: 0 4px 4px 0 !important;
-  font-size: 11px !important;
-  font-weight: 500 !important;
-  cursor: pointer !important;
-  transition: background 0.2s ease !important;
+  display: inline-block;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  padding: 3px 8px;
+  border-radius: 12px;
+  margin: 0 4px 4px 0;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
 }
 
 .ksc-tag:hover {
-  background: var(--interactive-accent-hover) !important;
+  background: var(--interactive-accent-hover);
 }
 
 .ksc-empty-state {
-  color: var(--text-muted) !important;
-  text-align: center !important;
-  padding: 20px !important;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px;
 }
 
 .ksc-step-item {
-  margin-bottom: 4px !important;
+  margin-bottom: 4px;
 }
 
 .ksc-muted-line {
-  color: var(--text-muted) !important;
-  margin-bottom: 4px !important;
-  font-size: 14px !important;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  font-size: 14px;
 }
 
 .ksc-muted-text {
-  color: var(--text-muted) !important;
-  font-size: 14px !important;
+  color: var(--text-muted);
+  font-size: 14px;
 }
 
 .ksc-accent-tip {
-  color: var(--text-accent) !important;
-  font-size: 13px !important;
-  margin-top: 4px !important;
+  color: var(--text-accent);
+  font-size: 13px;
+  margin-top: 4px;
 }
 
 .ksc-info-title,
 .ksc-stats-title,
 .ksc-warning-title {
-  font-weight: 600 !important;
-  margin-bottom: 8px !important;
+  font-weight: 600;
+  margin-bottom: 8px;
 }
 
 .ksc-warning-title {
-  color: var(--text-warning) !important;
+  color: var(--text-warning);
 }
 
 .ksc-toggle-section {
-  margin-top: 16px !important;
+  margin-top: 16px;
 }
 
 .ksc-collapsible-container {
-  display: none !important;
-  margin-top: 16px !important;
+  display: none;
+  margin-top: 16px;
 }
 
 .ksc-collapsible-container.visible {
-  display: block !important;
+  display: block;
 }
 
 .ksc-backup-item {
-  margin-bottom: 8px !important;
+  margin-bottom: 8px;
 }
 
 .ksc-restore-button {
-  margin-top: 8px !important;
-  font-size: 12px !important;
+  margin-top: 8px;
+  font-size: 12px;
 }
 
 .ksc-stats-box,
 .ksc-inline-desc-box {
-  background: var(--background-secondary) !important;
-  border-radius: 8px !important;
-  padding: 16px !important;
-  margin-bottom: 20px !important;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
 }
 
 .ksc-stats-box {
-  border-radius: 6px !important;
-  padding: 12px !important;
-  margin-top: 12px !important;
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 12px;
 }
 
 .ksc-beta-warning-box {
-  background: rgba(255, 196, 0, 0.1) !important;
-  border: 1px solid rgba(255, 196, 0, 0.3) !important;
-  border-radius: 8px !important;
-  padding: 16px !important;
-  margin-bottom: 20px !important;
+  background: rgba(255, 196, 0, 0.1);
+  border: 1px solid rgba(255, 196, 0, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
 }
 
 .ksc-platform-tip {
-  font-size: 0.9em !important;
-  color: var(--text-muted) !important;
-  margin-top: 8px !important;
-  padding: 8px !important;
-  background: var(--background-secondary) !important;
-  border-radius: 4px !important;
+  font-size: 0.9em;
+  color: var(--text-muted);
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--background-secondary);
+  border-radius: 4px;
 }
 
 /* === Tag Hover States === */
 .ksc-tag-hover {
-  background: var(--interactive-accent-hover) !important;
+  background: var(--interactive-accent-hover);
 }
 
 /* === Collapsible Container States === */
 .ksc-container-visible {
-  display: block !important;
+  display: block;
 }
 
 .ksc-container-hidden {
-  display: none !important;
+  display: none;
 }

@@ -74,21 +74,21 @@ class AdaptiveModeManager {
 @media (max-width: 768px) {
   .korean-grammar-error-inline {
     /* 터치 친화적 크기 */
-    min-height: 44px !important;
-    padding: 12px 8px !important;
+    min-height: 44px;
+    padding: 12px 8px;
     
     /* 시각적 강조 */
-    background: rgba(255, 0, 0, 0.15) !important;
-    border-radius: 4px !important;
-    border: 2px solid rgba(255, 0, 0, 0.3) !important;
+    background: rgba(255, 0, 0, 0.15);
+    border-radius: 4px;
+    border: 2px solid rgba(255, 0, 0, 0.3);
     
     /* 터치 시 피드백 */
-    transition: all 0.2s ease !important;
+    transition: all 0.2s ease;
   }
   
   .korean-grammar-error-inline:active {
     transform: scale(0.98);
-    background: rgba(255, 0, 0, 0.25) !important;
+    background: rgba(255, 0, 0, 0.25);
   }
 }
 ```

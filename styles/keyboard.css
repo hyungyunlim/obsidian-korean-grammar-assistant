@@ -1,17 +1,17 @@
 /* styles/keyboard.css */
 
 .kga-keyboard-focused {
-  outline: 2px solid var(--interactive-accent) !important;
-  outline-offset: 2px !important;
-  border-radius: 4px !important;
-  background: var(--background-modifier-hover) !important;
-  transition: all 0.2s ease !important;
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+  background: var(--background-modifier-hover);
+  transition: all 0.2s ease;
 }
 
 .kga-error-item-compact.kga-keyboard-focused {
-  background: var(--background-modifier-hover) !important;
-  border-left: 3px solid var(--interactive-accent) !important;
-  padding-left: 13px !important; /* 원래 16px에서 border 3px를 뺀 값 */
+  background: var(--background-modifier-hover);
+  border-left: 3px solid var(--interactive-accent);
+  padding-left: 13px; /* 원래 16px에서 border 3px를 뺀 값 */
 }
 
 .kga-keyboard-navigation-hint {
@@ -176,26 +176,26 @@
 
 @keyframes edit-completion-pulse {
   0% {
-    background: #8b5cf6 !important; /* 보라색 */
-    color: white !important;
+    background: #8b5cf6; /* 보라색 */
+    color: white;
     transform: scale(1.05);
     box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
   }
   25% {
-    background: #8b5cf6 !important;
-    color: white !important;
+    background: #8b5cf6;
+    color: white;
     transform: scale(1.08);
     box-shadow: 0 0 16px rgba(139, 92, 246, 0.8);
   }
   50% {
-    background: #a78bfa !important;
-    color: white !important;
+    background: #a78bfa;
+    color: white;
     transform: scale(1.05);
     box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
   }
   100% {
-    background: var(--background-primary) !important;
-    color: var(--text-normal) !important;
+    background: var(--background-primary);
+    color: var(--text-normal);
     transform: scale(1);
     box-shadow: none;
   }
@@ -207,26 +207,26 @@
 
 @keyframes edit-completion-pulse-dark {
   0% {
-    background: #8b5cf6 !important;
-    color: white !important;
+    background: #8b5cf6;
+    color: white;
     transform: scale(1.05);
     box-shadow: 0 0 12px rgba(139, 92, 246, 0.8);
   }
   25% {
-    background: #8b5cf6 !important;
-    color: white !important;
+    background: #8b5cf6;
+    color: white;
     transform: scale(1.08);
     box-shadow: 0 0 16px rgba(139, 92, 246, 1.0);
   }
   50% {
-    background: #a78bfa !important;
-    color: white !important;
+    background: #a78bfa;
+    color: white;
     transform: scale(1.05);
     box-shadow: 0 0 12px rgba(139, 92, 246, 0.8);
   }
   100% {
-    background: var(--background-primary) !important;
-    color: var(--text-normal) !important;
+    background: var(--background-primary);
+    color: var(--text-normal);
     transform: scale(1);
     box-shadow: none;
   }

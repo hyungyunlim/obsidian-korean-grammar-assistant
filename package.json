@@ -1,10 +1,11 @@
 {
   "name": "korean-grammar-assistant",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Korean grammar and spelling checker for Obsidian with AI-powered suggestions. Features interactive corrections, performance optimization, and comprehensive settings management.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
+    "lint:css": "stylelint \"styles/**/*.css\" \"styles.css\"",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "build:qa": "npm run build && node scripts/deploy-to-vault.mjs",
     "version": "node version-bump.mjs && git add manifest.json versions.json"
@@ -20,6 +21,7 @@
     "@typescript-eslint/parser": "5.29.0",
     "esbuild": "0.17.3",
     "obsidian": "latest",
+    "stylelint": "^16.26.1",
     "tslib": "2.4.0",
     "typescript": "4.7.4"
   }
