@@ -1736,8 +1736,16 @@ html body.spell-popup-open #correctionPopup :is(input, textarea, [contenteditabl
 .kga-preview-tag.already-ignored {
   background: var(--background-modifier-border);
   color: var(--text-muted);
-  text-decoration: line-through;
   opacity: 0.8;
+  position: relative;
+}
+.kga-preview-tag.already-ignored::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 50%;
+  border-top: 1px solid var(--text-muted);
 }
 .kga-preview-tag.new-tag {
   background: var(--interactive-accent);
@@ -1971,10 +1979,7 @@ html body.spell-popup-open #correctionPopup :is(input, textarea, [contenteditabl
 /* styles/inline-mode.css */
 .korean-grammar-inline-error {
   background-color: rgba(255, 99, 71, 0.15);
-  text-decoration: wavy underline var(--color-red) 2px;
-  text-underline-offset: 3px;
-  text-decoration-skip-ink: none;
-  text-decoration-thickness: 2px;
+  border-bottom: 2px solid var(--color-red);
   cursor: pointer;
   position: relative;
   transition: background-color 0.2s ease;
@@ -2031,7 +2036,7 @@ html body.spell-popup-open #correctionPopup :is(input, textarea, [contenteditabl
 }
 .korean-grammar-ai-widget {
   color: #10b981;
-  text-decoration: wavy underline #10b981 2px;
+  border-bottom: 2px solid #10b981;
   background-color: rgba(16, 185, 129, 0.1);
   cursor: pointer;
   display: inline;
@@ -2058,7 +2063,6 @@ html body.spell-popup-open #correctionPopup :is(input, textarea, [contenteditabl
   color: var(--text-success);
   font-weight: 500;
   background-color: rgba(16, 185, 129, 0.15);
-  text-decoration: none;
   padding: 2px 4px;
   border-radius: 4px;
   transition: all 0.2s ease;
@@ -2234,38 +2238,34 @@ html body.spell-popup-open #correctionPopup :is(input, textarea, [contenteditabl
   display: inline;
   position: relative;
   cursor: pointer;
-  text-decoration-line: underline;
-  text-decoration-style: wavy;
-  text-decoration-color: var(--color-red);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
-  text-decoration-skip-ink: none;
+  border-bottom: 2px solid var(--color-red);
   background-color: rgba(255, 0, 0, 0.05);
   touch-action: manipulation;
 }
 .korean-grammar-error-inline:not([data-ai-status="exception"]):not([data-ai-status="keep-original"]):not([data-ai-status="corrected"]) {
-  text-decoration: wavy underline var(--color-red) 2px;
+  border-bottom-color: var(--color-red);
+  border-bottom-style: solid;
   background-color: rgba(var(--color-red-rgb), 0.1);
   cursor: pointer;
 }
 .korean-grammar-error-inline:not([data-ai-status="exception"]):not([data-ai-status="keep-original"]):not([data-ai-status="corrected"]):hover {
-  text-decoration: wavy underline var(--color-red) 2px;
   background-color: rgba(var(--color-red-rgb), 0.2);
 }
 .korean-grammar-error-inline.kga-underline-solid {
-  text-decoration-style: solid;
+  border-bottom-style: solid;
 }
 .korean-grammar-error-inline.kga-underline-dotted {
-  text-decoration-style: dotted;
+  border-bottom-style: dotted;
 }
 .korean-grammar-error-inline.kga-underline-dashed {
-  text-decoration-style: dashed;
+  border-bottom-style: dashed;
 }
 .korean-grammar-error-inline.kga-underline-wavy {
-  text-decoration-style: wavy;
+  border-bottom-style: solid;
 }
 .korean-grammar-error-inline[data-ai-status=exception] {
-  text-decoration: wavy underline #3b82f6 2px;
+  border-bottom-color: #3b82f6;
+  border-bottom-style: solid;
   background-color: rgba(59, 130, 246, 0.1);
   cursor: pointer;
 }
@@ -2273,7 +2273,8 @@ html body.spell-popup-open #correctionPopup :is(input, textarea, [contenteditabl
   background-color: rgba(59, 130, 246, 0.2);
 }
 .korean-grammar-error-inline[data-ai-status=keep-original] {
-  text-decoration: wavy underline #f59e0b 2px;
+  border-bottom-color: #f59e0b;
+  border-bottom-style: solid;
   background-color: rgba(245, 158, 11, 0.1);
   cursor: pointer;
 }
@@ -2324,7 +2325,16 @@ html body.spell-popup-open #correctionPopup :is(input, textarea, [contenteditabl
 .korean-grammar-tooltip-error {
   font-weight: 600;
   color: var(--text-error);
-  text-decoration: line-through;
+  position: relative;
+  display: inline-block;
+}
+.korean-grammar-tooltip-error::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 2px solid var(--text-error);
 }
 .korean-grammar-tooltip-suggestions {
   margin-bottom: 8px;
@@ -2429,9 +2439,16 @@ html body.spell-popup-open #correctionPopup :is(input, textarea, [contenteditabl
 .kgc-suggestion-error-text {
   font-weight: 600;
   color: var(--text-error);
-  text-decoration: line-through;
-  text-decoration-color: var(--text-error);
-  text-decoration-thickness: 2px;
+  position: relative;
+  display: inline-block;
+}
+.kgc-suggestion-error-text::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 2px solid var(--text-error);
 }
 .kgc-suggestion-confidence {
   margin-left: auto;

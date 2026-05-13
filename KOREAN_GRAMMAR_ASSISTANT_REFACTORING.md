@@ -605,10 +605,7 @@ export class ContextExtractor {
 
 /* 인라인 모드 적용 */
 .kg-error-base.kg-inline {
-  text-decoration: underline;
-  text-decoration-color: var(--kg-error-color);
-  text-decoration-thickness: var(--kg-inline-underline-thickness);
-  text-decoration-style: wavy;
+  border-bottom: var(--kg-inline-underline-thickness) solid var(--kg-error-color);
 }
 
 /* 팝업 모드 적용 */

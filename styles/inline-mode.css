@@ -5,10 +5,7 @@
 /* 인라인 에러 스팬 기본 스타일 */
 .korean-grammar-inline-error {
   background-color: rgba(255, 99, 71, 0.15);
-  text-decoration: wavy underline var(--color-red) 2px;
-  text-underline-offset: 3px;
-  text-decoration-skip-ink: none;
-  text-decoration-thickness: 2px;
+  border-bottom: 2px solid var(--color-red);
   cursor: pointer;
   position: relative;
   transition: background-color 0.2s ease;
@@ -82,7 +79,7 @@
 /* AI 위젯 스타일 */
 .korean-grammar-ai-widget {
   color: #10b981;
-  text-decoration: wavy underline #10b981 2px;
+  border-bottom: 2px solid #10b981;
   background-color: rgba(16, 185, 129, 0.1);
   cursor: pointer;
   display: inline;
@@ -114,7 +111,6 @@
   color: var(--text-success);
   font-weight: 500;
   background-color: rgba(16, 185, 129, 0.15);
-  text-decoration: none;
   padding: 2px 4px;
   border-radius: 4px;
   transition: all 0.2s ease;

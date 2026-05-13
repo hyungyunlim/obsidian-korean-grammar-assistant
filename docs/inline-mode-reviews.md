@@ -686,9 +686,7 @@ class KoreanInlineStrategy {
 /* 한국어 오류 표시 최적화 */
 .korean-error-inline {
   /* 한글 글꼴에 최적화된 밑줄 */
-  text-decoration: underline wavy #ff4444;
-  text-underline-offset: 2px;
-  text-decoration-thickness: 2px;
+  border-bottom: 2px solid #ff4444;
 }
 
 .korean-suggestion-tooltip {

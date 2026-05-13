@@ -160,8 +160,17 @@
 .kga-preview-tag.already-ignored {
   background: var(--background-modifier-border);
   color: var(--text-muted);
-  text-decoration: line-through;
   opacity: 0.8;
+  position: relative;
+}
+
+.kga-preview-tag.already-ignored::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 50%;
+  border-top: 1px solid var(--text-muted);
 }
 
 .kga-preview-tag.new-tag {
