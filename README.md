@@ -1,4 +1,63 @@
-# 한국어 맞춤법 검사기 (Korean Grammar Assistant)
+# Korean Grammar Assistant
+
+Korean Grammar Assistant is an Obsidian community plugin for checking Korean spelling, grammar, and writing style inside your vault. It combines Bareun.ai's Korean language analysis with optional AI providers such as OpenAI, Anthropic Claude, Google Gemini, and Ollama to help writers review Korean text, compare correction suggestions, and apply changes without leaving Obsidian.
+
+The plugin is designed for people who write Korean notes, drafts, study material, documentation, or professional text in Obsidian. It supports two editing workflows: a popup review mode for focused correction sessions and a beta inline mode for reviewing suggestions directly in the editor. Detected issues are shown with clear visual states, keyboard navigation, mobile-friendly controls, and optional AI reasoning so users can decide whether to apply a correction, keep the original wording, ignore a term, or make a custom edit.
+
+## English Overview
+
+### Key Features
+
+- Korean spelling and grammar checking powered by Bareun.ai.
+- Optional AI-assisted review with OpenAI, Anthropic Claude, Google Gemini, or local Ollama models.
+- Popup review mode for focused proofreading and batch correction.
+- Beta inline mode for reviewing and applying corrections directly inside the editor.
+- Multiple correction suggestions for each detected issue.
+- Five-state correction workflow: original error, corrected text, ignored exception, keep original, and user-edited text.
+- Keyboard navigation for fast review with Tab, Shift+Tab, arrow keys, Enter, Escape, and editing shortcuts.
+- Mobile-friendly layout with touch controls and responsive popup sizing.
+- Morphological analysis support for more accurate Korean word-boundary handling.
+- Token estimation and warning controls for optional AI requests.
+
+### Network And Privacy
+
+Korean Grammar Assistant sends selected text to Bareun.ai when you run the standard Korean grammar check. If you enable AI-assisted review, the plugin can also send correction context to the AI provider that you explicitly configure in settings. API keys are stored locally in your Obsidian vault configuration and are not sent anywhere except to the selected service provider during requests.
+
+The plugin does not include telemetry, analytics, tracking, or a remote plugin account system. It does not upload your whole vault. Network requests are only made when grammar checking or optional AI analysis is triggered, and provider usage can be controlled from the plugin settings.
+
+### Requirements
+
+1. A Bareun.ai API key is required for the primary Korean spelling and grammar analysis.
+2. An AI provider key or local Ollama endpoint is optional and only needed for AI-assisted suggestions.
+3. Obsidian 1.4.0 or newer is required.
+
+### Installation
+
+When installed from the Obsidian Community Plugins directory, enable the plugin from Settings, then open the Korean Grammar Assistant settings tab and enter your Bareun.ai API key. Optional AI provider settings can be configured in the same settings tab.
+
+For manual installation, download `main.js`, `manifest.json`, and `styles.css` from the latest GitHub release and place them in:
+
+```text
+<your vault>/.obsidian/plugins/korean-grammar-assistant/
+```
+
+Then restart Obsidian or reload community plugins and enable Korean Grammar Assistant.
+
+### Basic Usage
+
+1. Select Korean text in the editor.
+2. Run Korean Grammar Assistant from the ribbon icon or command palette.
+3. Review detected issues in the popup or inline editor.
+4. Choose a correction, keep the original text, add an exception, or edit the text manually.
+5. Apply the final changes back to the note.
+
+### AI-Assisted Usage
+
+After a standard grammar check, you can run AI analysis to ask the configured provider to evaluate the detected issues in context. AI suggestions can include confidence scores, reasoning, exception handling, and recommended corrections. Users remain in control of the final text and must apply changes explicitly.
+
+---
+
+# 한국어 맞춤법 검사기
 
 Bareun.ai와 다양한 AI 제공자를 활용한 Obsidian용 고급 한국어 맞춤법 및 문법 검사 플러그인입니다. 현대적인 UI/UX와 함께 포괄적인 한국어 텍스트 교정 기능을 제공합니다.
 
