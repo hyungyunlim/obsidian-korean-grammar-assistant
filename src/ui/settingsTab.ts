@@ -112,6 +112,7 @@ export class ModernSettingsTab extends PluginSettingTab {
   private currentTab: SettingsTab = 'basic';
   private tabContainer: HTMLElement | null = null;
   private contentContainer: HTMLElement | null = null;
+  private metricsIntervalId: number | null = null;
 
   constructor(app: App, plugin: KoreanGrammarPlugin) {
     super(app, plugin);
@@ -119,6 +120,8 @@ export class ModernSettingsTab extends PluginSettingTab {
   }
 
   display(): void {
+    this.clearMetricsInterval();
+
     const { containerEl } = this;
     containerEl.empty();
 
@@ -138,6 +141,20 @@ export class ModernSettingsTab extends PluginSettingTab {
 
     // 현재 탭 콘텐츠 렌더링
     this.renderCurrentTab();
+  }
+
+  hide(): void {
+    this.clearMetricsInterval();
+    super.hide();
+  }
+
+  private clearMetricsInterval(): void {
+    if (this.metricsIntervalId === null) {
+      return;
+    }
+
+    window.clearInterval(this.metricsIntervalId);
+    this.metricsIntervalId = null;
   }
 
   /**
@@ -1077,14 +1094,8 @@ export class ModernSettingsTab extends PluginSettingTab {
     updateMetrics(); // 초기 표시
 
     // 자동 업데이트 (15초마다)
-    const metricsInterval = window.setInterval(updateMetrics, 15000);
-
-    // 정리 함수 등록
-    const originalHide: () => void = this.hide.bind(this);
-    this.hide = (): void => {
-      window.clearInterval(metricsInterval);
-      originalHide();
-    };
+    this.clearMetricsInterval();
+    this.metricsIntervalId = window.setInterval(updateMetrics, 15000);
   }
 
   /**
